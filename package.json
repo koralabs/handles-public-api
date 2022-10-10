@@ -1,0 +1,13 @@
+{
+  "name": "handles-public-api",
+  "version": "0.0.1",
+  "description": "A downloadable and containerized decentralized API for Handles",
+  "main": "index.js",
+  "repository": "https://github.com/koralabs/handles-public-api.git",
+  "author": "Papa Goose <papa.goose@koralabs.io>",
+  "license": "Mozilla Public License 2.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  }
+}
