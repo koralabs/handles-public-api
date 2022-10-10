@@ -1,7 +1,8 @@
 FROM cardano-node-ogmios-nodejs:latest as handles-public-api
 
 WORKDIR /app
-ADD ./dist/* .
+ADD ./dist/ ./
+ADD entrypoint.sh README.md LICENSE ./
 
 SHELL ["/bin/bash", "-c"]
 

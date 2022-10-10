@@ -10,7 +10,7 @@ const requestListener = function (req, res) {
         res.end('404: Not Found');
     }
     if (path.startsWith('/health')) {
-        http.get(`http://127.0.0.1:1337/health`, healthRes => {
+        http.get('http://127.0.0.1:1337/health', healthRes => {
             let str = '';
             healthRes.on('data', function (chunk) {
               str += chunk;
@@ -22,11 +22,11 @@ const requestListener = function (req, res) {
             });
         }).on('error', err => {
             res.writeHead(503);
-            res.write('503 - Ogmios Not Running');
+            res.write(`503 - Ogmios Not Running - ${err}`);
             res.end();
         });
+        return;
     }
-    console.log(path, file);
     if (path === '/swagger') {
         path += '/index.html';
         file = 'index.html';
@@ -41,6 +41,7 @@ const requestListener = function (req, res) {
            res.write(data.toString());
         }
         res.end();
+        return;
      });
 }
 
