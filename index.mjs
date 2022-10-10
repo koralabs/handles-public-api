@@ -10,8 +10,21 @@ const requestListener = function (req, res) {
         res.end('404: Not Found');
     }
     if (path.startsWith('/health')) {
-        res.writeHead(200);
-        res.write('Healthy as a horse!');
+        http.get(`http://127.0.0.1:1337/health`, healthRes => {
+            let str = '';
+            healthRes.on('data', function (chunk) {
+              str += chunk;
+            });
+            healthRes.on('end', function () {
+                res.writeHead(200);
+                res.write(str);
+                res.end();
+            });
+        }).on('error', err => {
+            res.writeHead(503);
+            res.write('503 - Ogmios Not Running');
+            res.end();
+        });
     }
     console.log(path, file);
     if (path === '/swagger') {

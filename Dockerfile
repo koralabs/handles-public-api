@@ -1,7 +1,7 @@
 FROM cardano-node-ogmios-nodejs:latest as handles-public-api
 
 WORKDIR /app
-ADD . .
+ADD ./dist/* .
 
 SHELL ["/bin/bash", "-c"]
 

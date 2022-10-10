@@ -10,8 +10,8 @@ A downloadable and containerized decentralized API for Handles
 # Getting Started
 Run the following:
 ```sh
-docker pull koralabs/handles-public-api
-docker run koralabs/handles-public-api
+docker pull koralabs/handles-api
+docker run -p 3141:3141 koralabs/handles-api
 ```
 
 Open a browser to [http://localhost:3141/swagger](http://localhost:3141/swagger)
