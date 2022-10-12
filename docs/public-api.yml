@@ -188,7 +188,7 @@ components:
       type: string
       example: 'letters,numbers,special'
       description: |-
-        Included character types in the handles. Numbers includes negative and decimal numbers. 
+        Included character types in the handles. Numbers includes negative and decimal numbers. Combine types with commas to further filter results
           <br />`letters` - All characters are letters
           <br />`numbers` - All characters are valid numeric characters (including decimals and negative)
           <br />`special` - All characters are dash, period, or underscore
@@ -215,6 +215,7 @@ components:
             <br />Blank or not defined is a positive whole number, or not a number
             <br />`negative` - Negative whole number
             <br />`decimal` - Positive decimal
+            <br />`negative,decimal` - Negative decimal number
         example: 'negative,decimal'
   requestBodies:
     Handle:
