@@ -2,7 +2,7 @@
 A downloadable and containerized decentralized API for Handles
 
 <p align="center">
-  <img src="./swagger/handles-api.jpeg" />
+  <img src="./docs/handles-api.jpeg" />
 </p>
 
 <hr/>

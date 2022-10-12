@@ -31,7 +31,7 @@ const requestListener = function (req, res) {
         path += '/index.html';
         file = 'index.html';
     }
-    fs.readFile(path.substr(1), (err, data) => {
+    fs.readFile(path.replace('/swagger/','/docs/').substr(1), (err, data) => {
         if (err) {
            console.error(err);
            res.writeHead(404);
