@@ -9,9 +9,5 @@ export const {
     LOG_FORMAT = '',
     LOG_DIR = '',
     ORIGIN = '',
-    MY_AWS_ACCESS_KEY = '',
-    MY_AWS_SECRET_ACCESS_KEY = '',
-    MY_AWS_BUCKET = '',
-    MY_AWS_FIREBASE_KEY = '',
     OGMIOS_ENDPOINT = 'http://localhost:1337'
 } = process.env;

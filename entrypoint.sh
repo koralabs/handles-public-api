@@ -1,5 +1,5 @@
 #!/bin/bash
 
 /root/cardano-node-ogmios.sh &
-npm start &
+NODE_ENV=production npm start &
 wait

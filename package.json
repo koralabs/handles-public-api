@@ -7,15 +7,14 @@
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
   "scripts": {
-    "start": "node index.mjs",
+    "start": "node express.js",
     "build": "tsc",
+    "build:production": "tsc -p . && cp package.json dist/package.json && cd dist && yarn install --production",
     "dev": "cross-env NODE_ENV=development nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
     "test": "jest --forceExit --detectOpenHandles",
     "lint": "eslint --ignore-path .gitignore --ext .ts src/",
-    "lint:fix": "npm run lint -- --fix",
-    "build:local": "tsc -p . && sam build --beta-features",
-    "start:local": "sam local start-api --env-vars env.json -p 3009 --warm-containers EAGER"
+    "lint:fix": "npm run lint -- --fix"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
