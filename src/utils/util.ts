@@ -1,3 +1,5 @@
+import { Logger } from "./logger";
+
 /**
  * @method isEmpty
  * @param {String | Number | Object} value
@@ -62,7 +64,12 @@ export const getElapsedTime = (milliseconds: number) => {
 
 export const writeConsoleLine = (startTime: number, msg = ''): void => {
     const elapsed = getElapsedTime(Date.now() - startTime);
-    process.stdout.clearLine(0);
-    process.stdout.cursorTo(0);
-    process.stdout.write(`${elapsed} elapsed. ${msg}`);
+    const message = `${elapsed} elapsed. ${msg}`;
+    if (process.stdout?.clearLine && process.stdout?.cursorTo) {
+        process.stdout.clearLine(0);
+        process.stdout.cursorTo(0);
+        process.stdout.write(message);
+    } else {
+        Logger.log(message)
+    }
 };
