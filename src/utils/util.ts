@@ -61,7 +61,7 @@ export const getElapsedTime = (milliseconds: number) => {
 };
 
 export const writeConsoleLine = (startTime: number, msg = ''): void => {
-    const elapsed = getElapsedTime(Math.floor((new Date().getTime() - startTime) / 1000));
+    const elapsed = getElapsedTime(Date.now() - startTime);
     process.stdout.clearLine(0);
     process.stdout.cursorTo(0);
     process.stdout.write(`${elapsed} elapsed. ${msg}`);

@@ -15,13 +15,13 @@ class HandlesRoute extends BaseRoute {
         this.router.get(
             `${this.path}`,
             this.injectRegistryMiddleware,
-            //tokenAuthMiddleware,
+            tokenAuthMiddleware,
             this.handlesController.getAll
         );
         this.router.get(
             `${this.path}/:handle`,
             this.injectRegistryMiddleware,
-            // tokenAuthMiddleware,
+            tokenAuthMiddleware,
             this.handlesController.getHandle
         );
     }

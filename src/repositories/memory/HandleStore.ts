@@ -81,7 +81,15 @@ export class HandleStore {
     }
 
     static setMetrics(metrics: HandleStoreMetrics): void {
-        this.metrics = { ...metrics };
+        this.metrics = { ...this.metrics, ...metrics };
+    }
+
+    static getTimeMetrics() {
+        const { elapsedOgmiosExec = 0, elapsedBuildingExec = 0 } = this.metrics;
+        return {
+            elapsedOgmiosExec,
+            elapsedBuildingExec
+        }
     }
 
     static getMetrics(): IHandleStats {
@@ -92,6 +100,7 @@ export class HandleStore {
             firstMemoryUsage = 0,
             elapsedOgmiosExec = 0,
             elapsedBuildingExec = 0,
+            currentBlockHash = ''
         } = this.metrics;
 
         const handleSlotRange = lastSlot - firstSlot;
@@ -106,12 +115,17 @@ export class HandleStore {
         const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);
         const buildingElapsed = getElapsedTime(elapsedBuildingExec);
 
+        const slotDate = new Date((1596491091 + (currentSlot - 4924800)) * 1000)
+
         return {
             percentageComplete,
             currentMemoryUsed,
             memorySize,
             ogmiosElapsed,
-            buildingElapsed
+            buildingElapsed,
+            slotDate,
+            currentSlot,
+            currentBlockHash
         };
     }
 

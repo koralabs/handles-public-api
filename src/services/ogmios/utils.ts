@@ -1,5 +1,7 @@
+import { OGMIOS_ENDPOINT } from '../../config';
 import { Rarity } from '../../interfaces/handle.interface';
 import { HandleOnChainData } from '../../interfaces/ogmios.interfaces';
+import { LogCategory, Logger } from '../../utils/logger';
 
 const stringify = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -128,3 +130,14 @@ export const getRarity = (name: string): Rarity => {
 
 export const stringifyBlock = (metadata: any) =>
     JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
+
+export const fetchHealth = async () => {
+    let ogmiosResults = null;
+    try {
+        const ogmiosResponse = await fetch(`${OGMIOS_ENDPOINT}/health`);
+        ogmiosResults = await ogmiosResponse.json();
+    } catch (error: any) {
+        Logger.log(error.message, LogCategory.ERROR);
+    }
+    return ogmiosResults;
+};

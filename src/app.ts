@@ -8,16 +8,19 @@ import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
 import swaggerDoc from './swagger/swagger.json';
+import { writeConsoleLine } from './utils/util';
 
 class App {
     public app: express.Application;
     public env: string;
     public port: string | number;
+    public startTimer: number;
 
     constructor(routes: Routes[]) {
         this.app = express();
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
+        this.startTimer = Date.now();
 
         this.initializeMiddleware();
         this.initializeRoutes(routes);
@@ -33,10 +36,10 @@ class App {
 
     public listen() {
         this.app.listen(this.port, () => {
-            Logger.log(`=================================`);
-            Logger.log(`======= ENV: ${this.env} =======`);
+            Logger.log(`=========================================`);
+            Logger.log(`============ENV: ${this.env} ============`);
             Logger.log(`🚀 App listening on the port ${this.port}`);
-            Logger.log(`=================================`);
+            Logger.log(`=========================================`);
         });
     }
 
@@ -62,8 +65,21 @@ class App {
     }
 
     private async initializeStorage() {
-        const ogmiosService = new OgmiosService();
-        await ogmiosService.startSync();
+        const startOgmios = async () => {
+            try {
+                const ogmiosService = new OgmiosService();
+                await ogmiosService.startSync();
+                clearInterval(interval);
+            } catch (error: any) {
+                writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`)
+            }
+        };
+
+        const interval = setInterval(async () => {
+            await startOgmios();
+        }, 30000);
+
+        await startOgmios();
     }
 
     private async initializeMockStorage() {
@@ -74,7 +90,7 @@ class App {
     private async initializeSwagger() {
         var options = {
             customCss: '.swagger-ui .topbar { display: none }',
-            customSiteTitle: 'New Title',
+            customSiteTitle: 'Handle API',
             customfavIcon: '/assets/favicon.ico'
         };
 

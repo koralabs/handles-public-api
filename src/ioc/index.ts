@@ -1,3 +1,4 @@
+import MemoryApiKeysRepository from '../repositories/memory/apiKeys.repository';
 import MemoryHandlesRepository from '../repositories/memory/handles.repository';
 
 export enum RepoName {
@@ -9,5 +10,5 @@ export interface IRegistry extends Record<keyof typeof RepoName, any> {}
 
 export const registry: IRegistry = {
     [RepoName.handlesRepo]: MemoryHandlesRepository,
-    [RepoName.apiKeysRepo]: {}
+    [RepoName.apiKeysRepo]: MemoryApiKeysRepository
 };

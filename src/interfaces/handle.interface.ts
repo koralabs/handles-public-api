@@ -42,4 +42,7 @@ export interface IHandleStats {
     memorySize: number;
     ogmiosElapsed: string;
     buildingElapsed: string;
+    slotDate: Date;
+    currentSlot: number;
+    currentBlockHash: string
 }

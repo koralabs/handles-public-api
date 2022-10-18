@@ -36,24 +36,28 @@ afterAll(async () => {
 });
 
 describe('Testing Handles Routes', () => {
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+    
     describe('[GET] /handles', () => {
-        // it('should throw error if api-key header is not available', async () => {
-        //     const handlesRoute = new HandlesRoute();
-        //     const app = new App([handlesRoute]);
+        it('should throw error if api-key header is not available', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
 
-        //     const response = await request(app.getServer()).get('/handles');
-        //     expect(response.status).toEqual(404);
-        //     expect(response.body.message).toEqual('Missing api-key');
-        // });
+            const response = await request(app.getServer()).get('/handles');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Missing api-key');
+        });
 
-        // it('should throw error if api-key is invalid', async () => {
-        //     const handlesRoute = new HandlesRoute();
-        //     const app = new App([handlesRoute]);
+        it('should throw error if api-key is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
 
-        //     const response = await request(app.getServer()).get('/handles').set('api-key', 'fake-key-1');
-        //     expect(response.status).toEqual(401);
-        //     expect(response.body.message).toEqual('Wrong authentication token');
-        // });
+            const response = await request(app.getServer()).get('/handles').set('api-key', 'fake-key-1');
+            expect(response.status).toEqual(401);
+            expect(response.body.message).toEqual('Wrong authentication token');
+        });
 
         it('should throw error if limit is invalid', async () => {
             const handlesRoute = new HandlesRoute();
@@ -88,23 +92,23 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /handles/:handle', () => {
-        // it('should throw error if api-key header is not available', async () => {
-        //     const handlesRoute = new HandlesRoute();
-        //     const app = new App([handlesRoute]);
+        it('should throw error if api-key header is not available', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
 
-        //     const response = await request(app.getServer()).get('/handles/burritos');
-        //     expect(response.status).toEqual(404);
-        //     expect(response.body.message).toEqual('Missing api-key');
-        // });
+            const response = await request(app.getServer()).get('/handles/burritos');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Missing api-key');
+        });
 
-        // it('should throw error if api-key is invalid', async () => {
-        //     const handlesRoute = new HandlesRoute();
-        //     const app = new App([handlesRoute]);
+        it('should throw error if api-key is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
 
-        //     const response = await request(app.getServer()).get('/handles/burritos').set('api-key', 'fake-key-1');
-        //     expect(response.status).toEqual(401);
-        //     expect(response.body.message).toEqual('Wrong authentication token');
-        // });
+            const response = await request(app.getServer()).get('/handles/burritos').set('api-key', 'fake-key-1');
+            expect(response.status).toEqual(401);
+            expect(response.body.message).toEqual('Wrong authentication token');
+        });
 
         it('should throw error if handle does not exist', async () => {
             const handlesRoute = new HandlesRoute();
