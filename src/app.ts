@@ -6,7 +6,7 @@ import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { Logger } from './utils/logger';
+import { LogCategory, Logger } from './utils/logger';
 import swaggerDoc from './swagger/swagger.json';
 
 class App {
@@ -33,10 +33,10 @@ class App {
 
     public listen() {
         this.app.listen(this.port, () => {
-            Logger.log(`=================================`);
-            Logger.log(`======= ENV: ${this.env} =======`);
+            Logger.log(`=========================================`);
+            Logger.log(`============ENV: ${this.env} ============`);
             Logger.log(`🚀 App listening on the port ${this.port}`);
-            Logger.log(`=================================`);
+            Logger.log(`=========================================`);
         });
     }
 
@@ -62,8 +62,22 @@ class App {
     }
 
     private async initializeStorage() {
-        const ogmiosService = new OgmiosService();
-        await ogmiosService.startSync();
+        const startOgmios = async () => {
+            Logger.log('Trying to start Ogmios');
+            try {
+                const ogmiosService = new OgmiosService();
+                await ogmiosService.startSync();
+                clearInterval(interval);
+            } catch (error: any) {
+                Logger.log(error.message, LogCategory.ERROR);
+            }
+        };
+
+        const interval = setInterval(async () => {
+            await startOgmios();
+        }, 30000);
+
+        await startOgmios();
     }
 
     private async initializeMockStorage() {
@@ -74,7 +88,7 @@ class App {
     private async initializeSwagger() {
         var options = {
             customCss: '.swagger-ui .topbar { display: none }',
-            customSiteTitle: 'New Title',
+            customSiteTitle: 'Handle API',
             customfavIcon: '/assets/favicon.ico'
         };
 

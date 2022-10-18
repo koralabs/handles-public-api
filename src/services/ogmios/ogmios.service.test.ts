@@ -28,7 +28,10 @@ describe('Ogmios Service Tests', () => {
                 currentMemoryUsed: 0,
                 memorySize: 0,
                 buildingElapsed: '',
-                ogmiosElapsed: ''
+                ogmiosElapsed: '',
+                slotDate: new Date(),
+                currentSlot: 0,
+                currentBlockHash: ''
             });
             const ogmiosService = new OgmiosService();
             await ogmiosService.startSync();

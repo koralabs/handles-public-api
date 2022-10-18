@@ -92,7 +92,8 @@ export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txB
 
     // finish timer for our logs
     const buildingExecFinished = Date.now() - startBuildingExec;
+    const { elapsedBuildingExec } = HandleStore.getTimeMetrics()
     HandleStore.setMetrics({
-        elapsedOgmiosExec: (HandleStore.metrics.elapsedBuildingExec ?? 0) + buildingExecFinished
+        elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished
     });
 };

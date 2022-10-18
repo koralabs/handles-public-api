@@ -109,12 +109,13 @@ describe('processBlock Tests', () => {
     it('Should save a new handle to the datastore and set metrics', async () => {
         const saveSpy = jest.spyOn(HandleStore, 'save');
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 })
 
         processBlock({ policyId, txBlock: txBlock({}), tip });
 
         expect(saveSpy).toHaveBeenCalledWith(hexName, expectedItem);
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, { currentBlockHash: 'some_hash', currentSlot: 0, lastSlot: 0 });
-        expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedOgmiosExec: expect.any(Number) });
+        expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
     });
 
     it('Should not save a new handle because it already exists in store', () => {
