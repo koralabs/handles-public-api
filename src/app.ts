@@ -6,18 +6,21 @@ import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { LogCategory, Logger } from './utils/logger';
+import { Logger } from './utils/logger';
 import swaggerDoc from './swagger/swagger.json';
+import { writeConsoleLine } from './utils/util';
 
 class App {
     public app: express.Application;
     public env: string;
     public port: string | number;
+    public startTimer: number;
 
     constructor(routes: Routes[]) {
         this.app = express();
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
+        this.startTimer = Date.now();
 
         this.initializeMiddleware();
         this.initializeRoutes(routes);
@@ -63,13 +66,12 @@ class App {
 
     private async initializeStorage() {
         const startOgmios = async () => {
-            Logger.log('Trying to start Ogmios');
             try {
                 const ogmiosService = new OgmiosService();
                 await ogmiosService.startSync();
                 clearInterval(interval);
             } catch (error: any) {
-                Logger.log(error.message, LogCategory.ERROR);
+                writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`)
             }
         };
 

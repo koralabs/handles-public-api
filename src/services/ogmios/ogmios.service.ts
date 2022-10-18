@@ -6,13 +6,17 @@ import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
 
-const firstMemoryUsage = process.memoryUsage().rss;
-const startTime = new Date().getTime();
-
 let startOgmiosExec = 0;
 
 class OgmiosService {
     private intervals: NodeJS.Timer[] = [];
+    private startTime: number;
+    private firstMemoryUsage: number;
+
+    constructor() {
+        this.startTime = Date.now();
+        this.firstMemoryUsage = process.memoryUsage().rss;
+    }
 
     private async rollForward(
         response: {
@@ -47,7 +51,7 @@ class OgmiosService {
                 HandleStore.getMetrics();
 
             writeConsoleLine(
-                startTime,
+                this.startTime,
                 `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${HandleStore.count()} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
             );
         }, 1000);
@@ -87,7 +91,7 @@ class OgmiosService {
     public async startSync() {
         HandleStore.setMetrics({ 
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
-            firstMemoryUsage
+            firstMemoryUsage: this.firstMemoryUsage
          })
 
         const context: InteractionContext = await createInteractionContext(
