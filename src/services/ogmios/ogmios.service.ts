@@ -9,11 +9,11 @@ import { processBlock } from './processBlock';
 const firstMemoryUsage = process.memoryUsage().rss;
 const startTime = new Date().getTime();
 
-// TODO: !Figure out how to Handle rollbacks!
-
 let startOgmiosExec = 0;
 
 class OgmiosService {
+    private intervals: NodeJS.Timer[] = [];
+
     private async rollForward(
         response: {
             block: unknown;
@@ -36,12 +36,13 @@ class OgmiosService {
     }
 
     private async rollBackward(response: { point: unknown }, requestNext: () => void): Promise<void> {
+        // TODO: Figure out how to Handle rollbacks!
         Logger.log(`ROLLBACK POINT: ${JSON.stringify(response.point)}`);
         requestNext();
     }
 
     private startIntervals() {
-        setInterval(() => {
+        const metricsInterval = setInterval(() => {
             const { percentageComplete, currentMemoryUsed, memorySize, buildingElapsed, ogmiosElapsed, slotDate } =
                 HandleStore.getMetrics();
 
@@ -51,11 +52,13 @@ class OgmiosService {
             );
         }, 1000);
 
-        setInterval(() => {
+        const saveFileInterval = setInterval(() => {
             const { currentSlot, currentBlockHash } =
                 HandleStore.getMetrics();
             HandleStore.saveFile(currentSlot, currentBlockHash);
         }, 30000);
+
+        this.intervals = [metricsInterval, saveFileInterval];
     }
 
     private getStartingPoint(): Point {
@@ -89,7 +92,10 @@ class OgmiosService {
 
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
-            () => Logger.log('Connection closed.'),
+            () => {
+                this.intervals.map(i => clearInterval(i))
+                Logger.log('Connection closed.')
+            },
             { connection: { port: 1337 } }
         );
 
