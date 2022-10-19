@@ -1,4 +1,5 @@
 import { OGMIOS_ENDPOINT } from '../../config';
+import fetch from 'cross-fetch';
 import { Rarity } from '../../interfaces/handle.interface';
 import { HandleOnChainData } from '../../interfaces/ogmios.interfaces';
 import { LogCategory, Logger } from '../../utils/logger';

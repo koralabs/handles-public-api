@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { IHandle, IHandleStats } from '../../interfaces/handle.interface';
 import { getRarity } from '../../services/ogmios/utils';
+import { LogCategory, Logger } from '../../utils/logger';
 import { getElapsedTime } from '../../utils/util';
 
 interface HandleStoreMetrics {
@@ -105,7 +106,8 @@ export class HandleStore {
 
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+
+        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -157,15 +159,18 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.handles)
         };
 
-        fs.writeFile(
-            'handle-storage.json',
-            JSON.stringify({
-                slot,
-                hash,
-                handles
-            }),
-            () => {}
-        );
+        try {
+            fs.writeFileSync(
+                'storage/handles.json',
+                JSON.stringify({
+                    slot,
+                    hash,
+                    handles
+                })
+            );
+        } catch (error: any) {
+            Logger.log(`Error writing file: ${error.message}`, LogCategory.ERROR);
+        }
     }
 
     static getFile(): string | null {
