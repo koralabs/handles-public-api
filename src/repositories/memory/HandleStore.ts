@@ -30,6 +30,7 @@ export class HandleStore {
         firstMemoryUsage: 0,
         currentBlockHash: ''
     };
+    static storagePath = 'storage/handles.json';
 
     static get = (key: string) => {
         return this.handles.get(key);
@@ -161,7 +162,7 @@ export class HandleStore {
 
         try {
             fs.writeFileSync(
-                'storage/handles.json',
+                this.storagePath,
                 JSON.stringify({
                     slot,
                     hash,
@@ -175,7 +176,7 @@ export class HandleStore {
 
     static getFile(): string | null {
         try {
-            return fs.readFileSync('handle-storage.json', { encoding: 'utf8' });
+            return fs.readFileSync(this.storagePath, { encoding: 'utf8' });
         } catch (error: any) {
             if (error.code === 'ENOENT') {
                 return null;

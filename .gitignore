@@ -105,3 +105,4 @@ dist
 .env
 
 handle-storage.json
+storage/handles.json
