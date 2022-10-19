@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { IHandle, IHandleStats } from '../../interfaces/handle.interface';
 import { getRarity } from '../../services/ogmios/utils';
+import { LogCategory, Logger } from '../../utils/logger';
 import { getElapsedTime } from '../../utils/util';
 
 interface HandleStoreMetrics {
@@ -29,6 +30,7 @@ export class HandleStore {
         firstMemoryUsage: 0,
         currentBlockHash: ''
     };
+    static storagePath = 'storage/handles.json';
 
     static get = (key: string) => {
         return this.handles.get(key);
@@ -105,7 +107,8 @@ export class HandleStore {
 
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+
+        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -157,20 +160,23 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.handles)
         };
 
-        fs.writeFile(
-            'handle-storage.json',
-            JSON.stringify({
-                slot,
-                hash,
-                handles
-            }),
-            () => {}
-        );
+        try {
+            fs.writeFileSync(
+                this.storagePath,
+                JSON.stringify({
+                    slot,
+                    hash,
+                    handles
+                })
+            );
+        } catch (error: any) {
+            Logger.log(`Error writing file: ${error.message}`, LogCategory.ERROR);
+        }
     }
 
     static getFile(): string | null {
         try {
-            return fs.readFileSync('handle-storage.json', { encoding: 'utf8' });
+            return fs.readFileSync(this.storagePath, { encoding: 'utf8' });
         } catch (error: any) {
             if (error.code === 'ENOENT') {
                 return null;
