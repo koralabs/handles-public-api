@@ -1,5 +1,11 @@
 import { IHandle } from '../../interfaces/handle.interface';
-import { BlockTip, HandleOnChainData, HandleOnChainMetadata, TxBlock } from '../../interfaces/ogmios.interfaces';
+import {
+    BlockTip,
+    HandleOnChainData,
+    HandleOnChainMetadata,
+    TxBlock,
+    TxBlockBody
+} from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import {
     buildCharacters,
@@ -19,7 +25,7 @@ export const buildHandle = ({
     hexName: string;
     name: string;
     adaAddress: string;
-    data: HandleOnChainMetadata | null
+    data: HandleOnChainMetadata | null;
 }) => {
     // If there is already a handle in the map, we just need to update the address and add it back to the list
     const existingHandle = HandleStore.get(hexName);
@@ -54,45 +60,47 @@ export const buildHandle = ({
 export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
     const startBuildingExec = Date.now();
 
-    if (txBlock.shelley || txBlock.alonzo) {
-        const blockType = txBlock.alonzo ?? txBlock.shelley;
-        const lastSlot = tip.slot;
-        const currentSlot = blockType?.header?.slot ?? 0;
-        const currentBlockHash = blockType?.headerHash ?? '';
+    const blockType = txBlock[Object.keys(txBlock)[0] as 'alonzo' | 'shelley' | 'babbage'] as TxBlockBody;
 
-        HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
+    const lastSlot = tip.slot;
+    const currentSlot = blockType?.header?.slot ?? 0;
+    const currentBlockHash = blockType?.headerHash ?? '';
 
-        blockType?.body.forEach((blockBody) => {
-            // get metadata so we can use it later when we need to get OG data.
-            const handleMetadata =
-                blockBody.metadata?.body?.blob?.[721]?.map?.[0]?.k?.string === policyId
-                    ? buildHandleMetadata(blockBody.metadata?.body?.blob)
-                    : null;
+    HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
 
-            blockBody.body.outputs
-                .filter((o) => Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId)))
-                .forEach((output) => {
-                    Object.keys(output.value.assets ?? {})
-                        .filter((a) => a.startsWith(policyId))
-                        .forEach((policyIdDotHexName) => {
-                            const hexName = policyIdDotHexName?.split('.')[1];
-                            if (!hexName) {
-                                console.log(`unable to decode ${hexName}`, stringifyBlock(output));
-                                return;
-                            }
+    blockType?.body.forEach((blockBody) => {
+        // get metadata so we can use it later when we need to get OG data.
+        const handleMetadata =
+            blockBody.metadata?.body?.blob?.[721]?.map?.[0]?.k?.string === policyId
+                ? buildHandleMetadata(blockBody.metadata?.body?.blob)
+                : null;
 
-                            const name = hex2String(hexName);
-                            const data = blockBody.body.mint?.assets?.[policyIdDotHexName] && handleMetadata ? handleMetadata[policyId][name] : null;
+        blockBody.body.outputs
+            .filter((o) => Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId)))
+            .forEach((output) => {
+                Object.keys(output.value.assets ?? {})
+                    .filter((a) => a.startsWith(policyId))
+                    .forEach((policyIdDotHexName) => {
+                        const hexName = policyIdDotHexName?.split('.')[1];
+                        if (!hexName) {
+                            console.log(`unable to decode ${hexName}`, stringifyBlock(output));
+                            return;
+                        }
 
-                            buildHandle({ hexName, name, adaAddress: output.address, data });
-                        });
-                });
-        });
-    }
+                        const name = hex2String(hexName);
+                        const data =
+                            blockBody.body.mint?.assets?.[policyIdDotHexName] && handleMetadata
+                                ? handleMetadata[policyId][name]
+                                : null;
+
+                        buildHandle({ hexName, name, adaAddress: output.address, data });
+                    });
+            });
+    });
 
     // finish timer for our logs
     const buildingExecFinished = Date.now() - startBuildingExec;
-    const { elapsedBuildingExec } = HandleStore.getTimeMetrics()
+    const { elapsedBuildingExec } = HandleStore.getTimeMetrics();
     HandleStore.setMetrics({
         elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished
     });

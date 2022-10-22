@@ -78,4 +78,5 @@ export interface TxBlockBody {
 export interface TxBlock {
     shelley?: TxBlockBody;
     alonzo?: TxBlockBody;
+    babbage?: TxBlock;
 }
