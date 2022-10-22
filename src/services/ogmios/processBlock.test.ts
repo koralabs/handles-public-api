@@ -57,8 +57,8 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name}) => ({
-        shelley: {
+    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name }) => ({
+        babbage: {
             body: [
                 {
                     id: 'some_id',
@@ -109,12 +109,16 @@ describe('processBlock Tests', () => {
     it('Should save a new handle to the datastore and set metrics', async () => {
         const saveSpy = jest.spyOn(HandleStore, 'save');
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 })
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        processBlock({ policyId, txBlock: txBlock({}), tip });
+        processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledWith(hexName, expectedItem);
-        expect(setMetricsSpy).toHaveBeenNthCalledWith(1, { currentBlockHash: 'some_hash', currentSlot: 0, lastSlot: 0 });
+        expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
+            currentBlockHash: 'some_hash',
+            currentSlot: 0,
+            lastSlot: 0
+        });
         expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
     });
 
@@ -124,7 +128,7 @@ describe('processBlock Tests', () => {
 
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
-        processBlock({ policyId, txBlock: txBlock({address: newAddress}), tip });
+        processBlock({ policyId, txBlock: txBlock({ address: newAddress }) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledWith(hexName, { ...expectedItem, resolved_addresses: { ada: newAddress } });
     });
@@ -132,8 +136,8 @@ describe('processBlock Tests', () => {
     it('Should not save anything is policyId does not match', () => {
         const saveSpy = jest.spyOn(HandleStore, 'save');
 
-        processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
+        processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledTimes(0);
-    })
+    });
 });
