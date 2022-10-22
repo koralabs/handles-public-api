@@ -1,5 +1,5 @@
 FROM cardano-node-ogmios-nodejs:latest as handles-public-api
-
+STOPSIGNAL SIGINT
 WORKDIR /app
 ADD ./dist/ ./
 ADD entrypoint.sh README.md LICENSE ./
