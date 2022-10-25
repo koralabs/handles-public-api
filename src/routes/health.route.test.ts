@@ -34,6 +34,7 @@ describe('Health Routes Test', () => {
                     currentMemoryUsed: expect.any(Number),
                     currentSlot: expect.any(Number),
                     memorySize: expect.any(Number),
+                    handleCount: expect.any(Number),
                     ogmiosElapsed: expect.any(String),
                     percentageComplete: expect.any(String),
                     slotDate: expect.any(String)

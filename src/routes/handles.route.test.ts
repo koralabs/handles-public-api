@@ -39,7 +39,7 @@ describe('Testing Handles Routes', () => {
     afterEach(() => {
         jest.clearAllMocks();
     });
-    
+
     describe('[GET] /handles', () => {
         it('should throw error if api-key header is not available', async () => {
             const handlesRoute = new HandlesRoute();
@@ -87,7 +87,7 @@ describe('Testing Handles Routes', () => {
                 .get('/handles?limit=1&sort=asc')
                 .set('api-key', 'valid-key');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ data: [{ handle: 'burritos' }] });
+            expect(response.body).toEqual([{ handle: 'burritos' }]);
         });
     });
 
@@ -125,7 +125,7 @@ describe('Testing Handles Routes', () => {
 
             const response = await request(app.getServer()).get('/handles/burritos').set('api-key', 'valid-key');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ data: { handle: 'burritos' } });
+            expect(response.body).toEqual({ handle: 'burritos' });
         });
     });
 });
