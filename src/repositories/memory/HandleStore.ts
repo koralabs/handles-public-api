@@ -12,6 +12,7 @@ interface HandleStoreMetrics {
     elapsedBuildingExec?: number;
     firstMemoryUsage?: number;
     currentBlockHash?: string;
+    memorySize?: number;
 }
 
 export class HandleStore {
@@ -28,7 +29,8 @@ export class HandleStore {
         elapsedOgmiosExec: 0,
         elapsedBuildingExec: 0,
         firstMemoryUsage: 0,
-        currentBlockHash: ''
+        currentBlockHash: '',
+        memorySize: 0
     };
     static storagePath = 'storage/handles.json';
 
@@ -91,7 +93,7 @@ export class HandleStore {
         return {
             elapsedOgmiosExec,
             elapsedBuildingExec
-        }
+        };
     }
 
     static getMetrics(): IHandleStats {
@@ -102,31 +104,31 @@ export class HandleStore {
             firstMemoryUsage = 0,
             elapsedOgmiosExec = 0,
             elapsedBuildingExec = 0,
-            currentBlockHash = ''
+            currentBlockHash = '',
+            memorySize = 0
         } = this.metrics;
 
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
 
-        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete =
+            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
 
-        const memorySize = this.memorySize();
-
         const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);
         const buildingElapsed = getElapsedTime(elapsedBuildingExec);
 
-        const slotDate = new Date((1596491091 + (currentSlot - 4924800)) * 1000)
+        const slotDate = new Date((1596491091 + (currentSlot - 4924800)) * 1000);
 
         return {
             percentageComplete,
             currentMemoryUsed,
-            memorySize,
             ogmiosElapsed,
             buildingElapsed,
             slotDate,
+            memorySize,
             currentSlot,
             currentBlockHash
         };

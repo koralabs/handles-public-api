@@ -28,8 +28,8 @@ class OgmiosService {
         // finish timer for ogmios rollForward
         const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
 
-        const { elapsedOgmiosExec } = HandleStore.getTimeMetrics()
-        HandleStore.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished  });
+        const { elapsedOgmiosExec } = HandleStore.getTimeMetrics();
+        HandleStore.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
         const policyId = POLICY_IDS[process.env.NETWORK ?? 'testnet'][0];
         processBlock({ policyId, txBlock: response.block as TxBlock, tip: response.tip as BlockTip });
@@ -47,7 +47,7 @@ class OgmiosService {
 
     private startIntervals() {
         const metricsInterval = setInterval(() => {
-            const { percentageComplete, currentMemoryUsed, memorySize, buildingElapsed, ogmiosElapsed, slotDate } =
+            const { percentageComplete, currentMemoryUsed, buildingElapsed, memorySize, ogmiosElapsed, slotDate } =
                 HandleStore.getMetrics();
 
             writeConsoleLine(
@@ -57,12 +57,16 @@ class OgmiosService {
         }, 1000);
 
         const saveFileInterval = setInterval(() => {
-            const { currentSlot, currentBlockHash } =
-                HandleStore.getMetrics();
+            const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
             HandleStore.saveFile(currentSlot, currentBlockHash);
         }, 30000);
 
-        this.intervals = [metricsInterval, saveFileInterval];
+        const setMemoryInterval = setInterval(() => {
+            const memorySize = HandleStore.memorySize();
+            HandleStore.setMetrics({ memorySize });
+        }, 60000);
+
+        this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
     }
 
     private getStartingPoint(): Point {
@@ -89,16 +93,16 @@ class OgmiosService {
     }
 
     public async startSync() {
-        HandleStore.setMetrics({ 
+        HandleStore.setMetrics({
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             firstMemoryUsage: this.firstMemoryUsage
-         })
+        });
 
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
             () => {
-                this.intervals.map(i => clearInterval(i))
-                Logger.log('Connection closed.')
+                this.intervals.map((i) => clearInterval(i));
+                Logger.log('Connection closed.');
             },
             { connection: { port: 1337 } }
         );
