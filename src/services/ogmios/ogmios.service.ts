@@ -47,7 +47,7 @@ class OgmiosService {
 
     private startIntervals() {
         const metricsInterval = setInterval(() => {
-            const { percentageComplete, currentMemoryUsed, memorySize, buildingElapsed, ogmiosElapsed, slotDate } =
+            const { percentageComplete, currentMemoryUsed, buildingElapsed, memorySize, ogmiosElapsed, slotDate } =
                 HandleStore.getMetrics();
 
             writeConsoleLine(
@@ -61,7 +61,12 @@ class OgmiosService {
             HandleStore.saveFile(currentSlot, currentBlockHash);
         }, 30000);
 
-        this.intervals = [metricsInterval, saveFileInterval];
+        const setMemoryInterval = setInterval(() => {
+            const memorySize = HandleStore.memorySize();
+            HandleStore.setMetrics({ memorySize });
+        }, 60000);
+
+        this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
     }
 
     private getStartingPoint(): Point {

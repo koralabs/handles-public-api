@@ -39,10 +39,10 @@ export interface IGetAllHandlesResults {
 export interface IHandleStats {
     percentageComplete: string;
     currentMemoryUsed: number;
-    memorySize: number;
     ogmiosElapsed: string;
     buildingElapsed: string;
     slotDate: Date;
+    memorySize: number;
     currentSlot: number;
-    currentBlockHash: string
+    currentBlockHash: string;
 }
