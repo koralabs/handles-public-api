@@ -26,6 +26,16 @@ export interface IHandle {
     personalization: Record<string, unknown>;
 }
 
+export interface IGetAllQueryParams {
+    limit?: string;
+    cursor?: string;
+    sort?: 'asc' | 'desc';
+    characters?: string;
+    length?: string;
+    rarity?: string;
+    numeric_modifiers?: string;
+}
+
 export interface IGetHandleRequest {
     registry: IRegistry;
     handle: string;
@@ -33,6 +43,7 @@ export interface IGetHandleRequest {
 
 export interface IGetAllHandlesResults {
     handles: IHandle[];
+    total: number;
     cursor?: string;
 }
 
@@ -41,6 +52,7 @@ export interface IHandleStats {
     currentMemoryUsed: number;
     ogmiosElapsed: string;
     buildingElapsed: string;
+    handleCount: number;
     slotDate: Date;
     memorySize: number;
     currentSlot: number;
