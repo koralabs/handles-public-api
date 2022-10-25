@@ -25,8 +25,6 @@ WORKDIR /app
 ADD ./dist/ ./
 ADD entrypoint-ogmios.sh ./entrypoint.sh
 
-SHELL ["/bin/bash", "-c"]
-
 RUN chmod +x entrypoint.sh
 
 EXPOSE 3141
