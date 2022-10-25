@@ -2,7 +2,7 @@
 # ------------------------- WITH CARDANO-NODE  ------------------------------- #
 #                                                                              #
 
-FROM cardano-node-ogmios-nodejs:latest-${CARDANO_NETWORK} as handles-api
+FROM cardano-node-ogmios-nodejs:latest as handles-api
 WORKDIR /app
 ADD ./dist/ ./
 ADD entrypoint-node.sh ./entrypoint.sh
@@ -20,7 +20,7 @@ ENTRYPOINT [ "/app/entrypoint.sh" ]
 # ---------------------------- OGMIOS ONLY  ---------------------------------- #
 #                                                                              #
 
-FROM ogmios-nodejs:latest-${CARDANO_NETWORK} as handles-api-ogmios-only
+FROM ogmios-nodejs:latest as handles-api-ogmios-only
 WORKDIR /app
 ADD ./dist/ ./
 ADD entrypoint-ogmios.sh ./entrypoint.sh
