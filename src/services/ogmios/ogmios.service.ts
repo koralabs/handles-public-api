@@ -47,12 +47,19 @@ class OgmiosService {
 
     private startIntervals() {
         const metricsInterval = setInterval(() => {
-            const { percentageComplete, currentMemoryUsed, buildingElapsed, memorySize, ogmiosElapsed, slotDate } =
-                HandleStore.getMetrics();
+            const {
+                percentageComplete,
+                currentMemoryUsed,
+                buildingElapsed,
+                memorySize,
+                handleCount,
+                ogmiosElapsed,
+                slotDate
+            } = HandleStore.getMetrics();
 
             writeConsoleLine(
                 this.startTime,
-                `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${HandleStore.count()} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
+                `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
             );
         }, 1000);
 
@@ -77,7 +84,7 @@ class OgmiosService {
 
             Object.keys(handles ?? {}).forEach((k) => {
                 const handle = handles[k];
-                HandleStore.save(handle.hex, handle);
+                HandleStore.save(handle);
             });
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${

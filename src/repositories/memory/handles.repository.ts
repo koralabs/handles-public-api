@@ -2,40 +2,78 @@ import { HttpException } from '../../exceptions/HttpException';
 
 import { IGetAllHandlesResults, IHandle, IHandleStats } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
+import { HandleSearchModel } from '../../models/HandleSearch.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
-    public async getAll(pagination: HandlePaginationModel): Promise<IGetAllHandlesResults> {
+    public async getAll({
+        pagination,
+        search
+    }: {
+        pagination: HandlePaginationModel;
+        search: HandleSearchModel;
+    }): Promise<IGetAllHandlesResults> {
         const { cursor, sort } = pagination;
         const limitNumber = pagination.getLimitNumber();
 
-        const array = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+        const { characters, length, rarity, numeric_modifiers } = search;
+
+        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
+            Array.from(index.get(key ?? '') ?? [], (value) => value);
+
+        const characterArray = getHashes(HandleStore.charactersIndex, characters);
+        const lengthArray = getHashes(HandleStore.lengthIndex, length);
+        const rarityArray = getHashes(HandleStore.rarityIndex, rarity);
+        const numericModifiersArray = getHashes(HandleStore.numericModifiersIndex, numeric_modifiers);
+
+        const filteredArrays = [characterArray, lengthArray, rarityArray, numericModifiersArray].filter(
+            (a) => a.length
+        );
+
+        const handleHexes = filteredArrays.length
+            ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c)))
+            : [];
+
+        const uniqueHexes = [...new Set(handleHexes)];
+
+        const array =
+            characters || length || rarity || numeric_modifiers
+                ? uniqueHexes.reduce<IHandle[]>((agg, hex) => {
+                      const handle = HandleStore.handles.get(hex);
+                      if (handle) agg.push(handle);
+                      return agg;
+                  }, [])
+                : Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+
         array.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
 
         const nameIndex = cursor ? array.findIndex((a) => a.hex === cursor) : 0;
         const handles = array.slice(nameIndex, nameIndex + limitNumber);
         const nextCursor = array[nameIndex + limitNumber]?.hex;
 
+        const result = {
+            total: array.length,
+            handles
+        };
+
         if (nextCursor) {
             return {
-                cursor: nextCursor,
-                handles
+                ...result,
+                cursor: nextCursor
             };
         }
 
-        return {
-            handles
-        };
+        return result;
     }
 
     public async getAllHandleNames() {
-        const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+        const handles = HandleStore.getHandles();
         return handles.map((handle) => handle.name);
     }
 
     public async getHandleByName(handleName: string): Promise<IHandle> {
-        const handleHex = HandleStore.nameIndex.get(handleName);
+        const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
             if (handle) return handle;
@@ -46,7 +84,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
-    };
+    }
 }
 
 export default MemoryHandlesRepository;

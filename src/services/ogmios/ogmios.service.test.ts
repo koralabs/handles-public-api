@@ -30,6 +30,7 @@ describe('Ogmios Service Tests', () => {
                 buildingElapsed: '',
                 ogmiosElapsed: '',
                 slotDate: new Date(),
+                handleCount: 0,
                 currentSlot: 0,
                 currentBlockHash: ''
             });

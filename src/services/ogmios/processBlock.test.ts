@@ -113,7 +113,7 @@ describe('processBlock Tests', () => {
 
         processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith(hexName, expectedItem);
+        expect(saveSpy).toHaveBeenCalledWith(expectedItem);
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
             currentBlockHash: 'some_hash',
             currentSlot: 0,
@@ -130,7 +130,7 @@ describe('processBlock Tests', () => {
 
         processBlock({ policyId, txBlock: txBlock({ address: newAddress }) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith(hexName, { ...expectedItem, resolved_addresses: { ada: newAddress } });
+        expect(saveSpy).toHaveBeenCalledWith({ ...expectedItem, resolved_addresses: { ada: newAddress } });
     });
 
     it('Should not save anything is policyId does not match', () => {

@@ -59,7 +59,7 @@
                         }
                     },
                     {
-                        "name": "numericmodifiers",
+                        "name": "numeric_modifiers",
                         "in": "query",
                         "required": false,
                         "schema": {

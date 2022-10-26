@@ -22,6 +22,7 @@ export class HandleStore {
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
+    static lengthIndex = new Map<string, Set<string>>();
     static metrics: HandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -42,26 +43,35 @@ export class HandleStore {
         return this.handles.size;
     };
 
+    static getHandles = () => {
+        return Array.from(this.handles, ([_, value]) => ({ ...value } as IHandle));
+    };
+
+    static getFromNameIndex = (name: string) => {
+        return this.nameIndex.get(name);
+    };
+
     static addIndexSet = (indexSet: Map<string, Set<string>>, indexKey: string, hexName: string) => {
         const set = indexSet.get(indexKey) ?? new Set();
         set.add(hexName);
         indexSet.set(indexKey, set);
     };
 
-    static save = (key: string, handle: IHandle) => {
-        const { name, rarity, og, characters, numeric_modifiers } = handle;
+    static save = (handle: IHandle) => {
+        const { name, rarity, og, characters, numeric_modifiers, length, hex } = handle;
 
         // Set the main index
-        this.handles.set(key, handle);
+        this.handles.set(hex, handle);
 
         // set all one-to-one indexes
-        this.nameIndex.set(name, key);
+        this.nameIndex.set(name, hex);
 
         // set all one-to-many indexes
-        this.addIndexSet(this.rarityIndex, rarity, key);
-        this.addIndexSet(this.ogIndex, `${og}`, key);
-        this.addIndexSet(this.charactersIndex, characters, key);
-        this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, key);
+        this.addIndexSet(this.rarityIndex, rarity, hex);
+        this.addIndexSet(this.ogIndex, `${og}`, hex);
+        this.addIndexSet(this.charactersIndex, characters, hex);
+        this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
+        this.addIndexSet(this.lengthIndex, `${length}`, hex);
     };
 
     static convertMapsToObjects = (mapInstance: Map<string, any>) => {
@@ -77,6 +87,7 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.nameIndex),
             ...this.convertMapsToObjects(this.rarityIndex),
             ...this.convertMapsToObjects(this.ogIndex),
+            ...this.convertMapsToObjects(this.lengthIndex),
             ...this.convertMapsToObjects(this.charactersIndex),
             ...this.convertMapsToObjects(this.numericModifiersIndex)
         };
@@ -111,6 +122,8 @@ export class HandleStore {
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
 
+        const handleCount = this.count();
+
         const percentageComplete =
             currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
@@ -128,6 +141,7 @@ export class HandleStore {
             ogmiosElapsed,
             buildingElapsed,
             slotDate,
+            handleCount,
             memorySize,
             currentSlot,
             currentBlockHash
@@ -137,9 +151,11 @@ export class HandleStore {
     static buildStorage() {
         // used to quickly build a large datastore
         Array.from(Array(1000000).keys()).forEach((number) => {
+            const hex = `hash-${number}`;
+            const name = `${number}`.padStart(8, 'a');
             const handle: IHandle = {
-                hex: `hash-${number}`,
-                name: `${number}`.padStart(8, 'a'),
+                hex,
+                name,
                 nft_image: `QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW`,
                 original_nft_image: `QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW`,
                 length: `${number}`.length,
@@ -153,7 +169,7 @@ export class HandleStore {
                 personalization: {}
             };
 
-            this.save(`hash-${number}`, handle);
+            this.save(handle);
         });
     }
 

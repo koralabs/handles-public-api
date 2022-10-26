@@ -31,7 +31,7 @@ export const buildHandle = ({
     const existingHandle = HandleStore.get(hexName);
     if (existingHandle) {
         existingHandle.resolved_addresses.ada = adaAddress;
-        HandleStore.save(hexName, existingHandle);
+        HandleStore.save(existingHandle);
         return;
     }
 
@@ -54,7 +54,7 @@ export const buildHandle = ({
         original_nft_image: data?.image ?? ''
     };
 
-    HandleStore.save(hexName, newHandle);
+    HandleStore.save(newHandle);
 };
 
 export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
