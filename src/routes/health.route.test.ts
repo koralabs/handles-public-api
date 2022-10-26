@@ -1,12 +1,54 @@
 import request from 'supertest';
 import HealthRoutes from './health.route';
 import App from '../app';
-import { setupRegistryMocks } from '../utils/tests/ioc.mock';
 import * as ogmiosUtils from '../services/ogmios/utils';
+import { HttpException } from '../exceptions/HttpException';
+import { IHandleStats } from '../interfaces/handle.interface';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-setupRegistryMocks();
+jest.mock('../ioc', () => ({
+    registry: {
+        ['handlesRepo']: jest.fn().mockReturnValue({
+            getHandleByName: (handleName: string) => {
+                if (handleName === 'nope') {
+                    throw new HttpException(404, 'Not found');
+                }
+
+                return {
+                    handle: handleName
+                };
+            },
+            getAll: () => {
+                return [
+                    {
+                        handle: 'burritos'
+                    }
+                ];
+            },
+            getAllHandleNames: () => {
+                return ['burritos', 'tacos', 'barbacoa'];
+            },
+            getHandleStats: () => {
+                const stats: IHandleStats = {
+                    percentageComplete: '',
+                    currentMemoryUsed: 0,
+                    memorySize: 0,
+                    ogmiosElapsed: '',
+                    buildingElapsed: '',
+                    slotDate: new Date(),
+                    handleCount: 0,
+                    currentSlot: 0,
+                    currentBlockHash: ''
+                };
+                return stats;
+            }
+        }),
+        ['apiKeysRepo']: jest.fn().mockReturnValue({
+            get: (key: string) => key === 'valid-key'
+        })
+    }
+}));
 
 afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
