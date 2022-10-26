@@ -68,12 +68,12 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }
 
     public async getAllHandleNames() {
-        const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+        const handles = HandleStore.getHandles();
         return handles.map((handle) => handle.name);
     }
 
     public async getHandleByName(handleName: string): Promise<IHandle> {
-        const handleHex = HandleStore.nameIndex.get(handleName);
+        const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
             if (handle) return handle;

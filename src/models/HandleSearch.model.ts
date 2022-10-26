@@ -8,7 +8,17 @@ export class HandleSearchModel {
     private _rarity?: string;
     private _numeric_modifiers?: string;
 
-    constructor(characters?: string, length?: string, rarity?: string, numeric_modifiers?: string) {
+    constructor({
+        characters,
+        length,
+        rarity,
+        numeric_modifiers
+    }: {
+        characters?: string;
+        length?: string;
+        rarity?: string;
+        numeric_modifiers?: string;
+    }) {
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
@@ -35,7 +45,7 @@ export class HandleSearchModel {
     set rarity(value) {
         const validRarity = Object.values(Rarity);
         if (value && !validRarity.some((v) => value.split(',').includes(v))) {
-            throw new ModelException(`characters must be ${validRarity.join(', ')}`);
+            throw new ModelException(`rarity must be ${validRarity.join(', ')}`);
         }
         this._rarity = value;
     }

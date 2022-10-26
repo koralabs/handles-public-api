@@ -23,6 +23,9 @@ jest.mock('../ioc', () => ({
                         handle: 'burritos'
                     }
                 ];
+            },
+            getAllHandleNames: () => {
+                return ['burritos', 'tacos', 'barbacoa'];
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -88,6 +91,56 @@ describe('Testing Handles Routes', () => {
                 .set('api-key', 'valid-key');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual([{ handle: 'burritos' }]);
+        });
+
+        it('should throw error if characters is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
+
+            const response = await request(app.getServer()).get('/handles?characters=nope').set('api-key', 'valid-key');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('characters must be letters, numbers, special');
+        });
+
+        it('should throw error if length is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
+
+            const response = await request(app.getServer()).get('/handles?length=nope').set('api-key', 'valid-key');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('Length must be a number');
+        });
+
+        it('should throw error if rarity is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
+
+            const response = await request(app.getServer()).get('/handles?rarity=nope').set('api-key', 'valid-key');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('rarity must be basic, common, rare, ultra_rare, legendary');
+        });
+
+        it('should throw error if numeric_modifiers is invalid', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
+
+            const response = await request(app.getServer())
+                .get('/handles?numeric_modifiers=nope')
+                .set('api-key', 'valid-key');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('numeric_modifiers must be negative, decimal');
+        });
+
+        it('should pass plain text list of Accept is text/plain', async () => {
+            const handlesRoute = new HandlesRoute();
+            const app = new App([handlesRoute]);
+
+            const response = await request(app.getServer())
+                .get('/handles')
+                .set('api-key', 'valid-key')
+                .set('Accept', 'text/plain');
+            expect(response.status).toEqual(200);
+            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
         });
     });
 

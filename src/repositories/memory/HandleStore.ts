@@ -43,6 +43,14 @@ export class HandleStore {
         return this.handles.size;
     };
 
+    static getHandles = () => {
+        return Array.from(this.handles, ([_, value]) => ({ ...value } as IHandle));
+    };
+
+    static getFromNameIndex = (name: string) => {
+        return this.nameIndex.get(name);
+    };
+
     static addIndexSet = (indexSet: Map<string, Set<string>>, indexKey: string, hexName: string) => {
         const set = indexSet.get(indexKey) ?? new Set();
         set.add(hexName);

@@ -23,7 +23,7 @@ class HandlesController {
 
             const { limit = '100', sort = 'desc', cursor, characters, length, rarity, numeric_modifiers } = req.query;
             const pagination = new HandlePaginationModel(limit, sort, cursor);
-            const search = new HandleSearchModel(characters, length, rarity, numeric_modifiers);
+            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
             const handleData = await handleRepo.getAll({ pagination, search });
             res.status(200).json(handleData);
         } catch (error) {
