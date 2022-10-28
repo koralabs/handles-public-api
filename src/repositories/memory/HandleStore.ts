@@ -5,7 +5,7 @@ import { IHandle, IHandleStats } from '../../interfaces/handle.interface';
 import { getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
 import { getElapsedTime } from '../../utils/util';
-import { HandleFileContent, HandleStoreMetrics } from './interfaces/handleStore.interfaces';
+import { IHandleFileContent, IHandleStoreMetrics } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     static handles = new Map<string, IHandle>();
     static nameIndex = new Map<string, string>();
@@ -14,7 +14,7 @@ export class HandleStore {
     static charactersIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
-    static metrics: HandleStoreMetrics = {
+    static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
         currentSlot: 0,
@@ -88,7 +88,7 @@ export class HandleStore {
         return Buffer.byteLength(JSON.stringify(object));
     }
 
-    static setMetrics(metrics: HandleStoreMetrics): void {
+    static setMetrics(metrics: IHandleStoreMetrics): void {
         this.metrics = { ...this.metrics, ...metrics };
     }
 
@@ -174,6 +174,7 @@ export class HandleStore {
         const path = storagePath ?? this.storagePath;
 
         try {
+            Logger.log(`Saving file with ${this.handles.size} handles`);
             const isLocked = await lockfile.check(path);
             if (isLocked) {
                 Logger.log('Unable to save. File is locked');
@@ -202,7 +203,7 @@ export class HandleStore {
         }
     }
 
-    static async getFile(storagePath?: string): Promise<HandleFileContent | null> {
+    static async getFile(storagePath?: string): Promise<IHandleFileContent | null> {
         const path = storagePath ?? this.storagePath;
 
         try {
@@ -212,25 +213,27 @@ export class HandleStore {
             }
 
             const file = fs.readFileSync(path, { encoding: 'utf8' });
-            return JSON.parse(file) as HandleFileContent;
+            return JSON.parse(file) as IHandleFileContent;
         } catch (error: any) {
-            if (error.code === 'ENOENT') {
-                return null;
-            }
-
-            throw error;
+            Logger.log(`Error getting file from ${path} with error: ${error.message}`);
+            return null;
         }
     }
 
-    static async getFileFromAWS(): Promise<HandleFileContent | null> {
-        Logger.log('Fetching handles.json from AWS');
-        const awsResponse = await fetch('http://api.handle.me.s3-website-us-west-2.amazonaws.com/handles.json');
-        if (awsResponse.status === 200) {
-            const text = await awsResponse.text();
-            Logger.log('Found handles in AWS');
-            return JSON.parse(text) as HandleFileContent;
-        }
+    static async getFileOnline(): Promise<IHandleFileContent | null> {
+        try {
+            Logger.log('Fetching handles.json');
+            const awsResponse = await fetch('http://api.handle.me.s3-website-us-west-2.amazonaws.com/handles.json');
+            if (awsResponse.status === 200) {
+                const text = await awsResponse.text();
+                Logger.log('Found handles.json');
+                return JSON.parse(text) as IHandleFileContent;
+            }
 
-        return null;
+            return null;
+        } catch (error: any) {
+            Logger.log(`Error fetching file from online with error: ${error.message}`);
+            return null;
+        }
     }
 }

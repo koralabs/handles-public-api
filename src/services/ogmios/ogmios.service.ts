@@ -2,7 +2,7 @@ import { createChainSyncClient, createInteractionContext, InteractionContext } f
 import fetch from 'cross-fetch';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { HandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
+import { IHandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
 import { Logger } from '../../utils/logger';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
@@ -83,46 +83,55 @@ class OgmiosService {
     }
 
     public async getStartingPoint(): Promise<Point> {
-        let startingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
-        // get the file from AWS
-        const awsResponse = await HandleStore.getFileFromAWS();
+        const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
+        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
 
-        let handlesContent: HandleFileContent | null = awsResponse;
-
-        // get the local file
-        const existingHandles = await HandleStore.getFile();
-
-        // if there is no local file, this is the first time starting up and we need to use the AWS version
-        if (existingHandles) {
-            // However, if there is a local file, check the slot date against the AWS file, use the newest version
-            if (
-                handlesContent &&
-                existingHandles.slot > handlesContent.slot &&
-                // Also, check the schema. If AWS's schema is newer, use it even if the slot is older than AWS
-                existingHandles.schemaVersion >= handlesContent.schemaVersion
-            ) {
-                handlesContent = existingHandles;
+        if (externalHandles || localHandles) {
+            let isNew = false;
+            let handlesContent: IHandleFileContent | null;
+            if (!externalHandles) {
+                handlesContent = localHandles;
+            } else if (!localHandles) {
+                isNew = true;
+                handlesContent = externalHandles;
+            } else {
+                if (
+                    localHandles.slot > externalHandles.slot &&
+                    (localHandles.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
+                ) {
+                    handlesContent = localHandles;
+                } else {
+                    isNew = true;
+                    handlesContent = externalHandles;
+                }
             }
-        }
 
-        if (handlesContent) {
+            if (!handlesContent) {
+                Logger.log('Handle storage not found');
+                return initialStartingPoint;
+            }
+
             const { handles, slot, hash } = handlesContent;
             Object.keys(handles ?? {}).forEach((k) => {
                 const handle = handles[k];
                 HandleStore.save(handle);
             });
+
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${
                     Object.keys(handles ?? {}).length
                 } handles`
             );
-            startingPoint = { slot, hash };
-            await HandleStore.saveFile(slot, hash);
-        } else {
-            Logger.log('Handle storage not found');
+
+            if (isNew) {
+                await HandleStore.saveFile(slot, hash);
+            }
+
+            return { slot, hash };
         }
 
-        return startingPoint;
+        Logger.log('Handle storage not found');
+        return initialStartingPoint;
     }
 
     public async startSync() {
@@ -145,8 +154,8 @@ class OgmiosService {
             rollBackward: this.rollBackward
         });
 
-        this.startIntervals();
         const startingPoint = await this.getStartingPoint();
+        this.startIntervals();
 
         await client.startSync([startingPoint]);
     }

@@ -29,7 +29,7 @@ describe('OgmiosService Tests', () => {
             });
             const createInteractionContextSpy = jest.spyOn(ogmiosClient, 'createInteractionContext');
             jest.spyOn(HandleStore, 'getFile');
-            jest.spyOn(HandleStore, 'getFileFromAWS');
+            jest.spyOn(HandleStore, 'getFileOnline');
             jest.spyOn(HandleStore, 'getMetrics').mockReturnValue({
                 percentageComplete: '0',
                 currentMemoryUsed: 0,
@@ -55,7 +55,7 @@ describe('OgmiosService Tests', () => {
         it('Should get starting point from AWS file because it is newer', async () => {
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
-            jest.spyOn(HandleStore, 'getFileFromAWS').mockResolvedValue({
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
                 slot: 75171663,
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 handles: {
@@ -87,7 +87,8 @@ describe('OgmiosService Tests', () => {
         });
 
         it('Should get starting point from the local file because it is newer', async () => {
-            jest.spyOn(HandleStore, 'getFileFromAWS').mockResolvedValue({
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
                 slot: 42971872,
                 hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
                 handles: {},
@@ -105,10 +106,12 @@ describe('OgmiosService Tests', () => {
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 slot: 75171663
             });
+            expect(saveFileSpy).toHaveBeenCalledTimes(0);
         });
 
-        it('Should get starting point from the AWS file because the schema is newer', async () => {
-            jest.spyOn(HandleStore, 'getFileFromAWS').mockResolvedValue({
+        it('Should get starting point from the online file because the schema is newer', async () => {
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
                 slot: 42971872,
                 hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
                 handles: {},
@@ -126,12 +129,70 @@ describe('OgmiosService Tests', () => {
                 hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
                 slot: 42971872
             });
+            expect(saveFileSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('Should get starting point from the local file when schema is unavailable', async () => {
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
+                slot: 42971872,
+                hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
+                handles: {}
+            });
+            jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
+                slot: 75171663,
+                hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
+                handles: {},
+                schemaVersion: 1
+            });
+            const ogmiosService = new OgmiosService();
+            const startingPoint = await ogmiosService.getStartingPoint();
+            expect(startingPoint).toEqual({
+                hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
+                slot: 75171663
+            });
+            expect(saveFileSpy).toHaveBeenCalledTimes(0);
+        });
+
+        it('Should get starting point from the local file when online file is unavailable', async () => {
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
+            jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
+                slot: 1,
+                hash: 'a',
+                handles: {},
+                schemaVersion: 1
+            });
+            const ogmiosService = new OgmiosService();
+            const startingPoint = await ogmiosService.getStartingPoint();
+            expect(startingPoint).toEqual({
+                hash: 'a',
+                slot: 1
+            });
+            expect(saveFileSpy).toHaveBeenCalledTimes(0);
+        });
+
+        it('Should get starting point from the online file when local available', async () => {
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
+                slot: 2,
+                hash: 'b',
+                handles: {}
+            });
+            jest.spyOn(HandleStore, 'getFile').mockResolvedValue(null);
+            const ogmiosService = new OgmiosService();
+            const startingPoint = await ogmiosService.getStartingPoint();
+            expect(startingPoint).toEqual({
+                hash: 'b',
+                slot: 2
+            });
+            expect(saveFileSpy).toHaveBeenCalledTimes(1);
         });
 
         it('Should use starting point from constants if both AWS and local file are not found', async () => {
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
-            jest.spyOn(HandleStore, 'getFileFromAWS').mockResolvedValue(null);
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
             jest.spyOn(HandleStore, 'getFile').mockResolvedValue(null);
             const ogmiosService = new OgmiosService();
             const startingPoint = await ogmiosService.getStartingPoint();

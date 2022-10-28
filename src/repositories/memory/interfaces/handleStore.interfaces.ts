@@ -1,13 +1,13 @@
 import { IHandle } from '../../../interfaces/handle.interface';
 
-export interface HandleFileContent {
+export interface IHandleFileContent {
     slot: number;
     hash: string;
-    schemaVersion: number;
+    schemaVersion?: number;
     handles: Record<string, IHandle>;
 }
 
-export interface HandleStoreMetrics {
+export interface IHandleStoreMetrics {
     firstSlot?: number;
     lastSlot?: number;
     currentSlot?: number;
