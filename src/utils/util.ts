@@ -1,4 +1,4 @@
-import { Logger } from "./logger";
+import { Logger } from './logger';
 
 /**
  * @method isEmpty
@@ -56,6 +56,10 @@ export const getMimeType = (filename: string) => {
     }
 };
 
+export const delay = (ms: number): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
 export const getElapsedTime = (milliseconds: number) => {
     const seconds = Math.floor(milliseconds / 1000);
     const mins = Math.floor(seconds / 60);
@@ -70,6 +74,6 @@ export const writeConsoleLine = (startTime: number, msg = ''): void => {
         process.stdout.cursorTo(0);
         process.stdout.write(message);
     } else {
-        Logger.log(message)
+        Logger.log(message);
     }
 };

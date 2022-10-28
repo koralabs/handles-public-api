@@ -1,20 +1,11 @@
+import fetch from 'cross-fetch';
 import fs from 'fs';
+import lockfile from 'proper-lockfile';
 import { IHandle, IHandleStats } from '../../interfaces/handle.interface';
 import { getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
 import { getElapsedTime } from '../../utils/util';
-
-interface HandleStoreMetrics {
-    firstSlot?: number;
-    lastSlot?: number;
-    currentSlot?: number;
-    elapsedOgmiosExec?: number;
-    elapsedBuildingExec?: number;
-    firstMemoryUsage?: number;
-    currentBlockHash?: string;
-    memorySize?: number;
-}
-
+import { HandleFileContent, HandleStoreMetrics } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     static handles = new Map<string, IHandle>();
     static nameIndex = new Map<string, string>();
@@ -33,7 +24,9 @@ export class HandleStore {
         currentBlockHash: '',
         memorySize: 0
     };
+
     static storagePath = 'storage/handles.json';
+    static storageSchemaVersion = 1;
 
     static get = (key: string) => {
         return this.handles.get(key);
@@ -74,8 +67,8 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
     };
 
-    static convertMapsToObjects = (mapInstance: Map<string, any>) => {
-        return Array.from(mapInstance).reduce<Record<string, unknown>>((obj, [key, value]) => {
+    static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
+        return Array.from(mapInstance).reduce<Record<string, T>>((obj, [key, value]) => {
             obj[key] = value;
             return obj;
         }, {});
@@ -173,28 +166,53 @@ export class HandleStore {
         });
     }
 
-    static saveFile(slot: number, hash: string) {
+    static async saveFile(slot: number, hash: string, storagePath?: string, processing?: Function): Promise<boolean> {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
 
+        const path = storagePath ?? this.storagePath;
+
         try {
+            const isLocked = await lockfile.check(path);
+            if (isLocked) {
+                Logger.log('Unable to save. File is locked');
+                return false;
+            }
+
+            const release = await lockfile.lock(path);
+
             fs.writeFileSync(
-                this.storagePath,
+                storagePath ?? this.storagePath,
                 JSON.stringify({
                     slot,
                     hash,
+                    schemaVersion: this.storageSchemaVersion,
                     handles
                 })
             );
+
+            if (processing) await processing();
+
+            await release();
+            return true;
         } catch (error: any) {
             Logger.log(`Error writing file: ${error.message}`, LogCategory.ERROR);
+            return false;
         }
     }
 
-    static getFile(): string | null {
+    static async getFile(storagePath?: string): Promise<HandleFileContent | null> {
+        const path = storagePath ?? this.storagePath;
+
         try {
-            return fs.readFileSync(this.storagePath, { encoding: 'utf8' });
+            const isLocked = await lockfile.check(path);
+            if (isLocked) {
+                return null;
+            }
+
+            const file = fs.readFileSync(path, { encoding: 'utf8' });
+            return JSON.parse(file) as HandleFileContent;
         } catch (error: any) {
             if (error.code === 'ENOENT') {
                 return null;
@@ -202,5 +220,17 @@ export class HandleStore {
 
             throw error;
         }
+    }
+
+    static async getFileFromAWS(): Promise<HandleFileContent | null> {
+        Logger.log('Fetching handles.json from AWS');
+        const awsResponse = await fetch('http://api.handle.me.s3-website-us-west-2.amazonaws.com/handles.json');
+        if (awsResponse.status === 200) {
+            const text = await awsResponse.text();
+            Logger.log('Found handles in AWS');
+            return JSON.parse(text) as HandleFileContent;
+        }
+
+        return null;
     }
 }

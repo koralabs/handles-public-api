@@ -1,6 +1,8 @@
 import { createChainSyncClient, createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import fetch from 'cross-fetch';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
+import { HandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
 import { Logger } from '../../utils/logger';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
@@ -9,7 +11,7 @@ import { processBlock } from './processBlock';
 let startOgmiosExec = 0;
 
 class OgmiosService {
-    private intervals: NodeJS.Timer[] = [];
+    public intervals: NodeJS.Timer[] = [];
     private startTime: number;
     private firstMemoryUsage: number;
 
@@ -47,6 +49,10 @@ class OgmiosService {
 
     private startIntervals() {
         const metricsInterval = setInterval(() => {
+            const metrics = HandleStore.getMetrics();
+
+            if (!metrics) return;
+
             const {
                 percentageComplete,
                 currentMemoryUsed,
@@ -55,7 +61,7 @@ class OgmiosService {
                 handleCount,
                 ogmiosElapsed,
                 slotDate
-            } = HandleStore.getMetrics();
+            } = metrics;
 
             writeConsoleLine(
                 this.startTime,
@@ -63,9 +69,9 @@ class OgmiosService {
             );
         }, 1000);
 
-        const saveFileInterval = setInterval(() => {
+        const saveFileInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
-            HandleStore.saveFile(currentSlot, currentBlockHash);
+            await HandleStore.saveFile(currentSlot, currentBlockHash);
         }, 30000);
 
         const setMemoryInterval = setInterval(() => {
@@ -76,12 +82,31 @@ class OgmiosService {
         this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
     }
 
-    private getStartingPoint(): Point {
-        const existingHandles = HandleStore.getFile();
+    public async getStartingPoint(): Promise<Point> {
         let startingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
-        if (existingHandles) {
-            const { slot, hash, handles } = JSON.parse(existingHandles);
+        // get the file from AWS
+        const awsResponse = await HandleStore.getFileFromAWS();
 
+        let handlesContent: HandleFileContent | null = awsResponse;
+
+        // get the local file
+        const existingHandles = await HandleStore.getFile();
+
+        // if there is no local file, this is the first time starting up and we need to use the AWS version
+        if (existingHandles) {
+            // However, if there is a local file, check the slot date against the AWS file, use the newest version
+            if (
+                handlesContent &&
+                existingHandles.slot > handlesContent.slot &&
+                // Also, check the schema. If AWS's schema is newer, use it even if the slot is older than AWS
+                existingHandles.schemaVersion >= handlesContent.schemaVersion
+            ) {
+                handlesContent = existingHandles;
+            }
+        }
+
+        if (handlesContent) {
+            const { handles, slot, hash } = handlesContent;
             Object.keys(handles ?? {}).forEach((k) => {
                 const handle = handles[k];
                 HandleStore.save(handle);
@@ -92,6 +117,7 @@ class OgmiosService {
                 } handles`
             );
             startingPoint = { slot, hash };
+            await HandleStore.saveFile(slot, hash);
         } else {
             Logger.log('Handle storage not found');
         }
@@ -120,7 +146,7 @@ class OgmiosService {
         });
 
         this.startIntervals();
-        const startingPoint = this.getStartingPoint();
+        const startingPoint = await this.getStartingPoint();
 
         await client.startSync([startingPoint]);
     }
