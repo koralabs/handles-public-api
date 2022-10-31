@@ -3,57 +3,10 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
+import { handlesFixture } from './fixtures/handles';
 
 describe('MemoryHandlesRepository Tests', () => {
-    const handles: IHandle[] = [
-        {
-            hex: 'barbacoa-hex',
-            name: 'barbacoa',
-            nft_image: '',
-            original_nft_image: '',
-            length: 8,
-            og: 0,
-            rarity: Rarity.common,
-            characters: 'letters',
-            numeric_modifiers: '',
-            resolved_addresses: {
-                ada: ''
-            },
-            personalization: {}
-        },
-        {
-            hex: 'burrito-hex',
-            name: 'burrito',
-            nft_image: '',
-            original_nft_image: '',
-            length: 7,
-            og: 0,
-            rarity: Rarity.basic,
-            characters: 'letters',
-            numeric_modifiers: '',
-            resolved_addresses: {
-                ada: ''
-            },
-            personalization: {}
-        },
-        {
-            hex: 'taco-hex',
-            name: 'taco',
-            nft_image: '',
-            original_nft_image: '',
-            length: 4,
-            og: 0,
-            rarity: Rarity.rare,
-            characters: 'letters',
-            numeric_modifiers: '',
-            resolved_addresses: {
-                ada: ''
-            },
-            personalization: {}
-        }
-    ];
-
-    handles.forEach((handle) => {
+    handlesFixture.forEach((handle) => {
         HandleStore.save(handle);
     });
 
@@ -67,7 +20,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel('1', 'asc');
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ cursor: 'burrito-hex', handles: [handles[0]], total: 3 });
+            expect(result).toEqual({ cursor: 'burrito-hex', handles: [handlesFixture[0]], total: 3 });
         });
 
         it('should find rare handles', async () => {
@@ -75,7 +28,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel('100', 'asc');
             const search = new HandleSearchModel({ rarity: 'rare' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ handles: [handles[2]], total: 1 });
+            expect(result).toEqual({ handles: [handlesFixture[2]], total: 1 });
         });
 
         it('should no handles with compounded searches', async () => {
@@ -89,7 +42,7 @@ describe('MemoryHandlesRepository Tests', () => {
 
     describe('getAllHandleNames', () => {
         it('should get all handle names', async () => {
-            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();
             const result = await repo.getAllHandleNames();
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
@@ -100,7 +53,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should get handle by name', async () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHandleByName('barbacoa');
-            expect(result).toEqual(handles[0]);
+            expect(result).toEqual(handlesFixture[0]);
         });
     });
 

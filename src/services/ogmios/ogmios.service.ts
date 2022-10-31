@@ -1,6 +1,8 @@
 import { createChainSyncClient, createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import fetch from 'cross-fetch';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
+import { IHandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
 import { Logger } from '../../utils/logger';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
@@ -9,7 +11,7 @@ import { processBlock } from './processBlock';
 let startOgmiosExec = 0;
 
 class OgmiosService {
-    private intervals: NodeJS.Timer[] = [];
+    public intervals: NodeJS.Timer[] = [];
     private startTime: number;
     private firstMemoryUsage: number;
 
@@ -47,6 +49,10 @@ class OgmiosService {
 
     private startIntervals() {
         const metricsInterval = setInterval(() => {
+            const metrics = HandleStore.getMetrics();
+
+            if (!metrics) return;
+
             const {
                 percentageComplete,
                 currentMemoryUsed,
@@ -55,7 +61,7 @@ class OgmiosService {
                 handleCount,
                 ogmiosElapsed,
                 slotDate
-            } = HandleStore.getMetrics();
+            } = metrics;
 
             writeConsoleLine(
                 this.startTime,
@@ -63,9 +69,9 @@ class OgmiosService {
             );
         }, 1000);
 
-        const saveFileInterval = setInterval(() => {
+        const saveFileInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
-            HandleStore.saveFile(currentSlot, currentBlockHash);
+            await HandleStore.saveFile(currentSlot, currentBlockHash);
         }, 30000);
 
         const setMemoryInterval = setInterval(() => {
@@ -76,27 +82,56 @@ class OgmiosService {
         this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
     }
 
-    private getStartingPoint(): Point {
-        const existingHandles = HandleStore.getFile();
-        let startingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
-        if (existingHandles) {
-            const { slot, hash, handles } = JSON.parse(existingHandles);
+    public async getStartingPoint(): Promise<Point> {
+        const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
+        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
 
+        if (externalHandles || localHandles) {
+            let isNew = false;
+            let handlesContent: IHandleFileContent | null;
+            if (!externalHandles) {
+                handlesContent = localHandles;
+            } else if (!localHandles) {
+                isNew = true;
+                handlesContent = externalHandles;
+            } else {
+                if (
+                    localHandles.slot > externalHandles.slot &&
+                    (localHandles.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
+                ) {
+                    handlesContent = localHandles;
+                } else {
+                    isNew = true;
+                    handlesContent = externalHandles;
+                }
+            }
+
+            if (!handlesContent) {
+                Logger.log('Handle storage not found');
+                return initialStartingPoint;
+            }
+
+            const { handles, slot, hash } = handlesContent;
             Object.keys(handles ?? {}).forEach((k) => {
                 const handle = handles[k];
                 HandleStore.save(handle);
             });
+
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${
                     Object.keys(handles ?? {}).length
                 } handles`
             );
-            startingPoint = { slot, hash };
-        } else {
-            Logger.log('Handle storage not found');
+
+            if (isNew) {
+                await HandleStore.saveFile(slot, hash);
+            }
+
+            return { slot, hash };
         }
 
-        return startingPoint;
+        Logger.log('Handle storage not found');
+        return initialStartingPoint;
     }
 
     public async startSync() {
@@ -119,8 +154,8 @@ class OgmiosService {
             rollBackward: this.rollBackward
         });
 
+        const startingPoint = await this.getStartingPoint();
         this.startIntervals();
-        const startingPoint = this.getStartingPoint();
 
         await client.startSync([startingPoint]);
     }

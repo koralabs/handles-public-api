@@ -71,7 +71,7 @@ class App {
                 await ogmiosService.startSync();
                 clearInterval(interval);
             } catch (error: any) {
-                writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`)
+                writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`);
             }
         };
 
