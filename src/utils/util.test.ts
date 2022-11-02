@@ -1,4 +1,3 @@
-import { Logger } from './logger';
 import { getElapsedTime, isNumeric, writeConsoleLine } from './util';
 
 jest.mock('./logger');
@@ -22,8 +21,8 @@ describe('Utils tests', () => {
         it('should get correct elapsed time', () => {
             const loggerSpy = jest.spyOn(process.stdout, 'write');
             const now = Date.now();
-            writeConsoleLine(now, 'starting now');
-            expect(loggerSpy).toHaveBeenNthCalledWith(3, '0:00 elapsed. starting now');
+            const message = writeConsoleLine(now, 'starting now');
+            expect(message).toEqual('0:00 elapsed. starting now');
         });
     });
 });

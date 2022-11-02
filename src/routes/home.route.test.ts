@@ -1,7 +1,5 @@
 import request from 'supertest';
-import HealthRoutes from './health.route';
 import App from '../app';
-import * as ogmiosUtils from '../services/ogmios/utils';
 import { HttpException } from '../exceptions/HttpException';
 import { IHandleStats } from '../interfaces/handle.interface';
 
@@ -54,7 +52,7 @@ afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
 });
 
-describe('Health Routes Test', () => {
+describe('Home Routes Test', () => {
     let app: App | null;
     beforeEach(() => {
         app = new App();
@@ -64,26 +62,11 @@ describe('Health Routes Test', () => {
         jest.clearAllMocks();
     });
 
-    describe('[GET] /health', () => {
-        it('Should return 200 and health stats', async () => {
-            // @ts-ignore
-            jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue({ stats: 'burritos' });
-            const response = await request(app?.getServer()).get('/health');
+    describe('[GET] /home', () => {
+        it('Should return 200', async () => {
+            const response = await request(app?.getServer()).get('/');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
-                ogmios: { stats: 'burritos' },
-                stats: {
-                    buildingElapsed: expect.any(String),
-                    currentBlockHash: expect.any(String),
-                    currentMemoryUsed: expect.any(Number),
-                    currentSlot: expect.any(Number),
-                    memorySize: expect.any(Number),
-                    handleCount: expect.any(Number),
-                    ogmiosElapsed: expect.any(String),
-                    percentageComplete: expect.any(String),
-                    slotDate: expect.any(String)
-                }
-            });
+            expect(response.body).toEqual({});
         });
     });
 });

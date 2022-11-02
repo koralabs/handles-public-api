@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import HealthController from '../controllers/health.controller';
-import BaseRoute from './base.route';
+import BaseRoute from './base';
 
 class HealthRoute extends BaseRoute {
     public path = '/health';
