@@ -2,15 +2,17 @@ import cors from 'cors';
 import fs from 'fs';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
+import yaml from 'yamljs'
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
-import swaggerDoc from './swagger/swagger.json';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
+
+const swaggerDoc = yaml.load('./swagger/swagger.json');
 
 class App {
     public app: express.Application;
