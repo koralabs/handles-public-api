@@ -8,6 +8,7 @@ import { registry } from '../ioc';
 class BaseRoute implements Routes {
     public router = Router();
     public registry: IRegistry;
+    public path = '/';
 
     constructor() {
         this.registry = registry;

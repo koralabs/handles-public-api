@@ -1,4 +1,5 @@
 import cors from 'cors';
+import fs from 'fs';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
@@ -8,7 +9,8 @@ import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
 import swaggerDoc from './swagger/swagger.json';
-import { writeConsoleLine } from './utils/util';
+import { dynamicallyLoad, writeConsoleLine } from './utils/util';
+import { DynamicLoadType } from './interfaces/util.interface';
 
 class App {
     public app: express.Application;
@@ -16,22 +18,15 @@ class App {
     public port: string | number;
     public startTimer: number;
 
-    constructor(routes: Routes[]) {
+    constructor() {
         this.app = express();
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
         this.startTimer = Date.now();
 
         this.initializeMiddleware();
-        this.initializeRoutes(routes);
-        this.initializeErrorHandling();
-        this.initializeSwagger();
-
-        if (this.env === 'development') {
-            this.initializeMockStorage();
-        } else {
-            this.initializeStorage();
-        }
+        this.initializeDynamicHandlers();
+        this.initializeStorage();
     }
 
     public listen() {
@@ -54,17 +49,32 @@ class App {
         this.app.use(express.urlencoded({ extended: true }));
     }
 
+    private async initializeDynamicHandlers() {
+        this.initializeSwagger();
+
+        const middlewares = await dynamicallyLoad(`${__dirname}/middlewares`, DynamicLoadType.MIDDLEWARE);
+        middlewares.forEach((middleware) => {
+            this.app.use(middleware);
+        });
+
+        const routes = await dynamicallyLoad(`${__dirname}/routes`, DynamicLoadType.ROUTE);
+        this.initializeRoutes(routes);
+
+        this.app.use(errorMiddleware);
+    }
+
     private initializeRoutes(routes: Routes[]) {
         routes.forEach((route) => {
             this.app.use('/', route.router);
         });
     }
 
-    private initializeErrorHandling() {
-        this.app.use(errorMiddleware);
-    }
-
     private async initializeStorage() {
+        if (this.env === 'development') {
+            this.initializeMockStorage();
+            return;
+        }
+
         const startOgmios = async () => {
             try {
                 const ogmiosService = new OgmiosService();

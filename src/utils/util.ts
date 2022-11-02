@@ -1,3 +1,6 @@
+import fs from 'fs';
+import { DynamicLoadType } from '../interfaces/util.interface';
+import BaseRoute from '../routes/base';
 import { Logger } from './logger';
 
 export const isNumeric = (n: string) => {
@@ -24,4 +27,21 @@ export const writeConsoleLine = (startTime: number, msg = ''): void => {
     } else {
         Logger.log(message);
     }
+};
+
+export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType) => {
+    const files = fs.readdirSync(folderPath);
+    const filteredFiles = files.filter((f) => new RegExp(`[\\w]+\\.${type}\\.(ts|js)`, 'gi').test(f));
+
+    return Promise.all(
+        filteredFiles.map(async (f) => {
+            Logger.log(`Dynamically loading: ${f}`);
+            const stuff = await import(`${folderPath}/${f}`);
+            try {
+                return new stuff.default();
+            } catch (error) {
+                return stuff.default;
+            }
+        })
+    );
 };

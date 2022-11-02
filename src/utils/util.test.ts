@@ -1,4 +1,3 @@
-import { Logger } from './logger';
 import { getElapsedTime, isNumeric, writeConsoleLine } from './util';
 
 jest.mock('./logger');
