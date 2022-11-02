@@ -17,7 +17,7 @@ export const getElapsedTime = (milliseconds: number) => {
     return `${mins}:${(seconds - mins * 60).toString().padStart(2, '0')}`;
 };
 
-export const writeConsoleLine = (startTime: number, msg = ''): void => {
+export const writeConsoleLine = (startTime: number, msg = ''): string => {
     const elapsed = getElapsedTime(Date.now() - startTime);
     const message = `${elapsed} elapsed. ${msg}`;
     if (process.stdout?.clearLine && process.stdout?.cursorTo) {
@@ -27,6 +27,8 @@ export const writeConsoleLine = (startTime: number, msg = ''): void => {
     } else {
         Logger.log(message);
     }
+
+    return message;
 };
 
 export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType) => {
