@@ -12,7 +12,7 @@ import { Logger } from './utils/logger';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 
-const swaggerDoc = yaml.load('./swagger/swagger.json');
+const swaggerDoc = yaml.load('./swagger/swagger.yml');
 
 class App {
     public app: express.Application;
