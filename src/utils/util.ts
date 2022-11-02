@@ -36,11 +36,11 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
     return Promise.all(
         filteredFiles.map(async (f) => {
             Logger.log(`Dynamically loading: ${f}`);
-            const stuff = await import(`${folderPath}/${f}`);
+            const imported = await import(`${folderPath}/${f}`);
             try {
-                return new stuff.default();
+                return new imported.default();
             } catch (error) {
-                return stuff.default;
+                return imported.default;
             }
         })
     );
