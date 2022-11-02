@@ -138,6 +138,10 @@ components:
         name:
           type: string
           example: my.handle
+        stake_key:
+          type: string
+          description: Current holding wallet stake key
+          example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         nft_image:
           type: string
           description: IPFS URL of the personalized handle image
