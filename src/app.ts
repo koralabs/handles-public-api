@@ -2,7 +2,7 @@ import cors from 'cors';
 import fs from 'fs';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import yaml from 'yamljs'
+import yaml from 'yamljs';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
@@ -11,8 +11,9 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
-
-const swaggerDoc = yaml.load('./swagger/swagger.yml');
+import swaggerDoc from './swagger/swagger.json';
+// TODO: figure out how to make this work and get tests working
+// const swaggerDoc = yaml.load('./swagger/swagger.yml');
 
 class App {
     public app: express.Application;

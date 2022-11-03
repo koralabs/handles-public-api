@@ -8,8 +8,10 @@
   "license": "Mozilla Public License 2.0",
   "scripts": {
     "start": "node express.js",
-    "build": "tsc && cp ./docs/swagger.yml ./dist/swagger/swagger.yml",
-    "build:production": "tsc -p . && cp ./docs/swagger.yml ./dist/swagger/swagger.yml && cp package.json dist/package.json && cd dist && yarn install --production",
+    "build": "tsc && yarn copySwaggerToDist && yarn copySwagger",
+    "copySwaggerToDist": "cp ./docs/swagger.yml ./dist/swagger/swagger.yml",
+    "copySwagger": "cp ./docs/swagger.yml ./src/swagger/swagger.yml",
+    "build:production": "tsc -p . && yarn copySwaggerToDist && cp package.json dist/package.json && cd dist && yarn install --production",
     "dev": "cross-env NODE_ENV=development nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
     "test": "jest --forceExit --detectOpenHandles --coverage",

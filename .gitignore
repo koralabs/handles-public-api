@@ -106,4 +106,3 @@ dist
 
 handle-storage.json
 storage/handles.json
-src/swagger/*
