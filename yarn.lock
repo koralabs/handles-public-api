@@ -617,6 +617,13 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
+"@koralabs/protected-words@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@koralabs/protected-words/-/protected-words-1.0.0.tgz#e6d3d288aaf452d5047505ef8081f720d510b9fb"
+  integrity sha512-obfuSk+b9O3jfE4H93s1+nmtR1myzDBJsKURFh8o02DfPU/CZzAbY0ixOKBPOZtJpbVi1cNJK2KjZV6grSzNqQ==
+  dependencies:
+    pluralize "^8.0.0"
+
 "@messageformat/core@^3.0.1":
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/@messageformat/core/-/core-3.0.1.tgz#191e12cf9643704d1fd32e592a3fbdc194dd588e"
@@ -3643,6 +3650,11 @@ pkg-dir@^4.2.0:
   integrity sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==
   dependencies:
     find-up "^4.0.0"
+
+pluralize@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/pluralize/-/pluralize-8.0.0.tgz#1a6fa16a38d12a1901e0320fa017051c539ce3b1"
+  integrity sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==
 
 prelude-ls@^1.2.1:
   version "1.2.1"
