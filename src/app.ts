@@ -11,9 +11,6 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
-import swaggerDoc from './swagger/swagger.json';
-// TODO: figure out how to make this work and get tests working
-// const swaggerDoc = yaml.load('./swagger/swagger.yml');
 
 class App {
     public app: express.Application;
@@ -107,6 +104,7 @@ class App {
             customfavIcon: '/assets/favicon.ico'
         };
 
+        const swaggerDoc = yaml.load(`${__dirname}/swagger.yml`);
         this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
     }
 }
