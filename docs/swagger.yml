@@ -163,6 +163,18 @@ components:
           "$ref": "#/components/schemas/Characters"
         numeric_modifiers:
           "$ref": "#/components/schemas/NumericModifiers"
+        default_in_wallet:
+          type: string
+          description: The name of the default Handle in this wallet
+          example: my_default_hndl
+        profile_pic:
+          type: string
+          description: IPFS hash of the selected profile pic - cropped and zoomed
+          example: Q2de4Fg56tNHy82300000001
+        background:
+          type: string
+          description: IPFS hash of the selected background
+          example: Q2de4Fg56tNHy82300000001
         resolved_addresses:
           type: object
           properties:
@@ -175,13 +187,6 @@ components:
             btc:
               type: string
               example: addr1e00000000000000000000000000000000000003
-        personalization:
-          type: object
-          properties:
-            profile_pic:
-              type: string
-              description: IPFS hash of the selected profile pic - cropped and zoomed
-              example: Q2de4Fg56tNHy82300000001
     Personalization:
       type: object
       properties:
