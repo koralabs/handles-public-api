@@ -1,5 +1,5 @@
 #!/bin/sh
 
-/bin/ogmios "$@" &
+/bin/ogmios $@ &
 NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK:-mainnet} npm start &
 wait
