@@ -48,7 +48,7 @@ const parseCborObject = (value: any) => {
 
 /**
  *
- * expecting metadata starting with 721 or 8413
+ * expecting cbor metadata after 721 or some other label
  *
  * @param metadata
  * @returns parsed metadata

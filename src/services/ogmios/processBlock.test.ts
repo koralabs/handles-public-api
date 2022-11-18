@@ -164,7 +164,6 @@ describe('processBlock Tests', () => {
 
         processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
-        //{ ...expectedItem, resolved_addresses: { ada: newAddress } }
         expect(saveSpy).toHaveBeenCalledWith(hexName, newAddress);
     });
 

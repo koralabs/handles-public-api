@@ -52,14 +52,14 @@ describe('OgmiosService Tests', () => {
     });
 
     describe('getStartingPoint', () => {
-        it('Should use starting point from constants if both AWS and local file are not found', async () => {
+        it('Should use starting point from constants if both no data is found from files', async () => {
             jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue(null);
             const ogmiosService = new OgmiosService();
             const startingPoint = await ogmiosService.getStartingPoint();
             expect(startingPoint).toEqual(handleEraBoundaries['testnet']);
         });
 
-        it('Should use starting point from constants if both AWS and local file are not found', async () => {
+        it('Should use starting point from prepareHandlesStorage', async () => {
             jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue({
                 slot: 2,
                 hash: 'b',

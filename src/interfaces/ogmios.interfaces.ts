@@ -1,9 +1,10 @@
 export enum MetadataLabel {
     'NFT' = 721,
-    'HANDLE_PERSONALIZATION' = 8008
+    'HANDLE_PERSONALIZATION' = 80085 // (.)(.)
 }
 
 export enum MetadatumAssetLabel {
+    // TODO: Figure out hex labels
     REFERENCE_NFT = '0x000de140', // 100
     SUB_STANDARD_NFT = '0x000de140', // 222
     SUB_STANDARD_FT = '0x000de140'
