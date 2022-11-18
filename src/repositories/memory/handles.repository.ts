@@ -1,6 +1,6 @@
 import { HttpException } from '../../exceptions/HttpException';
 
-import { IGetAllHandlesResults, IHandle, IHandleStats } from '../../interfaces/handle.interface';
+import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import IHandlesRepository from '../handles.repository';
@@ -77,6 +77,24 @@ class MemoryHandlesRepository implements IHandlesRepository {
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
             if (handle) return handle;
+        }
+
+        throw new HttpException(404, 'Not found');
+    }
+
+    public async getPersonalizedHandleByName(handleName: string): Promise<IPersonalizedHandle> {
+        const handleHex = HandleStore.getFromNameIndex(handleName);
+        if (handleHex) {
+            const handle = HandleStore.get(handleHex);
+            const personalization = HandleStore.getPersonalization(handleHex);
+            if (handle) {
+                const personalizedHandle: IPersonalizedHandle = {
+                    ...handle,
+                    personalization
+                };
+
+                return personalizedHandle;
+            }
         }
 
         throw new HttpException(404, 'Not found');

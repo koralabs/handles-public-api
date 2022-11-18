@@ -1,13 +1,19 @@
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
-import { IHandle, IHandleStats } from '../../interfaces/handle.interface';
-import { getRarity } from '../../services/ogmios/utils';
+import { IHandle, IPersonalization, IHandleStats } from '../../interfaces/handle.interface';
+import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
 import { getElapsedTime } from '../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics } from './interfaces/handleStore.interfaces';
+import {
+    IHandleFileContent,
+    IHandleStoreMetrics,
+    SaveMintingTxInput,
+    SavePersonalizationInput
+} from './interfaces/handleStore.interfaces';
 export class HandleStore {
     static handles = new Map<string, IHandle>();
+    static personalization = new Map<string, IPersonalization>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
@@ -30,6 +36,10 @@ export class HandleStore {
 
     static get = (key: string) => {
         return this.handles.get(key);
+    };
+
+    static getPersonalization = (key: string) => {
+        return this.personalization.get(key);
     };
 
     static count = () => {
@@ -66,6 +76,63 @@ export class HandleStore {
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
     };
+
+    static saveMintedHandle = ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
+        const newHandle: IHandle = {
+            hex: hexName,
+            name,
+            length: name.length,
+            rarity: getRarity(name),
+            characters: buildCharacters(name),
+            numeric_modifiers: buildNumericModifiers(name),
+            resolved_addresses: {
+                ada: adaAddress
+            },
+            og,
+            original_nft_image: image,
+            nft_image: image,
+            background: '',
+            default_in_wallet: '',
+            profile_pic: ''
+        };
+
+        this.save(newHandle);
+    };
+
+    static saveWalletAddressMove = (hexName: string, adaAddress: string) => {
+        const existingHandle = HandleStore.get(hexName);
+        if (!existingHandle) {
+            Logger.log(
+                `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
+                LogCategory.ERROR
+            );
+            return;
+        }
+
+        existingHandle.resolved_addresses.ada = adaAddress;
+        HandleStore.save(existingHandle);
+    };
+
+    static savePersonalizationChange({ hexName, personalization }: SavePersonalizationInput) {
+        const existingHandle = HandleStore.get(hexName);
+        if (!existingHandle) {
+            Logger.log(
+                `Personalization change, but there is no existing handle in storage with hex: ${hexName}`,
+                LogCategory.ERROR
+            );
+            return;
+        }
+
+        const { nft_appearance } = personalization;
+
+        existingHandle.nft_image = nft_appearance?.image ?? '';
+        existingHandle.background = nft_appearance?.background ?? '';
+        existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
+        existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
+        HandleStore.save(existingHandle);
+
+        HandleStore.personalization.set(hexName, personalization);
+    }
 
     static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
         return Array.from(mapInstance).reduce<Record<string, T>>((obj, [key, value]) => {
@@ -159,7 +226,9 @@ export class HandleStore {
                 resolved_addresses: {
                     ada: 'addr_test1qqrvwfds2vxvzagdrejjpwusas4j0k64qju5ul7hfnjl853lqpk6tq05pf67hwvmplvu0gc2xn75vvy3gyuxe6f7e5fsw0ever'
                 },
-                personalization: {}
+                default_in_wallet: 'hdl',
+                background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
+                profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW'
             };
 
             this.save(handle);
@@ -235,5 +304,54 @@ export class HandleStore {
             Logger.log(`Error fetching file from online with error: ${error.message}`);
             return null;
         }
+    }
+
+    static async prepareHandlesStorage(): Promise<IHandleFileContent | null> {
+        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
+
+        if (externalHandles || localHandles) {
+            let isNew = false;
+            let handlesContent: IHandleFileContent | null;
+            if (!externalHandles) {
+                handlesContent = localHandles;
+            } else if (!localHandles) {
+                isNew = true;
+                handlesContent = externalHandles;
+            } else {
+                if (
+                    localHandles.slot > externalHandles.slot &&
+                    (localHandles.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
+                ) {
+                    handlesContent = localHandles;
+                } else {
+                    isNew = true;
+                    handlesContent = externalHandles;
+                }
+            }
+
+            if (!handlesContent) {
+                return null;
+            }
+
+            const { handles, slot, hash } = handlesContent;
+            Object.keys(handles ?? {}).forEach((k) => {
+                const handle = handles[k];
+                HandleStore.save(handle);
+            });
+
+            Logger.log(
+                `Handle storage found at slot: ${slot} and hash: ${hash} with ${
+                    Object.keys(handles ?? {}).length
+                } handles`
+            );
+
+            if (isNew) {
+                await HandleStore.saveFile(slot, hash);
+            }
+
+            return handlesContent;
+        }
+
+        return null;
     }
 }

@@ -1,4 +1,4 @@
-import { IGetAllHandlesResults, IHandle, IHandleStats } from '../interfaces/handle.interface';
+import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 
@@ -9,6 +9,7 @@ interface IHandlesRepository {
     }) => Promise<IGetAllHandlesResults>;
     getAllHandleNames(): Promise<string[]>;
     getHandleByName: (handleName: string) => Promise<IHandle>;
+    getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle>;
     getHandleStats: () => IHandleStats;
 }
 

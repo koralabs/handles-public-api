@@ -84,54 +84,20 @@ class OgmiosService {
 
     public async getStartingPoint(): Promise<Point> {
         const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
-        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
+        const handlesContent = await HandleStore.prepareHandlesStorage();
 
-        if (externalHandles || localHandles) {
-            let isNew = false;
-            let handlesContent: IHandleFileContent | null;
-            if (!externalHandles) {
-                handlesContent = localHandles;
-            } else if (!localHandles) {
-                isNew = true;
-                handlesContent = externalHandles;
-            } else {
-                if (
-                    localHandles.slot > externalHandles.slot &&
-                    (localHandles.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
-                ) {
-                    handlesContent = localHandles;
-                } else {
-                    isNew = true;
-                    handlesContent = externalHandles;
-                }
-            }
-
-            if (!handlesContent) {
-                Logger.log('Handle storage not found');
-                return initialStartingPoint;
-            }
-
-            const { handles, slot, hash } = handlesContent;
-            Object.keys(handles ?? {}).forEach((k) => {
-                const handle = handles[k];
-                HandleStore.save(handle);
-            });
-
-            Logger.log(
-                `Handle storage found at slot: ${slot} and hash: ${hash} with ${
-                    Object.keys(handles ?? {}).length
-                } handles`
-            );
-
-            if (isNew) {
-                await HandleStore.saveFile(slot, hash);
-            }
-
-            return { slot, hash };
+        if (!handlesContent) {
+            Logger.log('Handle storage not found');
+            return initialStartingPoint;
         }
 
-        Logger.log('Handle storage not found');
-        return initialStartingPoint;
+        const { handles, slot, hash } = handlesContent;
+
+        Logger.log(
+            `Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles`
+        );
+
+        return { slot, hash };
     }
 
     public async startSync() {

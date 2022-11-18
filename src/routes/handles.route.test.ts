@@ -17,6 +17,15 @@ jest.mock('../ioc', () => ({
                     handle: handleName
                 };
             },
+            getPersonalizedHandleByName: (handleName: string) => {
+                if (handleName === 'nope') {
+                    throw new HttpException(404, 'Not found');
+                }
+
+                return {
+                    handle: handleName
+                };
+            },
             getAll: () => {
                 return [
                     {
@@ -134,6 +143,40 @@ describe('Testing Handles Routes', () => {
 
         it('should return not allowed message', async () => {
             const response = await request(app?.getServer()).get('/handles/japan');
+            expect(response.status).toEqual(451);
+            expect(response.body.message).toEqual("Protected word match on 'jap,an'");
+        });
+    });
+
+    describe('[GET] /handles/:handle/personalized', () => {
+        it('should throw error if handle does not exist', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope/personalized');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Not found');
+        });
+
+        it('should return valid handle', async () => {
+            const response = await request(app?.getServer()).get('/handles/burritos/personalized');
+            expect(response.status).toEqual(200);
+            expect(response.body.handle).toEqual({ handle: 'burritos' });
+        });
+
+        it('should return legendary message', async () => {
+            const response = await request(app?.getServer()).get('/handles/1/personalized');
+            expect(response.status).toEqual(406);
+            expect(response.body.message).toEqual('Legendary handles are not available yet.');
+        });
+
+        it('should return invalid message', async () => {
+            const response = await request(app?.getServer()).get('/handles/***/personalized');
+            expect(response.status).toEqual(406);
+            expect(response.body.message).toEqual(
+                'Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.'
+            );
+        });
+
+        it('should return not allowed message', async () => {
+            const response = await request(app?.getServer()).get('/handles/japan/personalized');
             expect(response.status).toEqual(451);
             expect(response.body.message).toEqual("Protected word match on 'jap,an'");
         });

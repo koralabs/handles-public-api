@@ -1,6 +1,59 @@
-import { buildNumericModifiers, getRarity, stringifyBlock } from './utils';
+import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject } from './utils';
 
 describe('Utils Tests', () => {
+    describe('buildOnChainObject tests', () => {
+        const cborObject = {
+            map: [
+                {
+                    k: {
+                        string: '123'
+                    },
+                    v: {
+                        map: [
+                            {
+                                k: {
+                                    string: 'burritos'
+                                },
+                                v: {
+                                    map: [
+                                        {
+                                            k: {
+                                                string: 'image'
+                                            },
+                                            v: {
+                                                string: `ifps://some_hash`
+                                            }
+                                        },
+                                        {
+                                            k: {
+                                                string: 'core'
+                                            },
+                                            v: {
+                                                map: [
+                                                    {
+                                                        k: {
+                                                            string: 'og'
+                                                        },
+                                                        v: {
+                                                            int: BigInt(1)
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        };
+
+        const results = buildOnChainObject(cborObject);
+        expect(results).toEqual({ '123': { burritos: { core: { og: 1 }, image: 'ifps://some_hash' } } });
+    });
+
     describe('buildNumericModifiers tests', () => {
         it('should be negative', () => {
             const result = buildNumericModifiers('-1');
