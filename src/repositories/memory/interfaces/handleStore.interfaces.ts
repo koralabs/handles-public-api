@@ -1,10 +1,10 @@
-import { IHandle, IPersonalization } from '../../../interfaces/handle.interface';
+import { IPersonalization, IPersonalizedHandle } from '../../../interfaces/handle.interface';
 
 export interface IHandleFileContent {
     slot: number;
     hash: string;
     schemaVersion?: number;
-    handles: Record<string, IHandle>;
+    handles: Record<string, IPersonalizedHandle>;
 }
 
 export interface IHandleStoreMetrics {

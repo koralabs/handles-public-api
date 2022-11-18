@@ -86,7 +86,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
-            const personalization = HandleStore.getPersonalization(handleHex);
+            const personalization = HandleStore.getPersonalization(handleHex) ?? {};
             if (handle) {
                 const personalizedHandle: IPersonalizedHandle = {
                     ...handle,

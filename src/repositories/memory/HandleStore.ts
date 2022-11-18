@@ -1,6 +1,7 @@
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
+import { NODE_ENV } from '../../config';
 import { IHandle, IPersonalization, IHandleStats } from '../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
@@ -60,11 +61,16 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
-    static save = (handle: IHandle) => {
+    static save = (handle: IHandle, personalization?: IPersonalization) => {
         const { name, rarity, og, characters, numeric_modifiers, length, hex } = handle;
 
         // Set the main index
         this.handles.set(hex, handle);
+
+        // set the personalization index
+        if (personalization) {
+            this.personalization.set(hex, personalization);
+        }
 
         // set all one-to-one indexes
         this.nameIndex.set(name, hex);
@@ -129,9 +135,7 @@ export class HandleStore {
         existingHandle.background = nft_appearance?.background ?? '';
         existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
         existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-        HandleStore.save(existingHandle);
-
-        HandleStore.personalization.set(hexName, personalization);
+        HandleStore.save(existingHandle, personalization);
     }
 
     static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
@@ -307,7 +311,9 @@ export class HandleStore {
     }
 
     static async prepareHandlesStorage(): Promise<IHandleFileContent | null> {
-        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
+        const files =
+            NODE_ENV === 'local' ? [null, HandleStore.getFile()] : [HandleStore.getFileOnline(), HandleStore.getFile()];
+        const [externalHandles, localHandles] = await Promise.all(files);
 
         if (externalHandles || localHandles) {
             let isNew = false;
@@ -336,7 +342,11 @@ export class HandleStore {
             const { handles, slot, hash } = handlesContent;
             Object.keys(handles ?? {}).forEach((k) => {
                 const handle = handles[k];
-                HandleStore.save(handle);
+                const newHandle = {
+                    ...handle
+                };
+                delete newHandle.personalization;
+                HandleStore.save(newHandle, handle.personalization);
             });
 
             Logger.log(
