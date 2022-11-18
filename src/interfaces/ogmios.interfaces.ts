@@ -1,6 +1,6 @@
 export enum MetadataLabel {
     'NFT' = 721,
-    'HANDLE_PERSONALIZATION' = 80085 // (.)(.)
+    'HANDLE_PERSONALIZATION' = 5508
 }
 
 export enum MetadatumAssetLabel {
