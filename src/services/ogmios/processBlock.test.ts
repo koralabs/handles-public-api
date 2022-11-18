@@ -44,6 +44,23 @@ describe('processBlock Tests', () => {
                                                     v: {
                                                         string: `ifps://some_hash_${handleName}`
                                                     }
+                                                },
+                                                {
+                                                    k: {
+                                                        string: 'core'
+                                                    },
+                                                    v: {
+                                                        map: [
+                                                            {
+                                                                k: {
+                                                                    string: 'og'
+                                                                },
+                                                                v: {
+                                                                    int: BigInt(1)
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
                                                 }
                                             ]
                                         }
@@ -57,7 +74,13 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name }) => ({
+    const txBlock = ({
+        address = 'addr123',
+        policy = policyId,
+        handleHexName = hexName,
+        handleName = name,
+        isMint = true
+    }) => ({
         babbage: {
             body: [
                 {
@@ -74,12 +97,14 @@ describe('processBlock Tests', () => {
                                 }
                             }
                         ],
-                        mint: {
-                            coins: 1,
-                            assets: {
-                                [`${`${policy}.${handleHexName}`}`]: 1
-                            }
-                        }
+                        mint: isMint
+                            ? {
+                                  coins: 1,
+                                  assets: {
+                                      [`${`${policy}.${handleHexName}`}`]: 1
+                                  }
+                              }
+                            : {}
                     },
                     metadata: metadata(policy, handleName)
                 }
@@ -92,28 +117,36 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const expectedItem = {
+    const expectedItem: IHandle = {
         characters: 'letters,numbers',
         hex: hexName,
         length: 8,
         name,
-        nft_image: 'ifps://some_hash_test1234',
+        nft_image: 'some_hash_test1234',
         numeric_modifiers: '',
-        og: 0,
-        original_nft_image: 'ifps://some_hash_test1234',
-        personalization: {},
+        og: 1,
+        original_nft_image: 'some_hash_test1234',
         rarity: Rarity.basic,
-        resolved_addresses: { ada: 'addr123' }
+        resolved_addresses: { ada: 'addr123' },
+        default_in_wallet: 'some_hdl',
+        profile_pic: 'some_hash_test1234',
+        background: 'some_hash_test1234'
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
-        const saveSpy = jest.spyOn(HandleStore, 'save');
+        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith(expectedItem);
+        expect(saveSpy).toHaveBeenCalledWith({
+            adaAddress: 'addr123',
+            hexName: '7465737431323334',
+            image: 'ifps://some_hash_test1234',
+            name: 'test1234',
+            og: 1
+        });
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
             currentBlockHash: 'some_hash',
             currentSlot: 0,
@@ -124,20 +157,24 @@ describe('processBlock Tests', () => {
 
     it('Should not save a new handle because it already exists in store', () => {
         const newAddress = 'addr456';
-        const saveSpy = jest.spyOn(HandleStore, 'save');
-
+        const saveSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
+        jest.spyOn(HandleStore, 'setMetrics');
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
-        processBlock({ policyId, txBlock: txBlock({ address: newAddress }) as TxBlock, tip });
+        processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith({ ...expectedItem, resolved_addresses: { ada: newAddress } });
+        //{ ...expectedItem, resolved_addresses: { ada: newAddress } }
+        expect(saveSpy).toHaveBeenCalledWith(hexName, newAddress);
     });
 
     it('Should not save anything is policyId does not match', () => {
-        const saveSpy = jest.spyOn(HandleStore, 'save');
+        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
+        const saveAddressSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
 
         processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledTimes(0);
+        expect(saveAddressSpy).toHaveBeenCalledTimes(0);
     });
 });

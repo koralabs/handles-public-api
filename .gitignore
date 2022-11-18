@@ -106,3 +106,4 @@ dist
 
 handle-storage.json
 storage/handles.json
+storage/local.json

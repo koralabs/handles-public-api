@@ -11,6 +11,7 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { Logger } from './utils/logger';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
+import { LocalService } from './services/local/local.service';
 
 class App {
     public app: express.Application;
@@ -70,8 +71,18 @@ class App {
     }
 
     private async initializeStorage() {
+        if (this.env === 'test') {
+            return;
+        }
+
         if (this.env === 'development') {
             this.initializeMockStorage();
+            return;
+        }
+
+        if (this.env === 'local') {
+            const localService = new LocalService();
+            localService.startSync();
             return;
         }
 

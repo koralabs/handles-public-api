@@ -8,6 +8,34 @@ export enum Rarity {
     legendary = 'legendary' // - 1 character
 }
 
+export interface IPersonalization {
+    my_page?: {
+        type: string;
+        domain?: string | null;
+        customSettings?: string[] | null;
+    };
+    nft_appearance?: {
+        image: string;
+        background: string;
+        profilePic: string;
+        theme: string;
+        contact?: string;
+        textBackground: string;
+        border: string;
+        trimColor: string;
+        selectedAttributes: string[];
+        purchasedAttributes: string[];
+    };
+    social_links?: {
+        twitter?: string;
+        discord?: string;
+        facebook?: string;
+    };
+    sub_handles?: {
+        [subHandleName: string]: string; // walletId
+    };
+}
+
 export interface IHandle {
     hex: string;
     name: string;
@@ -18,12 +46,18 @@ export interface IHandle {
     rarity: Rarity;
     characters: string; // 'letters,numbers,special',
     numeric_modifiers: string; // 'negative,decimal',
+    default_in_wallet: string; // my_default_hndl
+    profile_pic: string;
+    background: string;
     resolved_addresses: {
         ada: string;
         eth?: string;
         btc?: string;
     };
-    personalization: Record<string, unknown>;
+}
+
+export interface IPersonalizedHandle extends IHandle {
+    personalization?: IPersonalization;
 }
 
 export interface IGetAllQueryParams {

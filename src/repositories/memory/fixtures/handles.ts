@@ -14,7 +14,9 @@ export const handlesFixture: IHandle[] = [
         resolved_addresses: {
             ada: ''
         },
-        personalization: {}
+        default_in_wallet: '',
+        profile_pic: '',
+        background: ''
     },
     {
         hex: 'burrito-hex',
@@ -29,7 +31,9 @@ export const handlesFixture: IHandle[] = [
         resolved_addresses: {
             ada: ''
         },
-        personalization: {}
+        default_in_wallet: '',
+        profile_pic: '',
+        background: ''
     },
     {
         hex: 'taco-hex',
@@ -44,6 +48,8 @@ export const handlesFixture: IHandle[] = [
         resolved_addresses: {
             ada: ''
         },
-        personalization: {}
+        default_in_wallet: '',
+        profile_pic: '',
+        background: ''
     }
 ];

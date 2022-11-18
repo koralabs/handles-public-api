@@ -1,4 +1,4 @@
-import { IHandle } from '../../../interfaces/handle.interface';
+import { IHandle, IPersonalization } from '../../../interfaces/handle.interface';
 
 export interface IHandleFileContent {
     slot: number;
@@ -16,4 +16,17 @@ export interface IHandleStoreMetrics {
     firstMemoryUsage?: number;
     currentBlockHash?: string;
     memorySize?: number;
+}
+
+export interface SaveMintingTxInput {
+    hexName: string;
+    name: string;
+    adaAddress: string;
+    og: number;
+    image: string;
+}
+
+export interface SavePersonalizationInput {
+    hexName: string;
+    personalization: IPersonalization;
 }

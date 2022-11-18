@@ -1,10 +1,9 @@
 import { OGMIOS_ENDPOINT } from '../../config';
 import fetch from 'cross-fetch';
 import { Rarity } from '../../interfaces/handle.interface';
-import { HandleOnChainData } from '../../interfaces/ogmios.interfaces';
 import { LogCategory, Logger } from '../../utils/logger';
 
-const stringify = (value: any) => {
+const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
     let objString = '';
     if (typeof value === 'object') {
@@ -16,9 +15,9 @@ const stringify = (value: any) => {
                     const { k, v } = value[key][i];
 
                     if (v.map) {
-                        objString += `"${k.string}":${stringify(v)}`;
+                        objString += `"${k.string}":${parseCborObject(v)}`;
                     } else {
-                        objString += `"${k.string}":${stringify(v.string ?? v.int ?? v.list ?? '')}`;
+                        objString += `"${k.string}":${parseCborObject(v.string ?? v.int ?? v.list ?? '')}`;
                     }
 
                     // We add the comma
@@ -27,7 +26,7 @@ const stringify = (value: any) => {
                     }
                 }
             } else {
-                objString += `"${key}":${stringify(value[key])}`;
+                objString += `"${key}":${parseCborObject(value[key])}`;
             }
 
             // We add the comma
@@ -49,22 +48,19 @@ const stringify = (value: any) => {
 
 /**
  *
- * expecting metadata starting with 721
+ * expecting metadata starting with 721 or 8413
  *
  * @param metadata
  * @returns parsed metadata
  */
-export const buildHandleMetadata = (metadata: any): HandleOnChainData | null => {
-    if (metadata?.['721']) {
-        try {
-            const stringifiedMetadata = stringify(metadata?.['721']);
-            return JSON.parse(stringifiedMetadata);
-        } catch (error) {
-            console.log('Error building metadata', error);
-        }
+export const buildOnChainObject = <T>(cborData: any): T | null => {
+    try {
+        const stringifiedMetadata = parseCborObject(cborData);
+        return JSON.parse(stringifiedMetadata) as T;
+    } catch (error) {
+        console.log('Error building metadata', error);
+        throw error;
     }
-
-    return null;
 };
 
 export const hex2String = (hex: string) => {

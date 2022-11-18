@@ -60,6 +60,30 @@ class HandlesController {
             next(error);
         }
     };
+
+    public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleName = req.params.handle;
+
+            const result = await ProtectedWords.checkAvailability(handleName);
+            if (!result.available) {
+                res.status(result.code).send({
+                    message:
+                        result.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
+                            ? result.reason
+                            : result.message
+                });
+                return;
+            }
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
+
+            res.status(200).json({ handle: handleData });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default HandlesController;
