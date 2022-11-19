@@ -114,7 +114,6 @@ describe('HandleStore tests', () => {
                 }
             };
 
-            console.log('DOING STUFF!!!');
             HandleStore.savePersonalizationChange({ hexName: 'nachos-hex', personalization: personalizationUpdates });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');

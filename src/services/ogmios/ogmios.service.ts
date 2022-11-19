@@ -91,12 +91,7 @@ class OgmiosService {
             return initialStartingPoint;
         }
 
-        const { handles, slot, hash } = handlesContent;
-
-        Logger.log(
-            `Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles`
-        );
-
+        const { slot, hash } = handlesContent;
         return { slot, hash };
     }
 
