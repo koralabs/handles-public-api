@@ -3,18 +3,18 @@ openapi: 3.0.3
 info:
   title: Handles Public API
   description: ADA Handle Public API
-  termsOfService: https://docs.handle.me/tou
+  termsOfService: https://handle.io/tou
   contact:
     email: hello@adahandle.com
   version: 0.0.1
 servers:
-- url: https://api.handle.me/v0
+- url: https://api.handle.me
 tags:
 - name: handles
   description: Handle endpoints
   externalDocs:
     description: Related Handle Docs
-    url: https://docs.handle.me/api
+    url: https://api.handle.me/swagger
 paths:
   "/handles":
     get:
