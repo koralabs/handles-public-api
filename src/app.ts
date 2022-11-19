@@ -111,7 +111,7 @@ class App {
     private async initializeSwagger() {
         var options = {
             customCss: '.swagger-ui .topbar { display: none }',
-            customSiteTitle: 'Handle API',
+            customSiteTitle: 'Handles API',
             customfavIcon: '/assets/favicon.ico'
         };
 
