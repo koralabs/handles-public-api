@@ -188,6 +188,10 @@ components:
             btc:
               type: string
               example: addr1e00000000000000000000000000000000000003
+        version:
+          type: string
+          description: The version of the Handle
+          example: 1
     Personalization:
       type: object
       properties:

@@ -16,9 +16,9 @@ class HandlesController {
         try {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
 
-            if (req.headers?.accept === 'text/plain') {
+            if (req.headers?.accept?.startsWith('text/plain')) {
                 const handles = await handleRepo.getAllHandleNames();
-                res.set('Content-Type', 'text/plain');
+                res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.send(handles.join('\n'));
                 return;
             }

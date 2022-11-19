@@ -108,7 +108,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer())
                 .get('/handles')
                 .set('api-key', 'valid-key')
-                .set('Accept', 'text/plain');
+                .set('Accept', 'text/plain; charset=utf-8');
             expect(response.status).toEqual(200);
             expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
         });
