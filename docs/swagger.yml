@@ -48,7 +48,7 @@ paths:
         '200':
           description: Successful operation
           content:
-            text/plain:
+            text/plain; charset=utf-8:
               schema:
                 type: string
                 example: |-
@@ -56,6 +56,11 @@ paths:
                   my.handle
                   i-always-hodl
                   ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Handle"
         '400':
           description: Invalid filter
       security:
@@ -77,9 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  "$ref": "#/components/schemas/Handle"
+                "$ref": "#/components/schemas/Handle"
         '400':
           description: Invalid Handle format
         '404':
@@ -103,9 +106,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  "$ref": "#/components/schemas/Personalization"
+                "$ref": "#/components/schemas/Personalization"
         '400':
           description: Invalid Handle format
         '404':
