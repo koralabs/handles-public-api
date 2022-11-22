@@ -1,3 +1,6 @@
+import fs from 'fs';
+
+import { NODE_ENV } from '../../config';
 import { HttpException } from '../../exceptions/HttpException';
 
 import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../../interfaces/handle.interface';
@@ -102,6 +105,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
+    }
+
+    public async patchHandle(handle: IPersonalizedHandle): Promise<string> {
+        if (NODE_ENV === 'local') {
+            fs.writeFileSync('storage/local.json', JSON.stringify(handle));
+            return JSON.stringify(handle);
+        }
+
+        // TODO: this needs to craft a transaction
+        throw new HttpException(500, 'Not implemented');
     }
 }
 

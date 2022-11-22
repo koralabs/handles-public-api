@@ -41,7 +41,8 @@ const processAssetReferenceToken = async (assetName: string, output: TxOutput) =
     // populate personalization from the reference token
     const personalization = await buildPersonalization(referenceTokenData);
 
-    HandleStore.savePersonalizationChange({ hexName, personalization });
+    // TODO: get addresses from personalization data
+    HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {} });
 };
 
 const processAssetToken = (

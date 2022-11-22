@@ -85,7 +85,8 @@ describe('HandleStore tests', () => {
                 original_nft_image: 'ipfs://123',
                 profile_pic: '',
                 rarity: 'common',
-                resolved_addresses: { ada: 'addr123' }
+                resolved_addresses: { ada: 'addr123' },
+                created_at: expect.any(Number)
             });
         });
     });
@@ -114,7 +115,11 @@ describe('HandleStore tests', () => {
                 }
             };
 
-            HandleStore.savePersonalizationChange({ hexName: 'nachos-hex', personalization: personalizationUpdates });
+            HandleStore.savePersonalizationChange({
+                hexName: 'nachos-hex',
+                personalization: personalizationUpdates,
+                addresses: {}
+            });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');
             expect(personalization).toEqual({
@@ -136,7 +141,7 @@ describe('HandleStore tests', () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const personalization: IPersonalization = {};
-            HandleStore.savePersonalizationChange({ hexName: '123', personalization });
+            HandleStore.savePersonalizationChange({ hexName: '123', personalization, addresses: {} });
             expect(loggerSpy).toHaveBeenCalledWith(
                 'Personalization change, but there is no existing handle in storage with hex: 123',
                 'ERROR'
@@ -171,7 +176,9 @@ describe('HandleStore tests', () => {
                 original_nft_image: 'ipfs://123',
                 profile_pic: '',
                 rarity: 'common',
-                resolved_addresses: { ada: newAddress }
+                resolved_addresses: { ada: newAddress },
+                created_at: expect.any(Number),
+                updated_at: expect.any(Number)
             });
         });
 

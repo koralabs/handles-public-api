@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest, IPersonalizedHandle } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
@@ -84,6 +84,23 @@ class HandlesController {
             next(error);
         }
     }
+
+    public pathHandle = async (
+        req: Request<IGetHandleRequest, {}, {}>,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const handle = req.body as { handle: IPersonalizedHandle };
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const transaction = await handleRepo.patchHandle(handle.handle);
+
+            res.status(200).json({ transaction });
+        } catch (error) {
+            next(error);
+        }
+    };
 }
 
 export default HandlesController;
