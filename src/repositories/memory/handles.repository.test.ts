@@ -1,4 +1,3 @@
-import { IHandle, Rarity } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';

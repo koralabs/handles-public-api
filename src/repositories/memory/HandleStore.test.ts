@@ -1,10 +1,9 @@
 import { writeFileSync, unlinkSync } from 'fs';
-import { IHandle, IPersonalization, Rarity } from '../../interfaces/handle.interface';
-import { handleEraBoundaries } from '../../services/ogmios/constants';
+import { HandleStore } from './HandleStore';
+import { IPersonalization } from '../../interfaces/handle.interface';
 import { Logger } from '../../utils/logger';
 import { delay } from '../../utils/util';
 import { handlesFixture } from './fixtures/handles';
-import { HandleStore } from './HandleStore';
 
 jest.mock('fs');
 jest.mock('cross-fetch');
