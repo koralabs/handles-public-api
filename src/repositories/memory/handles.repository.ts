@@ -1,3 +1,6 @@
+import fs from 'fs';
+
+import { NODE_ENV } from '../../config';
 import { HttpException } from '../../exceptions/HttpException';
 
 import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../../interfaces/handle.interface';
@@ -5,6 +8,7 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
+import { IHandleFileContent } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     public async getAll({
@@ -102,6 +106,26 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
+    }
+
+    public async patchHandle(handle: IPersonalizedHandle): Promise<string> {
+        if (NODE_ENV === 'local') {
+            const path = 'storage/local.json';
+            const fileContent = fs.readFileSync(path, { encoding: 'utf8' });
+            const handlesFile = JSON.parse(fileContent) as IHandleFileContent;
+            const newHandlesFile = {
+                ...handlesFile,
+                handles: {
+                    ...handlesFile.handles,
+                    [handle.hex]: handle
+                }
+            };
+            fs.writeFileSync('storage/local.json', JSON.stringify(newHandlesFile));
+            return JSON.stringify(handle);
+        }
+
+        // TODO: this needs to craft a transaction
+        throw new HttpException(500, 'Not implemented');
     }
 }
 

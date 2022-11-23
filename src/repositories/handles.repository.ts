@@ -11,6 +11,7 @@ interface IHandlesRepository {
     getHandleByName: (handleName: string) => Promise<IHandle>;
     getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle>;
     getHandleStats: () => IHandleStats;
+    patchHandle: (handle: IPersonalizedHandle) => Promise<string>;
 }
 
 export default IHandlesRepository;

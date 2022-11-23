@@ -29,4 +29,7 @@ export interface SaveMintingTxInput {
 export interface SavePersonalizationInput {
     hexName: string;
     personalization: IPersonalization;
+    addresses: {
+        [chain: string]: string;
+    };
 }

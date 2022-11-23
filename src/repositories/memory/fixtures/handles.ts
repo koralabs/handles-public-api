@@ -16,7 +16,8 @@ export const handlesFixture: IHandle[] = [
         },
         default_in_wallet: '',
         profile_pic: '',
-        background: ''
+        background: '',
+        created_at: Date.now()
     },
     {
         hex: 'burrito-hex',
@@ -33,7 +34,8 @@ export const handlesFixture: IHandle[] = [
         },
         default_in_wallet: '',
         profile_pic: '',
-        background: ''
+        background: '',
+        created_at: Date.now()
     },
     {
         hex: 'taco-hex',
@@ -50,6 +52,7 @@ export const handlesFixture: IHandle[] = [
         },
         default_in_wallet: '',
         profile_pic: '',
-        background: ''
+        background: '',
+        created_at: Date.now()
     }
 ];

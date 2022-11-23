@@ -13,7 +13,7 @@
     "copySwaggerDist": "cp docs/swagger.yml dist/swagger.yml",
     "build:production": "yarn build && cp package.json dist/package.json && cd dist && yarn install --production",
     "dev": "cross-env NODE_ENV=development nodemon",
-    "dev:local": "cross-env NODE_ENV=local PORT=3000 ORIGIN=* nodemon",
+    "dev:local": "cross-env NODE_ENV=local ORIGIN=* nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
     "test": "jest --forceExit --detectOpenHandles --coverage",
     "lint": "eslint --ignore-path .gitignore --ext .ts src/",

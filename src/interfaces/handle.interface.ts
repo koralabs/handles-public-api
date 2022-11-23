@@ -54,6 +54,9 @@ export interface IHandle {
         eth?: string;
         btc?: string;
     };
+    created_at: number;
+    updated_at?: number;
+    personalization_updated_at?: number;
 }
 
 export interface IPersonalizedHandle extends IHandle {

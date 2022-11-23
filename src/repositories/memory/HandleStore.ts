@@ -99,7 +99,8 @@ export class HandleStore {
             nft_image: image,
             background: '',
             default_in_wallet: '',
-            profile_pic: ''
+            profile_pic: '',
+            created_at: Date.now()
         };
 
         this.save(newHandle);
@@ -116,10 +117,11 @@ export class HandleStore {
         }
 
         existingHandle.resolved_addresses.ada = adaAddress;
+        existingHandle.updated_at = Date.now();
         HandleStore.save(existingHandle);
     };
 
-    static savePersonalizationChange({ hexName, personalization }: SavePersonalizationInput) {
+    static savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log(
@@ -129,12 +131,27 @@ export class HandleStore {
             return;
         }
 
-        const { nft_appearance } = personalization;
+        if (personalization) {
+            const { nft_appearance } = personalization;
+            existingHandle.nft_image = nft_appearance?.image ?? '';
+            existingHandle.background = nft_appearance?.background ?? '';
+            existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
+            existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
+            existingHandle.personalization_updated_at = Date.now();
+        }
 
-        existingHandle.nft_image = nft_appearance?.image ?? '';
-        existingHandle.background = nft_appearance?.background ?? '';
-        existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
-        existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
+        // update resolved addresses
+        // remove ada from the new addresses.
+        if (addresses.ada) {
+            delete addresses.ada;
+        }
+
+        // set ADA and replace
+        existingHandle.resolved_addresses = {
+            ada: existingHandle.resolved_addresses.ada,
+            ...addresses
+        };
+
         HandleStore.save(existingHandle, personalization);
     }
 
@@ -232,7 +249,8 @@ export class HandleStore {
                 },
                 default_in_wallet: 'hdl',
                 background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW'
+                profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
+                created_at: Date.now()
             };
 
             this.save(handle);
@@ -277,7 +295,7 @@ export class HandleStore {
     }
 
     static async getFile(storagePath?: string): Promise<IHandleFileContent | null> {
-        const path = storagePath ?? this.storagePath;
+        const path = NODE_ENV === 'local' ? 'storage/local.json' : storagePath ?? this.storagePath;
 
         try {
             const isLocked = await lockfile.check(path);
@@ -294,6 +312,10 @@ export class HandleStore {
     }
 
     static async getFileOnline(): Promise<IHandleFileContent | null> {
+        if (NODE_ENV === 'local') {
+            return null;
+        }
+
         try {
             Logger.log('Fetching handles.json');
             const awsResponse = await fetch('http://api.handle.me.s3-website-us-west-2.amazonaws.com/handles.json');
@@ -311,9 +333,7 @@ export class HandleStore {
     }
 
     static async prepareHandlesStorage(): Promise<IHandleFileContent | null> {
-        const files =
-            NODE_ENV === 'local' ? [null, HandleStore.getFile()] : [HandleStore.getFileOnline(), HandleStore.getFile()];
-        const [externalHandles, localHandles] = await Promise.all(files);
+        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
 
         if (externalHandles || localHandles) {
             let isNew = false;
