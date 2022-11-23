@@ -85,7 +85,7 @@ class HandlesController {
         }
     }
 
-    public pathHandle = async (
+    public patchHandle = async (
         req: Request<IGetHandleRequest, {}, {}>,
         res: Response,
         next: NextFunction
