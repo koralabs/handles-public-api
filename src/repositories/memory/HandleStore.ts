@@ -5,6 +5,7 @@ import { NODE_ENV } from '../../config';
 import { IHandle, IPersonalization, IHandleStats } from '../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
+import { getAddressStakeKey } from '../../utils/serialization';
 import { getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
@@ -21,6 +22,7 @@ export class HandleStore {
     static charactersIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
+    static stakeKeyIndex = new Map<string, Set<string>>();
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -62,7 +64,16 @@ export class HandleStore {
     };
 
     static save = (handle: IHandle, personalization?: IPersonalization) => {
-        const { name, rarity, og, characters, numeric_modifiers, length, hex } = handle;
+        const {
+            name,
+            rarity,
+            og,
+            characters,
+            numeric_modifiers,
+            length,
+            hex,
+            resolved_addresses: { ada }
+        } = handle;
 
         // Set the main index
         this.handles.set(hex, handle);
@@ -81,6 +92,11 @@ export class HandleStore {
         this.addIndexSet(this.charactersIndex, characters, hex);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
+
+        const stakeKey = getAddressStakeKey(ada);
+        if (stakeKey) {
+            this.addIndexSet(this.stakeKeyIndex, stakeKey, hex);
+        }
     };
 
     static saveMintedHandle = ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
