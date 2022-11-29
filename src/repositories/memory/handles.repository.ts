@@ -107,26 +107,6 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
     }
-
-    public async patchHandle(handle: IPersonalizedHandle): Promise<string> {
-        if (NODE_ENV === 'local') {
-            const path = 'storage/local.json';
-            const fileContent = fs.readFileSync(path, { encoding: 'utf8' });
-            const handlesFile = JSON.parse(fileContent) as IHandleFileContent;
-            const newHandlesFile = {
-                ...handlesFile,
-                handles: {
-                    ...handlesFile.handles,
-                    [handle.hex]: handle
-                }
-            };
-            fs.writeFileSync('storage/local.json', JSON.stringify(newHandlesFile));
-            return JSON.stringify(handle);
-        }
-
-        // TODO: this needs to craft a transaction
-        throw new HttpException(500, 'Not implemented');
-    }
 }
 
 export default MemoryHandlesRepository;
