@@ -1,7 +1,7 @@
 import { OGMIOS_ENDPOINT } from '../../config';
 import fetch from 'cross-fetch';
-import { Rarity } from '../../interfaces/handle.interface';
 import { LogCategory, Logger } from '../../utils/logger';
+import { Rarity } from '@koralabs/handles-public-api-interfaces';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();

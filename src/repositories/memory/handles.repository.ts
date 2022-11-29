@@ -1,14 +1,11 @@
-import fs from 'fs';
-
-import { NODE_ENV } from '../../config';
+import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
 
-import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../../interfaces/handle.interface';
+import { IGetAllHandlesResults } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
-import { IHandleFileContent } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     public async getAll({

@@ -1,5 +1,5 @@
+import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { ModelException } from '../exceptions/ModelException';
-import { Rarity } from '../interfaces/handle.interface';
 import { isNumeric } from '../utils/util';
 
 export class HandleSearchModel {

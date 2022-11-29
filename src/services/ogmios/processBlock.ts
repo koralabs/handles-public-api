@@ -1,4 +1,4 @@
-import { IPersonalization } from '../../interfaces/handle.interface';
+import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import {
     BlockTip,
     HandleOnChainData,

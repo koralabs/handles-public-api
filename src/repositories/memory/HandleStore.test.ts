@@ -1,9 +1,9 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from './HandleStore';
-import { IPersonalization } from '../../interfaces/handle.interface';
 import { Logger } from '../../utils/logger';
 import { delay } from '../../utils/util';
 import { handlesFixture } from './fixtures/handles';
+import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 
 jest.mock('fs');
 jest.mock('cross-fetch');

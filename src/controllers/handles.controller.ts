@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest, IPersonalizedHandle } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';

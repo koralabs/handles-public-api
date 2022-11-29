@@ -1,7 +1,7 @@
+import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
 import request from 'supertest';
 import App from '../app';
 import { HttpException } from '../exceptions/HttpException';
-import { IHandleStats } from '../interfaces/handle.interface';
 
 jest.mock('../services/ogmios/ogmios.service');
 

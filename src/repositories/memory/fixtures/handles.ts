@@ -1,4 +1,4 @@
-import { IHandle, Rarity } from '../../../interfaces/handle.interface';
+import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
 
 export const handlesFixture: IHandle[] = [
     {
