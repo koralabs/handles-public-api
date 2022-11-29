@@ -42,10 +42,10 @@ const processAssetReferenceToken = async (assetName: string, output: TxOutput) =
     const personalization = await buildPersonalization(referenceTokenData);
 
     // TODO: get addresses from personalization data
-    HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {} });
+    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {} });
 };
 
-const processAssetToken = (
+const processAssetToken = async (
     assetName: string,
     output: TxOutput,
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata }
@@ -64,9 +64,9 @@ const processAssetToken = (
             image,
             core: { og }
         } = data;
-        HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: output.address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: output.address });
     } else {
-        HandleStore.saveWalletAddressMove(hexName, output.address);
+        await HandleStore.saveWalletAddressMove(hexName, output.address);
     }
 };
 
@@ -112,7 +112,7 @@ export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txB
                             isMintingTransaction(txBody, assetName) && handleMetadata
                                 ? handleMetadata[policyId]
                                 : undefined;
-                        processAssetToken(assetName, output, data);
+                        await processAssetToken(assetName, output, data);
                     });
             });
     });

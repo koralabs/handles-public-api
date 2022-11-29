@@ -63,7 +63,7 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
-    static save = (handle: IHandle, personalization?: IPersonalization) => {
+    static save = async (handle: IHandle, personalization?: IPersonalization) => {
         const {
             name,
             rarity,
@@ -93,13 +93,13 @@ export class HandleStore {
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
-        const stakeKey = getAddressStakeKey(ada);
+        const stakeKey = await getAddressStakeKey(ada);
         if (stakeKey) {
             this.addIndexSet(this.stakeKeyIndex, stakeKey, hex);
         }
     };
 
-    static saveMintedHandle = ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
+    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
@@ -119,10 +119,10 @@ export class HandleStore {
             created_at: Date.now()
         };
 
-        this.save(newHandle);
+        await this.save(newHandle);
     };
 
-    static saveWalletAddressMove = (hexName: string, adaAddress: string) => {
+    static saveWalletAddressMove = async (hexName: string, adaAddress: string) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log(
@@ -134,10 +134,10 @@ export class HandleStore {
 
         existingHandle.resolved_addresses.ada = adaAddress;
         existingHandle.updated_at = Date.now();
-        HandleStore.save(existingHandle);
+        await HandleStore.save(existingHandle);
     };
 
-    static savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
+    static async savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log(
@@ -153,7 +153,7 @@ export class HandleStore {
             existingHandle.background = nft_appearance?.background ?? '';
             existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
             existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-            existingHandle.personalization_updated_at = Date.now();
+            existingHandle.updated_at = Date.now(); // TODO: Change to slot number
         }
 
         // update resolved addresses
@@ -168,7 +168,7 @@ export class HandleStore {
             ...addresses
         };
 
-        HandleStore.save(existingHandle, personalization);
+        await HandleStore.save(existingHandle, personalization);
     }
 
     static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
@@ -376,13 +376,13 @@ export class HandleStore {
             }
 
             const { handles, slot, hash } = handlesContent;
-            Object.keys(handles ?? {}).forEach((k) => {
+            Object.keys(handles ?? {}).forEach(async (k) => {
                 const handle = handles[k];
                 const newHandle = {
                     ...handle
                 };
                 delete newHandle.personalization;
-                HandleStore.save(newHandle, handle.personalization);
+                await HandleStore.save(newHandle, handle.personalization);
             });
 
             Logger.log(

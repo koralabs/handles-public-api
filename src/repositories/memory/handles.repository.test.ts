@@ -5,8 +5,9 @@ import { HandleStore } from './HandleStore';
 import { handlesFixture } from './fixtures/handles';
 
 describe('MemoryHandlesRepository Tests', () => {
-    handlesFixture.forEach((handle) => {
-        HandleStore.save(handle);
+    beforeAll(async () => {
+        const saves = handlesFixture.map(async (handle) => HandleStore.save(handle));
+        await Promise.all(saves);
     });
 
     beforeEach(() => {
