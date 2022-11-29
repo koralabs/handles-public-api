@@ -324,6 +324,11 @@
   dependencies:
     bignumber.js "^9.0.0"
 
+"@emurgo/cardano-serialization-lib-nodejs@^11.1.0":
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/@emurgo/cardano-serialization-lib-nodejs/-/cardano-serialization-lib-nodejs-11.1.0.tgz#d75decb7a8447abceb15162cc6254f5b9171ae8c"
+  integrity sha512-lcKuKmeMGLLu45DqT2HYugHujsu1/WYKfrPzycAMpRk4FhZ0wWY2IFkD6We8+CQwNpXyQquy0psmRD5tChIxMA==
+
 "@esbuild/android-arm@0.15.10":
   version "0.15.10"
   resolved "https://registry.yarnpkg.com/@esbuild/android-arm/-/android-arm-0.15.10.tgz#a5f9432eb221afc243c321058ef25fe899886892"

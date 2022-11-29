@@ -14,10 +14,10 @@ export class LocalService {
             const data = fs.readFileSync('storage/local.json', 'utf-8');
             if (data) {
                 const fileContents = JSON.parse(data) as IHandleFileContent;
-                Object.entries(fileContents.handles).forEach(([k, v]) => {
+                Object.entries(fileContents.handles).forEach(async ([k, v]) => {
                     const { hex, name, personalization, resolved_addresses: addresses } = v as PersonalizationUpdates;
                     console.log(`${name} changed! saving personalization`);
-                    HandleStore.savePersonalizationChange({ hexName: hex, personalization, addresses });
+                    await HandleStore.savePersonalizationChange({ hexName: hex, personalization, addresses });
                 });
             }
         }

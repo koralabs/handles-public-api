@@ -1,5 +1,4 @@
 import * as ogmiosClient from '@cardano-ogmios/client';
-import { handlesFixture } from '../../repositories/memory/fixtures/handles';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
