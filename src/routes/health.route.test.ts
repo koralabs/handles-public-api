@@ -3,7 +3,7 @@ import HealthRoutes from './health.route';
 import App from '../app';
 import * as ogmiosUtils from '../services/ogmios/utils';
 import { HttpException } from '../exceptions/HttpException';
-import { IHandleStats } from '../interfaces/handle.interface';
+import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
 
 jest.mock('../services/ogmios/ogmios.service');
 

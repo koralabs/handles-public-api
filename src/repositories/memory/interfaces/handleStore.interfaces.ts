@@ -1,4 +1,4 @@
-import { IPersonalization, IPersonalizedHandle } from '../../../interfaces/handle.interface';
+import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
 export interface IHandleFileContent {
     slot: number;

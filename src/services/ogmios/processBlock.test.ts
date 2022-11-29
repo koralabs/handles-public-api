@@ -1,4 +1,4 @@
-import { IHandle, Rarity } from '../../interfaces/handle.interface';
+import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { processBlock } from './processBlock';

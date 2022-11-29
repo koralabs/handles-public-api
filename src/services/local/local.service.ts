@@ -1,5 +1,5 @@
+import { IHandle, IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import fs from 'fs';
-import { IHandle, IPersonalization } from '../../interfaces/handle.interface';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { IHandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
 

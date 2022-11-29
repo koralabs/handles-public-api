@@ -1,4 +1,5 @@
-import { IGetAllHandlesResults, IHandle, IHandleStats, IPersonalizedHandle } from '../interfaces/handle.interface';
+import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IGetAllHandlesResults } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 

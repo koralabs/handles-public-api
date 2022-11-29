@@ -1,8 +1,8 @@
+import { IHandle, IHandleStats, IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
 import { NODE_ENV } from '../../config';
-import { IHandle, IPersonalization, IHandleStats } from '../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
 import { getAddressStakeKey } from '../../utils/serialization';
