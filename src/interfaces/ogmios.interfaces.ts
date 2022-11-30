@@ -127,3 +127,35 @@ export interface TxBlock {
     alonzo?: TxBlockBody;
     babbage?: TxBlock;
 }
+
+export interface HealthResponseBody {
+    startTime: string;
+    lastKnownTip: {
+        slot: number;
+        hash: string;
+        blockNo: number;
+    };
+    lastTipUpdate: string;
+    networkSynchronization: number;
+    currentEra: string;
+    metrics: {
+        activeConnections: number;
+        runtimeStats: {
+            cpuTime: number;
+            currentHeapSize: number;
+            gcCpuTime: number;
+            maxHeapSize: number;
+        };
+        sessionDurations: {
+            max: number;
+            mean: number;
+            min: number;
+        };
+        totalConnections: number;
+        totalMessages: number;
+        totalUnrouted: number;
+    };
+    connectionStatus: string;
+    currentEpoch: number;
+    slotInEpoch: number;
+}

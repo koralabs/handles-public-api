@@ -2,6 +2,7 @@ import { OGMIOS_ENDPOINT } from '../../config';
 import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '../../utils/logger';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
+import { HealthResponseBody } from '../../interfaces/ogmios.interfaces';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -128,7 +129,7 @@ export const getRarity = (name: string): Rarity => {
 export const stringifyBlock = (metadata: any) =>
     JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
 
-export const fetchHealth = async () => {
+export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
     let ogmiosResults = null;
     try {
         const ogmiosResponse = await fetch(`${OGMIOS_ENDPOINT}/health`);

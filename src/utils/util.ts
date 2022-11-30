@@ -47,3 +47,11 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
         })
     );
 };
+
+export const getDateStringFromSlot = (currentSlot: number): Date => {
+    return new Date((1596491091 + (currentSlot - 4924800)) * 1000);
+};
+
+export const getSlotNumberFromDate = (date: Date): number => {
+    return Math.floor(date.getTime() / 1000) - 1596491091 + 4924800;
+};

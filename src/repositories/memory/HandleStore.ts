@@ -6,7 +6,7 @@ import { NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { LogCategory, Logger } from '../../utils/logger';
 import { getAddressStakeKey } from '../../utils/serialization';
-import { getElapsedTime } from '../../utils/util';
+import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
     IHandleStoreMetrics,
@@ -230,7 +230,7 @@ export class HandleStore {
         const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);
         const buildingElapsed = getElapsedTime(elapsedBuildingExec);
 
-        const slotDate = new Date((1596491091 + (currentSlot - 4924800)) * 1000);
+        const slotDate = getDateStringFromSlot(currentSlot);
 
         return {
             percentageComplete,

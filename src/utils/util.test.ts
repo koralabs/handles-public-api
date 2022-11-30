@@ -1,4 +1,4 @@
-import { getElapsedTime, isNumeric, writeConsoleLine } from './util';
+import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate, isNumeric, writeConsoleLine } from './util';
 
 jest.mock('./logger');
 
@@ -23,6 +23,20 @@ describe('Utils tests', () => {
             const now = Date.now();
             const message = writeConsoleLine(now, 'starting now');
             expect(message).toEqual('0:00 elapsed. starting now');
+        });
+    });
+
+    describe('getDateStringFromSlot', () => {
+        it('should get the correct date string from slot', () => {
+            const date = getDateStringFromSlot(78200473);
+            expect(date).toEqual(new Date('2022-11-30T00:06:04.000Z'));
+        });
+    });
+
+    describe('getSlotNumberFromDate', () => {
+        it('should get the correct date string from slot', () => {
+            const date = getSlotNumberFromDate(new Date('2022-11-30T00:06:04.000Z'));
+            expect(date).toEqual(78200473);
         });
     });
 });
