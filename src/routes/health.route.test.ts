@@ -139,7 +139,8 @@ describe('Health Routes Test', () => {
                     ogmiosElapsed: expect.any(String),
                     percentageComplete: expect.any(String),
                     slotDate: expect.any(String)
-                }
+                },
+                status: 'ogmios_behind'
             });
         });
 
@@ -162,7 +163,8 @@ describe('Health Routes Test', () => {
                     ogmiosElapsed: expect.any(String),
                     percentageComplete: expect.any(String),
                     slotDate: expect.any(String)
-                }
+                },
+                status: 'storage_behind'
             });
         });
 
@@ -188,7 +190,8 @@ describe('Health Routes Test', () => {
                     ogmiosElapsed: expect.any(String),
                     percentageComplete: expect.any(String),
                     slotDate: expect.any(String)
-                }
+                },
+                status: 'current'
             });
         });
     });

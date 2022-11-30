@@ -4,6 +4,12 @@ import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { fetchHealth } from '../services/ogmios/utils';
 import { getSlotNumberFromDate } from '../utils/util';
 
+enum HealthStatus {
+    CURRENT = 'current',
+    OGMIOS_BEHIND = 'ogmios_behind',
+    STORAGE_BEHIND = 'storage_behind'
+}
+
 class HealthController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -27,6 +33,7 @@ class HealthController {
             } = ogmiosResults;
             if (slot < currentSlot) {
                 res.status(202).json({
+                    status: HealthStatus.OGMIOS_BEHIND,
                     ogmios: ogmiosResults,
                     stats
                 });
@@ -36,6 +43,7 @@ class HealthController {
             // check if storage is still trying to catch up.
             if (stats.currentSlot < slot) {
                 res.status(202).json({
+                    status: HealthStatus.STORAGE_BEHIND,
                     ogmios: ogmiosResults,
                     stats
                 });
@@ -43,6 +51,7 @@ class HealthController {
             }
 
             res.status(200).json({
+                status: HealthStatus.CURRENT,
                 ogmios: ogmiosResults,
                 stats
             });
