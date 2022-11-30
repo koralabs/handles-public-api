@@ -17,7 +17,6 @@ class HealthController {
                     ogmios: null,
                     stats
                 });
-
                 return;
             }
 
