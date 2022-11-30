@@ -1,6 +1,6 @@
 import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate, isNumeric, writeConsoleLine } from './util';
 
-jest.mock('./logger');
+jest.mock('@koralabs/logger');
 
 describe('Utils tests', () => {
     describe('isNumeric', () => {

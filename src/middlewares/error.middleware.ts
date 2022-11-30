@@ -1,7 +1,7 @@
+import { LogCategory, Logger } from '@koralabs/logger';
 import { NextFunction, Request, Response } from 'express';
 import { HttpException } from '../exceptions/HttpException';
 import { ModelException } from '../exceptions/ModelException';
-import { LogCategory, Logger } from '../utils/logger';
 
 const errorMiddleware = (error: HttpException, req: Request, res: Response, next: NextFunction) => {
     try {
@@ -13,7 +13,11 @@ const errorMiddleware = (error: HttpException, req: Request, res: Response, next
             status = error.status;
         }
 
-        Logger.log(`[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`, LogCategory.ERROR);
+        Logger.log({
+            message: `[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`,
+            category: LogCategory.ERROR,
+            event: 'middleware.error'
+        });
         res.status(status).json({ message });
     } catch (error) {
         next(error);

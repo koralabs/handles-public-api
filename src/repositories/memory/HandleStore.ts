@@ -1,10 +1,10 @@
 import { IHandle, IHandleStats, IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { LogCategory, Logger } from '@koralabs/logger';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
 import { NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
-import { LogCategory, Logger } from '../../utils/logger';
 import { getAddressStakeKey } from '../../utils/serialization';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
@@ -125,10 +125,11 @@ export class HandleStore {
     static saveWalletAddressMove = async (hexName: string, adaAddress: string) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
-            Logger.log(
-                `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
-                LogCategory.ERROR
-            );
+            Logger.log({
+                message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
+                category: LogCategory.ERROR,
+                event: 'saveWalletAddressMove.noHandleFound'
+            });
             return;
         }
 
@@ -140,10 +141,11 @@ export class HandleStore {
     static async savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
-            Logger.log(
-                `Personalization change, but there is no existing handle in storage with hex: ${hexName}`,
-                LogCategory.ERROR
-            );
+            Logger.log({
+                message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
+                category: LogCategory.ERROR,
+                event: 'saveWalletAddressMove.noHandleFound'
+            });
             return;
         }
 
@@ -305,7 +307,11 @@ export class HandleStore {
             await release();
             return true;
         } catch (error: any) {
-            Logger.log(`Error writing file: ${error.message}`, LogCategory.ERROR);
+            Logger.log({
+                message: `Error writing file: ${error.message}`,
+                event: 'saveFile.errorSavingFile',
+                category: LogCategory.ERROR
+            });
             return false;
         }
     }

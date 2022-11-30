@@ -1,9 +1,9 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from './HandleStore';
-import { Logger } from '../../utils/logger';
 import { delay } from '../../utils/util';
 import { handlesFixture } from './fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { Logger } from '@koralabs/logger';
 
 jest.mock('fs');
 jest.mock('cross-fetch');
@@ -141,10 +141,11 @@ describe('HandleStore tests', () => {
 
             const personalization: IPersonalization = {};
             HandleStore.savePersonalizationChange({ hexName: '123', personalization, addresses: {} });
-            expect(loggerSpy).toHaveBeenCalledWith(
-                'Personalization change, but there is no existing handle in storage with hex: 123',
-                'ERROR'
-            );
+            expect(loggerSpy).toHaveBeenCalledWith({
+                category: 'ERROR',
+                event: 'saveWalletAddressMove.noHandleFound',
+                message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
+            });
         });
     });
 
@@ -187,10 +188,11 @@ describe('HandleStore tests', () => {
 
             const newAddress = 'addr123_new';
             HandleStore.saveWalletAddressMove('123', newAddress);
-            expect(loggerSpy).toHaveBeenCalledWith(
-                'Wallet moved, but there is no existing handle in storage with hex: 123',
-                'ERROR'
-            );
+            expect(loggerSpy).toHaveBeenCalledWith({
+                category: 'ERROR',
+                event: 'saveWalletAddressMove.noHandleFound',
+                message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
+            });
         });
     });
 
