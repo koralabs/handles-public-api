@@ -1,9 +1,7 @@
 import { createChainSyncClient, createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import fetch from 'cross-fetch';
+import { Logger } from '@koralabs/logger';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { IHandleFileContent } from '../../repositories/memory/interfaces/handleStore.interfaces';
-import { Logger } from '../../utils/logger';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';

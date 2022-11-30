@@ -1,8 +1,8 @@
 import { OGMIOS_ENDPOINT } from '../../config';
 import fetch from 'cross-fetch';
-import { LogCategory, Logger } from '../../utils/logger';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { HealthResponseBody } from '../../interfaces/ogmios.interfaces';
+import { LogCategory, Logger } from '@koralabs/logger';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -135,7 +135,7 @@ export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
         const ogmiosResponse = await fetch(`${OGMIOS_ENDPOINT}/health`);
         ogmiosResults = await ogmiosResponse.json();
     } catch (error: any) {
-        Logger.log(error.message, LogCategory.ERROR);
+        Logger.log({ message: error.message, category: LogCategory.ERROR, event: 'fetchOgmiosHealth.error' });
     }
     return ogmiosResults;
 };

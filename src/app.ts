@@ -1,5 +1,5 @@
 import cors from 'cors';
-import fs from 'fs';
+import { Logger } from '@koralabs/logger';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yamljs';
@@ -8,7 +8,6 @@ import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { Logger } from './utils/logger';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';

@@ -1,7 +1,6 @@
+import { Logger } from '@koralabs/logger';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
-import BaseRoute from '../routes/base';
-import { Logger } from './logger';
 
 export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));
