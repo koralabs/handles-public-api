@@ -9,5 +9,6 @@ export const {
     LOG_FORMAT = '',
     LOG_DIR = '',
     ORIGIN = '',
-    OGMIOS_ENDPOINT = 'http://localhost:1337'
+    OGMIOS_ENDPOINT = 'http://localhost:1337',
+    NETWORK = ''
 } = process.env;

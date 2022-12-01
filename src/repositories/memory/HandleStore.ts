@@ -3,7 +3,7 @@ import { LogCategory, Logger } from '@koralabs/logger';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
-import { NODE_ENV } from '../../config';
+import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getAddressStakeKey } from '../../utils/serialization';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
@@ -34,7 +34,15 @@ export class HandleStore {
         memorySize: 0
     };
 
-    static storagePath = 'storage/handles.json';
+    static buildNetworkForNaming = () => {
+        if (NETWORK === 'mainnet') {
+            return '';
+        }
+
+        return `-${NETWORK}`;
+    };
+
+    static storagePath = `storage/handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageSchemaVersion = 1;
 
     static get = (key: string) => {
@@ -339,11 +347,12 @@ export class HandleStore {
         }
 
         try {
-            Logger.log('Fetching handles.json');
-            const awsResponse = await fetch('http://api.handle.me.s3-website-us-west-2.amazonaws.com/handles.json');
+            const fileName = `handles${HandleStore.buildNetworkForNaming()}.json`;
+            Logger.log(`Fetching ${fileName}`);
+            const awsResponse = await fetch(`http://api.handle.me.s3-website-us-west-2.amazonaws.com/${fileName}`);
             if (awsResponse.status === 200) {
                 const text = await awsResponse.text();
-                Logger.log('Found handles.json');
+                Logger.log(`Found ${fileName}`);
                 return JSON.parse(text) as IHandleFileContent;
             }
 

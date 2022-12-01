@@ -8,16 +8,16 @@ import { getSlotNumberFromDate } from '../utils/util';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-let slotNumber: number = 0;
+let percentage: string = '';
 const getStats = (): IHandleStats => ({
-    percentageComplete: '',
+    percentageComplete: percentage,
     currentMemoryUsed: 0,
     memorySize: 0,
     ogmiosElapsed: '',
     buildingElapsed: '',
     slotDate: new Date(),
     handleCount: 0,
-    currentSlot: slotNumber,
+    currentSlot: 0,
     currentBlockHash: ''
 });
 
@@ -62,21 +62,21 @@ describe('Health Routes Test', () => {
     let app: App | null;
     beforeEach(() => {
         app = new App();
-        slotNumber = 0;
+        percentage = '';
     });
 
     afterEach(() => {
         jest.clearAllMocks();
     });
 
-    const getMockResponse = ({ slot = 0 }: { slot?: number }): HealthResponseBody => ({
+    const getMockResponse = ({ lastTipUpdate = '' }: { lastTipUpdate?: string }): HealthResponseBody => ({
         startTime: '',
         lastKnownTip: {
-            slot,
+            slot: 0,
             hash: '',
             blockNo: 0
         },
-        lastTipUpdate: '',
+        lastTipUpdate,
         networkSynchronization: 0,
         currentEra: '',
         metrics: {
@@ -123,7 +123,9 @@ describe('Health Routes Test', () => {
         });
 
         it('Should return 202 when ogmios is not caught up', async () => {
-            const ogmiosResult = getMockResponse({});
+            const ogmiosResult = getMockResponse({
+                lastTipUpdate: `${new Date(Date.now() - 60000).toISOString()}`
+            });
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(202);
@@ -146,7 +148,7 @@ describe('Health Routes Test', () => {
 
         it('Should return 202 when current slot is not caught up', async () => {
             const ogmiosResult = getMockResponse({
-                slot: getSlotNumberFromDate(new Date(new Date().getTime() + 10 * 86400000))
+                lastTipUpdate: `${Date.now() + 60000}`
             });
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             const response = await request(app?.getServer()).get('/health');
@@ -169,12 +171,11 @@ describe('Health Routes Test', () => {
         });
 
         it('Should return 200 everything is caught up', async () => {
-            const slotNumberInFuture = getSlotNumberFromDate(new Date(new Date().getTime() + 10 * 86400000));
             const ogmiosResult = getMockResponse({
-                slot: slotNumberInFuture
+                lastTipUpdate: `${Date.now() + 60000}`
             });
 
-            slotNumber = slotNumberInFuture;
+            percentage = '100.00';
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(200);
