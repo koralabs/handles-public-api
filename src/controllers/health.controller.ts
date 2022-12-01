@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { fetchHealth } from '../services/ogmios/utils';
-import { getSlotNumberFromDate } from '../utils/util';
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -27,11 +26,12 @@ class HealthController {
             }
 
             // check if ogmios is still trying to catch up.
-            const currentSlot = getSlotNumberFromDate(new Date());
-            const {
-                lastKnownTip: { slot }
-            } = ogmiosResults;
-            if (slot < currentSlot) {
+            const { lastTipUpdate } = ogmiosResults;
+
+            const date = new Date(lastTipUpdate).getTime();
+            const now = new Date().getTime();
+
+            if (date < now - 60000) {
                 res.status(202).json({
                     status: HealthStatus.OGMIOS_BEHIND,
                     ogmios: ogmiosResults,
@@ -41,7 +41,7 @@ class HealthController {
             }
 
             // check if storage is still trying to catch up.
-            if (stats.currentSlot < slot) {
+            if (stats.percentageComplete !== '100.00') {
                 res.status(202).json({
                     status: HealthStatus.STORAGE_BEHIND,
                     ogmios: ogmiosResults,
