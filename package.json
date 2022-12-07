@@ -8,6 +8,7 @@
   "license": "Mozilla Public License 2.0",
   "scripts": {
     "start": "node express.js",
+    "start:forever": "forever start express.js",
     "build": "tsc && yarn copySwagger && yarn copySwaggerDist",
     "copySwagger": "cp docs/swagger.yml src/swagger.yml",
     "copySwaggerDist": "cp docs/swagger.yml dist/swagger.yml",
@@ -53,6 +54,7 @@
     "cross-fetch": "^3.1.5",
     "dotenv": "^16.0.2",
     "express": "^4.18.1",
+    "forever": "^4.0.3",
     "jsonwebtoken": "^8.5.1",
     "proper-lockfile": "^4.1.2",
     "swagger-ui-express": "^4.5.0",

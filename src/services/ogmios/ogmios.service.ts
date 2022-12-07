@@ -5,6 +5,7 @@ import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
+import { memoryWatcher } from './utils';
 
 let startOgmiosExec = 0;
 
@@ -48,7 +49,6 @@ class OgmiosService {
     private startIntervals() {
         const metricsInterval = setInterval(() => {
             const metrics = HandleStore.getMetrics();
-
             if (!metrics) return;
 
             const {
@@ -70,6 +70,8 @@ class OgmiosService {
         const saveFileInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
             await HandleStore.saveFile(currentSlot, currentBlockHash);
+
+            memoryWatcher();
         }, 30000);
 
         const setMemoryInterval = setInterval(() => {

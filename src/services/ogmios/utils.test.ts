@@ -1,4 +1,6 @@
-import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject } from './utils';
+import { Logger } from '@koralabs/logger';
+import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from './utils';
+import v8 from 'v8';
 
 describe('Utils Tests', () => {
     describe('buildOnChainObject tests', () => {
@@ -111,6 +113,44 @@ describe('Utils Tests', () => {
         it('should stringify with a big int', () => {
             const burritos = stringifyBlock({ burritos: BigInt(1) });
             expect(burritos).toEqual('{"burritos":"1"}');
+        });
+    });
+
+    describe('memoryWatcher', () => {
+        const buildHeapSpaceInfo = (spaceSize?: number, spaceUsedSize?: number) => ({
+            space_size: spaceSize ?? 0,
+            space_used_size: spaceUsedSize ?? 0,
+            space_name: '',
+            space_available_size: 0,
+            physical_space_size: 0
+        });
+
+        it('should log a notification and kill the process', () => {
+            const loggerSpy = jest.spyOn(Logger, 'log');
+            jest.spyOn(v8, 'getHeapSpaceStatistics').mockReturnValue([
+                buildHeapSpaceInfo(),
+                buildHeapSpaceInfo(138874880, 136245672)
+            ]);
+            memoryWatcher();
+            expect(loggerSpy).toHaveBeenCalledWith({
+                category: 'NOTIFY',
+                event: 'memoryWatcher.limit.reached',
+                message: 'Memory usage has reached the limit (98%)'
+            });
+        });
+
+        it('should log a warning', () => {
+            const loggerSpy = jest.spyOn(Logger, 'log');
+            jest.spyOn(v8, 'getHeapSpaceStatistics').mockReturnValue([
+                buildHeapSpaceInfo(),
+                buildHeapSpaceInfo(138874880, 116245672)
+            ]);
+            memoryWatcher();
+            expect(loggerSpy).toHaveBeenCalledWith({
+                category: 'INFO',
+                event: 'memoryWatcher.limit.close',
+                message: 'Memory usage close to the limit (84%)'
+            });
         });
     });
 });
