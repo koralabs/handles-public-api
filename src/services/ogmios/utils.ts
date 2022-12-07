@@ -149,10 +149,8 @@ const canExitProcess = () => {
  * Used to monitor memory usage and kill the process when it gets above 90%.
  */
 export const memoryWatcher = () => {
-    var space = v8.getHeapSpaceStatistics();
-    var old_space_total = space[1].space_size;
-    var old_space_used = space[1].space_used_size;
-    var usage = (100 / old_space_total) * old_space_used;
+    const heap = v8.getHeapStatistics();
+    const usage = (heap.used_heap_size / heap.heap_size_limit) * 100;
     if (usage > 80 && usage < 90) {
         Logger.log({
             message: `Memory usage close to the limit (${usage.toFixed()}%)`,

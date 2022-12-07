@@ -2,6 +2,8 @@ import { Logger } from '@koralabs/logger';
 import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from './utils';
 import v8 from 'v8';
 
+type DoesZapCodeSpaceFlag = 0 | 1;
+
 describe('Utils Tests', () => {
     describe('buildOnChainObject tests', () => {
         const cborObject = {
@@ -117,39 +119,39 @@ describe('Utils Tests', () => {
     });
 
     describe('memoryWatcher', () => {
-        const buildHeapSpaceInfo = (spaceSize?: number, spaceUsedSize?: number) => ({
-            space_size: spaceSize ?? 0,
-            space_used_size: spaceUsedSize ?? 0,
-            space_name: '',
-            space_available_size: 0,
-            physical_space_size: 0
+        const buildHeapInfo = (usedSize?: number, sizeLimit?: number) => ({
+            total_heap_size: 0,
+            total_heap_size_executable: 0,
+            total_physical_size: 0,
+            total_available_size: 0,
+            used_heap_size: usedSize ?? 0,
+            heap_size_limit: sizeLimit ?? 0,
+            malloced_memory: 0,
+            peak_malloced_memory: 0,
+            does_zap_garbage: 0 as DoesZapCodeSpaceFlag,
+            number_of_native_contexts: 0,
+            number_of_detached_contexts: 0
         });
 
         it('should log a notification and kill the process', () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
-            jest.spyOn(v8, 'getHeapSpaceStatistics').mockReturnValue([
-                buildHeapSpaceInfo(),
-                buildHeapSpaceInfo(138874880, 136245672)
-            ]);
+            jest.spyOn(v8, 'getHeapStatistics').mockReturnValue(buildHeapInfo(2097815296, 2197815296));
             memoryWatcher();
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'NOTIFY',
                 event: 'memoryWatcher.limit.reached',
-                message: 'Memory usage has reached the limit (98%)'
+                message: 'Memory usage has reached the limit (95%)'
             });
         });
 
         it('should log a warning', () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
-            jest.spyOn(v8, 'getHeapSpaceStatistics').mockReturnValue([
-                buildHeapSpaceInfo(),
-                buildHeapSpaceInfo(138874880, 116245672)
-            ]);
+            jest.spyOn(v8, 'getHeapStatistics').mockReturnValue(buildHeapInfo(1797815296, 2197815296));
             memoryWatcher();
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'INFO',
                 event: 'memoryWatcher.limit.close',
-                message: 'Memory usage close to the limit (84%)'
+                message: 'Memory usage close to the limit (82%)'
             });
         });
     });
