@@ -150,7 +150,7 @@ const canExitProcess = () => {
  */
 export const memoryWatcher = () => {
     const heap = v8.getHeapStatistics();
-    const usage = (100 / heap.heap_size_limit) * heap.used_heap_size;
+    const usage = (heap.used_heap_size / heap.heap_size_limit) * 100;
     if (usage > 80 && usage < 90) {
         Logger.log({
             message: `Memory usage close to the limit (${usage.toFixed()}%)`,
