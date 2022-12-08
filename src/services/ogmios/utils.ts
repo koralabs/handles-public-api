@@ -1,8 +1,9 @@
-import { OGMIOS_ENDPOINT } from '../../config';
+import { NODE_ENV, OGMIOS_ENDPOINT } from '../../config';
 import fetch from 'cross-fetch';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { HealthResponseBody } from '../../interfaces/ogmios.interfaces';
 import { LogCategory, Logger } from '@koralabs/logger';
+import v8 from 'v8';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -138,4 +139,31 @@ export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
         Logger.log({ message: error.message, category: LogCategory.ERROR, event: 'fetchOgmiosHealth.error' });
     }
     return ogmiosResults;
+};
+
+const canExitProcess = () => {
+    return NODE_ENV !== 'test';
+};
+
+/**
+ * Used to monitor memory usage and kill the process when it gets above 90%.
+ */
+export const memoryWatcher = () => {
+    const heap = v8.getHeapStatistics();
+    const usage = (heap.used_heap_size / heap.heap_size_limit) * 100;
+    if (usage > 80 && usage < 90) {
+        Logger.log({
+            message: `Memory usage close to the limit (${usage.toFixed()}%)`,
+            event: 'memoryWatcher.limit.close',
+            category: LogCategory.INFO
+        });
+    } else if (usage > 90) {
+        Logger.log({
+            message: `Memory usage has reached the limit (${usage.toFixed()}%)`,
+            event: 'memoryWatcher.limit.reached',
+            category: LogCategory.NOTIFY
+        });
+
+        if (canExitProcess()) process.exit(1);
+    }
 };
