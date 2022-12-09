@@ -31,15 +31,16 @@ docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc koralabs/handles-ap
 
 &nbsp;
 
-## Open a browser to [http://localhost:3141/swagger](http://localhost:3141/swagger)
-You can also see the current API status at [http://localhost:3141/health](http://localhost:3141/health)
+# Testing the API 
+- Open a browser to [http://localhost:3141/swagger](http://localhost:3141/swagger)
+- You can also see the current API status at [http://localhost:3141/health](http://localhost:3141/health)
+- 🚩WARNING: The health endpoint will return a <span style="color:red">202</span> when it is running but the scan hasn't reached the tip of the chain yet. It is not recommended to use the results until a <span style="color:green">200</span> status is returned.
 
 &nbsp;
 
+
+## NOTES
 ----
-
-### NOTES
-
 It can take a few hours to download the cardano-node snapshot and begin an Ogmios scan.
 
 Due to JavaScript garbage collection during the Ogmios scan, it is recommnded to run this container on a host with 12GB or more of RAM available.
