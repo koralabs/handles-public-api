@@ -43,3 +43,8 @@ You can also see the current API status at [http://localhost:3141/health](http:/
 It can take a few hours to download the cardano-node snapshot and begin an Ogmios scan.
 
 Due to JavaScript garbage collection during the Ogmios scan, it is recommnded to run this container on a host with 12GB or more of RAM available.
+
+For a more graceful shutdown of cardano-node (which helps subsequent load times), try running on the host (or in the container):
+```sh
+kill -SIGINT $(pidof cardano-node) 
+```
