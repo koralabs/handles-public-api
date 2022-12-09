@@ -42,7 +42,7 @@ export class HandleStore {
         return `-${NETWORK}`;
     };
 
-    static storagePath = `storage/handles${HandleStore.buildNetworkForNaming()}.json`;
+    static storagePath = `/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageSchemaVersion = 1;
 
     static get = (key: string) => {
@@ -328,12 +328,33 @@ export class HandleStore {
         const path = NODE_ENV === 'local' ? 'storage/local.json' : storagePath ?? this.storagePath;
 
         try {
+            const exists = fs.existsSync(path);
+            if (exists) {
+                Logger.log({
+                    message: `${path} file does not exist`,
+                    category: LogCategory.INFO,
+                    event: 'HandleStore.getFile.doesNotExist'
+                });
+                return null;
+            }
+
             const isLocked = await lockfile.check(path);
             if (isLocked) {
+                Logger.log({
+                    message: `${path} file is locked`,
+                    category: LogCategory.INFO,
+                    event: 'HandleStore.getFile.locked'
+                });
                 return null;
             }
 
             const file = fs.readFileSync(path, { encoding: 'utf8' });
+            Logger.log({
+                message: `${path} found`,
+                category: LogCategory.INFO,
+                event: 'HandleStore.getFile.fileFound'
+            });
+
             return JSON.parse(file) as IHandleFileContent;
         } catch (error: any) {
             Logger.log(`Error getting file from ${path} with error: ${error.message}`);
@@ -348,8 +369,9 @@ export class HandleStore {
 
         try {
             const fileName = `handles${HandleStore.buildNetworkForNaming()}.json`;
-            Logger.log(`Fetching ${fileName}`);
-            const awsResponse = await fetch(`http://api.handle.me.s3-website-us-west-2.amazonaws.com/${fileName}`);
+            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${this.storageSchemaVersion}/${fileName}`;
+            Logger.log(`Fetching ${url}`);
+            const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
                 const text = await awsResponse.text();
                 Logger.log(`Found ${fileName}`);
