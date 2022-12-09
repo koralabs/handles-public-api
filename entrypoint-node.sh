@@ -19,6 +19,14 @@ if [ $ogmios_status -ne 0 ]; then
   exit $ogmios_status
 fi
 
+NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK:-mainnet} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm start &
+
+DB_FILE=/db/protocolMagicId
+
+if [ ! -f "$DB_FILE" ]; then
+    curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
+fi
+
 cardano-node run +RTS -N -RTS \
     --config ./cardano-world/docs/environments/${NETWORK:-mainnet}/config.json \
     --topology ./cardano-world/docs/environments/${NETWORK:-mainnet}/topology.json \
@@ -27,5 +35,4 @@ cardano-node run +RTS -N -RTS \
     --host-addr 0.0.0.0 \
     --socket-path /ipc/node.socket &
 
-NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK:-mainnet} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm start &
 wait
