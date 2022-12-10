@@ -1,8 +1,4 @@
 #!/bin/bash
-function cleanup()
-{
-    kill -SIGINT $(pidof cardano-node)
-}
 
 DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
@@ -30,8 +26,6 @@ DB_FILE=/db/protocolMagicId
 if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
     curl -k -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
 fi
-
-trap cleanup SIGINT SIGTERM SIGKILL
 
 cardano-node run +RTS -N -RTS \
     --config ./cardano-world/docs/environments/${NETWORK}/config.json \

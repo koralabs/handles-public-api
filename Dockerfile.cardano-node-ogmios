@@ -16,4 +16,4 @@ RUN \
 EXPOSE 3141
 
 STOPSIGNAL SIGINT
-ENTRYPOINT [ "/app/entrypoint.sh" ]
+ENTRYPOINT [ "/tini", "-g", "--", "/app/entrypoint.sh" ]
