@@ -14,10 +14,10 @@ Our Decentralized API uses Ogmios to scan a cardano-node for Handles related tra
 ### Run the following:
 ```sh
 docker pull koralabs/handles-api
-docker run -p 3141:3141 -v ./handles-api/db:/db koralabs/handles-api
+docker run -p 3141:3141 -v db:/db koralabs/handles-api
 ```
-- The `-v ./handles-api/db:/db` in the command above can be omitted, but we recommeded it so the `cardano-node` db progress is saved to the host when the container goes down.
-- You can also map a volume to the node socket with `-v <path_to_socket_folder>:/ipc`
+- The `-v db:/db` in the command above can be omitted, but we recommeded it so the `cardano-node` db progress is saved to the host when the container goes down.
+- You can also map a volume to the node socket with `-v <path_to_socket_folder>:/ipc`. This lets you use the cardano-node with other apps outside the container.
 
 &nbsp;
 
