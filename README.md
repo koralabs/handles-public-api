@@ -40,7 +40,7 @@ docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc koralabs/handles-ap
 
 
 ## NOTES
-----
+
 It can take a few hours to download the cardano-node snapshot and begin an Ogmios scan.
 
 Due to JavaScript garbage collection during the Ogmios scan, it is recommnded to run this container on a host with 12GB or more of RAM available.

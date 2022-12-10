@@ -10,7 +10,7 @@ ADD entrypoint-node.sh ./entrypoint.sh
 SHELL ["/bin/bash", "-c"]
 
 RUN \
-    git -c http.sslVerify=false clone https://github.com/input-output-hk/cardano-world.git && \
+    git clone https://github.com/input-output-hk/cardano-world.git && \
     chmod +x entrypoint.sh
 
 EXPOSE 3141
