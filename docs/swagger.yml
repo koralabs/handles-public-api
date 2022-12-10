@@ -8,7 +8,7 @@ info:
     email: hello@adahandle.com
   version: 0.0.1
 servers:
-- url: https://api.handle.me
+- url: http://localhost:3141
 tags:
 - name: handles
   description: Handle endpoints
@@ -126,7 +126,9 @@ paths:
       - utils
       responses:
         '200':
-          description: Current status of the Handles API
+          description: Healthy and scanning is complete
+        '202':
+          description: Healthy, but scanning is still catching up to the tip of the blockchain
         '503':
           description: HTTP application failure
 components:

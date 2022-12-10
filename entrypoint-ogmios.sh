@@ -15,5 +15,5 @@ then
 fi
 
 /bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
-NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK:-mainnet} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm start &
+NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK:-mainnet} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm start:forever &
 wait
