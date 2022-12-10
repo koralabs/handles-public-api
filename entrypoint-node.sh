@@ -20,7 +20,7 @@ if [ $ogmios_status -ne 0 ]; then
   exit $ogmios_status
 fi
 
-NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm start:forever &
+NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm run start:forever &
 
 DB_FILE=/db/protocolMagicId
 if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
