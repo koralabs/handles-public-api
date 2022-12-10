@@ -28,7 +28,7 @@ NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} NODE_OPTIONS="${NODE_OPTIONS
 
 DB_FILE=/db/protocolMagicId
 if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
-    curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
+    curl -k -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
 fi
 
 trap cleanup SIGINT SIGTERM SIGKILL
