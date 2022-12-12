@@ -10,6 +10,7 @@
     "start": "node express.js",
     "start:forever": "mkdir -p forever && forever -p ./forever start express.js",
     "forever:list": "forever list",
+    "forever:stop": "forever stopall",
     "build": "tsc && yarn copySwagger && yarn copySwaggerDist",
     "copySwagger": "cp docs/swagger.yml src/swagger.yml",
     "copySwaggerDist": "cp docs/swagger.yml dist/swagger.yml",
