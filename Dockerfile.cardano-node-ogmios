@@ -14,7 +14,7 @@ RUN \
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip -o ogmios.zip && \
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip && \
     cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install && \
-    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && sudo apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && apt install -y nodejs
 EXPOSE 3141
 STOPSIGNAL SIGINT
 ENTRYPOINT [ "tini", "-g", "--", "./entrypoint.sh" ]
