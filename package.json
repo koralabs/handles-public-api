@@ -8,7 +8,7 @@
   "license": "Mozilla Public License 2.0",
   "scripts": {
     "start": "node express.js",
-    "start:forever": "forever start express.js",
+    "start:forever": "forever -p ./forever start express.js",
     "build": "tsc && yarn copySwagger && yarn copySwaggerDist",
     "copySwagger": "cp docs/swagger.yml src/swagger.yml",
     "copySwaggerDist": "cp docs/swagger.yml dist/swagger.yml",
