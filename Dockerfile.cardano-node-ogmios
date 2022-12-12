@@ -11,7 +11,8 @@ RUN \
     rm -f ./cardano-node-1.35.4-linux.tar.gz && \
     chmod +x ./cardano-node && chmod +x ./entrypoint.sh && \
     git clone https://github.com/input-output-hk/cardano-world.git && \
-    curl -s https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip | unzip -d ./ogmios-install && \
+    curl -s https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip -o ogmios.zip && \
+    unzip -d ./ogmios-install && rm ogmios.zip && \
     cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
 
 EXPOSE 3141
