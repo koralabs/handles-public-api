@@ -6,7 +6,7 @@ ADD ./dist/ ./
 ADD entrypoint-node.sh ./entrypoint.sh
 RUN \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip && \
-    curl https://hydra.iohk.io/build/21343721/download/1/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
+    curl https://update-cardano-mainnet.iohk.io/cardano-node-releases/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
     # tar -xzvf cardano-node-1.35.4-linux.tar.gz && \
     rm -f ./cardano-node-1.35.4-linux.tar.gz && \
     chmod +x ./cardano-node && chmod +x ./entrypoint.sh && \
