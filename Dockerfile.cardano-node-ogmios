@@ -1,19 +1,19 @@
-#                                                                              #
-# ------------------------- WITH CARDANO-NODE  ------------------------------- #
-#                                                                              #
-
-FROM cardano-node-ogmios-nodejs:latest as handles-api
+FROM ubuntu:22.04
+ENV NETWORK=mainnet
 WORKDIR /app
+SHELL ["/bin/bash", "-c"]
 ADD ./dist/ ./
 ADD entrypoint-node.sh ./entrypoint.sh
-
-SHELL ["/bin/bash", "-c"]
-
 RUN \
-    git -c http.sslVerify=false clone https://github.com/input-output-hk/cardano-world.git && \
-    chmod +x entrypoint.sh
+    apt install -y && apt update -y && apt install -y git curl socat jq unzip && \
+    curl https://hydra.iohk.io/build/21343721/download/1/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
+    # tar -xzvf cardano-node-1.35.4-linux.tar.gz && \
+    rm -f ./cardano-node-1.35.4-linux.tar.gz && \
+    chmod +x ./cardano-node && chmod +x ./entrypoint.sh && \
+    git clone https://github.com/input-output-hk/cardano-world.git && \
+    curl -s https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip | unzip -d ./ogmios-install && \
+    cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
 
 EXPOSE 3141
-
 STOPSIGNAL SIGINT
-ENTRYPOINT [ "/tini", "-g", "--", "/app/entrypoint.sh" ]
+ENTRYPOINT [ "/tini", "-g", "--", "./entrypoint.sh" ]

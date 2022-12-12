@@ -1,16 +1,17 @@
-#                                                                              #
-# ---------------------------- OGMIOS ONLY  ---------------------------------- #
-#                                                                              #
-
-FROM ogmios-nodejs:latest as handles-api-ogmios-only
+FROM ubuntu:22.04
+ENV NETWORK=mainnet
 WORKDIR /app
+SHELL ["/bin/bash", "-c"]
 ADD ./dist/ ./
 ADD entrypoint-ogmios.sh ./entrypoint.sh
+RUN \
+    apt install -y && apt update -y && apt install -y git curl socat jq unzip && \
+    chmod +x ./entrypoint.sh && \
+    git clone https://github.com/input-output-hk/cardano-world.git && \
+    curl -s https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip | unzip -d ./ogmios-install && \
+    cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
 
-RUN chmod +x entrypoint.sh
-
-EXPOSE 3141
-HEALTHCHECK --interval=10s --timeout=5s --retries=1 CMD /bin/ogmios health-check
-
+EXPOSE 3141 1337
 STOPSIGNAL SIGINT
+HEALTHCHECK --interval=10s --timeout=5s --retries=1 CMD /bin/ogmios health-check
 ENTRYPOINT [ "/app/entrypoint.sh" ]
