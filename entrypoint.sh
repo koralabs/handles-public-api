@@ -35,7 +35,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
     fi
 
-    ./cardano-node run +RTS -N -RTS \
+    exec ./cardano-node run +RTS -N -RTS \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \
         --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
         --database-path /db \
