@@ -1,4 +1,4 @@
-# A downloadable and containerized decentralized API for Handles
+# Decentralized Public API for Handles
 
 <p align="center">
   <img src="./docs/handles-api.jpeg" />
@@ -10,6 +10,10 @@ Our Decentralized API uses Ogmios to scan a cardano-node for Handles related tra
 
 
 # Getting Started
+
+### Prerequisites
+- Install Docker - https://docs.docker.com/get-docker/
+
 
 ### Run the following:
 ```sh
