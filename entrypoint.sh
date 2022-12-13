@@ -41,7 +41,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     
     trap cleanup SIGINT SIGTERM SIGKILL SIGQUIT SIGABRT
 
-    exec ./cardano-node run +RTS -N -RTS \
+    exec ./cardano-node run \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \
         --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
         --database-path /db \
