@@ -4,6 +4,10 @@ DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
 
+function cleanup {
+  kill -SIGINT $(pidof cardano-node)
+}
+
 if [[ "$@" != *"--host"* ]]
 then
     HOST="--host 0.0.0.0"
@@ -34,6 +38,8 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
         curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
     fi
+    
+    trap cleanup SIGINT SIGTERM SIGKILL SIGQUIT SIGABRT
 
     exec ./cardano-node run +RTS -N -RTS \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \
