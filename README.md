@@ -23,8 +23,8 @@ docker run -p 3141:3141 -v db:/db koralabs/handles-api
 
 ### If you already have a cardano-node running, you can use the ogmios-only version: 
 ```sh
-docker pull koralabs/handles-api-ogmios-only
-docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc koralabs/handles-api-ogmios-only:latest
+docker pull koralabs/handles-api
+docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc -e MODE=ogmios koralabs/handles-api:latest
 ```
 
 - Replace `<path_to_socket_folder>` with the path to your ipc folder on the host that has the node.socket file
@@ -38,6 +38,9 @@ docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc koralabs/handles-ap
 
 &nbsp;
 
+## TESTNET ENVIRONMENTS
+To use Preview or PreProd environments just add `-e NETWORK=preview` or `-e NETWORK=preprod` to either of the `docker run` commands.
+
 
 ## NOTES
 
@@ -45,7 +48,7 @@ It can take a few hours to download the cardano-node snapshot and begin an Ogmio
 
 Due to JavaScript garbage collection during the Ogmios scan, it is recommnded to run this container on a host with 12GB or more of RAM available.
 
-For a more graceful shutdown of cardano-node (which helps subsequent load times), try running on the host (or in the container):
+The containers are setup for graceful cardano-node shutdown, but if you have to shut it down manually, for a more graceful shutdown (which helps subsequent load times), try running on the host (or in the container):
 ```sh
 kill -SIGINT $(pidof cardano-node) 
 ```
