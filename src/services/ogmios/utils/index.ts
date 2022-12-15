@@ -1,7 +1,7 @@
-import { NODE_ENV, OGMIOS_ENDPOINT } from '../../config';
+import { NODE_ENV, OGMIOS_ENDPOINT } from '../../../config';
 import fetch from 'cross-fetch';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
-import { HealthResponseBody } from '../../interfaces/ogmios.interfaces';
+import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { LogCategory, Logger } from '@koralabs/logger';
 import v8 from 'v8';
 

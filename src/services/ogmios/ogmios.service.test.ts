@@ -2,8 +2,10 @@ import * as ogmiosClient from '@cardano-ogmios/client';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
+import * as localChainSync from './utils/localChainSync';
 
 jest.mock('@cardano-ogmios/client');
+jest.mock('./utils/localChainSync');
 jest.mock('../../repositories/memory/HandleStore');
 
 describe('OgmiosService Tests', () => {
@@ -14,18 +16,20 @@ describe('OgmiosService Tests', () => {
     describe('startSync', () => {
         it('Should call ogmios functions and start sync', async () => {
             // @ts-ignore;
-            const createChainSyncClientSpy = jest.spyOn(ogmiosClient, 'createChainSyncClient').mockResolvedValue({
-                // @ts-ignore;
-                startSync: (result) => {
-                    expect(result).toEqual([
-                        {
-                            slot: 42971872,
-                            hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6'
-                        }
-                    ]);
-                    return jest.fn();
-                }
-            });
+            const createChainSyncClientSpy = jest
+                .spyOn(localChainSync, 'createLocalChainSyncClient')
+                .mockResolvedValue({
+                    // @ts-ignore;
+                    startSync: (result) => {
+                        expect(result).toEqual([
+                            {
+                                slot: 42971872,
+                                hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6'
+                            }
+                        ]);
+                        return jest.fn();
+                    }
+                });
             const createInteractionContextSpy = jest.spyOn(ogmiosClient, 'createInteractionContext');
             jest.spyOn(HandleStore, 'getFile');
             jest.spyOn(HandleStore, 'getFileOnline');

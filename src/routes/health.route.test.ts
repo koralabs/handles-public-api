@@ -4,7 +4,6 @@ import * as ogmiosUtils from '../services/ogmios/utils';
 import { HttpException } from '../exceptions/HttpException';
 import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
-import { getSlotNumberFromDate } from '../utils/util';
 
 jest.mock('../services/ogmios/ogmios.service');
 
