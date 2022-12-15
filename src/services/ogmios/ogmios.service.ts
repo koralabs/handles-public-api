@@ -6,6 +6,7 @@ import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
 import { memoryWatcher } from './utils';
+import { createLocalChainSyncClient } from './utils/localChainSync';
 
 let startOgmiosExec = 0;
 
@@ -110,7 +111,7 @@ class OgmiosService {
             { connection: { port: 1337 } }
         );
 
-        const client = await createChainSyncClient(context, {
+        const client = await createLocalChainSyncClient(context, {
             rollForward: this.rollForward,
             rollBackward: this.rollBackward
         });
