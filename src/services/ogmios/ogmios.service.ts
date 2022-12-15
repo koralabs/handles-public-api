@@ -1,4 +1,4 @@
-import { createChainSyncClient, createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
 import { Logger } from '@koralabs/logger';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
