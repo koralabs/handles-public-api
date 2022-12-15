@@ -1,4 +1,4 @@
-import { createChainSyncClient, createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
 import { Logger } from '@koralabs/logger';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
@@ -6,6 +6,7 @@ import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
 import { memoryWatcher } from './utils';
+import { createLocalChainSyncClient } from './utils/localChainSync';
 
 let startOgmiosExec = 0;
 
@@ -110,7 +111,7 @@ class OgmiosService {
             { connection: { port: 1337 } }
         );
 
-        const client = await createChainSyncClient(context, {
+        const client = await createLocalChainSyncClient(context, {
             rollForward: this.rollForward,
             rollBackward: this.rollBackward
         });

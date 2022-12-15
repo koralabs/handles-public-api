@@ -1,5 +1,5 @@
 import { Logger } from '@koralabs/logger';
-import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from './utils';
+import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from '.';
 import v8 from 'v8';
 
 type DoesZapCodeSpaceFlag = 0 | 1;

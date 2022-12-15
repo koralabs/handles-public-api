@@ -12,6 +12,7 @@
     "forever:list": "forever list",
     "forever:stop": "forever stopall",
     "build": "tsc && yarn copySwagger && yarn copySwaggerDist",
+    "tsc": "tsc -p .",
     "copySwagger": "cp docs/swagger.yml src/swagger.yml",
     "copySwaggerDist": "cp docs/swagger.yml dist/swagger.yml",
     "build:production": "yarn build && cp package.json dist/package.json && cd dist && yarn install --production",
@@ -32,6 +33,7 @@
     "@types/proper-lockfile": "^4.1.2",
     "@types/supertest": "^2.0.12",
     "@types/swagger-ui-express": "^4.1.3",
+    "@types/ws": "^8.5.3",
     "@types/yamljs": "^0.2.31",
     "aws-sdk": "^2.1224.0",
     "cross-env": "^7.0.3",
@@ -44,7 +46,8 @@
     "supertest": "^6.2.4",
     "ts-jest": "^29.0.1",
     "tsconfig-paths": "^4.1.0",
-    "typescript": "^4.8.3"
+    "typescript": "^4.8.3",
+    "ws": "^8.11.0"
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
