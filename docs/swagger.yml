@@ -8,7 +8,7 @@ info:
     email: hello@adahandle.com
   version: 0.0.1
 servers:
-- url: http://localhost:3141
+- url: https://api.handle.me
 tags:
 - name: handles
   description: Handle endpoints

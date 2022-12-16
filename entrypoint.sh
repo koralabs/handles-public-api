@@ -29,6 +29,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     echo "Failed to start ogmios: $ogmios_status"
     exit $ogmios_status
     fi
+    sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm run start:forever &
 fi
