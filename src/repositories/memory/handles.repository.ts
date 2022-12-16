@@ -50,26 +50,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
     }): Promise<IGetAllHandlesResults> {
-        const { cursor, sort } = pagination;
-        const limitNumber = pagination.getLimitNumber();
+        const { page, sort, handlesPerPage } = pagination;
 
         const items = this.search(search, sort);
-
-        const nameIndex = cursor ? items.findIndex((a) => a.hex === cursor) : 0;
-        const handles = items.slice(nameIndex, nameIndex + limitNumber);
-        const nextCursor = items[nameIndex + limitNumber]?.hex;
+        const startIndex = (page - 1) * handlesPerPage
+        const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
         const result = {
             total: items.length,
             handles
         };
-
-        if (nextCursor) {
-            return {
-                ...result,
-                cursor: nextCursor
-            };
-        }
 
         return result;
     }

@@ -636,10 +636,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/handles-public-api-interfaces@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-1.0.0.tgz#60b0f5c8d40b4407e3d0b74fff79efffdaf6114c"
-  integrity sha512-1aEXM+egwxUDZVERfa2DRXhcyd9r+sMeuy9fgxesVyb14MfuDMotElcn5m4wkgq3xN38RBVkVb3x406V71T0WA==
+"@koralabs/handles-public-api-interfaces@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-1.2.0.tgz#4bd6a126a96fdfd0c1a34bfc0b907b26969dc6e3"
+  integrity sha512-TgTt4eQZ+zxsxuEtYngzuMT2v8vzDhYf/0BJBSiD/mDK5ZvVLlGbr3uZM9YUvBE/ZZOgZMsi4Wu22ElQnHWGhg==
 
 "@koralabs/logger@^1.0.0":
   version "1.0.0"

@@ -85,7 +85,8 @@ describe('HandleStore tests', () => {
                 profile_pic: '',
                 rarity: 'common',
                 resolved_addresses: { ada: 'addr123' },
-                created_at: expect.any(Number)
+                created_slot_number: expect.any(Number),
+                updated_slot_number: expect.any(Number)
             });
         });
     });
@@ -177,8 +178,8 @@ describe('HandleStore tests', () => {
                 profile_pic: '',
                 rarity: 'common',
                 resolved_addresses: { ada: newAddress },
-                created_at: expect.any(Number),
-                updated_at: expect.any(Number)
+                created_slot_number: expect.any(Number),
+                updated_slot_number: expect.any(Number)
             });
         });
 

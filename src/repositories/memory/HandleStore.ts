@@ -6,7 +6,7 @@ import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getAddressStakeKey } from '../../utils/serialization';
-import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
+import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate } from '../../utils/util';
 import {
     IHandleFileContent,
     IHandleStoreMetrics,
@@ -124,7 +124,8 @@ export class HandleStore {
             background: '',
             default_in_wallet: '',
             profile_pic: '',
-            created_at: Date.now()
+            created_slot_number: getSlotNumberFromDate(new Date()),
+            updated_slot_number: getSlotNumberFromDate(new Date()) // TODO: replace with actual slot number
         };
 
         await this.save(newHandle);
@@ -142,7 +143,7 @@ export class HandleStore {
         }
 
         existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.updated_at = Date.now();
+        existingHandle.updated_slot_number = getSlotNumberFromDate(new Date());
         await HandleStore.save(existingHandle);
     };
 
@@ -163,7 +164,7 @@ export class HandleStore {
             existingHandle.background = nft_appearance?.background ?? '';
             existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
             existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-            existingHandle.updated_at = Date.now(); // TODO: Change to slot number
+            existingHandle.updated_slot_number = getSlotNumberFromDate(new Date()); // TODO: Change to slot number
         }
 
         // update resolved addresses
@@ -276,7 +277,7 @@ export class HandleStore {
                 default_in_wallet: 'hdl',
                 background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
                 profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                created_at: Date.now()
+                created_slot_number: Date.now()
             };
 
             this.save(handle);

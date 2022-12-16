@@ -20,7 +20,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel('1', 'asc');
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ cursor: 'burrito-hex', handles: [handlesFixture[0]], total: 3 });
+            expect(result).toEqual({ handles: [handlesFixture[0]], total: 3 });
         });
 
         it('should find rare handles', async () => {

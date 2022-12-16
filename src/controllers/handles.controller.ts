@@ -14,7 +14,7 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { limit = '100', sort = 'desc', cursor, characters, length, rarity, numeric_modifiers } = req.query;
+            const { handles_per_page, sort = 'desc', page, characters, length, rarity, numeric_modifiers } = req.query;
             const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
 
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
@@ -26,9 +26,9 @@ class HandlesController {
                 return;
             }
 
-            const pagination = new HandlePaginationModel(limit, sort, cursor);
+            const pagination = new HandlePaginationModel(handles_per_page, sort, page);
             const handleData = await handleRepo.getAll({ pagination, search });
-            res.status(200).json({ results: handleData });
+            res.status(200).json(handleData.handles);
         } catch (error) {
             next(error);
         }
@@ -56,7 +56,7 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const handleData = await handleRepo.getHandleByName(handleName);
 
-            res.status(200).json({ handle: handleData });
+            res.status(200).json(handleData);
         } catch (error) {
             next(error);
         }
@@ -80,7 +80,7 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
 
-            res.status(200).json({ handle: handleData });
+            res.status(200).json(handleData);
         } catch (error) {
             next(error);
         }

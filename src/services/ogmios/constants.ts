@@ -36,3 +36,12 @@ export const POLICY_IDS: PolicyIds = {
     preprod: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'],
     preview: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a']
 };
+
+export enum ERROR_TEXT {
+    HANDLE_LIMIT_EXCEEDED = "'handles_per_page' must be a number",
+    HANDLE_LIMIT_INVALID_FORMAT = "'handles_per_page' can't be more than 1000",
+    HANDLE_SORT_INVALID = "'sort' must be 'desc' or 'asc'",
+    HANDLE_PAGE_INVALID = "'page' must be a number"
+}
+
+export const HANDLES_PER_PAGE_MAX = 1000;

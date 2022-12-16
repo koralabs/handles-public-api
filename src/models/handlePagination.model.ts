@@ -1,48 +1,34 @@
 import { ModelException } from '../exceptions/ModelException';
+import { ERROR_TEXT } from '../services/ogmios/constants';
 import { isNumeric } from '../utils/util';
 
 export type Sort = 'asc' | 'desc';
 
 export class HandlePaginationModel {
-    cursor?: string;
-    private _limit: string = '0';
-    private _sort: string = 'desc';
+    public page: number;
+    public handlesPerPage: number;
+    public sort: Sort;
 
-    constructor(limit: string, sort: Sort, cursor?: string) {
-        this.limit = limit;
+    constructor(handlesPerPage: string = '100', sort: Sort = 'desc', page: string = '1') {
+        this.validateHandlePagination(handlesPerPage, sort, page);
+        this.handlesPerPage = parseInt(handlesPerPage);
+        this.page = parseInt(page);
         this.sort = sort;
-        this.cursor = cursor;
     }
 
-    getLimitNumber() {
-        return parseInt(this.limit);
-    }
-
-    get limit(): string {
-        return this._limit;
-    }
-
-    set limit(value: string) {
-        if (!isNumeric(value)) {
-            throw new ModelException('Limit must be a number');
+    private validateHandlePagination(handlesPerPage: string, sort: Sort, page: string): void {
+        if (!isNumeric(handlesPerPage)) {
+            throw new ModelException(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
         }
-
-        if (parseInt(value) > 1000) {
-            throw new ModelException('Limit exceeded');
+        if (parseInt(handlesPerPage) > 1000) {
+            throw new ModelException(ERROR_TEXT.HANDLE_LIMIT_EXCEEDED);
         }
-
-        this._limit = value;
-    }
-
-    get sort(): 'asc' | 'desc' {
-        return this._sort as 'asc' | 'desc';
-    }
-
-    set sort(value) {
-        if (!['desc', 'asc'].includes(value)) {
-            throw new ModelException('Sort must be desc or asc');
+        if (!isNumeric(page)) {
+            throw new ModelException(ERROR_TEXT.HANDLE_PAGE_INVALID);
         }
-
-        this._sort = value;
+        if (!['desc', 'asc'].includes(sort)) {
+            throw new ModelException(ERROR_TEXT.HANDLE_SORT_INVALID);
+        }
     }
+
 }

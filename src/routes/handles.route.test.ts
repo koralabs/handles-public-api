@@ -2,6 +2,7 @@ import request from 'supertest';
 import HandlesRoute from './handles.route';
 import App from '../app';
 import { HttpException } from '../exceptions/HttpException';
+import { ERROR_TEXT } from '../services/ogmios/constants';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -27,11 +28,14 @@ jest.mock('../ioc', () => ({
                 };
             },
             getAll: () => {
-                return [
-                    {
-                        handle: 'burritos'
-                    }
-                ];
+                return {
+                    handles: [
+                        {
+                            handle: 'burritos'
+                        }
+                    ],
+                    total: 1
+                };
             },
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];
@@ -58,24 +62,24 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /handles', () => {
-        it('should throw error if limit is invalid', async () => {
-            const response = await request(app?.getServer()).get('/handles?limit=two');
+        it('should throw error if handles_per_page is invalid', async () => {
+            const response = await request(app?.getServer()).get('/handles?handles_per_page=two');
             expect(response.status).toEqual(400);
-            expect(response.body.message).toEqual('Limit must be a number');
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
         });
 
         it('should throw error if sort is invalid', async () => {
-            const response = await request(app?.getServer()).get('/handles?limit=1&sort=hmm');
+            const response = await request(app?.getServer()).get('/handles?handles_per_page=1&sort=hmm');
 
             expect(response.status).toEqual(400);
-            expect(response.body.message).toEqual('Sort must be desc or asc');
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_SORT_INVALID);
         });
 
         it('should return handles', async () => {
-            const response = await request(app?.getServer()).get('/handles?limit=1&sort=asc');
+            const response = await request(app?.getServer()).get('/handles?handles_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body.results).toEqual([{ handle: 'burritos' }]);
+            expect(response.body).toEqual([{ handle: 'burritos' }]);
         });
 
         it('should throw error if characters is invalid', async () => {
@@ -124,7 +128,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual({ handle: 'burritos' });
+            expect(response.body.handle).toEqual('burritos');
         });
 
         it('should return legendary message', async () => {
@@ -158,7 +162,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual({ handle: 'burritos' });
+            expect(response.body.handle).toEqual('burritos');
         });
 
         it('should return legendary message', async () => {

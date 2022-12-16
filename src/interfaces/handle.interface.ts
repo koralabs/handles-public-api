@@ -2,8 +2,8 @@ import { IHandle } from '@koralabs/handles-public-api-interfaces';
 import { IRegistry } from '../ioc';
 
 export interface IGetAllQueryParams {
-    limit?: string;
-    cursor?: string;
+    handles_per_page?: string;
+    page?: string;
     sort?: 'asc' | 'desc';
     characters?: string;
     length?: string;
@@ -19,5 +19,4 @@ export interface IGetHandleRequest {
 export interface IGetAllHandlesResults {
     handles: IHandle[];
     total: number;
-    cursor?: string;
 }

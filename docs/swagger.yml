@@ -44,6 +44,31 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/NumericModifiers"
+      - name: handles_per_page
+        in: query
+        description: Number of Handles to return per page in paginated results. Maximum of 1000.
+          Only `application/json` returns paginated results. `text/plain` always returns the full search set.
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        description: The page number to return in paginated results. Either `page` or `slot_number` can be
+          used in paginated results. Using the `page` parameter will order results by Handle name. This means
+          pagination can potentially miss some Handles if Handles are added while paginating. As an alternative
+          see `slot_number` below.
+        required: false
+        schema:
+          type: integer
+      - name: slot_number (not yet implemented)
+        in: query
+        description: The slot number to start at when paginating results. Either `page` or `slot_number` can be
+          used in paginated results. Using the `slot_number` parameter will order results by the slot number the
+          Handles were created or updated in. Pagination can potentially return the same Handle more than once
+          if Handles are added or updated during pagination. As an alternative, see `page` above.
+        required: false
+        schema:
+          type: integer
       responses:
         '200':
           description: Successful operation
@@ -194,6 +219,12 @@ components:
           type: string
           description: The version of the Handle
           example: 1
+        created_slot_number:
+          type: integer
+          description: The slot number this Handle was minted
+        updated_slot_number:
+          type: integer
+          description: The slot number this Handle was updated
     Personalization:
       type: object
       properties:
@@ -230,6 +261,7 @@ components:
           <br />Blank or not defined is a positive whole number, or not a number
           <br />`negative` - Negative whole number
           <br />`decimal` - Positive decimal
+          <br />`negative,decimal` - Negative decimal
       example: negative,decimal
   requestBodies:
     Handle:

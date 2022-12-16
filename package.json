@@ -20,7 +20,7 @@
     "dev:local": "cross-env NODE_ENV=local ORIGIN=* nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
     "dev:preprod": "cross-env NODE_ENV=production NETWORK=preprod nodemon",
-    "test": "jest --forceExit --detectOpenHandles --coverage",
+    "test": "jest --silent --forceExit --detectOpenHandles --coverage",
     "lint": "eslint --ignore-path .gitignore --ext .ts src/",
     "lint:fix": "npm run lint -- --fix"
   },
@@ -52,7 +52,7 @@
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
     "@emurgo/cardano-serialization-lib-nodejs": "^11.1.0",
-    "@koralabs/handles-public-api-interfaces": "^1.0.0",
+    "@koralabs/handles-public-api-interfaces": "^1.2.0",
     "@koralabs/logger": "^1.0.0",
     "@koralabs/protected-words": "^1.0.0",
     "cors": "^2.8.5",
