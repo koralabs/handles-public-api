@@ -1,11 +1,11 @@
 #!/bin/bash
-
 DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
+export NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
 
 function cleanup {
-  kill -SIGINT $(pidof cardano-node)
+  kill -INT $(pidof cardano-node)
 }
 
 if [[ "$@" != *"--host"* ]]

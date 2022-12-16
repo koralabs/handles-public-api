@@ -11,6 +11,7 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
+import { loadCardanoWasm } from './utils/serialization';
 
 class App {
     public app: express.Application;
@@ -27,6 +28,7 @@ class App {
         this.initializeMiddleware();
         this.initializeDynamicHandlers();
         this.initializeStorage();
+        loadCardanoWasm();
     }
 
     public listen() {
