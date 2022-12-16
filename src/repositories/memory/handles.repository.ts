@@ -8,16 +8,7 @@ import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
-    public async getAll({
-        pagination,
-        search
-    }: {
-        pagination: HandlePaginationModel;
-        search: HandleSearchModel;
-    }): Promise<IGetAllHandlesResults> {
-        const { cursor, sort } = pagination;
-        const limitNumber = pagination.getLimitNumber();
-
+    private search(search: HandleSearchModel, sort: string) {
         const { characters, length, rarity, numeric_modifiers } = search;
 
         const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
@@ -49,12 +40,27 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         array.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
 
-        const nameIndex = cursor ? array.findIndex((a) => a.hex === cursor) : 0;
-        const handles = array.slice(nameIndex, nameIndex + limitNumber);
-        const nextCursor = array[nameIndex + limitNumber]?.hex;
+        return array;
+    }
+
+    public async getAll({
+        pagination,
+        search
+    }: {
+        pagination: HandlePaginationModel;
+        search: HandleSearchModel;
+    }): Promise<IGetAllHandlesResults> {
+        const { cursor, sort } = pagination;
+        const limitNumber = pagination.getLimitNumber();
+
+        const items = this.search(search, sort);
+
+        const nameIndex = cursor ? items.findIndex((a) => a.hex === cursor) : 0;
+        const handles = items.slice(nameIndex, nameIndex + limitNumber);
+        const nextCursor = items[nameIndex + limitNumber]?.hex;
 
         const result = {
-            total: array.length,
+            total: items.length,
             handles
         };
 
@@ -68,8 +74,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return result;
     }
 
-    public async getAllHandleNames() {
-        const handles = HandleStore.getHandles();
+    public async getAllHandleNames(search: HandleSearchModel, sort: string) {
+        const handles = this.search(search, sort);
         return handles.map((handle) => handle.name);
     }
 

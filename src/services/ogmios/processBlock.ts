@@ -12,6 +12,7 @@ import {
     TxOutput
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
+import { awaitForEach } from '../../utils/util';
 import { buildOnChainObject, hex2String, stringifyBlock } from './utils';
 
 const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): Promise<IPersonalization> => {
@@ -75,7 +76,15 @@ const isMintingTransaction = (txBody: TxBody, assetName: string) => {
     return result !== undefined;
 };
 
-export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
+export const processBlock = async ({
+    policyId,
+    txBlock,
+    tip
+}: {
+    policyId: string;
+    txBlock: TxBlock;
+    tip: BlockTip;
+}) => {
     const startBuildingExec = Date.now();
 
     const txBlockType = txBlock[Object.keys(txBlock)[0] as 'alonzo' | 'shelley' | 'babbage'] as TxBlockBody;
@@ -86,35 +95,35 @@ export const processBlock = ({ policyId, txBlock, tip }: { policyId: string; txB
 
     HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
 
-    txBlockType?.body.forEach((txBody) => {
+    await awaitForEach(txBlockType?.body, async (txBody) => {
         // get metadata so we can use it later when we need to get OG data.
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
-        txBody.body.outputs
-            .filter((o) => Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId)))
-            .forEach((output) => {
-                Object.keys(output.value.assets ?? {})
-                    .filter((a) => a.startsWith(policyId))
-                    .forEach(async (assetName) => {
-                        // assetName can be:
-                        //  - {policyId}.{assetNameHex}
-                        //  - {policyId}{asset_name}{assetNameHex}
+        const filteredOutputs = txBody.body.outputs.filter((o) =>
+            Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
+        );
 
-                        if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.SUB_STANDARD_NFT}`)) {
-                            await processAssetReferenceToken(assetName, output);
-                            return;
-                        }
+        await awaitForEach(filteredOutputs, async (output) => {
+            const filteredAssets = Object.keys(output.value.assets ?? {}).filter((a) => a.startsWith(policyId));
 
-                        const data =
-                            isMintingTransaction(txBody, assetName) && handleMetadata
-                                ? handleMetadata[policyId]
-                                : undefined;
-                        await processAssetToken(assetName, output, data);
-                    });
+            await awaitForEach(filteredAssets, async (assetName) => {
+                // assetName can be:
+                //  - {policyId}.{assetNameHex}
+                //  - {policyId}{asset_name}{assetNameHex}
+
+                if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.SUB_STANDARD_NFT}`)) {
+                    await processAssetReferenceToken(assetName, output);
+                    return;
+                }
+
+                const data =
+                    isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
+                await processAssetToken(assetName, output, data);
             });
+        });
     });
 
     // finish timer for our logs

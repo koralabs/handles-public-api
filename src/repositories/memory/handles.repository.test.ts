@@ -44,8 +44,19 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should get all handle names', async () => {
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getAllHandleNames();
+            const search = new HandleSearchModel({});
+            const result = await repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
+        });
+
+        it('should search all handle names', async () => {
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
+            const repo = new MemoryHandlesRepository();
+            const search = new HandleSearchModel({
+                length: '4'
+            });
+            const result = await repo.getAllHandleNames(search, 'asc');
+            expect(result).toEqual(['taco']);
         });
     });
 

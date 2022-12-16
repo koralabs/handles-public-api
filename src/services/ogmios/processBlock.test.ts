@@ -139,7 +139,7 @@ describe('processBlock Tests', () => {
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -148,31 +148,33 @@ describe('processBlock Tests', () => {
             name: 'test1234',
             og: 1
         });
+
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
             currentBlockHash: 'some_hash',
             currentSlot: 0,
             lastSlot: 0
         });
+
         expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
     });
 
-    it('Should not save a new handle because it already exists in store', () => {
+    it('Should not save a new handle because it already exists in store', async () => {
         const newAddress = 'addr456';
         const saveSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
         jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
-        processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledWith(hexName, newAddress);
     });
 
-    it('Should not save anything is policyId does not match', () => {
+    it('Should not save anything is policyId does not match', async () => {
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         const saveAddressSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
 
-        processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
 
         expect(saveSpy).toHaveBeenCalledTimes(0);
         expect(saveAddressSpy).toHaveBeenCalledTimes(0);

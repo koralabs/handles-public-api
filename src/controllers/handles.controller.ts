@@ -14,18 +14,19 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
+            const { limit = '100', sort = 'desc', cursor, characters, length, rarity, numeric_modifiers } = req.query;
+            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
+
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handles = await handleRepo.getAllHandleNames();
+                const handles = await handleRepo.getAllHandleNames(search, sort);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.send(handles.join('\n'));
                 return;
             }
 
-            const { limit = '100', sort = 'desc', cursor, characters, length, rarity, numeric_modifiers } = req.query;
             const pagination = new HandlePaginationModel(limit, sort, cursor);
-            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
             const handleData = await handleRepo.getAll({ pagination, search });
             res.status(200).json({ results: handleData });
         } catch (error) {

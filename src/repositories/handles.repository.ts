@@ -8,7 +8,7 @@ interface IHandlesRepository {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
     }) => Promise<IGetAllHandlesResults>;
-    getAllHandleNames(): Promise<string[]>;
+    getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
     getHandleByName: (handleName: string) => Promise<IHandle>;
     getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle>;
     getHandleStats: () => IHandleStats;

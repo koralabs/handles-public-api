@@ -34,7 +34,7 @@ class OgmiosService {
         HandleStore.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
         const policyId = POLICY_IDS[process.env.NETWORK ?? 'testnet'][0];
-        processBlock({ policyId, txBlock: response.block as TxBlock, tip: response.tip as BlockTip });
+        await processBlock({ policyId, txBlock: response.block as TxBlock, tip: response.tip as BlockTip });
 
         // start timer for ogmios rollForward
         startOgmiosExec = Date.now();
