@@ -6,7 +6,8 @@ import { fetchHealth } from '../services/ogmios/utils';
 enum HealthStatus {
     CURRENT = 'current',
     OGMIOS_BEHIND = 'ogmios_behind',
-    STORAGE_BEHIND = 'storage_behind'
+    STORAGE_BEHIND = 'storage_behind',
+    WAITING_ON_CARDANO_NODE = 'waiting_on_cardano_node'
 }
 
 class HealthController {
@@ -31,27 +32,19 @@ class HealthController {
             const date = new Date(lastTipUpdate).getTime();
             const now = new Date().getTime();
 
-            if (date < now - 60000) {
-                res.status(202).json({
-                    status: HealthStatus.OGMIOS_BEHIND,
-                    ogmios: ogmiosResults,
-                    stats
-                });
-                return;
-            }
-
-            // check if storage is still trying to catch up.
+            let status = HealthStatus.CURRENT;
             if (stats.percentageComplete !== '100.00') {
-                res.status(202).json({
-                    status: HealthStatus.STORAGE_BEHIND,
-                    ogmios: ogmiosResults,
-                    stats
-                });
-                return;
+                status = HealthStatus.STORAGE_BEHIND;
+            }
+            if (date < now - 60000) {
+                status = HealthStatus.OGMIOS_BEHIND;
+            }
+            if (ogmiosResults.connectionStatus !== 'connected') {
+                status = HealthStatus.WAITING_ON_CARDANO_NODE;
             }
 
-            res.status(200).json({
-                status: HealthStatus.CURRENT,
+            res.status(status === HealthStatus.CURRENT ? 200 : 202).json({
+                status,
                 ogmios: ogmiosResults,
                 stats
             });

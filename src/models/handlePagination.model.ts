@@ -9,7 +9,7 @@ export class HandlePaginationModel {
     public handlesPerPage: number;
     public sort: Sort;
 
-    constructor(handlesPerPage: string = '100', sort: Sort = 'desc', page: string = '1') {
+    constructor(handlesPerPage: string = '100', sort: Sort = 'asc', page: string = '1') {
         this.validateHandlePagination(handlesPerPage, sort, page);
         this.handlesPerPage = parseInt(handlesPerPage);
         this.page = parseInt(page);

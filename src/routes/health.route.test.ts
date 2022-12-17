@@ -45,6 +45,9 @@ jest.mock('../ioc', () => ({
             getHandleStats: () => {
                 const stats = getStats();
                 return stats;
+            },
+            getIsCaughtUp: () => {
+                return true;
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -95,7 +98,7 @@ describe('Health Routes Test', () => {
             totalMessages: 0,
             totalUnrouted: 0
         },
-        connectionStatus: '',
+        connectionStatus: 'connected',
         currentEpoch: 0,
         slotInEpoch: 0
     });

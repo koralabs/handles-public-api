@@ -71,7 +71,23 @@ paths:
           type: integer
       responses:
         '200':
-          description: Successful operation
+          description: Successful and up to date
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: |-
+                  handle123
+                  my.handle
+                  i-always-hodl
+                  ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Handle"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             text/plain; charset=utf-8:
               schema:
@@ -108,6 +124,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Handle"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Handle"
         '400':
           description: Invalid Handle format
         '404':
@@ -128,6 +150,12 @@ paths:
       responses:
         '200':
           description: Successful operation
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Personalization"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:

@@ -232,8 +232,7 @@ export class HandleStore {
 
         const handleCount = this.count();
 
-        const percentageComplete =
-            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -256,6 +255,25 @@ export class HandleStore {
         };
     }
 
+    static isCaughtUp(): boolean {
+        const {
+            firstSlot = 0,
+            lastSlot = 0,
+            currentSlot = 0,
+        } = this.metrics;
+        const handleSlotRange = lastSlot - firstSlot;
+        const currentSlotInRange = currentSlot - firstSlot;
+        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+
+        const slotDate = getDateStringFromSlot(currentSlot);
+
+        const date = slotDate.getTime();
+        const now = new Date().getTime();
+
+        return (date < now - 60000 && percentageComplete != `100.00`)
+
+    }
+    
     static buildStorage() {
         // used to quickly build a large datastore
         Array.from(Array(1000000).keys()).forEach((number) => {

@@ -50,7 +50,7 @@ To use Preview or PreProd environments just add `-e NETWORK=preview` or `-e NETW
 
 It can take a few hours to download the cardano-node snapshot and begin an Ogmios scan.
 
-Due to JavaScript garbage collection during the Ogmios scan, it is recommnded to run this container on a host with 12GB or more of RAM available.
+A minimum of 16GB of RAM is required when running the container - 20GB recommended. If running in Ogmios-only mode, 4GB minimum is required, 8GB recommended.
 
 The containers are setup for graceful cardano-node shutdown, but if you have to shut it down manually, for a more graceful shutdown (which helps subsequent load times), try running on the host (or in the container):
 ```sh

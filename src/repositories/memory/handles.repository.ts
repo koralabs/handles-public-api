@@ -100,6 +100,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
     }
+
+    public getIsCaughtUp(): boolean {
+        return HandleStore.isCaughtUp();
+    }
 }
 
 export default MemoryHandlesRepository;

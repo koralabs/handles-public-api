@@ -39,6 +39,9 @@ jest.mock('../ioc', () => ({
             },
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];
+            },
+            getIsCaughtUp: () => {
+                return true;
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({

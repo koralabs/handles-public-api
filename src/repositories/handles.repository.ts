@@ -12,6 +12,7 @@ interface IHandlesRepository {
     getHandleByName: (handleName: string) => Promise<IHandle>;
     getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle>;
     getHandleStats: () => IHandleStats;
+    getIsCaughtUp: () => boolean;
 }
 
 export default IHandlesRepository;

@@ -22,13 +22,13 @@ class HandlesController {
             if (req.headers?.accept?.startsWith('text/plain')) {
                 const handles = await handleRepo.getAllHandleNames(search, sort);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.send(handles.join('\n'));
+                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).send(handles.join('\n'));
                 return;
             }
 
             const pagination = new HandlePaginationModel(handles_per_page, sort, page);
             const handleData = await handleRepo.getAll({ pagination, search });
-            res.status(200).json(handleData.handles);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData.handles);
         } catch (error) {
             next(error);
         }
@@ -56,7 +56,7 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const handleData = await handleRepo.getHandleByName(handleName);
 
-            res.status(200).json(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
         } catch (error) {
             next(error);
         }
@@ -80,7 +80,7 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
 
-            res.status(200).json(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
         } catch (error) {
             next(error);
         }
