@@ -146,7 +146,8 @@ describe('processBlock Tests', () => {
             hexName: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
-            og: 1
+            og: 1,
+            slotNumber: 0
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -167,7 +168,7 @@ describe('processBlock Tests', () => {
 
         await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith(hexName, newAddress);
+        expect(saveSpy).toHaveBeenCalledWith({ adaAddress: newAddress, hexName, slotNumber: 0 });
     });
 
     it('Should not save anything is policyId does not match', async () => {

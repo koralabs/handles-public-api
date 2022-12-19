@@ -28,7 +28,15 @@ const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): P
     return personalization;
 };
 
-const processAssetReferenceToken = async (assetName: string, output: TxOutput) => {
+const processAssetReferenceToken = async ({
+    assetName,
+    output,
+    slotNumber
+}: {
+    assetName: string;
+    output: TxOutput;
+    slotNumber: number;
+}) => {
     const hexName = assetName?.split(MetadatumAssetLabel.SUB_STANDARD_NFT)[1];
     if (!hexName) {
         console.log(`unable to decode ${hexName}`, stringifyBlock(output));
@@ -43,14 +51,20 @@ const processAssetReferenceToken = async (assetName: string, output: TxOutput) =
     const personalization = await buildPersonalization(referenceTokenData);
 
     // TODO: get addresses from personalization data
-    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {} });
+    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {}, slotNumber });
 };
 
-const processAssetToken = async (
-    assetName: string,
-    output: TxOutput,
-    handleMetadata?: { [handleName: string]: HandleOnChainMetadata }
-) => {
+const processAssetToken = async ({
+    assetName,
+    slotNumber,
+    output,
+    handleMetadata
+}: {
+    assetName: string;
+    slotNumber: number;
+    output: TxOutput;
+    handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
+}) => {
     const hexName = assetName?.split('.')[1];
     if (!hexName) {
         console.log(`unable to decode ${hexName}`, stringifyBlock(output));
@@ -65,9 +79,9 @@ const processAssetToken = async (
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: output.address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, adaAddress: output.address });
     } else {
-        await HandleStore.saveWalletAddressMove(hexName, output.address);
+        await HandleStore.saveWalletAddressMove({ hexName, adaAddress: output.address, slotNumber });
     }
 };
 
@@ -115,13 +129,13 @@ export const processBlock = async ({
                 //  - {policyId}{asset_name}{assetNameHex}
 
                 if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.SUB_STANDARD_NFT}`)) {
-                    await processAssetReferenceToken(assetName, output);
+                    await processAssetReferenceToken({ assetName, output, slotNumber: currentSlot });
                     return;
                 }
 
                 const data =
                     isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
-                await processAssetToken(assetName, output, data);
+                await processAssetToken({ assetName, slotNumber: currentSlot, output, handleMetadata: data });
             });
         });
     });

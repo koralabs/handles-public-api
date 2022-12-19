@@ -7,22 +7,26 @@ export class HandleSearchModel {
     private _length?: string;
     private _rarity?: string;
     private _numeric_modifiers?: string;
+    private _slot_number?: string;
 
     constructor({
         characters,
         length,
         rarity,
-        numeric_modifiers
+        numeric_modifiers,
+        slot_number
     }: {
         characters?: string;
         length?: string;
         rarity?: string;
         numeric_modifiers?: string;
+        slot_number?: string;
     }) {
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
         this.numeric_modifiers = numeric_modifiers;
+        this.slot_number = slot_number;
     }
 
     get characters() {
@@ -77,5 +81,17 @@ export class HandleSearchModel {
         }
 
         this._numeric_modifiers = value;
+    }
+
+    get slot_number() {
+        return this._slot_number;
+    }
+
+    set slot_number(value) {
+        if (value && !isNumeric(value)) {
+            throw new ModelException('Length must be a number');
+        }
+
+        this._slot_number = value;
     }
 }

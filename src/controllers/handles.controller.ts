@@ -14,8 +14,17 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { handles_per_page, sort = 'desc', page, characters, length, rarity, numeric_modifiers } = req.query;
-            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
+            const {
+                handles_per_page,
+                sort = 'desc',
+                page,
+                characters,
+                length,
+                rarity,
+                numeric_modifiers,
+                slot_number
+            } = req.query;
+            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers, slot_number });
 
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
 

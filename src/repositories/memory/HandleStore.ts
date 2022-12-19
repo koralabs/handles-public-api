@@ -6,12 +6,13 @@ import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getAddressStakeKey } from '../../utils/serialization';
-import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate } from '../../utils/util';
+import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
     IHandleStoreMetrics,
     SaveMintingTxInput,
-    SavePersonalizationInput
+    SavePersonalizationInput,
+    SaveWalletAddressMoveInput
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     static handles = new Map<string, IHandle>();
@@ -107,7 +108,7 @@ export class HandleStore {
         }
     };
 
-    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
+    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image, slotNumber }: SaveMintingTxInput) => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
@@ -124,14 +125,14 @@ export class HandleStore {
             background: '',
             default_in_wallet: '',
             profile_pic: '',
-            created_slot_number: getSlotNumberFromDate(new Date()),
-            updated_slot_number: getSlotNumberFromDate(new Date()) // TODO: replace with actual slot number
+            created_slot_number: slotNumber,
+            updated_slot_number: slotNumber
         };
 
         await this.save(newHandle);
     };
 
-    static saveWalletAddressMove = async (hexName: string, adaAddress: string) => {
+    static saveWalletAddressMove = async ({ hexName, adaAddress, slotNumber }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -143,11 +144,16 @@ export class HandleStore {
         }
 
         existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.updated_slot_number = getSlotNumberFromDate(new Date());
+        existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };
 
-    static async savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
+    static async savePersonalizationChange({
+        hexName,
+        personalization,
+        addresses,
+        slotNumber
+    }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -164,7 +170,7 @@ export class HandleStore {
             existingHandle.background = nft_appearance?.background ?? '';
             existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
             existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-            existingHandle.updated_slot_number = getSlotNumberFromDate(new Date()); // TODO: Change to slot number
+            existingHandle.updated_slot_number = slotNumber;
         }
 
         // update resolved addresses
@@ -232,7 +238,8 @@ export class HandleStore {
 
         const handleCount = this.count();
 
-        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete =
+            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -256,24 +263,20 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const {
-            firstSlot = 0,
-            lastSlot = 0,
-            currentSlot = 0,
-        } = this.metrics;
+        const { firstSlot = 0, lastSlot = 0, currentSlot = 0 } = this.metrics;
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete =
+            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const slotDate = getDateStringFromSlot(currentSlot);
 
         const date = slotDate.getTime();
         const now = new Date().getTime();
 
-        return (date < now - 60000 && percentageComplete != `100.00`)
-
+        return date < now - 60000 && percentageComplete != `100.00`;
     }
-    
+
     static buildStorage() {
         // used to quickly build a large datastore
         Array.from(Array(1000000).keys()).forEach((number) => {

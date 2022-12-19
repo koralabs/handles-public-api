@@ -24,9 +24,17 @@ export interface SaveMintingTxInput {
     adaAddress: string;
     og: number;
     image: string;
+    slotNumber: number;
+}
+
+export interface SaveWalletAddressMoveInput {
+    slotNumber: number;
+    hexName: string;
+    adaAddress: string;
 }
 
 export interface SavePersonalizationInput {
+    slotNumber: number;
     hexName: string;
     personalization: IPersonalization;
     addresses: {

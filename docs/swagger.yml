@@ -60,7 +60,7 @@ paths:
         required: false
         schema:
           type: integer
-      - name: slot_number (not yet implemented)
+      - name: slot_number
         in: query
         description: The slot number to start at when paginating results. Either `page` or `slot_number` can be
           used in paginated results. Using the `slot_number` parameter will order results by the slot number the
@@ -263,7 +263,7 @@ components:
       type: string
       example: letters,numbers,special
       description: "Included character types in the handles. Numbers includes negative
-        and decimal numbers. Combining them does an "AND" search. `letters,numbers`
+        and decimal numbers. Combining them does an \"AND\" search. `letters,numbers`
         will find Handles that have both letters and numbers
         <br />`letters` - All characters are letters
         <br />`numbers` - All characters are valid numeric characters (including decimals
