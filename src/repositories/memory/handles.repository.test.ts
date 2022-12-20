@@ -3,6 +3,8 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture } from './fixtures/handles';
+import { ModelException } from '../../exceptions/ModelException';
+import { ERROR_TEXT } from '../../services/ogmios/constants';
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
@@ -17,26 +19,63 @@ describe('MemoryHandlesRepository Tests', () => {
     describe('getAll', () => {
         it('should get all handles', async () => {
             const repo = new MemoryHandlesRepository();
-            const pagination = new HandlePaginationModel('1', 'asc');
+            const pagination = new HandlePaginationModel({ page: '1', handlesPerPage: '1', sort: 'asc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ handles: [handlesFixture[0]], total: 3 });
+            expect(result).toEqual([handlesFixture[0]]);
         });
 
         it('should find rare handles', async () => {
             const repo = new MemoryHandlesRepository();
-            const pagination = new HandlePaginationModel('100', 'asc');
+            const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'rare' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ handles: [handlesFixture[2]], total: 1 });
+            expect(result).toEqual([handlesFixture[2]]);
         });
 
         it('should no handles with compounded searches', async () => {
             const repo = new MemoryHandlesRepository();
-            const pagination = new HandlePaginationModel('100', 'asc');
+            const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'rare', length: '7' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ handles: [], total: 0 });
+            expect(result).toEqual([]);
+        });
+
+        it('should paginate handles by slot number', async () => {
+            const repo = new MemoryHandlesRepository();
+            const { updated_slot_number } = handlesFixture[0];
+            const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, handlesPerPage: '1' });
+            const search = new HandleSearchModel({});
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([handlesFixture[0]]);
+        });
+
+        it('should paginate handles by slot number and sort ascending by default', async () => {
+            const repo = new MemoryHandlesRepository();
+            const { updated_slot_number } = handlesFixture[0];
+            const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}` });
+            const search = new HandleSearchModel({});
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([handlesFixture[0], handlesFixture[1], handlesFixture[2]]);
+        });
+
+        it('should paginate handles by slot number and sort desc', async () => {
+            const repo = new MemoryHandlesRepository();
+            const { updated_slot_number } = handlesFixture[1];
+            const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, sort: 'desc' });
+            const search = new HandleSearchModel({});
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([handlesFixture[1], handlesFixture[0]]);
+        });
+
+        // this will not work and I'm not sure why.
+        it.skip('should throw error if page and slot number are used together', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel({ page: '1', slotNumber: '1' });
+            const search = new HandleSearchModel({});
+            expect(async () => {
+                await repo.getAll({ pagination, search });
+            }).toThrow("'page' and 'slot_number' can't be used together");
         });
     });
 

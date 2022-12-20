@@ -16,8 +16,3 @@ export interface IGetHandleRequest {
     registry: IRegistry;
     handle: string;
 }
-
-export interface IGetAllHandlesResults {
-    handles: IHandle[];
-    total: number;
-}

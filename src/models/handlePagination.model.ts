@@ -4,31 +4,46 @@ import { isNumeric } from '../utils/util';
 
 export type Sort = 'asc' | 'desc';
 
+export interface HandlePaginationInput {
+    handlesPerPage?: string;
+    sort?: Sort;
+    page?: string;
+    slotNumber?: string;
+}
+
 export class HandlePaginationModel {
     public page: number;
     public handlesPerPage: number;
     public sort: Sort;
+    public slotNumber?: number | null;
 
-    constructor(handlesPerPage: string = '100', sort: Sort = 'asc', page: string = '1') {
-        this.validateHandlePagination(handlesPerPage, sort, page);
-        this.handlesPerPage = parseInt(handlesPerPage);
-        this.page = parseInt(page);
-        this.sort = sort;
+    constructor(input?: HandlePaginationInput) {
+        const { handlesPerPage, sort, page, slotNumber } = input ?? {};
+        this.validateHandlePagination(handlesPerPage, sort, page, slotNumber);
+        this.handlesPerPage = handlesPerPage ? parseInt(handlesPerPage) : 100;
+        this.page = page ? parseInt(page) : 1;
+        this.sort = sort ?? 'asc';
+        this.slotNumber = slotNumber ? parseInt(slotNumber) : null;
     }
 
-    private validateHandlePagination(handlesPerPage: string, sort: Sort, page: string): void {
-        if (!isNumeric(handlesPerPage)) {
+    private validateHandlePagination(handlesPerPage?: string, sort?: Sort, page?: string, slotNumber?: string): void {
+        if (handlesPerPage && !isNumeric(handlesPerPage)) {
             throw new ModelException(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
         }
-        if (parseInt(handlesPerPage) > 1000) {
+        if (handlesPerPage && parseInt(handlesPerPage) > 1000) {
             throw new ModelException(ERROR_TEXT.HANDLE_LIMIT_EXCEEDED);
         }
-        if (!isNumeric(page)) {
+        if (page && !isNumeric(page)) {
             throw new ModelException(ERROR_TEXT.HANDLE_PAGE_INVALID);
         }
-        if (!['desc', 'asc'].includes(sort)) {
+        if (sort && !['desc', 'asc'].includes(sort)) {
             throw new ModelException(ERROR_TEXT.HANDLE_SORT_INVALID);
         }
+        if (slotNumber && !isNumeric(slotNumber)) {
+            throw new ModelException(ERROR_TEXT.HANDLE_SLOT_NUMBER_INVALID);
+        }
+        if (page && slotNumber) {
+            throw new ModelException(ERROR_TEXT.HANDLE_PAGE_AND_SLOT_NUMBER_INVALID);
+        }
     }
-
 }

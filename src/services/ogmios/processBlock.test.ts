@@ -131,7 +131,8 @@ describe('processBlock Tests', () => {
         default_in_wallet: 'some_hdl',
         profile_pic: 'some_hash_test1234',
         background: 'some_hash_test1234',
-        created_slot_number: Date.now()
+        created_slot_number: Date.now(),
+        updated_slot_number: Date.now()
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {

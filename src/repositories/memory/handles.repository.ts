@@ -1,14 +1,13 @@
 import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
 
-import { IGetAllHandlesResults } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
-    private search(search: HandleSearchModel, sort: string) {
+    private search(search: HandleSearchModel) {
         const { characters, length, rarity, numeric_modifiers } = search;
 
         const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
@@ -38,8 +37,6 @@ class MemoryHandlesRepository implements IHandlesRepository {
                   }, [])
                 : Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
 
-        array.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-
         return array;
     }
 
@@ -49,23 +46,33 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }: {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
-    }): Promise<IGetAllHandlesResults> {
-        const { page, sort, handlesPerPage } = pagination;
+    }): Promise<IHandle[]> {
+        const { page, sort, handlesPerPage, slotNumber } = pagination;
 
-        const items = this.search(search, sort);
-        const startIndex = (page - 1) * handlesPerPage
+        const items = this.search(search);
+
+        if (slotNumber) {
+            items.sort((a, b) =>
+                sort === 'desc'
+                    ? b.updated_slot_number - a.updated_slot_number
+                    : a.updated_slot_number - b.updated_slot_number
+            );
+            const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
+            const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
+
+            return handles;
+        }
+
+        items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+        const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        const result = {
-            total: items.length,
-            handles
-        };
-
-        return result;
+        return handles;
     }
 
     public async getAllHandleNames(search: HandleSearchModel, sort: string) {
-        const handles = this.search(search, sort);
+        const handles = this.search(search);
+        handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
         return handles.map((handle) => handle.name);
     }
 

@@ -14,30 +14,28 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const {
-                handles_per_page,
-                sort = 'desc',
+            const { handles_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number } =
+                req.query;
+            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
+            const pagination = new HandlePaginationModel({
                 page,
-                characters,
-                length,
-                rarity,
-                numeric_modifiers,
-                slot_number
-            } = req.query;
-            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers, slot_number });
+                sort,
+                handlesPerPage: handles_per_page,
+                slotNumber: slot_number
+            });
 
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handles = await handleRepo.getAllHandleNames(search, sort);
+                const { sort: sortParam } = pagination;
+                const handles = await handleRepo.getAllHandleNames(search, sortParam);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.status(handleRepo.getIsCaughtUp() ? 200 : 202).send(handles.join('\n'));
                 return;
             }
 
-            const pagination = new HandlePaginationModel(handles_per_page, sort, page);
-            const handleData = await handleRepo.getAll({ pagination, search });
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData.handles);
+            const handles = await handleRepo.getAll({ pagination, search });
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handles);
         } catch (error) {
             next(error);
         }

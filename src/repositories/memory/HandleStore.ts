@@ -44,7 +44,7 @@ export class HandleStore {
     };
 
     static storagePath = `/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
-    static storageSchemaVersion = 1;
+    static storageSchemaVersion = 2;
 
     static get = (key: string) => {
         return this.handles.get(key);
@@ -298,7 +298,8 @@ export class HandleStore {
                 default_in_wallet: 'hdl',
                 background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
                 profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                created_slot_number: Date.now()
+                created_slot_number: Date.now(),
+                updated_slot_number: Date.now()
             };
 
             this.save(handle);
@@ -396,10 +397,11 @@ export class HandleStore {
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
                 const text = await awsResponse.text();
-                Logger.log(`Found ${fileName}`);
+                Logger.log(`Found ${url}`);
                 return JSON.parse(text) as IHandleFileContent;
             }
 
+            Logger.log(`Unable to find ${url} online`);
             return null;
         } catch (error: any) {
             Logger.log(`Error fetching file from online with error: ${error.message}`);

@@ -41,7 +41,9 @@ export enum ERROR_TEXT {
     HANDLE_LIMIT_EXCEEDED = "'handles_per_page' must be a number",
     HANDLE_LIMIT_INVALID_FORMAT = "'handles_per_page' can't be more than 1000",
     HANDLE_SORT_INVALID = "'sort' must be 'desc' or 'asc'",
-    HANDLE_PAGE_INVALID = "'page' must be a number"
+    HANDLE_PAGE_INVALID = "'page' must be a number",
+    HANDLE_SLOT_NUMBER_INVALID = "'slot_number' must be a number",
+    HANDLE_PAGE_AND_SLOT_NUMBER_INVALID = "'page' and 'slot_number' can't be used together"
 }
 
 export const HANDLES_PER_PAGE_MAX = 1000;
