@@ -263,8 +263,8 @@ components:
       type: string
       example: letters,numbers,special
       description: "Included character types in the handles. Numbers includes negative
-        and decimal numbers. Combining them does an \"AND\" search. `letters,numbers`
-        will find Handles that have both letters and numbers
+        and decimal numbers. Combining them does an 'AND' search. Ex - `letters,numbers`
+        will find Handles that have both letters and numbers.
         <br />`letters` - All characters are letters
         <br />`numbers` - All characters are valid numeric characters (including decimals
         and negative)

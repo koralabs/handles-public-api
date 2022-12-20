@@ -11,9 +11,10 @@ import {
     TxBody,
     TxOutput
 } from '../../interfaces/ogmios.interfaces';
+import { Buffer } from 'buffer';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { awaitForEach } from '../../utils/util';
-import { buildOnChainObject, hex2String, stringifyBlock } from './utils';
+import { buildOnChainObject, stringifyBlock } from './utils';
 
 const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): Promise<IPersonalization> => {
     const { personalContactInfo, additionalHandleSettings, socialContactInfo } = metadata;
@@ -71,7 +72,7 @@ const processAssetToken = async ({
         return;
     }
 
-    const name = hex2String(hexName);
+    const name = Buffer.from(hexName, 'hex').toString('utf8');
     const data = handleMetadata && handleMetadata[name];
 
     if (data) {
@@ -116,9 +117,22 @@ export const processBlock = async ({
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
-        const filteredOutputs = txBody.body.outputs.filter((o) =>
-            Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
-        );
+        // const filteredOutputs = txBody.body.outputs.filter((o) =>
+        //     Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
+        // );
+
+        const filteredOutputs = [];
+        for (let i = 0; i < txBody.body.outputs.length; i++) {
+            const o = txBody.body.outputs[i];
+            if (o.value.assets) {
+                const keys = Object.keys(o.value.assets);
+                for (let j = 0; j < keys.length; j++) {
+                    if (keys[j].toString().startsWith(policyId)) {
+                        filteredOutputs.push(o);
+                    }
+                }
+            }
+        }
 
         await awaitForEach(filteredOutputs, async (output) => {
             const filteredAssets = Object.keys(output.value.assets ?? {}).filter((a) => a.startsWith(policyId));
