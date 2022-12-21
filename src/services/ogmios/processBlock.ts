@@ -48,12 +48,12 @@ const processAssetReferenceToken = async (assetName: string, output: TxOutput) =
 
 const processAssetToken = async (
     assetName: string,
-    output: TxOutput,
+    address: string,
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata }
 ) => {
     const hexName = assetName?.split('.')[1];
     if (!hexName) {
-        console.log(`unable to decode ${hexName}`, stringifyBlock(output));
+        console.log(`unable to decode ${hexName}`, stringifyBlock(address));
         return;
     }
 
@@ -65,9 +65,9 @@ const processAssetToken = async (
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: output.address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: address });
     } else {
-        await HandleStore.saveWalletAddressMove(hexName, output.address);
+        await HandleStore.saveWalletAddressMove(hexName, address);
     }
 };
 
@@ -95,7 +95,8 @@ export const processBlock = async ({
 
     HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
 
-    await awaitForEach(txBlockType?.body, async (txBody) => {
+    for (let b=0; b<txBlockType?.body.length; b++) {
+        const txBody = txBlockType?.body[b];
         // get metadata so we can use it later when we need to get OG data.
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
@@ -105,38 +106,29 @@ export const processBlock = async ({
         // const filteredOutputs = txBody.body.outputs.filter((o) =>
         //     Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
         // );
-        
-        const filteredOutputs = [];
-        for (let i=0; i<txBody.body.outputs.length; i++) {
+
+        for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
-            if (o.value.assets){
-                for (let j=0; j<o.value.assets.length; j++){
-                    if (o.value.assets[j].toString().startsWith(policyId)) {
-                        filteredOutputs.push(o);
+            if (o.value.assets) {
+                const keys = Object.keys(o.value.assets);
+                for (let j = 0; j < keys.length; j++) {
+                    if (keys[j].toString().startsWith(policyId)) {
+                        const assetName = keys[j].toString();
+                        if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
+                            await processAssetReferenceToken(assetName, o);
+                        }
+                        else
+                        {
+                            const data = isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
+                            const { address } = o;
+                            await processAssetToken(assetName, address, data);
+                        }
                     }
                 }
             }
         }
 
-        await awaitForEach(filteredOutputs, async (output) => {
-            const filteredAssets = Object.keys(output.value.assets ?? {}).filter((a) => a.startsWith(policyId));
-
-            await awaitForEach(filteredAssets, async (assetName) => {
-                // assetName can be:
-                //  - {policyId}.{assetNameHex}
-                //  - {policyId}{asset_name}{assetNameHex}
-
-                if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.SUB_STANDARD_NFT}`)) {
-                    await processAssetReferenceToken(assetName, output);
-                    return;
-                }
-
-                const data =
-                    isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
-                await processAssetToken(assetName, output, data);
-            });
-        });
-    });
+    }
 
     // finish timer for our logs
     const buildingExecFinished = Date.now() - startBuildingExec;

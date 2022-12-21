@@ -107,3 +107,5 @@ dist
 storage/
 
 /src/swagger.yml
+
+/handles/*.json

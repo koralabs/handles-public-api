@@ -15,6 +15,8 @@ tags:
   externalDocs:
     description: Related Handle Docs
     url: https://api.handle.me/swagger
+- name: utils
+  description: Handle utility endpoints
 paths:
   "/handles":
     get:
@@ -166,6 +168,17 @@ paths:
           description: Handle not found
       security:
       - api-key: []
+  "/stats":
+    get:
+      tags:
+      - utils
+      responses:
+        '200':
+          description: Handle Stats
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Stats"
   "/swagger":
     get:
       tags:
@@ -253,6 +266,13 @@ components:
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    Stats:
+      type: object
+      properties:
+        total_handles:
+          type: integer
+          example: 185123
+          description: "Total of all Handles minted"
     Personalization:
       type: object
       properties:

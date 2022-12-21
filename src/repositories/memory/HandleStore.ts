@@ -42,7 +42,7 @@ export class HandleStore {
         return `-${NETWORK}`;
     };
 
-    static storagePath = `/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
+    static storagePath = `${process.cwd()}/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageSchemaVersion = 1;
 
     static get = (key: string) => {
@@ -142,7 +142,8 @@ export class HandleStore {
             return;
         }
 
-        existingHandle.resolved_addresses.ada = adaAddress;
+        //existingHandle.resolved_addresses.ada = adaAddress;
+        existingHandle.resolved_addresses.ada = 'addr1q9qwzthqqueyaawjshavm2ss8c34g9da8fmr32ldx757gdkz28dq2p72el5pgmwt0efgc626xkpyhswsqkyqkg622plsv9dd9y';
         existingHandle.updated_slot_number = getSlotNumberFromDate(new Date());
         await HandleStore.save(existingHandle);
     };
@@ -316,6 +317,9 @@ export class HandleStore {
                 Logger.log('Unable to save. File is locked');
                 return false;
             }
+            
+            const os = require("os");
+            console.log(os.userInfo());
 
             const release = await lockfile.lock(path);
 
