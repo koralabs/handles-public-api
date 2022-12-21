@@ -7,8 +7,8 @@ import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
-    private search(search: HandleSearchModel) {
-        const { characters, length, rarity, numeric_modifiers } = search;
+    private search(searchModel: HandleSearchModel) {
+        const { characters, length, rarity, numeric_modifiers, search } = searchModel;
 
         const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
             Array.from(index.get(key ?? '') ?? [], (value) => value);
@@ -29,10 +29,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const uniqueHexes = [...new Set(handleHexes)];
 
         const array =
-            characters || length || rarity || numeric_modifiers
+            characters || length || rarity || numeric_modifiers || search
                 ? uniqueHexes.reduce<IHandle[]>((agg, hex) => {
                       const handle = HandleStore.handles.get(hex);
-                      if (handle) agg.push(handle);
+                      if (handle) {
+                          if (search && !handle.name.includes(search)) {
+                              return agg;
+                          }
+
+                          agg.push(handle);
+                      }
                       return agg;
                   }, [])
                 : Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));

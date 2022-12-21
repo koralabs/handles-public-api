@@ -107,6 +107,20 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('numeric_modifiers must be negative, decimal');
         });
 
+        it('should throw error if page and slot number are used together', async () => {
+            const response = await request(app?.getServer()).get('/handles?page=1&slot_number=123');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual("'page' and 'slot_number' can't be used together");
+        });
+
+        it('should throw error if search query is less than 3 characters', async () => {
+            const response = await request(app?.getServer()).get('/handles?search=ab');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('search must be at least 3 characters');
+        });
+
         it('should pass plain text list of Accept is text/plain', async () => {
             const response = await request(app?.getServer())
                 .get('/handles')
