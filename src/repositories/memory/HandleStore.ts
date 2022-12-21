@@ -43,7 +43,7 @@ export class HandleStore {
         return `-${NETWORK}`;
     };
 
-    static storagePath = `/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
+    static storagePath = `${process.cwd()}/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageSchemaVersion = 2;
 
     static get = (key: string) => {
@@ -347,12 +347,25 @@ export class HandleStore {
         }
     }
 
+    static checkIfExists(path: string): boolean {
+        try {
+            const exists = fs.statSync(path);
+            if (exists) {
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
     static async getFile(storagePath?: string): Promise<IHandleFileContent | null> {
         const path = NODE_ENV === 'local' ? 'storage/local.json' : storagePath ?? this.storagePath;
 
         try {
-            const exists = fs.existsSync(path);
-            if (exists) {
+            const exists = this.checkIfExists(path);
+            if (!exists) {
                 Logger.log({
                     message: `${path} file does not exist`,
                     category: LogCategory.INFO,

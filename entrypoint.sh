@@ -1,6 +1,6 @@
 #!/bin/bash
-DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
-export NODE_OPTIONS=--max-old-space-size=12288
+# DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
+# export NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
 
@@ -26,21 +26,24 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     ogmios_status=$?
 
     if [ $ogmios_status -ne 0 ]; then
-    echo "Failed to start ogmios: $ogmios_status"
-    exit $ogmios_status
+        echo "Failed to start ogmios: $ogmios_status"
+        exit $ogmios_status
     fi
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 
-    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} NODE_OPTIONS="${NODE_OPTIONS:-$DEFAULT_NODE_OPTIONS}" npm run start:forever &
+    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever &
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     DB_FILE=/db/protocolMagicId
     if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
+        echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
         curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
+        echo "Download complete."
     fi
     
-    trap cleanup SIGINT SIGTERM SIGKILL SIGQUIT SIGABRT
+    trap cleanup INT TERM KILL QUIT ABRT
+    echo "Starting cardano-node."
 
     exec ./cardano-node run \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \

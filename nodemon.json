@@ -8,5 +8,5 @@
         "src/logs/*",
         "src/**/*.{spec,test}.ts"
     ],
-    "exec": "ts-node -r tsconfig-paths/register --transpile-only src/express.ts"
+    "exec": "mkdir -p handles && touch handles/handles.json && ts-node -r tsconfig-paths/register --transpile-only src/express.ts"
 }
