@@ -1,5 +1,4 @@
 import request from 'supertest';
-import HandlesRoute from './handles.route';
 import App from '../app';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
@@ -28,14 +27,11 @@ jest.mock('../ioc', () => ({
                 };
             },
             getAll: () => {
-                return {
-                    handles: [
-                        {
-                            handle: 'burritos'
-                        }
-                    ],
-                    total: 1
-                };
+                return [
+                    {
+                        handle: 'burritos'
+                    }
+                ];
             },
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];

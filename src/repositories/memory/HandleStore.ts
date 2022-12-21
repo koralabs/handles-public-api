@@ -6,12 +6,13 @@ import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getAddressStakeKey } from '../../utils/serialization';
-import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate } from '../../utils/util';
+import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
     IHandleStoreMetrics,
     SaveMintingTxInput,
-    SavePersonalizationInput
+    SavePersonalizationInput,
+    SaveWalletAddressMoveInput
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     static handles = new Map<string, IHandle>();
@@ -43,7 +44,7 @@ export class HandleStore {
     };
 
     static storagePath = `${process.cwd()}/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
-    static storageSchemaVersion = 1;
+    static storageSchemaVersion = 2;
 
     static get = (key: string) => {
         return this.handles.get(key);
@@ -107,7 +108,7 @@ export class HandleStore {
         }
     };
 
-    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image }: SaveMintingTxInput) => {
+    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image, slotNumber }: SaveMintingTxInput) => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
@@ -124,14 +125,14 @@ export class HandleStore {
             background: '',
             default_in_wallet: '',
             profile_pic: '',
-            created_slot_number: getSlotNumberFromDate(new Date()),
-            updated_slot_number: getSlotNumberFromDate(new Date()) // TODO: replace with actual slot number
+            created_slot_number: slotNumber,
+            updated_slot_number: slotNumber
         };
 
         await this.save(newHandle);
     };
 
-    static saveWalletAddressMove = async (hexName: string, adaAddress: string) => {
+    static saveWalletAddressMove = async ({ hexName, adaAddress, slotNumber }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -142,13 +143,17 @@ export class HandleStore {
             return;
         }
 
-        //existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.resolved_addresses.ada = 'addr1q9qwzthqqueyaawjshavm2ss8c34g9da8fmr32ldx757gdkz28dq2p72el5pgmwt0efgc626xkpyhswsqkyqkg622plsv9dd9y';
-        existingHandle.updated_slot_number = getSlotNumberFromDate(new Date());
+        existingHandle.resolved_addresses.ada = adaAddress;
+        existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };
 
-    static async savePersonalizationChange({ hexName, personalization, addresses }: SavePersonalizationInput) {
+    static async savePersonalizationChange({
+        hexName,
+        personalization,
+        addresses,
+        slotNumber
+    }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -165,7 +170,7 @@ export class HandleStore {
             existingHandle.background = nft_appearance?.background ?? '';
             existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
             existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-            existingHandle.updated_slot_number = getSlotNumberFromDate(new Date()); // TODO: Change to slot number
+            existingHandle.updated_slot_number = slotNumber;
         }
 
         // update resolved addresses
@@ -233,7 +238,8 @@ export class HandleStore {
 
         const handleCount = this.count();
 
-        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete =
+            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -257,24 +263,20 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const {
-            firstSlot = 0,
-            lastSlot = 0,
-            currentSlot = 0,
-        } = this.metrics;
+        const { firstSlot = 0, lastSlot = 0, currentSlot = 0 } = this.metrics;
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete =
+            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const slotDate = getDateStringFromSlot(currentSlot);
 
         const date = slotDate.getTime();
         const now = new Date().getTime();
 
-        return (date < now - 60000 && percentageComplete != `100.00`)
-
+        return date < now - 60000 && percentageComplete != `100.00`;
     }
-    
+
     static buildStorage() {
         // used to quickly build a large datastore
         Array.from(Array(1000000).keys()).forEach((number) => {
@@ -296,7 +298,8 @@ export class HandleStore {
                 default_in_wallet: 'hdl',
                 background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
                 profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                created_slot_number: Date.now()
+                created_slot_number: Date.now(),
+                updated_slot_number: Date.now()
             };
 
             this.save(handle);
@@ -317,9 +320,6 @@ export class HandleStore {
                 Logger.log('Unable to save. File is locked');
                 return false;
             }
-            
-            const os = require("os");
-            console.log(os.userInfo());
 
             const release = await lockfile.lock(path);
 
@@ -347,12 +347,25 @@ export class HandleStore {
         }
     }
 
+    static checkIfExists(path: string): boolean {
+        try {
+            const exists = fs.statSync(path);
+            if (exists) {
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
     static async getFile(storagePath?: string): Promise<IHandleFileContent | null> {
         const path = NODE_ENV === 'local' ? 'storage/local.json' : storagePath ?? this.storagePath;
 
         try {
-            const exists = fs.existsSync(path);
-            if (exists) {
+            const exists = this.checkIfExists(path);
+            if (!exists) {
                 Logger.log({
                     message: `${path} file does not exist`,
                     category: LogCategory.INFO,
@@ -397,10 +410,11 @@ export class HandleStore {
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
                 const text = await awsResponse.text();
-                Logger.log(`Found ${fileName}`);
+                Logger.log(`Found ${url}`);
                 return JSON.parse(text) as IHandleFileContent;
             }
 
+            Logger.log(`Unable to find ${url} online`);
             return null;
         } catch (error: any) {
             Logger.log(`Error fetching file from online with error: ${error.message}`);

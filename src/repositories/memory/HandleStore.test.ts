@@ -68,7 +68,8 @@ describe('HandleStore tests', () => {
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
-                image: 'ipfs://123'
+                image: 'ipfs://123',
+                slotNumber: 1234
             });
             const handle = HandleStore.get('nachos-hex');
             expect(handle).toEqual({
@@ -98,7 +99,8 @@ describe('HandleStore tests', () => {
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
-                image: 'ipfs://123'
+                image: 'ipfs://123',
+                slotNumber: 1234
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -118,7 +120,8 @@ describe('HandleStore tests', () => {
             HandleStore.savePersonalizationChange({
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
-                addresses: {}
+                addresses: {},
+                slotNumber: 1234
             });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');
@@ -141,7 +144,7 @@ describe('HandleStore tests', () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const personalization: IPersonalization = {};
-            HandleStore.savePersonalizationChange({ hexName: '123', personalization, addresses: {} });
+            HandleStore.savePersonalizationChange({ hexName: '123', personalization, addresses: {}, slotNumber: 1234 });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveWalletAddressMove.noHandleFound',
@@ -157,11 +160,12 @@ describe('HandleStore tests', () => {
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
-                image: 'ipfs://123'
+                image: 'ipfs://123',
+                slotNumber: 1234
             });
 
             const newAddress = 'addr123_new';
-            HandleStore.saveWalletAddressMove('nachos-hex', newAddress);
+            HandleStore.saveWalletAddressMove({ hexName: 'nachos-hex', adaAddress: newAddress, slotNumber: 1234 });
 
             const handle = HandleStore.get('nachos-hex');
             expect(handle).toEqual({
@@ -188,7 +192,7 @@ describe('HandleStore tests', () => {
             jest.spyOn(HandleStore, 'get').mockReturnValue(undefined);
 
             const newAddress = 'addr123_new';
-            HandleStore.saveWalletAddressMove('123', newAddress);
+            HandleStore.saveWalletAddressMove({ hexName: '123', adaAddress: newAddress, slotNumber: 1234 });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveWalletAddressMove.noHandleFound',

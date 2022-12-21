@@ -1,4 +1,5 @@
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { Logger } from '@koralabs/logger';
 import {
     BlockTip,
     HandleOnChainData,
@@ -11,6 +12,7 @@ import {
     TxBody,
     TxOutput
 } from '../../interfaces/ogmios.interfaces';
+import { Buffer } from 'buffer';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { awaitForEach } from '../../utils/util';
 import { buildOnChainObject, stringifyBlock } from './utils';
@@ -28,32 +30,52 @@ const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): P
     return personalization;
 };
 
-const processAssetReferenceToken = async (assetName: string, output: TxOutput) => {
+const processAssetReferenceToken = async ({
+    assetName,
+    slotNumber,
+    datum
+}: {
+    assetName: string;
+    slotNumber: number;
+    datum:
+        | string
+        | {
+              [k: string]: unknown;
+          }
+        | null
+        | undefined;
+}) => {
     const hexName = assetName?.split(MetadatumAssetLabel.SUB_STANDARD_NFT)[1];
     if (!hexName) {
-        console.log(`unable to decode ${hexName}`, stringifyBlock(output));
+        Logger.log(`unable to decode ${hexName}`);
         return;
     }
 
     // TODO: get the metadata from the datum
-    const referenceTokenData = buildOnChainObject<PersonalizationOnChainMetadata>(output.datum);
+    const referenceTokenData = buildOnChainObject<PersonalizationOnChainMetadata>(datum);
     if (!referenceTokenData) return;
 
     // populate personalization from the reference token
     const personalization = await buildPersonalization(referenceTokenData);
 
     // TODO: get addresses from personalization data
-    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {} });
+    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {}, slotNumber });
 };
 
-const processAssetToken = async (
-    assetName: string,
-    address: string,
-    handleMetadata?: { [handleName: string]: HandleOnChainMetadata }
-) => {
+const processAssetToken = async ({
+    assetName,
+    slotNumber,
+    address,
+    handleMetadata
+}: {
+    assetName: string;
+    slotNumber: number;
+    address: string;
+    handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
+}) => {
     const hexName = assetName?.split('.')[1];
     if (!hexName) {
-        console.log(`unable to decode ${hexName}`, stringifyBlock(address));
+        Logger.log(`unable to decode ${hexName}`);
         return;
     }
 
@@ -65,9 +87,9 @@ const processAssetToken = async (
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, adaAddress: address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, adaAddress: address });
     } else {
-        await HandleStore.saveWalletAddressMove(hexName, address);
+        await HandleStore.saveWalletAddressMove({ hexName, adaAddress: address, slotNumber });
     }
 };
 
@@ -95,7 +117,7 @@ export const processBlock = async ({
 
     HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
 
-    for (let b=0; b<txBlockType?.body.length; b++) {
+    for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         // get metadata so we can use it later when we need to get OG data.
         const handleMetadata =
@@ -115,19 +137,25 @@ export const processBlock = async ({
                     if (keys[j].toString().startsWith(policyId)) {
                         const assetName = keys[j].toString();
                         if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
-                            await processAssetReferenceToken(assetName, o);
-                        }
-                        else
-                        {
-                            const data = isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
+                            const { datum } = o;
+                            await processAssetReferenceToken({ assetName, slotNumber: currentSlot, datum });
+                        } else {
+                            const data =
+                                isMintingTransaction(txBody, assetName) && handleMetadata
+                                    ? handleMetadata[policyId]
+                                    : undefined;
                             const { address } = o;
-                            await processAssetToken(assetName, address, data);
+                            await processAssetToken({
+                                assetName,
+                                address,
+                                slotNumber: currentSlot,
+                                handleMetadata: data
+                            });
                         }
                     }
                 }
             }
         }
-
     }
 
     // finish timer for our logs

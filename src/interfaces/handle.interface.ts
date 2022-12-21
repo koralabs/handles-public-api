@@ -9,14 +9,10 @@ export interface IGetAllQueryParams {
     length?: string;
     rarity?: string;
     numeric_modifiers?: string;
+    slot_number?: string;
 }
 
 export interface IGetHandleRequest {
     registry: IRegistry;
     handle: string;
-}
-
-export interface IGetAllHandlesResults {
-    handles: IHandle[];
-    total: number;
 }

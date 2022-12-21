@@ -62,7 +62,7 @@ paths:
         required: false
         schema:
           type: integer
-      - name: slot_number (not yet implemented)
+      - name: slot_number
         in: query
         description: The slot number to start at when paginating results. Either `page` or `slot_number` can be
           used in paginated results. Using the `slot_number` parameter will order results by the slot number the

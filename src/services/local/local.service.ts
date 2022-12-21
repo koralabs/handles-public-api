@@ -17,7 +17,12 @@ export class LocalService {
                 Object.entries(fileContents.handles).forEach(async ([k, v]) => {
                     const { hex, name, personalization, resolved_addresses: addresses } = v as PersonalizationUpdates;
                     console.log(`${name} changed! saving personalization`);
-                    await HandleStore.savePersonalizationChange({ hexName: hex, personalization, addresses });
+                    await HandleStore.savePersonalizationChange({
+                        hexName: hex,
+                        personalization,
+                        addresses,
+                        slotNumber: fileContents.slot
+                    });
                 });
             }
         }
