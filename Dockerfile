@@ -7,7 +7,7 @@ RUN \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip tini && \
     curl -fsSL https://update-cardano-mainnet.iohk.io/cardano-node-releases/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
     rm -f ./cardano-node-1.35.4-linux.tar.gz && \
-    chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p handles && touch handles/handles.json \
+    chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p handles && touch handles/handles.json && \
     git clone https://github.com/input-output-hk/cardano-world.git && \
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v5.5.7/ogmios-v5.5.7-x86_64-linux.zip -o ogmios.zip && \
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip && \
