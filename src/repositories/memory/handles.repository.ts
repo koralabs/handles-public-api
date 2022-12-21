@@ -52,7 +52,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const items = this.search(search);
 
         const sortBySlot = ({ updated_slot_number: a }: IHandle, { updated_slot_number: b }: IHandle) =>
-            sort === 'desc' ? b - a : a - b;
+            sort === 'desc' ? b ?? 0 - a ?? 0 : a ?? 0 - b ?? 0;
 
         if (slotNumber) {
             items.sort(sortBySlot);
