@@ -43,7 +43,8 @@ export class HandleStore {
         return `-${NETWORK}`;
     };
 
-    static storagePath = `${process.cwd()}/handles/handles${HandleStore.buildNetworkForNaming()}.json`;
+    static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
+    static storagePath = `${HandleStore.storageFolder}/handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageSchemaVersion = 2;
 
     static get = (key: string) => {
