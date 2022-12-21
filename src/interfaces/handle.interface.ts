@@ -10,6 +10,7 @@ export interface IGetAllQueryParams {
     rarity?: string;
     numeric_modifiers?: string;
     slot_number?: string;
+    search?: string;
 }
 
 export interface IGetHandleRequest {

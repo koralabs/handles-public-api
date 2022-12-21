@@ -41,6 +41,14 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual([]);
         });
 
+        it('should find handle using search parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ search: 'bur' });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([handlesFixture[1]]);
+        });
+
         it('should paginate handles by slot number', async () => {
             const repo = new MemoryHandlesRepository();
             const { updated_slot_number } = handlesFixture[0];
@@ -66,16 +74,6 @@ describe('MemoryHandlesRepository Tests', () => {
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([handlesFixture[1], handlesFixture[0]]);
-        });
-
-        // this will not work and I'm not sure why.
-        it.skip('should throw error if page and slot number are used together', async () => {
-            const repo = new MemoryHandlesRepository();
-            const pagination = new HandlePaginationModel({ page: '1', slotNumber: '1' });
-            const search = new HandleSearchModel({});
-            expect(async () => {
-                await repo.getAll({ pagination, search });
-            }).toThrow("'page' and 'slot_number' can't be used together");
         });
     });
 

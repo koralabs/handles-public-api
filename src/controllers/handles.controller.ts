@@ -14,9 +14,26 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { handles_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number } =
-                req.query;
-            const search = new HandleSearchModel({ characters, length, rarity, numeric_modifiers });
+            const {
+                handles_per_page,
+                sort,
+                page,
+                characters,
+                length,
+                rarity,
+                numeric_modifiers,
+                slot_number,
+                search: searchQuery
+            } = req.query;
+
+            const search = new HandleSearchModel({
+                characters,
+                length,
+                rarity,
+                numeric_modifiers,
+                search: searchQuery
+            });
+
             const pagination = new HandlePaginationModel({
                 page,
                 sort,
