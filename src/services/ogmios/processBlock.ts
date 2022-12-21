@@ -1,4 +1,5 @@
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { Logger } from '@koralabs/logger';
 import {
     BlockTip,
     HandleOnChainData,
@@ -31,21 +32,27 @@ const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): P
 
 const processAssetReferenceToken = async ({
     assetName,
-    output,
-    slotNumber
+    slotNumber,
+    datum
 }: {
     assetName: string;
-    output: TxOutput;
     slotNumber: number;
+    datum:
+        | string
+        | {
+              [k: string]: unknown;
+          }
+        | null
+        | undefined;
 }) => {
     const hexName = assetName?.split(MetadatumAssetLabel.SUB_STANDARD_NFT)[1];
     if (!hexName) {
-        console.log(`unable to decode ${hexName}`, stringifyBlock(output));
+        Logger.log(`unable to decode ${hexName}`);
         return;
     }
 
     // TODO: get the metadata from the datum
-    const referenceTokenData = buildOnChainObject<PersonalizationOnChainMetadata>(output.datum);
+    const referenceTokenData = buildOnChainObject<PersonalizationOnChainMetadata>(datum);
     if (!referenceTokenData) return;
 
     // populate personalization from the reference token
@@ -58,17 +65,17 @@ const processAssetReferenceToken = async ({
 const processAssetToken = async ({
     assetName,
     slotNumber,
-    output,
+    address,
     handleMetadata
 }: {
     assetName: string;
     slotNumber: number;
-    output: TxOutput;
+    address: string;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
 }) => {
     const hexName = assetName?.split('.')[1];
     if (!hexName) {
-        console.log(`unable to decode ${hexName}`, stringifyBlock(output));
+        Logger.log(`unable to decode ${hexName}`);
         return;
     }
 
@@ -80,9 +87,9 @@ const processAssetToken = async ({
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, adaAddress: output.address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, adaAddress: address });
     } else {
-        await HandleStore.saveWalletAddressMove({ hexName, adaAddress: output.address, slotNumber });
+        await HandleStore.saveWalletAddressMove({ hexName, adaAddress: address, slotNumber });
     }
 };
 
@@ -110,7 +117,8 @@ export const processBlock = async ({
 
     HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
 
-    await awaitForEach(txBlockType?.body, async (txBody) => {
+    for (let b = 0; b < txBlockType?.body.length; b++) {
+        const txBody = txBlockType?.body[b];
         // get metadata so we can use it later when we need to get OG data.
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
@@ -121,38 +129,34 @@ export const processBlock = async ({
         //     Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
         // );
 
-        const filteredOutputs = [];
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
             if (o.value.assets) {
                 const keys = Object.keys(o.value.assets);
                 for (let j = 0; j < keys.length; j++) {
                     if (keys[j].toString().startsWith(policyId)) {
-                        filteredOutputs.push(o);
+                        const assetName = keys[j].toString();
+                        if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
+                            const { datum } = o;
+                            await processAssetReferenceToken({ assetName, slotNumber: currentSlot, datum });
+                        } else {
+                            const data =
+                                isMintingTransaction(txBody, assetName) && handleMetadata
+                                    ? handleMetadata[policyId]
+                                    : undefined;
+                            const { address } = o;
+                            await processAssetToken({
+                                assetName,
+                                address,
+                                slotNumber: currentSlot,
+                                handleMetadata: data
+                            });
+                        }
                     }
                 }
             }
         }
-
-        await awaitForEach(filteredOutputs, async (output) => {
-            const filteredAssets = Object.keys(output.value.assets ?? {}).filter((a) => a.startsWith(policyId));
-
-            await awaitForEach(filteredAssets, async (assetName) => {
-                // assetName can be:
-                //  - {policyId}.{assetNameHex}
-                //  - {policyId}{asset_name}{assetNameHex}
-
-                if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.SUB_STANDARD_NFT}`)) {
-                    await processAssetReferenceToken({ assetName, output, slotNumber: currentSlot });
-                    return;
-                }
-
-                const data =
-                    isMintingTransaction(txBody, assetName) && handleMetadata ? handleMetadata[policyId] : undefined;
-                await processAssetToken({ assetName, slotNumber: currentSlot, output, handleMetadata: data });
-            });
-        });
-    });
+    }
 
     // finish timer for our logs
     const buildingExecFinished = Date.now() - startBuildingExec;
