@@ -4,7 +4,7 @@
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
 NODE_DB=${NODE_DB:-'/db'}
-SOCKET_PATH=${NODE_SOCKET:-'/ipc/node.socket'}
+SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -20,7 +20,7 @@ then
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
-    NODE_SOCKET="--node-socket /ipc/node.socket"
+    NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
@@ -56,12 +56,12 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         --socket-path ${SOCKET_PATH} &
 
     if [[ "${ENABLE_SOCKET_REDIRECT}" == "true" ]]; then
+        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
         until [ -S ${SOCKET_PATH} ]
         do
             sleep 1
         done
         echo "Found! ${SOCKET_PATH}"
-        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
     fi
 fi
