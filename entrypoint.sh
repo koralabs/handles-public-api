@@ -3,6 +3,8 @@
 # export NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
+NODE_DB=${NODE_DB:-'/db'}
+NODE_SOCKET=${NODE_SOCKET:-'/ipc/node.socket'}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -48,9 +50,9 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     exec ./cardano-node run \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \
         --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
-        --database-path /db \
+        --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
-        --socket-path /ipc/node.socket &
+        --socket-path ${NODE_SOCKET} &
 fi
 wait
