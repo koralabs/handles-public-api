@@ -2,27 +2,28 @@ import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { ModelException } from '../exceptions/ModelException';
 import { isNumeric } from '../utils/util';
 
+interface HandleSearchInput {
+    characters?: string;
+    length?: string;
+    rarity?: string;
+    numeric_modifiers?: string;
+    search?: string;
+}
+
 export class HandleSearchModel {
     private _characters?: string;
     private _length?: string;
     private _rarity?: string;
     private _numeric_modifiers?: string;
+    private _search?: string;
 
-    constructor({
-        characters,
-        length,
-        rarity,
-        numeric_modifiers
-    }: {
-        characters?: string;
-        length?: string;
-        rarity?: string;
-        numeric_modifiers?: string;
-    }) {
+    constructor(input?: HandleSearchInput) {
+        const { characters, length, rarity, numeric_modifiers, search } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
         this.numeric_modifiers = numeric_modifiers;
+        this.search = search;
     }
 
     get characters() {
@@ -77,5 +78,16 @@ export class HandleSearchModel {
         }
 
         this._numeric_modifiers = value;
+    }
+
+    get search() {
+        return this._search;
+    }
+
+    set search(value) {
+        if (value && value.length < 3) {
+            throw new ModelException('search must be at least 3 characters');
+        }
+        this._search = value;
     }
 }
