@@ -4,7 +4,7 @@
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
 NODE_DB=${NODE_DB:-'/db'}
-NODE_SOCKET=${NODE_SOCKET:-'/ipc/node.socket'}
+SOCKET_PATH=${NODE_SOCKET:-'/ipc/node.socket'}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -53,6 +53,6 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
-        --socket-path ${NODE_SOCKET} &
+        --socket-path ${SOCKET_PATH} &
 fi
 wait
