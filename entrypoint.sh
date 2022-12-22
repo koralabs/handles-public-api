@@ -54,5 +54,15 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         --port 3000 \
         --host-addr 0.0.0.0 \
         --socket-path ${SOCKET_PATH} &
+
+    if [[ "${ENABLE_SOCKET_REDIRECT}" == "true" ]]; then
+        until [ -S ${SOCKET_PATH} ]
+        do
+            sleep 1
+        done
+        echo "Found! ${SOCKET_PATH}"
+        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
+        socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
+    fi
 fi
 wait
