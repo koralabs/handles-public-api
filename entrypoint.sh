@@ -37,10 +37,10 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
-    DB_FILE=/db/protocolMagicId
+    DB_FILE=${NODE_DB}/protocolMagicId
     if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
         echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
-        curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
+        curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x --strip-components=1 -C ${NODE_DB}
         echo "Download complete."
     fi
     
