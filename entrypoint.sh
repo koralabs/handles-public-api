@@ -65,4 +65,5 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
     fi
 fi
+tail -f ./forever/*.log
 wait
