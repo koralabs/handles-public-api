@@ -1,4 +1,4 @@
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from '.';
 import v8 from 'v8';
 

@@ -1,5 +1,5 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';

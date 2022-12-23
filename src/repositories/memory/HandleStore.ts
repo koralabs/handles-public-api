@@ -1,5 +1,5 @@
 import { IHandle, IHandleStats, IPersonalization } from '@koralabs/handles-public-api-interfaces';
-import { LogCategory, Logger } from '@koralabs/logger';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';

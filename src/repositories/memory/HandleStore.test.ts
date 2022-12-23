@@ -3,7 +3,7 @@ import { HandleStore } from './HandleStore';
 import { delay } from '../../utils/util';
 import { handlesFixture } from './fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 
 jest.mock('fs');
 jest.mock('cross-fetch');

@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yamljs';

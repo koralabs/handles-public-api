@@ -1,4 +1,4 @@
-import { LogCategory, Logger } from '@koralabs/logger';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
 import { HttpException } from '../exceptions/HttpException';
 import { ModelException } from '../exceptions/ModelException';

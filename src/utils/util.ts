@@ -1,4 +1,4 @@
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 

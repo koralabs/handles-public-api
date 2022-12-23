@@ -33,7 +33,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     fi
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 
-    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever &
+    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
@@ -65,5 +65,5 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
     fi
 fi
-tail -f ./forever/*.log
+tail -f ./forever/**.log
 wait

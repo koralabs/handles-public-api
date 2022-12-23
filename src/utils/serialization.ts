@@ -1,5 +1,5 @@
 //import lib from '@emurgo/cardano-serialization-lib-nodejs';
-import { LogCategory, Logger } from '@koralabs/logger';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NODE_ENV } from '../config';
 
 let cardanoWasm: any = null;
