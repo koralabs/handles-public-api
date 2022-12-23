@@ -641,10 +641,10 @@
   resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-1.2.1.tgz#7b740a6dc0453116cd7e091b20217ed44e171046"
   integrity sha512-V4A941hu01Ml76rzhDVYkOowBsB9M6GXRj0EaVYmsqhrn3SPUCLI+iUgswmIwaf4Bsl6OBni3ppRZkXnvxcL8w==
 
-"@koralabs/kora-labs-common@^1.0.0":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-1.0.4.tgz#66ff289fe2aa39397cd61a18ef8206d1883add24"
-  integrity sha512-dIfHTaTrxzapa72TwInAIXlJ9kc63Cwqd6SlvJhmyw8xfBiPFpoHIWeNxO3WpLWeO9zyV6rLLVNy12MrimFdAQ==
+"@koralabs/kora-labs-common@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-1.0.5.tgz#ca78526be52238891eb4c3a53ea4a96376d09eab"
+  integrity sha512-gJSu0aIrVHDZhktpczG3CuoLMiDInrcwev4XL3YbPNPz3PbxvxaURtEquEPZ7lbUtQjUzxUIkbKfdbO7JoZeBg==
 
 "@koralabs/protected-words@^1.0.0":
   version "1.0.0"
