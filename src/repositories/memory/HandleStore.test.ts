@@ -1,7 +1,7 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from './HandleStore';
 import { delay } from '../../utils/util';
-import { handlesFixture } from './fixtures/handles';
+import { handlesFixture } from './tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/logger';
 
@@ -198,6 +198,21 @@ describe('HandleStore tests', () => {
                 event: 'saveWalletAddressMove.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
+        });
+    });
+
+    describe('setDefaultHandle tests', () => {
+        it('Should set the default handle for all handles', () => {
+            const stakeKey = '123';
+            Array.from(HandleStore.handles, ([name, value]) => ({ name, value })).forEach(({ value }) => {
+                HandleStore.addIndexSet(HandleStore.stakeKeyIndex, stakeKey, value.hex);
+            });
+
+            HandleStore.setDefaultHandle(stakeKey);
+
+            expect(
+                [...HandleStore.handles].map(([k, v]) => v.default_in_wallet).every((v) => v === 'taco')
+            ).toBeTruthy();
         });
     });
 

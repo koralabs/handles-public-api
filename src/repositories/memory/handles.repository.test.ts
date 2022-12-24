@@ -2,9 +2,7 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture } from './fixtures/handles';
-import { ModelException } from '../../exceptions/ModelException';
-import { ERROR_TEXT } from '../../services/ogmios/constants';
+import { handlesFixture } from './tests/fixtures/handles';
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {

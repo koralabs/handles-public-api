@@ -5,6 +5,7 @@ import fs from 'fs';
 import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
+import { getDefaultHandle } from '../../utils/getDefaultHandle';
 import { getAddressStakeKey } from '../../utils/serialization';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
@@ -106,10 +107,34 @@ export class HandleStore {
         const stakeKey = await getAddressStakeKey(ada);
         if (stakeKey) {
             this.addIndexSet(this.stakeKeyIndex, stakeKey, hex);
+            this.setDefaultHandle(stakeKey);
         }
     };
 
-    static saveMintedHandle = async ({ hexName, name, adaAddress, og, image, slotNumber }: SaveMintingTxInput) => {
+    static setDefaultHandle = async (stakeKey: string, defaultName?: string) => {
+        // first get all the handles for the stake key
+        const allStakeKeyHandleHexes = this.stakeKeyIndex.get(stakeKey) ?? [];
+        const handles = [...allStakeKeyHandleHexes].map((hex) => this.handles.get(hex) as IHandle);
+        if (handles.length === 0) {
+            Logger.log({
+                message: `No handles found for stake key ${stakeKey}`,
+                category: LogCategory.ERROR,
+                event: 'HandleStore.setDefaultHandle.notFound'
+            });
+            return;
+        }
+
+        // get the default handle or use the defaultName provided (this is used during personalization)
+        const defaultHandleName = defaultName ?? getDefaultHandle(handles)?.name ?? '';
+
+        // iterate through each handle and set the default_in_wallet property
+        handles.forEach((handle) => {
+            handle.default_in_wallet = defaultHandleName;
+            this.handles.set(handle.hex, handle);
+        });
+    };
+
+    static buildHandle = ({ hexName, name, adaAddress, og, image, slotNumber }: SaveMintingTxInput): IHandle => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
@@ -130,6 +155,11 @@ export class HandleStore {
             updated_slot_number: slotNumber
         };
 
+        return newHandle;
+    };
+
+    static saveMintedHandle = async (input: SaveMintingTxInput) => {
+        const newHandle: IHandle = this.buildHandle(input);
         await this.save(newHandle);
     };
 
