@@ -1,5 +1,5 @@
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
-import { Logger } from '@koralabs/logger';
+import { Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,

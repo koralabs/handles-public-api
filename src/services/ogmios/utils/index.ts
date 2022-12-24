@@ -2,7 +2,7 @@ import { NODE_ENV, OGMIOS_ENDPOINT } from '../../../config';
 import fetch from 'cross-fetch';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
-import { LogCategory, Logger } from '@koralabs/logger';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
 
 const parseCborObject = (value: any) => {

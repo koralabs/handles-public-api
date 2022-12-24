@@ -3,6 +3,8 @@
 # export NODE_OPTIONS=--max-old-space-size=12288
 NETWORK=${NETWORK:-mainnet}
 MODE=${MODE:-both}
+NODE_DB=${NODE_DB:-'/db'}
+SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -18,7 +20,7 @@ then
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
-    NODE_SOCKET="--node-socket /ipc/node.socket"
+    NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
@@ -31,14 +33,14 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     fi
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 
-    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever &
+    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
-    DB_FILE=/db/protocolMagicId
+    DB_FILE=${NODE_DB}/protocolMagicId
     if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
         echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
-        curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x -C /
+        curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x --strip-components=1 -C ${NODE_DB}
         echo "Download complete."
     fi
     
@@ -48,9 +50,20 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     exec ./cardano-node run \
         --config ./cardano-world/docs/environments/${NETWORK}/config.json \
         --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
-        --database-path /db \
+        --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
-        --socket-path /ipc/node.socket &
+        --socket-path ${SOCKET_PATH} &
+
+    if [[ "${ENABLE_SOCKET_REDIRECT}" == "true" ]]; then
+        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
+        until [ -S ${SOCKET_PATH} ]
+        do
+            sleep 1
+        done
+        echo "Found! ${SOCKET_PATH}"
+        socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
+    fi
 fi
+tail -f ./forever/**.log
 wait

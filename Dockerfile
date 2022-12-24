@@ -4,7 +4,7 @@ WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 ADD ./dist/ entrypoint.sh ./
 RUN \
-    apt install -y && apt update -y && apt install -y git curl socat jq unzip tini && \
+    apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 && \
     curl -fsSL https://update-cardano-mainnet.iohk.io/cardano-node-releases/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
     rm -f ./cardano-node-1.35.4-linux.tar.gz && \
     chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p handles && touch handles/handles.json && \
