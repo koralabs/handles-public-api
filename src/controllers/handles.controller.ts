@@ -23,7 +23,8 @@ class HandlesController {
                 rarity,
                 numeric_modifiers,
                 slot_number,
-                search: searchQuery
+                search: searchQuery,
+                stake_key
             } = req.query;
 
             const search = new HandleSearchModel({
@@ -31,7 +32,8 @@ class HandlesController {
                 length,
                 rarity,
                 numeric_modifiers,
-                search: searchQuery
+                search: searchQuery,
+                stake_key
             });
 
             const pagination = new HandlePaginationModel({

@@ -46,7 +46,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should no handles with compounded searches', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ rarity: 'rare', length: '7' });
+            const search = new HandleSearchModel({ rarity: 'rare', length: '7', stake_key: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([]);
         });
@@ -57,6 +57,22 @@ describe('MemoryHandlesRepository Tests', () => {
             const search = new HandleSearchModel({ search: 'bur' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([handlesFixture[1]]);
+        });
+
+        it('should find handles using stake_key parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ stake_key: 'stake-key1' });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual(handlesFixture);
+        });
+
+        it('should find no handles using invalid stake_key parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ stake_key: 'nope' });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([]);
         });
 
         it('should paginate handles by slot number', async () => {

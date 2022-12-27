@@ -8,29 +8,55 @@ import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
-        const { characters, length, rarity, numeric_modifiers, search } = searchModel;
+        const EMPTY = 'empty';
+        const { characters, length, rarity, numeric_modifiers, search, stake_key } = searchModel;
 
-        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
-            key ? Array.from(index.get(key ?? '') ?? [], (value) => value) : [];
+        // helper function to get a list of hashes from the Set indexes
+        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) => {
+            if (!key) return [];
 
+            const array = Array.from(index.get(key) ?? [], (value) => value);
+            return array.length === 0 ? [EMPTY] : array;
+        };
+
+        // get hex arrays for all the search parameters
         const characterArray = getHashes(HandleStore.charactersIndex, characters);
         const lengthArray = getHashes(HandleStore.lengthIndex, length);
         const rarityArray = getHashes(HandleStore.rarityIndex, rarity);
         const numericModifiersArray = getHashes(HandleStore.numericModifiersIndex, numeric_modifiers);
 
-        const filteredArrays = [characterArray, lengthArray, rarityArray, numericModifiersArray].filter(
-            (a) => a.length
-        );
+        const getStakeKeyHashes = (key: string | undefined) => {
+            if (!key) return [];
 
+            const array = Array.from(HandleStore.stakeKeyIndex.get(key)?.hexes ?? [], (value) => value);
+            return array.length === 0 ? [EMPTY] : array;
+        };
+
+        const stakeKeyItemsArray = getStakeKeyHashes(stake_key);
+
+        // filter out any empty arrays
+        const filteredArrays = [
+            characterArray,
+            lengthArray,
+            rarityArray,
+            numericModifiersArray,
+            stakeKeyItemsArray
+        ].filter((a) => a.length);
+
+        // get the intersection of all the arrays
         const handleHexes = filteredArrays.length
             ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c)))
             : [];
 
+        // remove duplicates by getting the unique hexes
         const uniqueHexes = [...new Set(handleHexes)];
 
+        // remove the empty hexes
+        const nonEmptyHexes = uniqueHexes.filter((hex) => hex !== EMPTY);
+
         const array =
-            characters || length || rarity || numeric_modifiers
-                ? uniqueHexes.reduce<IHandle[]>((agg, hex) => {
+            characters || length || rarity || numeric_modifiers || stake_key
+                ? nonEmptyHexes.reduce<IHandle[]>((agg, hex) => {
                       const handle = HandleStore.get(hex);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;

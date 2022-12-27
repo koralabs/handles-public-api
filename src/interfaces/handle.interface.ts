@@ -11,6 +11,7 @@ export interface IGetAllQueryParams {
     numeric_modifiers?: string;
     slot_number?: string;
     search?: string;
+    stake_key?: string;
 }
 
 export interface IGetHandleRequest {
