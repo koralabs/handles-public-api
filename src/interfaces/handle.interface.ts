@@ -18,3 +18,14 @@ export interface IGetHandleRequest {
     registry: IRegistry;
     handle: string;
 }
+
+export interface IGetStakeKeyDetailsRequest {
+    registry: IRegistry;
+    key: string;
+}
+
+export interface StakeKeyDetailsResponse {
+    handles: IHandle[];
+    default_handle: string;
+    manually_set: boolean;
+}

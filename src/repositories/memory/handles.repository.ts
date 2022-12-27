@@ -1,5 +1,6 @@
 import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
+import { StakeKeyDetailsResponse } from '../../interfaces/handle.interface';
 
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
@@ -135,6 +136,25 @@ class MemoryHandlesRepository implements IHandlesRepository {
         }
 
         throw new HttpException(404, 'Not found');
+    }
+
+    public async getStakeKeyDetails(key: string): Promise<StakeKeyDetailsResponse> {
+        const stakeKeyDetails = HandleStore.stakeKeyIndex.get(key);
+        if (!stakeKeyDetails) throw new HttpException(404, 'Not found');
+
+        const handles = [...stakeKeyDetails.hexes].reduce<IHandle[]>((agg, hex) => {
+            const handle = HandleStore.get(hex);
+            if (handle) agg.push(handle);
+            return agg;
+        }, []);
+
+        const { defaultHandle, manuallySet } = stakeKeyDetails;
+
+        return {
+            handles,
+            default_handle: defaultHandle,
+            manually_set: manuallySet
+        };
     }
 
     public getHandleStats(): IHandleStats {

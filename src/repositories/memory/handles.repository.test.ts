@@ -131,6 +131,18 @@ describe('MemoryHandlesRepository Tests', () => {
         });
     });
 
+    describe('getStakeKeyDetails', () => {
+        it('should get stakeKey details', async () => {
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getStakeKeyDetails('stake-key1');
+            expect(result).toEqual({
+                default_handle: 'taco',
+                manually_set: false,
+                handles: handlesFixture
+            });
+        });
+    });
+
     describe('getHandleStats', () => {
         it('should get metrics', () => {
             const repo = new MemoryHandlesRepository();
