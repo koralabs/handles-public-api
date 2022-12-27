@@ -11,7 +11,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const { characters, length, rarity, numeric_modifiers, search } = searchModel;
 
         const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
-            Array.from(index.get(key ?? '') ?? [], (value) => value);
+            key ? Array.from(index.get(key ?? '') ?? [], (value) => value) : [];
 
         const characterArray = getHashes(HandleStore.charactersIndex, characters);
         const lengthArray = getHashes(HandleStore.lengthIndex, length);
@@ -29,19 +29,20 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const uniqueHexes = [...new Set(handleHexes)];
 
         const array =
-            characters || length || rarity || numeric_modifiers || search
+            characters || length || rarity || numeric_modifiers
                 ? uniqueHexes.reduce<IHandle[]>((agg, hex) => {
-                      const handle = HandleStore.handles.get(hex);
+                      const handle = HandleStore.get(hex);
                       if (handle) {
-                          if (search && !handle.name.includes(search)) {
-                              return agg;
-                          }
-
+                          if (search && !handle.name.includes(search)) return agg;
                           agg.push(handle);
                       }
                       return agg;
                   }, [])
-                : Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+                : HandleStore.getHandles().reduce<IHandle[]>((agg, handle) => {
+                      if (search && !handle.name.includes(search)) return agg;
+                      agg.push(handle);
+                      return agg;
+                  }, []);
 
         return array;
     }

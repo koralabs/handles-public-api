@@ -25,6 +25,9 @@ export interface SaveMintingTxInput {
     og: number;
     image: string;
     slotNumber: number;
+    background?: string;
+    default_in_wallet?: string;
+    profile_pic?: string;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -40,4 +43,10 @@ export interface SavePersonalizationInput {
     addresses: {
         [chain: string]: string;
     };
+}
+
+export interface StakeKeyIndex {
+    hexes: Set<string>;
+    defaultHandle: string;
+    manuallySet: boolean;
 }

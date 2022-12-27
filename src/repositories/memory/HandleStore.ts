@@ -13,18 +13,19 @@ import {
     IHandleStoreMetrics,
     SaveMintingTxInput,
     SavePersonalizationInput,
-    SaveWalletAddressMoveInput
+    SaveWalletAddressMoveInput,
+    StakeKeyIndex
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
-    static handles = new Map<string, IHandle>();
+    private static handles = new Map<string, IHandle>();
     static personalization = new Map<string, IPersonalization>();
+    static stakeKeyIndex = new Map<string, StakeKeyIndex>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
-    static stakeKeyIndex = new Map<string, Set<string>>();
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -46,10 +47,20 @@ export class HandleStore {
 
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     static storagePath = `${HandleStore.storageFolder}/handles${HandleStore.buildNetworkForNaming()}.json`;
-    static storageSchemaVersion = 2;
+    static storageSchemaVersion = 3;
 
-    static get = (key: string) => {
-        return this.handles.get(key);
+    static get = (key: string): IHandle | null => {
+        const handle = this.handles.get(key);
+        if (!handle) {
+            return null;
+        }
+
+        const stakeKeyIndex = this.stakeKeyIndex.get(handle.stake_key);
+        if (stakeKeyIndex) {
+            handle.default_in_wallet = stakeKeyIndex.defaultHandle;
+        }
+
+        return handle;
     };
 
     static getPersonalization = (key: string) => {
@@ -61,7 +72,8 @@ export class HandleStore {
     };
 
     static getHandles = () => {
-        return Array.from(this.handles, ([_, value]) => ({ ...value } as IHandle));
+        const handles = Array.from(this.handles, ([_, value]) => ({ ...value } as IHandle));
+        return handles.map((handle) => this.get(handle.hex) as IHandle);
     };
 
     static getFromNameIndex = (name: string) => {
@@ -78,6 +90,7 @@ export class HandleStore {
         const {
             name,
             rarity,
+            stake_key,
             og,
             characters,
             numeric_modifiers,
@@ -104,40 +117,48 @@ export class HandleStore {
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
-        const stakeKey = await getAddressStakeKey(ada);
-        if (stakeKey) {
-            this.addIndexSet(this.stakeKeyIndex, stakeKey, hex);
-            this.setDefaultHandle(stakeKey);
-        }
+        // TODO: set default name during personalization
+        this.setStakeKeyIndex(stake_key, hex);
     };
 
-    static setDefaultHandle = async (stakeKey: string, defaultName?: string) => {
+    static setStakeKeyIndex = async (stakeKey: string, newHex: string, defaultName?: string) => {
         // first get all the handles for the stake key
-        const allStakeKeyHandleHexes = this.stakeKeyIndex.get(stakeKey) ?? [];
-        const handles = [...allStakeKeyHandleHexes].map((hex) => this.handles.get(hex) as IHandle);
-        if (handles.length === 0) {
-            Logger.log({
-                message: `No handles found for stake key ${stakeKey}`,
-                category: LogCategory.ERROR,
-                event: 'HandleStore.setDefaultHandle.notFound'
-            });
-            return;
-        }
+        const stakeKeyDetails =
+            this.stakeKeyIndex.get(stakeKey) ??
+            ({ hexes: new Set(), defaultHandle: '', manuallySet: false } as StakeKeyIndex);
+
+        // add the new hex to the set
+        stakeKeyDetails.hexes.add(newHex);
+
+        const handles = [...stakeKeyDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
-        const defaultHandleName = defaultName ?? getDefaultHandle(handles)?.name ?? '';
+        const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
 
-        // iterate through each handle and set the default_in_wallet property
-        handles.forEach((handle) => {
-            handle.default_in_wallet = defaultHandleName;
-            this.handles.set(handle.hex, handle);
+        this.stakeKeyIndex.set(stakeKey, {
+            ...stakeKeyDetails,
+            defaultHandle,
+            manuallySet: !!defaultName
         });
     };
 
-    static buildHandle = ({ hexName, name, adaAddress, og, image, slotNumber }: SaveMintingTxInput): IHandle => {
+    static buildHandle = async ({
+        hexName,
+        name,
+        adaAddress,
+        og,
+        image,
+        slotNumber,
+        background = '',
+        default_in_wallet = '',
+        profile_pic = ''
+    }: SaveMintingTxInput): Promise<IHandle> => {
+        const stakeKey = await getAddressStakeKey(adaAddress); // should we default this to something?
+
         const newHandle: IHandle = {
             hex: hexName,
             name,
+            stake_key: stakeKey ?? '',
             length: name.length,
             rarity: getRarity(name),
             characters: buildCharacters(name),
@@ -148,9 +169,9 @@ export class HandleStore {
             og,
             original_nft_image: image,
             nft_image: image,
-            background: '',
-            default_in_wallet: '',
-            profile_pic: '',
+            background,
+            default_in_wallet,
+            profile_pic,
             created_slot_number: slotNumber,
             updated_slot_number: slotNumber
         };
@@ -159,7 +180,7 @@ export class HandleStore {
     };
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        const newHandle: IHandle = this.buildHandle(input);
+        const newHandle: IHandle = await this.buildHandle(input);
         await this.save(newHandle);
     };
 
@@ -310,30 +331,24 @@ export class HandleStore {
 
     static buildStorage() {
         // used to quickly build a large datastore
-        Array.from(Array(1000000).keys()).forEach((number) => {
+        Array.from(Array(1000000).keys()).forEach(async (number) => {
             const hex = `hash-${number}`;
             const name = `${number}`.padStart(8, 'a');
-            const handle: IHandle = {
-                hex,
-                name,
-                nft_image: `QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW`,
-                original_nft_image: `QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW`,
-                length: `${number}`.length,
-                og: 0,
-                rarity: getRarity(`${number}`),
-                characters: 'letters,numbers,special',
-                numeric_modifiers: 'negative,decimal',
-                resolved_addresses: {
-                    ada: 'addr_test1qqrvwfds2vxvzagdrejjpwusas4j0k64qju5ul7hfnjl853lqpk6tq05pf67hwvmplvu0gc2xn75vvy3gyuxe6f7e5fsw0ever'
-                },
-                default_in_wallet: 'hdl',
-                background: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                profile_pic: 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW',
-                created_slot_number: Date.now(),
-                updated_slot_number: Date.now()
-            };
+            const image = 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW';
 
-            this.save(handle);
+            const handle = await this.buildHandle({
+                hexName: hex,
+                name,
+                adaAddress:
+                    'addr_test1qqrvwfds2vxvzagdrejjpwusas4j0k64qju5ul7hfnjl853lqpk6tq05pf67hwvmplvu0gc2xn75vvy3gyuxe6f7e5fsw0ever',
+                image,
+                og: 0,
+                slotNumber: Date.now(),
+                background: image,
+                profile_pic: image
+            });
+
+            await this.save(handle);
         });
     }
 
@@ -457,10 +472,11 @@ export class HandleStore {
         const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline(), HandleStore.getFile()]);
 
         if (externalHandles || localHandles) {
+            const localHandlesHasValidSchemaVersion = (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion;
             let isNew = false;
             let handlesContent: IHandleFileContent | null;
             if (!externalHandles) {
-                handlesContent = localHandles;
+                handlesContent = localHandlesHasValidSchemaVersion ? localHandles : null;
             } else if (!localHandles) {
                 isNew = true;
                 handlesContent = externalHandles;
@@ -469,7 +485,7 @@ export class HandleStore {
                     localHandles.slot > externalHandles.slot &&
                     (localHandles.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
                 ) {
-                    handlesContent = localHandles;
+                    handlesContent = localHandlesHasValidSchemaVersion ? localHandles : null;
                 } else {
                     isNew = true;
                     handlesContent = externalHandles;

@@ -3,10 +3,22 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture } from './tests/fixtures/handles';
+import * as serialization from '../../utils/serialization'; // getAddressStakeKey
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
-        const saves = handlesFixture.map(async (handle) => HandleStore.save(handle));
+        jest.spyOn(serialization, 'getAddressStakeKey').mockResolvedValue('stake-key1');
+        const saves = handlesFixture.map(async (handle) => {
+            const {
+                hex: hexName,
+                original_nft_image: image,
+                name,
+                og,
+                updated_slot_number: slotNumber,
+                resolved_addresses: { ada: adaAddress }
+            } = handle;
+            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+        });
         await Promise.all(saves);
     });
 
@@ -23,10 +35,10 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual([handlesFixture[0]]);
         });
 
-        it('should find rare handles', async () => {
+        it('should find handles by rarity', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ rarity: 'rare' });
+            const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([handlesFixture[2]]);
         });
@@ -81,7 +93,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel({});
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
+            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
         });
 
         it('should search all handle names', async () => {
