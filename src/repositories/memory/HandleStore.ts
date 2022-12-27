@@ -195,7 +195,9 @@ export class HandleStore {
             return;
         }
 
+        const stakeKey = await getAddressStakeKey(adaAddress);
         existingHandle.resolved_addresses.ada = adaAddress;
+        existingHandle.stake_key = stakeKey ?? '';
         existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };
