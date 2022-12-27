@@ -71,6 +71,12 @@ paths:
         required: false
         schema:
           type: integer
+      - name: stake_key
+        in: query
+        description: The stake key of the wallet that the Handle is in.
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: Successful and up to date
@@ -260,6 +266,10 @@ components:
           type: string
           description: The version of the Handle
           example: 1
+        utxo:
+          type: string
+          description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
+          example: 8f1d7ec063ce83d93d1bad658886e81568d19ca9bd8dd0e6e268d7be3e33c653#1
         created_slot_number:
           type: integer
           description: The slot number this Handle was minted
