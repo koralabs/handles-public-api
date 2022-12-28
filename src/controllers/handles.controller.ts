@@ -111,22 +111,6 @@ class HandlesController {
             next(error);
         }
     }
-
-    public async getHolderAddressDetails(
-        req: Request<IGetHolderAddressDetailsRequest, {}, {}>,
-        res: Response,
-        next: NextFunction
-    ) {
-        try {
-            const holderAddress = req.params.key;
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const details = await handleRepo.getHolderAddressDetails(holderAddress);
-
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(details);
-        } catch (error) {
-            next(error);
-        }
-    }
 }
 
 export default HandlesController;

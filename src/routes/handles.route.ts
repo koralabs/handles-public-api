@@ -18,13 +18,6 @@ class HandlesRoute extends BaseRoute {
             this.injectRegistryMiddleware,
             this.handlesController.getPersonalizedHandle
         );
-
-        // Move this to a separate route /holders/:holder_address|script|enterprise|exchange
-        this.router.get(
-            `${this.path}/:handle/wallet/:stakeey`,
-            this.injectRegistryMiddleware,
-            this.handlesController.getHolderAddressDetails
-        );
     }
 }
 

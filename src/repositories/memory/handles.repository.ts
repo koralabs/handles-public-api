@@ -142,16 +142,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
         if (!holderAddressDetails) throw new HttpException(404, 'Not found');
 
-        const handles = [...holderAddressDetails.hexes].reduce<IHandle[]>((agg, hex) => {
-            const handle = HandleStore.get(hex);
-            if (handle) agg.push(handle);
-            return agg;
-        }, []);
-
         const { defaultHandle, manuallySet } = holderAddressDetails;
 
         return {
-            handles,
             default_handle: defaultHandle,
             manually_set: manuallySet
         };

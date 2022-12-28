@@ -21,11 +21,10 @@ export interface IGetHandleRequest {
 
 export interface IGetHolderAddressDetailsRequest {
     registry: IRegistry;
-    key: string;
+    address: string;
 }
 
 export interface HolderAddressDetailsResponse {
-    handles: IHandle[];
     default_handle: string;
     manually_set: boolean;
 }

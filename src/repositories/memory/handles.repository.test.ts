@@ -137,8 +137,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const result = await repo.getHolderAddressDetails('stake-key1');
             expect(result).toEqual({
                 default_handle: 'taco',
-                manually_set: false,
-                handles: handlesFixture
+                manually_set: false
             });
         });
     });

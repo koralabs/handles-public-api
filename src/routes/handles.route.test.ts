@@ -210,15 +210,15 @@ describe('Testing Handles Routes', () => {
         });
     });
 
-    describe('[GET] /handles/stake/:key', () => {
-        it('should throw error if holderAddress does not exist', async () => {
-            const response = await request(app?.getServer()).get('/handles/stake/nope');
+    describe('[GET] /holders/:address', () => {
+        it('should throw error if address does not exist', async () => {
+            const response = await request(app?.getServer()).get('/holders/nope');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Not found');
         });
 
         it('should return valid handle', async () => {
-            const response = await request(app?.getServer()).get('/handles/stake/key');
+            const response = await request(app?.getServer()).get('/holders/address');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
                 handles: ['burritos'],
