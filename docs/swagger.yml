@@ -371,6 +371,22 @@ components:
           type: integer
           example: 185123
           description: "Total of all Handles minted"
+        # network_load_percent:
+        #   type: integer
+        #   example: 76
+        #   description: Cardano network load calculated by block size over the last 20 blocks
+        # reservation_queue_size:
+        #   type: integer
+        #   example: 47
+        #   description: Number of Handles or NFT SubHandles currently waiting to be minted
+        # current_handle_prices:
+        #   type: string
+        #   example: 10,50,100,500
+        #   description: Comma-separated Handle price list. (basic,common,rare,ultra_rare)
+        total_holders:
+          type: integer
+          example: 42167
+          description: Total number of Handle Holders including wallets/scripts/enterprise/exchange and unknown addresses
     Personalization:
       type: object
       properties:
