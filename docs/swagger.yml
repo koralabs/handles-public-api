@@ -177,10 +177,11 @@ paths:
       security:
       - api-key: []
   "/holders":
-    description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
     get:
       tags:
       - holders
+      summary: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+      description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
       responses:
         '200':
           description: List of Handle holders and some simple stats
@@ -197,9 +198,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Holder"
         '400':
-          description: Invalid Holder format
-        '404':
-          description: Holder not found
+          description: Invalid filter
       security:
       - api-key: []
   "/holders/{holder_address}":
