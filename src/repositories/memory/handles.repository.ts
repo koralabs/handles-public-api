@@ -1,6 +1,6 @@
 import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
-import { StakeKeyDetailsResponse } from '../../interfaces/handle.interface';
+import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
@@ -10,7 +10,7 @@ import { HandleStore } from './HandleStore';
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = 'empty';
-        const { characters, length, rarity, numeric_modifiers, search, stake_key } = searchModel;
+        const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
         const getHashes = (index: Map<string, Set<string>>, key: string | undefined) => {
@@ -26,14 +26,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const rarityArray = getHashes(HandleStore.rarityIndex, rarity);
         const numericModifiersArray = getHashes(HandleStore.numericModifiersIndex, numeric_modifiers);
 
-        const getStakeKeyHashes = (key: string | undefined) => {
+        const getHolderAddressHashes = (key: string | undefined) => {
             if (!key) return [];
 
-            const array = Array.from(HandleStore.stakeKeyIndex.get(key)?.hexes ?? [], (value) => value);
+            const array = Array.from(HandleStore.holderAddressIndex.get(key)?.hexes ?? [], (value) => value);
             return array.length === 0 ? [EMPTY] : array;
         };
 
-        const stakeKeyItemsArray = getStakeKeyHashes(stake_key);
+        const holderAddressItemsArray = getHolderAddressHashes(holder_address);
 
         // filter out any empty arrays
         const filteredArrays = [
@@ -41,7 +41,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             lengthArray,
             rarityArray,
             numericModifiersArray,
-            stakeKeyItemsArray
+            holderAddressItemsArray
         ].filter((a) => a.length);
 
         // get the intersection of all the arrays
@@ -56,7 +56,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const nonEmptyHexes = uniqueHexes.filter((hex) => hex !== EMPTY);
 
         const array =
-            characters || length || rarity || numeric_modifiers || stake_key
+            characters || length || rarity || numeric_modifiers || holder_address
                 ? nonEmptyHexes.reduce<IHandle[]>((agg, hex) => {
                       const handle = HandleStore.get(hex);
                       if (handle) {
@@ -138,17 +138,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
         throw new HttpException(404, 'Not found');
     }
 
-    public async getStakeKeyDetails(key: string): Promise<StakeKeyDetailsResponse> {
-        const stakeKeyDetails = HandleStore.stakeKeyIndex.get(key);
-        if (!stakeKeyDetails) throw new HttpException(404, 'Not found');
+    public async getHolderAddressDetails(key: string): Promise<HolderAddressDetailsResponse> {
+        const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
+        if (!holderAddressDetails) throw new HttpException(404, 'Not found');
 
-        const handles = [...stakeKeyDetails.hexes].reduce<IHandle[]>((agg, hex) => {
+        const handles = [...holderAddressDetails.hexes].reduce<IHandle[]>((agg, hex) => {
             const handle = HandleStore.get(hex);
             if (handle) agg.push(handle);
             return agg;
         }, []);
 
-        const { defaultHandle, manuallySet } = stakeKeyDetails;
+        const { defaultHandle, manuallySet } = holderAddressDetails;
 
         return {
             handles,

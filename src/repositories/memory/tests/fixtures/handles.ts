@@ -4,7 +4,7 @@ export const handlesFixture: IHandle[] = [
     {
         hex: 'barbacoa-hex',
         name: 'barbacoa',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 8,
@@ -24,7 +24,7 @@ export const handlesFixture: IHandle[] = [
     {
         hex: 'burrito-hex',
         name: 'burritos',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 8,
@@ -44,7 +44,7 @@ export const handlesFixture: IHandle[] = [
     {
         hex: 'taco-hex',
         name: 'taco',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 4,

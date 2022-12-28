@@ -11,7 +11,7 @@ export interface IGetAllQueryParams {
     numeric_modifiers?: string;
     slot_number?: string;
     search?: string;
-    stake_key?: string;
+    holder_address?: string;
 }
 
 export interface IGetHandleRequest {
@@ -19,12 +19,12 @@ export interface IGetHandleRequest {
     handle: string;
 }
 
-export interface IGetStakeKeyDetailsRequest {
+export interface IGetHolderAddressDetailsRequest {
     registry: IRegistry;
     key: string;
 }
 
-export interface StakeKeyDetailsResponse {
+export interface HolderAddressDetailsResponse {
     handles: IHandle[];
     default_handle: string;
     manually_set: boolean;

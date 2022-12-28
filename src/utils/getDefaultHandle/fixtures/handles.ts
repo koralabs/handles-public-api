@@ -4,7 +4,7 @@ export const ogHandles: IHandle[] = [
     {
         hex: 'og1-hex',
         name: 'og1',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 3,
@@ -24,7 +24,7 @@ export const ogHandles: IHandle[] = [
     {
         hex: 'og2-hex',
         name: 'og2',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 3,
@@ -44,7 +44,7 @@ export const ogHandles: IHandle[] = [
     {
         hex: 'og3-hex',
         name: 'og3',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 3,
@@ -67,7 +67,7 @@ export const handlesWithDifferentLengths: IHandle[] = [
     {
         hex: '100-hex',
         name: '100',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 3,
@@ -87,7 +87,7 @@ export const handlesWithDifferentLengths: IHandle[] = [
     {
         hex: '10-hex',
         name: '10',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -107,7 +107,7 @@ export const handlesWithDifferentLengths: IHandle[] = [
     {
         hex: '1000-hex',
         name: '1000',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 4,
@@ -130,7 +130,7 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
     {
         hex: '10-hex',
         name: '10',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -150,7 +150,7 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
     {
         hex: '11-hex',
         name: '11',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -170,7 +170,7 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
     {
         hex: '12-hex',
         name: '12',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -193,7 +193,7 @@ export const handles: IHandle[] = [
     {
         hex: '11-hex',
         name: '11',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -213,7 +213,7 @@ export const handles: IHandle[] = [
     {
         hex: '10-hex',
         name: '10',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,
@@ -233,7 +233,7 @@ export const handles: IHandle[] = [
     {
         hex: '12-hex',
         name: '12',
-        stake_key: 'stake-key1',
+        holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
         length: 2,

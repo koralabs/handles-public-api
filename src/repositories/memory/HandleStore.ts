@@ -6,7 +6,7 @@ import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getDefaultHandle } from '../../utils/getDefaultHandle';
-import { getAddressStakeKey } from '../../utils/serialization';
+import { getAddressHolderAddress } from '../../utils/serialization';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
@@ -14,12 +14,12 @@ import {
     SaveMintingTxInput,
     SavePersonalizationInput,
     SaveWalletAddressMoveInput,
-    StakeKeyIndex
+    HolderAddressIndex
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     private static handles = new Map<string, IHandle>();
     static personalization = new Map<string, IPersonalization>();
-    static stakeKeyIndex = new Map<string, StakeKeyIndex>();
+    static holderAddressIndex = new Map<string, HolderAddressIndex>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
@@ -55,9 +55,9 @@ export class HandleStore {
             return null;
         }
 
-        const stakeKeyIndex = this.stakeKeyIndex.get(handle.stake_key);
-        if (stakeKeyIndex) {
-            handle.default_in_wallet = stakeKeyIndex.defaultHandle;
+        const holderAddressIndex = this.holderAddressIndex.get(handle.holder_address);
+        if (holderAddressIndex) {
+            handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
 
         return handle;
@@ -90,7 +90,7 @@ export class HandleStore {
         const {
             name,
             rarity,
-            stake_key,
+            holder_address,
             og,
             characters,
             numeric_modifiers,
@@ -118,25 +118,25 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        this.setStakeKeyIndex(stake_key, hex);
+        this.setHolderAddressIndex(holder_address, hex);
     };
 
-    static setStakeKeyIndex = async (stakeKey: string, newHex: string, defaultName?: string) => {
+    static setHolderAddressIndex = async (holderAddress: string, newHex: string, defaultName?: string) => {
         // first get all the handles for the stake key
-        const stakeKeyDetails =
-            this.stakeKeyIndex.get(stakeKey) ??
-            ({ hexes: new Set(), defaultHandle: '', manuallySet: false } as StakeKeyIndex);
+        const holderAddressDetails =
+            this.holderAddressIndex.get(holderAddress) ??
+            ({ hexes: new Set(), defaultHandle: '', manuallySet: false } as HolderAddressIndex);
 
         // add the new hex to the set
-        stakeKeyDetails.hexes.add(newHex);
+        holderAddressDetails.hexes.add(newHex);
 
-        const handles = [...stakeKeyDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
+        const handles = [...holderAddressDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
 
-        this.stakeKeyIndex.set(stakeKey, {
-            ...stakeKeyDetails,
+        this.holderAddressIndex.set(holderAddress, {
+            ...holderAddressDetails,
             defaultHandle,
             manuallySet: !!defaultName
         });
@@ -153,12 +153,12 @@ export class HandleStore {
         default_in_wallet = '',
         profile_pic = ''
     }: SaveMintingTxInput): Promise<IHandle> => {
-        const stakeKey = await getAddressStakeKey(adaAddress); // should we default this to something?
+        const holderAddress = await getAddressHolderAddress(adaAddress); // should we default this to something?
 
         const newHandle: IHandle = {
             hex: hexName,
             name,
-            stake_key: stakeKey ?? '',
+            holder_address: holderAddress ?? '',
             length: name.length,
             rarity: getRarity(name),
             characters: buildCharacters(name),
@@ -195,9 +195,9 @@ export class HandleStore {
             return;
         }
 
-        const stakeKey = await getAddressStakeKey(adaAddress);
+        const holderAddress = await getAddressHolderAddress(adaAddress);
         existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.stake_key = stakeKey ?? '';
+        existingHandle.holder_address = holderAddress ?? '';
         existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };

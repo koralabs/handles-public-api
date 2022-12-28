@@ -207,7 +207,7 @@ components:
         name:
           type: string
           example: my.handle
-        stake_key:
+        holder_address:
           type: string
           description: Current holding wallet stake key
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

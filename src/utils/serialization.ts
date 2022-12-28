@@ -13,18 +13,17 @@ export const loadCardanoWasm = async () => {
     return cardanoWasm;
 };
 
-export const getAddressStakeKey = async (addr: string): Promise<string | null> => {
+export const getAddressHolderAddress = async (addr: string): Promise<string | null> => {
     const lib = await loadCardanoWasm();
     if (!lib) {
         Logger.log({
             message: 'Unable to load CardanoWasm',
-            event: 'serialization.getAddressStakeKey.noCardanoWasm',
+            event: 'serialization.getAddressHolderAddress.noCardanoWasm',
             category: LogCategory.ERROR
         });
         return null;
     }
     try {
-
         const address = lib.Address.from_bech32(addr);
         const base = lib.BaseAddress.from_address(address);
         if (base) {
@@ -35,18 +34,21 @@ export const getAddressStakeKey = async (addr: string): Promise<string | null> =
     } catch (error: any) {
         Logger.log({
             message: `${addr} is invalid: ${JSON.stringify(error)}`,
-            event: 'serialization.getAddressStakeKey.errorSerializing',
+            event: 'serialization.getAddressHolderAddress.errorSerializing',
             category: LogCategory.INFO
         });
-        if (error == "mixed-case strings not allowed" || error.toString().startsWith('missing human-readable separator')) {
-            return "contract:exchange";
+        if (
+            error == 'mixed-case strings not allowed' ||
+            error.toString().startsWith('missing human-readable separator')
+        ) {
+            return 'contract:exchange';
         }
     }
     return null;
 };
 
 const checkKnownSmartContracts = (address: string, stake: string | null): string | null => {
-    switch (address){
+    switch (address) {
         case 'addr1w999n67e86jn6xal07pzxtrmqynspgx0fwmcmpua4wc6yzsxpljz3':
             return 'contract:jpg.store';
         case 'addr1w9yr0zr530tp9yzrhly8lw5upddu0eym3yh0mjwa0qlr9pgmkzgv0':
@@ -68,9 +70,9 @@ const checkKnownSmartContracts = (address: string, stake: string | null): string
         case 'addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk':
             return 'contract:Tokhun';
     }
-    switch (stake){
+    switch (stake) {
         case 'stake1uxqh9rn76n8nynsnyvf4ulndjv0srcc8jtvumut3989cqmgjt49h6':
             return 'contract:jpg.store';
     }
     return stake?.startsWith('stake') ? stake : null;
-}
+};

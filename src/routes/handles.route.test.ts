@@ -36,7 +36,7 @@ jest.mock('../ioc', () => ({
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];
             },
-            getStakeKeyDetails: (key: string) => {
+            getHolderAddressDetails: (key: string) => {
                 if (key === 'nope') {
                     throw new HttpException(404, 'Not found');
                 }
@@ -211,7 +211,7 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /handles/stake/:key', () => {
-        it('should throw error if stakeKey does not exist', async () => {
+        it('should throw error if holderAddress does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/stake/nope');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Not found');

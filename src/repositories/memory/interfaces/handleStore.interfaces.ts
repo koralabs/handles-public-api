@@ -45,7 +45,7 @@ export interface SavePersonalizationInput {
     };
 }
 
-export interface StakeKeyIndex {
+export interface HolderAddressIndex {
     hexes: Set<string>;
     defaultHandle: string;
     manuallySet: boolean;
