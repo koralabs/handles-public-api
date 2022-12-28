@@ -73,9 +73,9 @@ paths:
         required: false
         schema:
           type: integer
-      - name: stake_key
+      - name: holder_address
         in: query
-        description: The stake key of the wallet that the Handle is in.
+        description: The holder_address key of the wallet/script that the Handle is in. See the Holder endpoints for more information 
         required: false
         schema:
           type: string
@@ -182,6 +182,19 @@ paths:
       - holders
       summary: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
       description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+      parameters:
+      - name: holders_per_page
+        in: query
+        description: Number of Holders to return per page in paginated results. Maximum of 1000.
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        description: The page number to return in paginated results.
+        required: false
+        schema:
+          type: integer
       responses:
         '200':
           description: List of Handle holders and some simple stats
@@ -264,9 +277,9 @@ components:
         name:
           type: string
           example: my.handle
-        stake_key:
+        holder_address:
           type: string
-          description: Current holding wallet stake key
+          description: Current Holder of the Handle (see the Holder endpoints for more information)
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         nft_image:
           type: string
