@@ -15,6 +15,8 @@ tags:
   externalDocs:
     description: Related Handle Docs
     url: https://api.handle.me/swagger
+- name: holders
+  description: Handle holder wallets, scripts, addresses, stats
 - name: utils
   description: Handle utility endpoints
 paths:
@@ -174,6 +176,56 @@ paths:
           description: Handle not found
       security:
       - api-key: []
+  "/holders":
+    description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+    get:
+      tags:
+      - holders
+      responses:
+        '200':
+          description: List of Handle holders and some simple stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Holder"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '400':
+          description: Invalid Holder format
+        '404':
+          description: Holder not found
+      security:
+      - api-key: []
+  "/holders/{holder_address}":
+    description: Holder details
+    get:
+      tags:
+      - holders
+      responses:
+        '200':
+          description: List of Handle holders and some simple stats
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '400':
+          description: Invalid Holder format
+        '404':
+          description: Holder not found
+      security:
+      - api-key: []
   "/stats":
     get:
       tags:
@@ -276,6 +328,23 @@ components:
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    Holder:
+      type: object
+      properties:
+        total_handles:
+          type: integer
+          example: 1421
+          description: Total Handles this Holder holds
+        address:
+          type: string
+          example: stake1d4fg5dghrdxxxxxxxxxxxxxxxxxxx
+          description: Stake Key, Enterprise Address, Script Address, or Exchange Address
+        type:
+          "$ref": "#/components/schemas/AddressType"
+        known_owner_name:
+          type: string
+          example: jpg.store
+          description: The name of the vendor/exchange if the address is from a known list of vendors/exchanges/projects. 
     Stats:
       type: object
       properties:
@@ -329,6 +398,15 @@ components:
           <br />`10.0` = "decimal"
           <br />`-1.0` = "negative,decimal"
       example: negative,decimal
+    AddressType:
+      type: string
+      example: stake
+      enum:
+      - stake
+      - enterprise
+      - script
+      - exchange
+      - unknown
   requestBodies:
     Handle:
       content:
