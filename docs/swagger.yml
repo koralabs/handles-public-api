@@ -48,7 +48,7 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/NumericModifiers"
-      - name: handles_per_page
+      - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
           Only `application/json` returns paginated results. `text/plain` always returns the full search set.
@@ -183,7 +183,7 @@ paths:
       summary: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
       description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
       parameters:
-      - name: holders_per_page
+      - name: records_per_page
         in: query
         description: Number of Holders to return per page in paginated results. Maximum of 1000.
         required: false
@@ -219,6 +219,13 @@ paths:
     get:
       tags:
       - holders
+      parameters:
+      - name: holder_address
+        in: path
+        description: The stake/enterprise/script/exchange address of the Holder
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: List of Handle holders and some simple stats
