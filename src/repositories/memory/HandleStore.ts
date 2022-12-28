@@ -4,6 +4,7 @@ import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
+import { ISlotHistoryIndex } from '../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getDefaultHandle } from '../../utils/getDefaultHandle';
 import { getAddressStakeKey } from '../../utils/serialization';
@@ -17,15 +18,21 @@ import {
     StakeKeyIndex
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
+    // Indexes
     private static handles = new Map<string, IHandle>();
     static personalization = new Map<string, IPersonalization>();
     static stakeKeyIndex = new Map<string, StakeKeyIndex>();
+    static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
+
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
+
+    static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
+    static storageSchemaVersion = 3;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -45,9 +52,7 @@ export class HandleStore {
         return `-${NETWORK}`;
     };
 
-    static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     static storagePath = `${HandleStore.storageFolder}/handles${HandleStore.buildNetworkForNaming()}.json`;
-    static storageSchemaVersion = 3;
 
     static get = (key: string): IHandle | null => {
         const handle = this.handles.get(key);
@@ -119,6 +124,46 @@ export class HandleStore {
 
         // TODO: set default name during personalization
         this.setStakeKeyIndex(stake_key, hex);
+    };
+
+    static remove = async (hexName: string) => {
+        Logger.log({ category: LogCategory.INFO, message: `Removing handle ${hexName}`, event: 'HandleStore.remove' });
+
+        const handle = this.handles.get(hexName);
+        if (!handle) {
+            return;
+        }
+
+        const {
+            name,
+            rarity,
+            stake_key,
+            og,
+            characters,
+            numeric_modifiers,
+            length,
+            hex,
+            resolved_addresses: { ada }
+        } = handle;
+
+        // Set the main index
+        this.handles.delete(hex);
+
+        // set the personalization index
+        this.personalization.delete(hex);
+
+        // set all one-to-one indexes
+        this.nameIndex.delete(name);
+
+        // set all one-to-many indexes
+        this.rarityIndex.get(rarity)?.delete(hex);
+        this.ogIndex.get(`${og}`)?.delete(hex);
+        this.charactersIndex.get(characters)?.delete(hex);
+        this.numericModifiersIndex.get(numeric_modifiers)?.delete(hex);
+        this.lengthIndex.get(`${length}`)?.delete(hex);
+
+        // remove the stake key index
+        this.stakeKeyIndex.get(stake_key)?.hexes.delete(hex);
     };
 
     static setStakeKeyIndex = async (stakeKey: string, newHex: string, defaultName?: string) => {
@@ -522,5 +567,64 @@ export class HandleStore {
         }
 
         return null;
+    }
+
+    static rollBackToGenesis() {
+        Logger.log({
+            message: 'Rolling back to genesis',
+            category: LogCategory.INFO,
+            event: 'HandleStore.rollBackToGenesis'
+        });
+        this.handles = new Map<string, IHandle>();
+        this.personalization = new Map<string, IPersonalization>();
+        this.stakeKeyIndex = new Map<string, StakeKeyIndex>();
+        this.nameIndex = new Map<string, string>();
+        this.rarityIndex = new Map<string, Set<string>>();
+        this.ogIndex = new Map<string, Set<string>>();
+        this.charactersIndex = new Map<string, Set<string>>();
+        this.numericModifiersIndex = new Map<string, Set<string>>();
+        this.lengthIndex = new Map<string, Set<string>>();
+    }
+
+    static rewindChangesToSlot(slot: number) {
+        // first we need to order the historyIndex desc by slot
+        const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
+
+        // iterate through history starting with the most recent up to the slot we want to rewind to.
+        for (const item of orderedHistoryIndex) {
+            const [slotKey, history] = item;
+
+            // iterate through each handle hex in the history and revert it to the previous state
+            Object.keys(history).forEach(async (hex) => {
+                const existingHandle = this.get(hex);
+                if (!existingHandle) {
+                    Logger.log(`Handle ${hex} does not exist`);
+                    return;
+                }
+
+                const handleHistory = history[hex];
+
+                if (handleHistory.old === null) {
+                    // if the old value is null, then the handle was deleted
+                    // so we need to remove it from the indexes
+                    this.remove(hex);
+                    return;
+                }
+
+                // otherwise we need to update the handle with the old values
+                const newHandle: IHandle = {
+                    ...existingHandle,
+                    ...handleHistory.old
+                };
+
+                await this.save(newHandle);
+            });
+
+            // delete the slot key since we are rolling back to it
+            this.slotHistoryIndex.delete(slotKey);
+
+            // once we reach the slot we want to rewind to, we can stop
+            if (slotKey === slot) break;
+        }
     }
 }

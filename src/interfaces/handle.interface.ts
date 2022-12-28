@@ -29,3 +29,7 @@ export interface StakeKeyDetailsResponse {
     default_handle: string;
     manually_set: boolean;
 }
+
+export interface ISlotHistoryIndex {
+    [handleHex: string]: { old: Partial<IHandle> | null; new: Partial<IHandle> };
+}

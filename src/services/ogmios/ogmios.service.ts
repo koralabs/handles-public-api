@@ -1,10 +1,12 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { PointOrOrigin } from '@cardano-ogmios/schema';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
+import { processRollback } from './processRollback';
 import { memoryWatcher } from './utils';
 import { createLocalChainSyncClient } from './utils/localChainSync';
 
@@ -41,9 +43,9 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(response: { point: unknown }, requestNext: () => void): Promise<void> {
-        // TODO: Figure out how to Handle rollbacks!
-        Logger.log(`ROLLBACK POINT: ${JSON.stringify(response.point)}`);
+    private async rollBackward(response: { point: PointOrOrigin }, requestNext: () => void): Promise<void> {
+        const { point } = response;
+        processRollback(point);
         requestNext();
     }
 
