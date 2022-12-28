@@ -364,6 +364,18 @@ components:
           type: string
           example: jpg.store
           description: The name of the vendor/exchange if the address is from a known list of vendors/exchanges/projects. 
+        default_handle:
+          type: string
+          example: my_default_hndl
+          description: The default Handle for this Holder 
+        manually_set:
+          type: boolean
+          description: If `true` then the user set this as their default Handle manually.
+            If `false`, then a simple algorithm attempted to pick the Holder's best Handle. The algorithm selects in this order -
+            OG Handles first
+            If no OG Handle then shortest Handle
+            If many have the same length, then the earliest minted slot number
+            If multiple minted at the same time, then ascending alpha order
     Stats:
       type: object
       properties:
