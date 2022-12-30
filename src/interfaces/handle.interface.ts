@@ -25,6 +25,10 @@ export interface IGetHolderAddressDetailsRequest {
 }
 
 export interface HolderAddressDetailsResponse {
+    total_handles: number;
+    address: string;
+    type: string;
+    known_owner_name: string;
     default_handle: string;
     manually_set: boolean;
 }

@@ -6,7 +6,7 @@ import lockfile from 'proper-lockfile';
 import { NETWORK, NODE_ENV } from '../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getDefaultHandle } from '../../utils/getDefaultHandle';
-import { getAddressHolderAddress } from '../../utils/serialization';
+import { AddressDetails, getAddressHolderDetails } from '../../utils/addresses';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
@@ -90,7 +90,6 @@ export class HandleStore {
         const {
             name,
             rarity,
-            holder_address,
             og,
             characters,
             numeric_modifiers,
@@ -98,6 +97,9 @@ export class HandleStore {
             hex,
             resolved_addresses: { ada }
         } = handle;
+
+        const holderAddressDetails = await getAddressHolderDetails(ada); // should we default this to something?
+        handle.holder_address = holderAddressDetails.address;
 
         // Set the main index
         this.handles.set(hex, handle);
@@ -118,31 +120,43 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        this.setHolderAddressIndex(holder_address, hex);
+        await this.setHolderAddressIndex(holderAddressDetails, hex);
     };
 
-    static setHolderAddressIndex = async (holderAddress: string, newHex: string, defaultName?: string) => {
+    static setHolderAddressIndex = async (
+        holderAddressDetails: AddressDetails,
+        newHex: string,
+        defaultName?: string
+    ) => {
         // first get all the handles for the stake key
-        const holderAddressDetails =
-            this.holderAddressIndex.get(holderAddress) ??
-            ({ hexes: new Set(), defaultHandle: '', manuallySet: false } as HolderAddressIndex);
+        const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
+
+        const initialHolderAddressDetails: HolderAddressIndex = {
+            hexes: new Set(),
+            defaultHandle: '',
+            manuallySet: false,
+            type,
+            knownOwnerName: knownOwnerName
+        };
+
+        const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? initialHolderAddressDetails;
 
         // add the new hex to the set
-        holderAddressDetails.hexes.add(newHex);
+        existingHolderAddressDetails.hexes.add(newHex);
 
-        const handles = [...holderAddressDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
+        const handles = [...existingHolderAddressDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
 
         this.holderAddressIndex.set(holderAddress, {
-            ...holderAddressDetails,
+            ...existingHolderAddressDetails,
             defaultHandle,
             manuallySet: !!defaultName
         });
     };
 
-    static buildHandle = async ({
+    static buildHandle = ({
         hexName,
         name,
         adaAddress,
@@ -152,13 +166,11 @@ export class HandleStore {
         background = '',
         default_in_wallet = '',
         profile_pic = ''
-    }: SaveMintingTxInput): Promise<IHandle> => {
-        const holderAddress = await getAddressHolderAddress(adaAddress); // should we default this to something?
-
+    }: SaveMintingTxInput): IHandle => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
-            holder_address: holderAddress ?? '',
+            holder_address: '', // Populate on save
             length: name.length,
             rarity: getRarity(name),
             characters: buildCharacters(name),
@@ -180,7 +192,7 @@ export class HandleStore {
     };
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        const newHandle: IHandle = await this.buildHandle(input);
+        const newHandle: IHandle = this.buildHandle(input);
         await this.save(newHandle);
     };
 
@@ -195,9 +207,7 @@ export class HandleStore {
             return;
         }
 
-        const holderAddress = await getAddressHolderAddress(adaAddress);
         existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.holder_address = holderAddress ?? '';
         existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };
@@ -338,7 +348,7 @@ export class HandleStore {
             const name = `${number}`.padStart(8, 'a');
             const image = 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW';
 
-            const handle = await this.buildHandle({
+            const handle = this.buildHandle({
                 hexName: hex,
                 name,
                 adaAddress:

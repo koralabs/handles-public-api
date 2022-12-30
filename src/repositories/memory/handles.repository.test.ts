@@ -3,11 +3,17 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture } from './tests/fixtures/handles';
-import * as serialization from '../../utils/serialization'; // getAddressHolderAddress
+import * as addresses from '../../utils/addresses';
+
+jest.mock('../../utils/addresses');
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
-        jest.spyOn(serialization, 'getAddressHolderAddress').mockResolvedValue('stake-key1');
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+            address: 'stake-key1',
+            type: 'ScriptHash',
+            knownOwnerName: 'unknown'
+        });
         const saves = handlesFixture.map(async (handle) => {
             const {
                 hex: hexName,
@@ -136,8 +142,12 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHolderAddressDetails('stake-key1');
             expect(result).toEqual({
+                address: 'stake-key1',
                 default_handle: 'taco',
-                manually_set: false
+                known_owner_name: 'unknown',
+                manually_set: false,
+                total_handles: 3,
+                type: 'ScriptHash'
             });
         });
     });

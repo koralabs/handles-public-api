@@ -5,15 +5,23 @@ import { handlesFixture } from './tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as serialization from '../../utils/serialization';
+import * as addresses from '../../utils/addresses';
 
 jest.mock('fs');
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
+jest.mock('../../utils/serialization');
+jest.mock('../../utils/addresses');
 
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
 
     beforeAll(() => {
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+            address: 'stake123',
+            type: 'base',
+            knownOwnerName: 'unknown'
+        });
         // populate storage
         handlesFixture.forEach((handle) => {
             const {
@@ -72,8 +80,12 @@ describe('HandleStore tests', () => {
 
     describe('saveMintedHandle tests', () => {
         it('Should save a new handle', async () => {
-            const holderAddress = 'stake123';
-            jest.spyOn(serialization, 'getAddressHolderAddress').mockResolvedValue(holderAddress);
+            const stakeKey = 'stake123';
+            jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+                address: stakeKey,
+                type: 'base',
+                knownOwnerName: 'unknown'
+            });
 
             await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
@@ -87,7 +99,7 @@ describe('HandleStore tests', () => {
             expect(handle).toEqual({
                 background: '',
                 holder_address: 'stake123',
-                default_in_wallet: 'nachos',
+                default_in_wallet: 'taco',
                 characters: 'letters',
                 hex: 'nachos-hex',
                 length: 6,
@@ -106,7 +118,7 @@ describe('HandleStore tests', () => {
     });
 
     describe('savePersonalizationChange tests', () => {
-        it('Should update personalization data', () => {
+        it('Should update personalization data', async () => {
             HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
@@ -130,7 +142,7 @@ describe('HandleStore tests', () => {
                 }
             };
 
-            HandleStore.savePersonalizationChange({
+            await HandleStore.savePersonalizationChange({
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
                 addresses: {},
@@ -173,11 +185,19 @@ describe('HandleStore tests', () => {
 
     describe('saveWalletAddressMove tests', () => {
         it('Should only update the ada address', async () => {
-            const holderAddress = 'stake123';
-            const updatedHolderAddress = 'stake123_new';
-            jest.spyOn(serialization, 'getAddressHolderAddress')
-                .mockResolvedValueOnce(holderAddress)
-                .mockResolvedValueOnce(updatedHolderAddress);
+            const stakeKey = 'stake123';
+            const updatedStakeKey = 'stake123_new';
+            jest.spyOn(addresses, 'getAddressHolderDetails')
+                .mockResolvedValueOnce({
+                    address: stakeKey,
+                    type: 'base',
+                    knownOwnerName: 'unknown'
+                })
+                .mockResolvedValueOnce({
+                    address: updatedStakeKey,
+                    type: 'base',
+                    knownOwnerName: 'unknown'
+                });
 
             await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
@@ -190,7 +210,7 @@ describe('HandleStore tests', () => {
 
             const existingHandle = HandleStore.get('nachos-hex');
             expect(existingHandle?.resolved_addresses.ada).toEqual('addr123');
-            expect(existingHandle?.holder_address).toEqual(holderAddress);
+            expect(existingHandle?.holder_address).toEqual(stakeKey);
 
             const newAddress = 'addr123_new';
             await HandleStore.saveWalletAddressMove({
@@ -201,7 +221,7 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get('nachos-hex');
             expect(handle).toEqual({
-                holder_address: updatedHolderAddress,
+                holder_address: updatedStakeKey,
                 default_in_wallet: 'nachos',
                 background: '',
                 characters: 'letters',
