@@ -98,7 +98,7 @@ export class HandleStore {
             resolved_addresses: { ada }
         } = handle;
 
-        const holderAddressDetails = await getAddressHolderDetails(ada); // should we default this to something?
+        const holderAddressDetails = await getAddressHolderDetails(ada);
         handle.holder_address = holderAddressDetails.address;
 
         // Set the main index
@@ -136,7 +136,7 @@ export class HandleStore {
             defaultHandle: '',
             manuallySet: false,
             type,
-            knownOwnerName: knownOwnerName
+            knownOwnerName
         };
 
         const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? initialHolderAddressDetails;
