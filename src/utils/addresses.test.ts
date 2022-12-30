@@ -1,25 +1,9 @@
-import { AddressType, getAddressHolderDetails, inspect } from './addresses';
+import { AddressType, getAddressHolderDetails } from './addresses';
 import * as serialization from './serialization';
 
 jest.mock('./serialization');
 
 describe('addresses tests', () => {
-    describe('inspect', () => {
-        it('should inspect an address', async () => {
-            const address =
-                'DdzFFzCqrht4GSeFm69wTpZpJZjX6qedAEm9HCKCXAfCwpMP69HCn1xDZzoxx1Xmvxo3gaHqRzDiYd2WzSbZ1M5R6yTK6s1wk9VkN1o7';
-            const result = await inspect(address);
-            expect(result).toEqual({
-                address_root: 'bb2a408e26a10fde5d49d97c9ffb5c5af2cdf47e8ec2e76286b72958',
-                address_style: 'Byron',
-                address_type: 8,
-                derivation_path: '581c341540aaf534d92d6fb4f3422b22273c6d41a36b5b4743019a5a834a',
-                network_tag: null,
-                stake_reference: 'none'
-            });
-        });
-    });
-
     describe('getAddressHolderDetails', () => {
         it('should get the address holder details', async () => {
             const stakeAddress = 'stake1u8';
@@ -31,7 +15,7 @@ describe('addresses tests', () => {
             expect(result).toEqual({
                 address: stakeAddress,
                 knownOwnerName: '',
-                type: AddressType.Script
+                type: AddressType.Wallet
             });
         });
 
@@ -43,7 +27,7 @@ describe('addresses tests', () => {
             expect(result).toEqual({
                 address,
                 knownOwnerName: 'jpg.store',
-                type: AddressType.Other
+                type: AddressType.Script
             });
         });
     });

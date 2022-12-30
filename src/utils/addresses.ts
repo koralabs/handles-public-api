@@ -28,19 +28,6 @@ const getAddressType = (addressType: number): AddressType => {
     }
 };
 
-export const inspect = async (address: string): Promise<InspectAddress | null> => {
-    try {
-        return inspectAddress(address);
-    } catch (error) {
-        Logger.log({
-            message: `Unable to inspect address: ${address}`,
-            event: 'serialization.inspect.error',
-            category: LogCategory.ERROR
-        });
-        return null;
-    }
-};
-
 export const getAddressHolderDetails = async (addr: string): Promise<AddressDetails> => {
     const details = await inspectAddress(addr);
     const addressType = getAddressType(details.address_type);
