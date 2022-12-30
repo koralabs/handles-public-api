@@ -15,6 +15,8 @@ tags:
   externalDocs:
     description: Related Handle Docs
     url: https://api.handle.me/swagger
+- name: holders
+  description: Handle holder wallets, scripts, addresses, stats
 - name: utils
   description: Handle utility endpoints
 paths:
@@ -46,7 +48,7 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/NumericModifiers"
-      - name: handles_per_page
+      - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
           Only `application/json` returns paginated results. `text/plain` always returns the full search set.
@@ -71,6 +73,12 @@ paths:
         required: false
         schema:
           type: integer
+      - name: holder_address
+        in: query
+        description: The holder_address key of the wallet/script that the Handle is in. See the Holder endpoints for more information 
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: Successful and up to date
@@ -168,6 +176,75 @@ paths:
           description: Handle not found
       security:
       - api-key: []
+  "/holders":
+    get:
+      tags:
+      - holders
+      summary: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+      description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+      parameters:
+      - name: records_per_page
+        in: query
+        description: Number of Holders to return per page in paginated results. Maximum of 1000.
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        description: The page number to return in paginated results.
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: List of Handle holders and some simple stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Holder"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '400':
+          description: Invalid filter
+      security:
+      - api-key: []
+  "/holders/{holder_address}":
+    description: Holder details
+    get:
+      tags:
+      - holders
+      parameters:
+      - name: holder_address
+        in: path
+        description: The stake/enterprise/script/exchange address of the Holder
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of Handle holders and some simple stats
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Holder"
+        '400':
+          description: Invalid Holder format
+        '404':
+          description: Holder not found
+      security:
+      - api-key: []
   "/stats":
     get:
       tags:
@@ -209,7 +286,7 @@ components:
           example: my.handle
         holder_address:
           type: string
-          description: Current holding wallet stake key
+          description: Current Holder of the Handle (see the Holder endpoints for more information)
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         nft_image:
           type: string
@@ -260,12 +337,45 @@ components:
           type: string
           description: The version of the Handle
           example: 1
+        utxo:
+          type: string
+          description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
+          example: 8f1d7ec063ce83d93d1bad658886e81568d19ca9bd8dd0e6e268d7be3e33c653#1
         created_slot_number:
           type: integer
           description: The slot number this Handle was minted
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    Holder:
+      type: object
+      properties:
+        total_handles:
+          type: integer
+          example: 1421
+          description: Total Handles this Holder holds
+        address:
+          type: string
+          example: stake1d4fg5dghrdxxxxxxxxxxxxxxxxxxx
+          description: Stake Key, Enterprise Address, Script Address, or Exchange Address
+        type:
+          "$ref": "#/components/schemas/AddressType"
+        known_owner_name:
+          type: string
+          example: jpg.store
+          description: The name of the vendor/exchange if the address is from a known list of vendors/exchanges/projects. 
+        default_handle:
+          type: string
+          example: my_default_hndl
+          description: The default Handle for this Holder 
+        manually_set:
+          type: boolean
+          description: If `true` then the user set this as their default Handle manually.
+            If `false`, then a simple algorithm attempted to pick the Holder's best Handle. The algorithm selects in this order -
+            OG Handles first
+            If no OG Handle then shortest Handle
+            If many have the same length, then the earliest minted slot number
+            If multiple minted at the same time, then ascending alpha order
     Stats:
       type: object
       properties:
@@ -273,6 +383,22 @@ components:
           type: integer
           example: 185123
           description: "Total of all Handles minted"
+        # network_load_percent:
+        #   type: integer
+        #   example: 76
+        #   description: Cardano network load calculated by block size over the last 20 blocks
+        # reservation_queue_size:
+        #   type: integer
+        #   example: 47
+        #   description: Number of Handles or NFT SubHandles currently waiting to be minted
+        # current_handle_prices:
+        #   type: string
+        #   example: 10,50,100,500
+        #   description: Comma-separated Handle price list. (basic,common,rare,ultra_rare)
+        total_holders:
+          type: integer
+          example: 42167
+          description: Total number of Handle Holders including wallets/scripts/enterprise/exchange and unknown addresses
     Personalization:
       type: object
       properties:
@@ -319,6 +445,15 @@ components:
           <br />`10.0` = "decimal"
           <br />`-1.0` = "negative,decimal"
       example: negative,decimal
+    AddressType:
+      type: string
+      example: stake
+      enum:
+      - stake
+      - enterprise
+      - script
+      - exchange
+      - unknown
   requestBodies:
     Handle:
       content:
