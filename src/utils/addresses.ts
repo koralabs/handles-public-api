@@ -17,7 +17,7 @@ export enum AddressType {
 
 const getAddressType = (addressType: number): AddressType => {
     // https://cips.cardano.org/cips/cip19/#shelleyaddresses
-    if (addressType <= 8) {
+    if (addressType >= 8) {
         return AddressType.Other;
     } else if (addressType === 6) {
         return AddressType.Enterprise;

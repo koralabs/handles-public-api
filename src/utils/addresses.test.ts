@@ -31,7 +31,7 @@ describe('addresses tests', () => {
             expect(result).toEqual({
                 address: stakeAddress,
                 knownOwnerName: '',
-                type: AddressType.Other
+                type: AddressType.Script
             });
         });
 
