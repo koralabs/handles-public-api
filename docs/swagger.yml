@@ -288,6 +288,8 @@ components:
           type: string
           description: Current Holder of the Handle (see the Holder endpoints for more information)
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        holder_type:
+          "$ref": "#/components/schemas/AddressType"
         nft_image:
           type: string
           description: IPFS URL of the personalized handle image
@@ -447,13 +449,17 @@ components:
       example: negative,decimal
     AddressType:
       type: string
-      example: stake
+      example: wallet
+      description: |
+        <br />If it is a Shelley address and a script, it will say `script`.
+        <br />If it is Shelley, is not a script, and has a stake key, it will be `wallet`.
+        <br />If it is Shelley, is not a script, and doesn't have a stake key, it will be `enterprise`.
+        <br />If the address is not a Shelley address, it will be `other`.
       enum:
-      - stake
-      - enterprise
+      - wallet
       - script
-      - exchange
-      - unknown
+      - enterprise
+      - other
   requestBodies:
     Handle:
       content:
