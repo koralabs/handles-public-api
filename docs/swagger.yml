@@ -374,10 +374,10 @@ components:
           type: boolean
           description: If `true` then the user set this as their default Handle manually.
             If `false`, then a simple algorithm attempted to pick the Holder's best Handle. The algorithm selects in this order -
-            OG Handles first
-            If no OG Handle then shortest Handle
-            If many have the same length, then the earliest minted slot number
-            If multiple minted at the same time, then ascending alpha order
+            <br />OG Handles first
+            <br />If no OG Handle then shortest Handle
+            <br />If many have the same length, then the earliest minted slot number
+            <br />If multiple minted at the same time, then ascending alpha order
     Stats:
       type: object
       properties:
