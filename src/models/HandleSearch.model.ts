@@ -8,7 +8,7 @@ interface HandleSearchInput {
     rarity?: string;
     numeric_modifiers?: string;
     search?: string;
-    stake_key?: string;
+    holder_address?: string;
 }
 
 export class HandleSearchModel {
@@ -17,16 +17,16 @@ export class HandleSearchModel {
     private _rarity?: string;
     private _numeric_modifiers?: string;
     private _search?: string;
-    private _stake_key?: string;
+    private _holder_address?: string;
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, stake_key } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
         this.numeric_modifiers = numeric_modifiers;
         this.search = search;
-        this.stake_key = stake_key;
+        this.holder_address = holder_address;
     }
 
     get characters() {
@@ -94,11 +94,11 @@ export class HandleSearchModel {
         this._search = value;
     }
 
-    get stake_key() {
-        return this._stake_key;
+    get holder_address() {
+        return this._holder_address;
     }
 
-    set stake_key(value) {
-        this._stake_key = value;
+    set holder_address(value) {
+        this._holder_address = value;
     }
 }

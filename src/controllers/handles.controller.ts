@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest, IGetStakeKeyDetailsRequest } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest, IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
@@ -24,7 +24,7 @@ class HandlesController {
                 numeric_modifiers,
                 slot_number,
                 search: searchQuery,
-                stake_key
+                holder_address
             } = req.query;
 
             const search = new HandleSearchModel({
@@ -33,7 +33,7 @@ class HandlesController {
                 rarity,
                 numeric_modifiers,
                 search: searchQuery,
-                stake_key
+                holder_address
             });
 
             const pagination = new HandlePaginationModel({
@@ -107,22 +107,6 @@ class HandlesController {
             const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
 
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    public async getStakeKeyDetails(
-        req: Request<IGetStakeKeyDetailsRequest, {}, {}>,
-        res: Response,
-        next: NextFunction
-    ) {
-        try {
-            const stakeKey = req.params.key;
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const details = await handleRepo.getStakeKeyDetails(stakeKey);
-
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(details);
         } catch (error) {
             next(error);
         }

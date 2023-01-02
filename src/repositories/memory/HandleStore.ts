@@ -7,7 +7,7 @@ import { NETWORK, NODE_ENV } from '../../config';
 import { ISlotHistoryIndex } from '../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
 import { getDefaultHandle } from '../../utils/getDefaultHandle';
-import { getAddressStakeKey } from '../../utils/serialization';
+import { AddressDetails, getAddressHolderDetails } from '../../utils/addresses';
 import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
 import {
     IHandleFileContent,
@@ -15,15 +15,14 @@ import {
     SaveMintingTxInput,
     SavePersonalizationInput,
     SaveWalletAddressMoveInput,
-    StakeKeyIndex
+    HolderAddressIndex
 } from './interfaces/handleStore.interfaces';
 export class HandleStore {
     // Indexes
     private static handles = new Map<string, IHandle>();
     static personalization = new Map<string, IPersonalization>();
-    static stakeKeyIndex = new Map<string, StakeKeyIndex>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
-
+    static holderAddressIndex = new Map<string, HolderAddressIndex>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
@@ -60,9 +59,9 @@ export class HandleStore {
             return null;
         }
 
-        const stakeKeyIndex = this.stakeKeyIndex.get(handle.stake_key);
-        if (stakeKeyIndex) {
-            handle.default_in_wallet = stakeKeyIndex.defaultHandle;
+        const holderAddressIndex = this.holderAddressIndex.get(handle.holder_address);
+        if (holderAddressIndex) {
+            handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
 
         return handle;
@@ -95,7 +94,6 @@ export class HandleStore {
         const {
             name,
             rarity,
-            stake_key,
             og,
             characters,
             numeric_modifiers,
@@ -103,6 +101,9 @@ export class HandleStore {
             hex,
             resolved_addresses: { ada }
         } = handle;
+
+        const holderAddressDetails = await getAddressHolderDetails(ada);
+        handle.holder_address = holderAddressDetails.address;
 
         // Set the main index
         this.handles.set(hex, handle);
@@ -123,7 +124,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        this.setStakeKeyIndex(stake_key, hex);
+        await this.setHolderAddressIndex(holderAddressDetails, hex);
     };
 
     static remove = async (hexName: string) => {
@@ -137,7 +138,7 @@ export class HandleStore {
         const {
             name,
             rarity,
-            stake_key,
+            holder_address,
             og,
             characters,
             numeric_modifiers,
@@ -163,31 +164,43 @@ export class HandleStore {
         this.lengthIndex.get(`${length}`)?.delete(hex);
 
         // remove the stake key index
-        this.stakeKeyIndex.get(stake_key)?.hexes.delete(hex);
+        this.holderAddressIndex.get(holder_address)?.hexes.delete(hex);
     };
 
-    static setStakeKeyIndex = async (stakeKey: string, newHex: string, defaultName?: string) => {
+    static setHolderAddressIndex = async (
+        holderAddressDetails: AddressDetails,
+        newHex: string,
+        defaultName?: string
+    ) => {
         // first get all the handles for the stake key
-        const stakeKeyDetails =
-            this.stakeKeyIndex.get(stakeKey) ??
-            ({ hexes: new Set(), defaultHandle: '', manuallySet: false } as StakeKeyIndex);
+        const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
+
+        const initialHolderAddressDetails: HolderAddressIndex = {
+            hexes: new Set(),
+            defaultHandle: '',
+            manuallySet: false,
+            type,
+            knownOwnerName
+        };
+
+        const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? initialHolderAddressDetails;
 
         // add the new hex to the set
-        stakeKeyDetails.hexes.add(newHex);
+        existingHolderAddressDetails.hexes.add(newHex);
 
-        const handles = [...stakeKeyDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
+        const handles = [...existingHolderAddressDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
 
-        this.stakeKeyIndex.set(stakeKey, {
-            ...stakeKeyDetails,
+        this.holderAddressIndex.set(holderAddress, {
+            ...existingHolderAddressDetails,
             defaultHandle,
             manuallySet: !!defaultName
         });
     };
 
-    static buildHandle = async ({
+    static buildHandle = ({
         hexName,
         name,
         adaAddress,
@@ -197,13 +210,11 @@ export class HandleStore {
         background = '',
         default_in_wallet = '',
         profile_pic = ''
-    }: SaveMintingTxInput): Promise<IHandle> => {
-        const stakeKey = await getAddressStakeKey(adaAddress); // should we default this to something?
-
+    }: SaveMintingTxInput): IHandle => {
         const newHandle: IHandle = {
             hex: hexName,
             name,
-            stake_key: stakeKey ?? '',
+            holder_address: '', // Populate on save
             length: name.length,
             rarity: getRarity(name),
             characters: buildCharacters(name),
@@ -225,7 +236,7 @@ export class HandleStore {
     };
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        const newHandle: IHandle = await this.buildHandle(input);
+        const newHandle: IHandle = this.buildHandle(input);
         await this.save(newHandle);
     };
 
@@ -240,9 +251,7 @@ export class HandleStore {
             return;
         }
 
-        const stakeKey = await getAddressStakeKey(adaAddress);
         existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.stake_key = stakeKey ?? '';
         existingHandle.updated_slot_number = slotNumber;
         await HandleStore.save(existingHandle);
     };
@@ -383,7 +392,7 @@ export class HandleStore {
             const name = `${number}`.padStart(8, 'a');
             const image = 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW';
 
-            const handle = await this.buildHandle({
+            const handle = this.buildHandle({
                 hexName: hex,
                 name,
                 adaAddress:
@@ -577,7 +586,7 @@ export class HandleStore {
         });
         this.handles = new Map<string, IHandle>();
         this.personalization = new Map<string, IPersonalization>();
-        this.stakeKeyIndex = new Map<string, StakeKeyIndex>();
+        this.holderAddressIndex = new Map<string, HolderAddressIndex>();
         this.nameIndex = new Map<string, string>();
         this.rarityIndex = new Map<string, Set<string>>();
         this.ogIndex = new Map<string, Set<string>>();

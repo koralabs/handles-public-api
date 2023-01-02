@@ -1,3 +1,4 @@
+import fastq from 'fastq';
 import { createPointFromCurrentTip, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { findIntersect, Intersection, requestNext, UnknownResultError } from '@cardano-ogmios/client/dist/ChainSync';
 import { Block, Ogmios, PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
@@ -66,22 +67,27 @@ export const createLocalChainSyncClient = async (
             }
         };
 
-        socket.on('message', async (message: string) => {
+        const responseHandler = fastq.promise(messageHandler, 1).push;
+
+        const processMessage = async (message: string) => {
             const policyId = POLICY_IDS[process.env.NETWORK ?? 'testnet'][0];
             if (message.indexOf('"result":{"RollBackward"') >= 0 || message.indexOf(policyId) >= 0) {
                 const response: Ogmios['RequestNextResponse'] = safeJSON.parse(message);
                 if (response.methodname === 'RequestNext') {
                     try {
-                        await messageHandler(response);
+                        await responseHandler(response);
+                        return;
                     } catch (error) {
                         console.error(error);
                     }
-
-                    return;
                 }
             }
 
             requestNext(socket);
+        };
+
+        socket.on('message', async (message: string) => {
+            await processMessage(message);
         });
 
         return resolve({

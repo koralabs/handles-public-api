@@ -120,7 +120,7 @@ describe('processBlock Tests', () => {
     const expectedItem: IHandle = {
         characters: 'letters,numbers',
         hex: hexName,
-        stake_key: 'some_stake1',
+        holder_address: 'some_stake1',
         length: 8,
         name,
         nft_image: 'some_hash_test1234',

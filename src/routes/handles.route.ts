@@ -18,11 +18,6 @@ class HandlesRoute extends BaseRoute {
             this.injectRegistryMiddleware,
             this.handlesController.getPersonalizedHandle
         );
-        this.router.get(
-            `${this.path}/stake/:key`,
-            this.injectRegistryMiddleware,
-            this.handlesController.getStakeKeyDetails
-        );
     }
 }
 

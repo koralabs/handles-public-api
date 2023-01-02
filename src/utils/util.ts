@@ -58,5 +58,7 @@ export const getDateStringFromSlot = (currentSlot: number): Date => {
 };
 
 export const getSlotNumberFromDate = (date: Date): number => {
-    return Math.floor(date.getTime() / 1000) - 1596491091 + 4924800;
+    // Ignore parens to show intent
+    // prettier-ignore
+    return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
 };
