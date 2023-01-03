@@ -1,4 +1,5 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { ISlotHistoryIndex } from '../../../../interfaces/handle.interface';
 
 export const handlesFixture: IHandle[] = [
     {
@@ -13,7 +14,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -33,7 +34,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -53,7 +54,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -62,3 +63,45 @@ export const handlesFixture: IHandle[] = [
         updated_slot_number: Date.now() + 20
     }
 ];
+
+export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
+    0: {},
+    1: {
+        'barbacoa-hex': {
+            old: null,
+            new: {
+                resolved_addresses: { ada: handlesFixture[0].resolved_addresses.ada }
+            }
+        },
+        'burrito-hex': {
+            old: null,
+            new: {
+                resolved_addresses: { ada: handlesFixture[1].resolved_addresses.ada }
+            }
+        },
+        'taco-hex': {
+            old: null,
+            new: {
+                resolved_addresses: { ada: handlesFixture[2].resolved_addresses.ada }
+            }
+        }
+    },
+    2: {
+        'barbacoa-hex': {
+            old: { resolved_addresses: { ada: '123' } },
+            new: { resolved_addresses: { ada: '456' } }
+        }
+    },
+    3: {
+        'burrito-hex': {
+            old: { resolved_addresses: { ada: '123' } },
+            new: { resolved_addresses: { ada: '456' } }
+        }
+    },
+    4: {
+        'barbacoa-hex': {
+            old: { resolved_addresses: { ada: '456' } },
+            new: { resolved_addresses: { ada: '789' } }
+        }
+    }
+};

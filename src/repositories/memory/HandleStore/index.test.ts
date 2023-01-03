@@ -1,29 +1,29 @@
 import { writeFileSync, unlinkSync } from 'fs';
-import { HandleStore } from './HandleStore';
-import { delay } from '../../utils/util';
-import { handlesFixture } from './tests/fixtures/handles';
+import { HandleStore } from '.';
+import { delay } from '../../../utils/util';
+import { handlesFixture, slotHistoryFixture } from '../tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
-import * as serialization from '../../utils/serialization';
-import * as addresses from '../../utils/addresses';
+import * as addresses from '../../../utils/addresses';
 
 jest.mock('fs');
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
-jest.mock('../../utils/serialization');
-jest.mock('../../utils/addresses');
+jest.mock('../../../utils/serialization');
+jest.mock('../../../utils/addresses');
 
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
 
-    beforeAll(() => {
+    beforeEach(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
             address: 'stake123',
             type: 'base',
             knownOwnerName: 'unknown'
         });
         // populate storage
-        handlesFixture.forEach((handle) => {
+        for (const key in handlesFixture) {
+            const handle = handlesFixture[key];
             const {
                 hex: hexName,
                 original_nft_image: image,
@@ -32,19 +32,36 @@ describe('HandleStore tests', () => {
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
-        });
+            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+        }
 
+        // set the slotHistoryIndex
+        HandleStore.slotHistoryIndex = new Map(
+            Object.keys(slotHistoryFixture).map((k) => {
+                const slot = parseInt(k);
+                return [slot, slotHistoryFixture[slot]];
+            })
+        );
+    });
+
+    afterEach(() => {
+        for (const key in handlesFixture) {
+            const handle = handlesFixture[key];
+            HandleStore.remove(handle.hex);
+        }
+
+        HandleStore.slotHistoryIndex = new Map();
+
+        jest.clearAllMocks();
+    });
+
+    beforeAll(async () => {
         // create test file
         writeFileSync(filePath, '{}');
     });
 
     afterAll(() => {
         unlinkSync(filePath);
-    });
-
-    beforeEach(() => {
-        jest.clearAllMocks();
     });
 
     describe.skip('saveFile tests', () => {
@@ -400,6 +417,8 @@ describe('HandleStore tests', () => {
         });
 
         it('Should use starting point from constants if both AWS and local file are not found', async () => {
+            // clear the mock so we don't see the beforeAll() saves
+            jest.clearAllMocks();
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
             jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
@@ -411,6 +430,8 @@ describe('HandleStore tests', () => {
         });
 
         it('Should use starting point from constants if local schemaVersion does not match the HandleStore.storageSchemaVersion', async () => {
+            // clear the mock so we don't see the beforeAll() saves
+            jest.clearAllMocks();
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
             jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);

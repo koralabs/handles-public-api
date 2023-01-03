@@ -3,12 +3,12 @@ import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
-import { NETWORK, NODE_ENV } from '../../config';
-import { ISlotHistoryIndex } from '../../interfaces/handle.interface';
-import { buildCharacters, buildNumericModifiers, getRarity } from '../../services/ogmios/utils';
-import { getDefaultHandle } from '../../utils/getDefaultHandle';
-import { AddressDetails, getAddressHolderDetails } from '../../utils/addresses';
-import { getDateStringFromSlot, getElapsedTime } from '../../utils/util';
+import { NETWORK, NODE_ENV } from '../../../config';
+import { ISlotHistoryIndex } from '../../../interfaces/handle.interface';
+import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
+import { getDefaultHandle } from '../../../utils/getDefaultHandle';
+import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
+import { getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
 import {
     IHandleFileContent,
     IHandleStoreMetrics,
@@ -16,7 +16,7 @@ import {
     SavePersonalizationInput,
     SaveWalletAddressMoveInput,
     HolderAddressIndex
-} from './interfaces/handleStore.interfaces';
+} from '../interfaces/handleStore.interfaces';
 export class HandleStore {
     // Indexes
     private static handles = new Map<string, IHandle>();
@@ -54,12 +54,12 @@ export class HandleStore {
     static storagePath = `${HandleStore.storageFolder}/handles${HandleStore.buildNetworkForNaming()}.json`;
 
     static get = (key: string): IHandle | null => {
-        const handle = this.handles.get(key);
+        const handle = HandleStore.handles.get(key);
         if (!handle) {
             return null;
         }
 
-        const holderAddressIndex = this.holderAddressIndex.get(handle.holder_address);
+        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder_address);
         if (holderAddressIndex) {
             handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
@@ -76,8 +76,11 @@ export class HandleStore {
     };
 
     static getHandles = () => {
-        const handles = Array.from(this.handles, ([_, value]) => ({ ...value } as IHandle));
-        return handles.map((handle) => this.get(handle.hex) as IHandle);
+        const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+        return handles.map((handle) => {
+            const existingHandle = HandleStore.get(handle.hex) as IHandle;
+            return existingHandle;
+        });
     };
 
     static getFromNameIndex = (name: string) => {
@@ -595,7 +598,7 @@ export class HandleStore {
         this.lengthIndex = new Map<string, Set<string>>();
     }
 
-    static rewindChangesToSlot(slot: number) {
+    static async rewindChangesToSlot(slot: number): Promise<void> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
 
@@ -603,12 +606,24 @@ export class HandleStore {
         for (const item of orderedHistoryIndex) {
             const [slotKey, history] = item;
 
+            // once we reach the slot we want to rewind to, we can stop
+            if (slotKey === slot) {
+                Logger.log({
+                    message: `Rewound to slot ${slot}`,
+                    category: LogCategory.INFO,
+                    event: 'HandleStore.rewindChangesToSlot'
+                });
+                break;
+            }
+
             // iterate through each handle hex in the history and revert it to the previous state
-            Object.keys(history).forEach(async (hex) => {
+            const keys = Object.keys(history);
+            for (let i = 0; i < keys.length; i++) {
+                const hex = keys[i];
                 const existingHandle = this.get(hex);
                 if (!existingHandle) {
                     Logger.log(`Handle ${hex} does not exist`);
-                    return;
+                    continue;
                 }
 
                 const handleHistory = history[hex];
@@ -617,23 +632,20 @@ export class HandleStore {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
                     this.remove(hex);
-                    return;
+                    continue;
                 }
 
                 // otherwise we need to update the handle with the old values
-                const newHandle: IHandle = {
+                const updatedHandle: IHandle = {
                     ...existingHandle,
                     ...handleHistory.old
                 };
 
-                await this.save(newHandle);
-            });
+                await this.save(updatedHandle);
+            }
 
             // delete the slot key since we are rolling back to it
             this.slotHistoryIndex.delete(slotKey);
-
-            // once we reach the slot we want to rewind to, we can stop
-            if (slotKey === slot) break;
         }
     }
 }
