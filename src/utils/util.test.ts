@@ -1,3 +1,4 @@
+import { handlesFixture } from '../repositories/memory/tests/fixtures/handles';
 import { getDateStringFromSlot, getElapsedTime, getSlotNumberFromDate, isNumeric, writeConsoleLine } from './util';
 
 jest.mock('@koralabs/kora-labs-common');

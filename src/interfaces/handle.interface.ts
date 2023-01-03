@@ -11,9 +11,24 @@ export interface IGetAllQueryParams {
     numeric_modifiers?: string;
     slot_number?: string;
     search?: string;
+    holder_address?: string;
 }
 
 export interface IGetHandleRequest {
     registry: IRegistry;
     handle: string;
+}
+
+export interface IGetHolderAddressDetailsRequest {
+    registry: IRegistry;
+    address: string;
+}
+
+export interface HolderAddressDetailsResponse {
+    total_handles: number;
+    address: string;
+    type: string;
+    known_owner_name: string;
+    default_handle: string;
+    manually_set: boolean;
 }

@@ -1,21 +1,38 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from './HandleStore';
 import { delay } from '../../utils/util';
-import { handlesFixture } from './fixtures/handles';
+import { handlesFixture } from './tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
+import * as serialization from '../../utils/serialization';
+import * as addresses from '../../utils/addresses';
 
 jest.mock('fs');
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
+jest.mock('../../utils/serialization');
+jest.mock('../../utils/addresses');
 
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
 
     beforeAll(() => {
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+            address: 'stake123',
+            type: 'base',
+            knownOwnerName: 'unknown'
+        });
         // populate storage
         handlesFixture.forEach((handle) => {
-            HandleStore.save(handle);
+            const {
+                hex: hexName,
+                original_nft_image: image,
+                name,
+                og,
+                updated_slot_number: slotNumber,
+                resolved_addresses: { ada: adaAddress }
+            } = handle;
+            HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
         });
 
         // create test file
@@ -62,8 +79,15 @@ describe('HandleStore tests', () => {
     });
 
     describe('saveMintedHandle tests', () => {
-        it('Should save a new handle', () => {
-            HandleStore.saveMintedHandle({
+        it('Should save a new handle', async () => {
+            const stakeKey = 'stake123';
+            jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+                address: stakeKey,
+                type: 'base',
+                knownOwnerName: 'unknown'
+            });
+
+            await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr123',
@@ -74,8 +98,9 @@ describe('HandleStore tests', () => {
             const handle = HandleStore.get('nachos-hex');
             expect(handle).toEqual({
                 background: '',
+                holder_address: 'stake123',
+                default_in_wallet: 'taco',
                 characters: 'letters',
-                default_in_wallet: '',
                 hex: 'nachos-hex',
                 length: 6,
                 name: 'nachos',
@@ -93,7 +118,7 @@ describe('HandleStore tests', () => {
     });
 
     describe('savePersonalizationChange tests', () => {
-        it('Should update personalization data', () => {
+        it('Should update personalization data', async () => {
             HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
@@ -117,7 +142,7 @@ describe('HandleStore tests', () => {
                 }
             };
 
-            HandleStore.savePersonalizationChange({
+            await HandleStore.savePersonalizationChange({
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
                 addresses: {},
@@ -140,11 +165,16 @@ describe('HandleStore tests', () => {
             });
         });
 
-        it('Should log an error if handle is not found', () => {
+        it('Should log an error if handle is not found', async () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const personalization: IPersonalization = {};
-            HandleStore.savePersonalizationChange({ hexName: '123', personalization, addresses: {}, slotNumber: 1234 });
+            await HandleStore.savePersonalizationChange({
+                hexName: '123',
+                personalization,
+                addresses: {},
+                slotNumber: 1234
+            });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveWalletAddressMove.noHandleFound',
@@ -154,8 +184,22 @@ describe('HandleStore tests', () => {
     });
 
     describe('saveWalletAddressMove tests', () => {
-        it('Should only update the ada address', () => {
-            HandleStore.saveMintedHandle({
+        it('Should only update the ada address', async () => {
+            const stakeKey = 'stake123';
+            const updatedStakeKey = 'stake123_new';
+            jest.spyOn(addresses, 'getAddressHolderDetails')
+                .mockResolvedValueOnce({
+                    address: stakeKey,
+                    type: 'base',
+                    knownOwnerName: 'unknown'
+                })
+                .mockResolvedValueOnce({
+                    address: updatedStakeKey,
+                    type: 'base',
+                    knownOwnerName: 'unknown'
+                });
+
+            await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr123',
@@ -164,14 +208,23 @@ describe('HandleStore tests', () => {
                 slotNumber: 1234
             });
 
+            const existingHandle = HandleStore.get('nachos-hex');
+            expect(existingHandle?.resolved_addresses.ada).toEqual('addr123');
+            expect(existingHandle?.holder_address).toEqual(stakeKey);
+
             const newAddress = 'addr123_new';
-            HandleStore.saveWalletAddressMove({ hexName: 'nachos-hex', adaAddress: newAddress, slotNumber: 1234 });
+            await HandleStore.saveWalletAddressMove({
+                hexName: 'nachos-hex',
+                adaAddress: newAddress,
+                slotNumber: 1234
+            });
 
             const handle = HandleStore.get('nachos-hex');
             expect(handle).toEqual({
+                holder_address: updatedStakeKey,
+                default_in_wallet: 'nachos',
                 background: '',
                 characters: 'letters',
-                default_in_wallet: '',
                 hex: 'nachos-hex',
                 length: 6,
                 name: 'nachos',
@@ -187,12 +240,12 @@ describe('HandleStore tests', () => {
             });
         });
 
-        it('Should log an error if handle is not found', () => {
+        it('Should log an error if handle is not found', async () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
-            jest.spyOn(HandleStore, 'get').mockReturnValue(undefined);
+            jest.spyOn(HandleStore, 'get').mockReturnValue(null);
 
             const newAddress = 'addr123_new';
-            HandleStore.saveWalletAddressMove({ hexName: '123', adaAddress: newAddress, slotNumber: 1234 });
+            await HandleStore.saveWalletAddressMove({ hexName: '123', adaAddress: newAddress, slotNumber: 1234 });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveWalletAddressMove.noHandleFound',
@@ -243,20 +296,20 @@ describe('HandleStore tests', () => {
                 slot: 42971872,
                 hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
                 handles: {},
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
                 slot: 75171663,
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 handles: {},
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             const startingPoint = await HandleStore.prepareHandlesStorage();
             expect(startingPoint).toEqual({
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 slot: 75171663,
                 handles: expect.any(Object),
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             expect(saveFileSpy).toHaveBeenCalledTimes(0);
         });
@@ -296,14 +349,14 @@ describe('HandleStore tests', () => {
                 slot: 75171663,
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 handles: {},
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             const startingPoint = await HandleStore.prepareHandlesStorage();
             expect(startingPoint).toEqual({
                 hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
                 slot: 75171663,
                 handles: expect.any(Object),
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             expect(saveFileSpy).toHaveBeenCalledTimes(0);
         });
@@ -315,14 +368,14 @@ describe('HandleStore tests', () => {
                 slot: 1,
                 hash: 'a',
                 handles: {},
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             const startingPoint = await HandleStore.prepareHandlesStorage();
             expect(startingPoint).toEqual({
                 hash: 'a',
                 slot: 1,
                 handles: expect.any(Object),
-                schemaVersion: 1
+                schemaVersion: HandleStore.storageSchemaVersion
             });
             expect(saveFileSpy).toHaveBeenCalledTimes(0);
         });
@@ -351,6 +404,22 @@ describe('HandleStore tests', () => {
             const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
             jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
             jest.spyOn(HandleStore, 'getFile').mockResolvedValue(null);
+            const startingPoint = await HandleStore.prepareHandlesStorage();
+            expect(startingPoint).toEqual(null);
+            expect(saveSpy).toHaveBeenCalledTimes(0);
+            expect(saveFileSpy).toHaveBeenCalledTimes(0);
+        });
+
+        it('Should use starting point from constants if local schemaVersion does not match the HandleStore.storageSchemaVersion', async () => {
+            const saveSpy = jest.spyOn(HandleStore, 'save');
+            const saveFileSpy = jest.spyOn(HandleStore, 'saveFile');
+            jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
+            jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
+                slot: 1,
+                hash: 'a',
+                handles: {},
+                schemaVersion: 1
+            });
             const startingPoint = await HandleStore.prepareHandlesStorage();
             expect(startingPoint).toEqual(null);
             expect(saveSpy).toHaveBeenCalledTimes(0);

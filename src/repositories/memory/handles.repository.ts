@@ -1,5 +1,6 @@
 import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
+import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
@@ -8,40 +9,67 @@ import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
-        const { characters, length, rarity, numeric_modifiers, search } = searchModel;
+        const EMPTY = 'empty';
+        const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
 
-        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) =>
-            Array.from(index.get(key ?? '') ?? [], (value) => value);
+        // helper function to get a list of hashes from the Set indexes
+        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) => {
+            if (!key) return [];
 
+            const array = Array.from(index.get(key) ?? [], (value) => value);
+            return array.length === 0 ? [EMPTY] : array;
+        };
+
+        // get hex arrays for all the search parameters
         const characterArray = getHashes(HandleStore.charactersIndex, characters);
         const lengthArray = getHashes(HandleStore.lengthIndex, length);
         const rarityArray = getHashes(HandleStore.rarityIndex, rarity);
         const numericModifiersArray = getHashes(HandleStore.numericModifiersIndex, numeric_modifiers);
 
-        const filteredArrays = [characterArray, lengthArray, rarityArray, numericModifiersArray].filter(
-            (a) => a.length
-        );
+        const getHolderAddressHashes = (key: string | undefined) => {
+            if (!key) return [];
 
+            const array = Array.from(HandleStore.holderAddressIndex.get(key)?.hexes ?? [], (value) => value);
+            return array.length === 0 ? [EMPTY] : array;
+        };
+
+        const holderAddressItemsArray = getHolderAddressHashes(holder_address);
+
+        // filter out any empty arrays
+        const filteredArrays = [
+            characterArray,
+            lengthArray,
+            rarityArray,
+            numericModifiersArray,
+            holderAddressItemsArray
+        ].filter((a) => a.length);
+
+        // get the intersection of all the arrays
         const handleHexes = filteredArrays.length
             ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c)))
             : [];
 
+        // remove duplicates by getting the unique hexes
         const uniqueHexes = [...new Set(handleHexes)];
 
-        const array =
-            characters || length || rarity || numeric_modifiers || search
-                ? uniqueHexes.reduce<IHandle[]>((agg, hex) => {
-                      const handle = HandleStore.handles.get(hex);
-                      if (handle) {
-                          if (search && !handle.name.includes(search)) {
-                              return agg;
-                          }
+        // remove the empty hexes
+        const nonEmptyHexes = uniqueHexes.filter((hex) => hex !== EMPTY);
 
+        const array =
+            characters || length || rarity || numeric_modifiers || holder_address
+                ? nonEmptyHexes.reduce<IHandle[]>((agg, hex) => {
+                      const handle = HandleStore.get(hex);
+                      if (handle) {
+                          if (search && !handle.name.includes(search)) return agg;
                           agg.push(handle);
                       }
                       return agg;
                   }, [])
-                : Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IHandle));
+                : HandleStore.getHandles().reduce<IHandle[]>((agg, handle) => {
+                      if (search && !handle.name.includes(search)) return agg;
+                      agg.push(handle);
+                      return agg;
+                  }, []);
 
         return array;
     }
@@ -60,8 +88,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
         if (slotNumber) {
             items.sort((a, b) =>
                 sort === 'desc'
-                    ? b.updated_slot_number ?? 0 - (a.updated_slot_number ?? 0)
-                    : a.updated_slot_number ?? 0 - (b.updated_slot_number ?? 0)
+                    ? b.updated_slot_number - a.updated_slot_number
+                    : a.updated_slot_number - b.updated_slot_number ?? 0
             );
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
@@ -108,6 +136,22 @@ class MemoryHandlesRepository implements IHandlesRepository {
         }
 
         throw new HttpException(404, 'Not found');
+    }
+
+    public async getHolderAddressDetails(key: string): Promise<HolderAddressDetailsResponse> {
+        const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
+        if (!holderAddressDetails) throw new HttpException(404, 'Not found');
+
+        const { defaultHandle, manuallySet, hexes, knownOwnerName, type } = holderAddressDetails;
+
+        return {
+            total_handles: hexes.size,
+            default_handle: defaultHandle,
+            manually_set: manuallySet,
+            address: key,
+            known_owner_name: knownOwnerName,
+            type
+        };
     }
 
     public getHandleStats(): IHandleStats {

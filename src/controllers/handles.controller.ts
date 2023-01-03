@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest, IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
@@ -23,7 +23,8 @@ class HandlesController {
                 rarity,
                 numeric_modifiers,
                 slot_number,
-                search: searchQuery
+                search: searchQuery,
+                holder_address
             } = req.query;
 
             const search = new HandleSearchModel({
@@ -31,7 +32,8 @@ class HandlesController {
                 length,
                 rarity,
                 numeric_modifiers,
-                search: searchQuery
+                search: searchQuery,
+                holder_address
             });
 
             const pagination = new HandlePaginationModel({

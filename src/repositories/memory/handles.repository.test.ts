@@ -2,13 +2,29 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture } from './fixtures/handles';
-import { ModelException } from '../../exceptions/ModelException';
-import { ERROR_TEXT } from '../../services/ogmios/constants';
+import { handlesFixture } from './tests/fixtures/handles';
+import * as addresses from '../../utils/addresses';
+
+jest.mock('../../utils/addresses');
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
-        const saves = handlesFixture.map(async (handle) => HandleStore.save(handle));
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+            address: 'stake-key1',
+            type: 'ScriptHash',
+            knownOwnerName: 'unknown'
+        });
+        const saves = handlesFixture.map(async (handle) => {
+            const {
+                hex: hexName,
+                original_nft_image: image,
+                name,
+                og,
+                updated_slot_number: slotNumber,
+                resolved_addresses: { ada: adaAddress }
+            } = handle;
+            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+        });
         await Promise.all(saves);
     });
 
@@ -25,10 +41,10 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual([handlesFixture[0]]);
         });
 
-        it('should find rare handles', async () => {
+        it('should find handles by rarity', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ rarity: 'rare' });
+            const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([handlesFixture[2]]);
         });
@@ -36,7 +52,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should no handles with compounded searches', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ rarity: 'rare', length: '7' });
+            const search = new HandleSearchModel({ rarity: 'rare', length: '7', holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([]);
         });
@@ -47,6 +63,22 @@ describe('MemoryHandlesRepository Tests', () => {
             const search = new HandleSearchModel({ search: 'bur' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual([handlesFixture[1]]);
+        });
+
+        it('should find handles using holder_address parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ holder_address: 'stake-key1' });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual(handlesFixture);
+        });
+
+        it('should find no handles using invalid holder_address parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ holder_address: 'nope' });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual([]);
         });
 
         it('should paginate handles by slot number', async () => {
@@ -83,7 +115,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel({});
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
+            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
         });
 
         it('should search all handle names', async () => {
@@ -102,6 +134,21 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHandleByName('barbacoa');
             expect(result).toEqual(handlesFixture[0]);
+        });
+    });
+
+    describe('getHolderAddressDetails', () => {
+        it('should get holderAddress details', async () => {
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getHolderAddressDetails('stake-key1');
+            expect(result).toEqual({
+                address: 'stake-key1',
+                default_handle: 'taco',
+                known_owner_name: 'unknown',
+                manually_set: false,
+                total_handles: 3,
+                type: 'ScriptHash'
+            });
         });
     });
 
