@@ -1,10 +1,26 @@
-import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IHandle, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+
+export interface HandleHistory {
+    old: Partial<IHandle> | null;
+    new: Partial<IHandle>;
+}
+
+export interface ISlotHistoryIndex {
+    [handleHex: string]: HandleHistory;
+}
 
 export interface IHandleFileContent {
     slot: number;
     hash: string;
     schemaVersion?: number;
     handles: Record<string, IPersonalizedHandle>;
+}
+
+export interface IHandleHistoryFileContent {
+    slot: number;
+    hash: string;
+    schemaVersion?: number;
+    history: [number, ISlotHistoryIndex][];
 }
 
 export interface IHandleStoreMetrics {

@@ -32,12 +32,3 @@ export interface HolderAddressDetailsResponse {
     default_handle: string;
     manually_set: boolean;
 }
-
-export interface HandleHistory {
-    old: Partial<IHandle> | null;
-    new: Partial<IHandle>;
-}
-
-export interface ISlotHistoryIndex {
-    [handleHex: string]: HandleHistory;
-}

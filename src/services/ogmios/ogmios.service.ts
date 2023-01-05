@@ -70,9 +70,10 @@ class OgmiosService {
             );
         }, 1000);
 
-        const saveFileInterval = setInterval(async () => {
+        const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
-            await HandleStore.saveFile(currentSlot, currentBlockHash);
+            await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
+            await HandleStore.saveSlotHistoryFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
         }, 30000);
@@ -82,7 +83,7 @@ class OgmiosService {
             HandleStore.setMetrics({ memorySize });
         }, 60000);
 
-        this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
+        this.intervals = [metricsInterval, saveFilesInterval, setMemoryInterval];
     }
 
     public async getStartingPoint(): Promise<Point> {

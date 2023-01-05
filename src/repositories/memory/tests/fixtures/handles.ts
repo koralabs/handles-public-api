@@ -1,5 +1,5 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
-import { ISlotHistoryIndex } from '../../../../interfaces/handle.interface';
+import { ISlotHistoryIndex } from '../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: IHandle[] = [
     {
