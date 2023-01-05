@@ -33,6 +33,11 @@ export interface HolderAddressDetailsResponse {
     manually_set: boolean;
 }
 
+export interface HandleHistory {
+    old: Partial<IHandle> | null;
+    new: Partial<IHandle>;
+}
+
 export interface ISlotHistoryIndex {
-    [handleHex: string]: { old: Partial<IHandle> | null; new: Partial<IHandle> };
+    [handleHex: string]: HandleHistory;
 }

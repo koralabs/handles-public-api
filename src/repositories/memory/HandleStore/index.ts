@@ -3,8 +3,9 @@ import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import fs from 'fs';
 import lockfile from 'proper-lockfile';
+import { diff } from 'deep-object-diff';
 import { NETWORK, NODE_ENV } from '../../../config';
-import { ISlotHistoryIndex } from '../../../interfaces/handle.interface';
+import { HandleHistory, ISlotHistoryIndex } from '../../../interfaces/handle.interface';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
@@ -93,7 +94,17 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
-    static save = async (handle: IHandle, personalization?: IPersonalization) => {
+    static save = async ({
+        handle,
+        oldHandle,
+        personalization,
+        isRewinding = false
+    }: {
+        handle: IHandle;
+        oldHandle?: IHandle;
+        personalization?: IPersonalization;
+        isRewinding?: boolean;
+    }) => {
         const {
             name,
             rarity,
@@ -102,7 +113,8 @@ export class HandleStore {
             numeric_modifiers,
             length,
             hex,
-            resolved_addresses: { ada }
+            resolved_addresses: { ada },
+            updated_slot_number
         } = handle;
 
         const holderAddressDetails = await getAddressHolderDetails(ada);
@@ -127,7 +139,12 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        await this.setHolderAddressIndex(holderAddressDetails, hex);
+        this.setHolderAddressIndex(holderAddressDetails, hex);
+
+        if (!isRewinding) {
+            const history = HandleStore.buildHandleHistory(handle, oldHandle, personalization);
+            if (history) HandleStore.saveSlotHistory(history, hex, updated_slot_number);
+        }
     };
 
     static remove = async (hexName: string) => {
@@ -170,11 +187,7 @@ export class HandleStore {
         this.holderAddressIndex.get(holder_address)?.hexes.delete(hex);
     };
 
-    static setHolderAddressIndex = async (
-        holderAddressDetails: AddressDetails,
-        newHex: string,
-        defaultName?: string
-    ) => {
+    static setHolderAddressIndex(holderAddressDetails: AddressDetails, newHex: string, defaultName?: string) {
         // first get all the handles for the stake key
         const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
 
@@ -201,7 +214,7 @@ export class HandleStore {
             defaultHandle,
             manuallySet: !!defaultName
         });
-    };
+    }
 
     static buildHandle = ({
         hexName,
@@ -238,9 +251,56 @@ export class HandleStore {
         return newHandle;
     };
 
+    static buildHandleHistory(
+        newHandle: IHandle,
+        oldHandle?: IHandle,
+        personalization?: IPersonalization
+    ): HandleHistory | null {
+        const { name } = newHandle;
+        if (!oldHandle) {
+            return {
+                old: null,
+                new: {
+                    name
+                }
+            };
+        }
+
+        // the diff will give us only properties that have been updated
+        const difference = diff({ ...oldHandle, personalization }, { ...newHandle, personalization });
+        if (Object.keys(difference).length === 0) {
+            return null;
+        }
+
+        // using the diff, we need to get the same properties from oldHandle
+        const old = Object.keys(difference).reduce<Record<string, unknown>>((agg, key) => {
+            agg[key] = oldHandle[key as keyof IHandle];
+            return agg;
+        }, {});
+
+        return {
+            old,
+            new: difference
+        };
+    }
+
+    static saveSlotHistory(handleHistory: HandleHistory, hex: string, slotNumber: number) {
+        const slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
+        if (!slotHistory) {
+            const newSlotHistory: ISlotHistoryIndex = {
+                [hex]: handleHistory
+            };
+            HandleStore.slotHistoryIndex.set(slotNumber, newSlotHistory);
+            return;
+        }
+
+        slotHistory[hex] = handleHistory;
+        HandleStore.slotHistoryIndex.set(slotNumber, slotHistory);
+    }
+
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        const newHandle: IHandle = this.buildHandle(input);
-        await this.save(newHandle);
+        const newHandle: IHandle = HandleStore.buildHandle(input);
+        await HandleStore.save({ handle: newHandle });
     };
 
     static saveWalletAddressMove = async ({ hexName, adaAddress, slotNumber }: SaveWalletAddressMoveInput) => {
@@ -254,9 +314,13 @@ export class HandleStore {
             return;
         }
 
-        existingHandle.resolved_addresses.ada = adaAddress;
-        existingHandle.updated_slot_number = slotNumber;
-        await HandleStore.save(existingHandle);
+        const updatedHandle = {
+            ...existingHandle,
+            resolved_addresses: { ada: adaAddress },
+            updated_slot_number: slotNumber
+        };
+
+        await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle });
     };
 
     static async savePersonalizationChange({
@@ -275,28 +339,26 @@ export class HandleStore {
             return;
         }
 
-        if (personalization) {
-            const { nft_appearance } = personalization;
-            existingHandle.nft_image = nft_appearance?.image ?? '';
-            existingHandle.background = nft_appearance?.background ?? '';
-            existingHandle.profile_pic = nft_appearance?.profilePic ?? '';
-            existingHandle.default_in_wallet = ''; // TODO: figure out how this is updated
-            existingHandle.updated_slot_number = slotNumber;
-        }
-
         // update resolved addresses
         // remove ada from the new addresses.
         if (addresses.ada) {
             delete addresses.ada;
         }
 
-        // set ADA and replace
-        existingHandle.resolved_addresses = {
-            ada: existingHandle.resolved_addresses.ada,
-            ...addresses
+        const updatedHandle = {
+            ...existingHandle,
+            nft_image: personalization?.nft_appearance?.image ?? '',
+            background: personalization?.nft_appearance?.background ?? '',
+            profile_pic: personalization?.nft_appearance?.profilePic ?? '',
+            default_in_wallet: '', // TODO: figure out how this is updated
+            updated_slot_number: slotNumber,
+            resolved_addresses: {
+                ada: existingHandle.resolved_addresses.ada,
+                ...addresses
+            }
         };
 
-        await HandleStore.save(existingHandle, personalization);
+        await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle, personalization });
     }
 
     static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
@@ -388,9 +450,9 @@ export class HandleStore {
         return date < now - 60000 && percentageComplete != `100.00`;
     }
 
-    static buildStorage() {
+    static async buildStorage() {
         // used to quickly build a large datastore
-        Array.from(Array(1000000).keys()).forEach(async (number) => {
+        for (const number in Array.from(Array(1000000).keys())) {
             const hex = `hash-${number}`;
             const name = `${number}`.padStart(8, 'a');
             const image = 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW';
@@ -407,8 +469,8 @@ export class HandleStore {
                 profile_pic: image
             });
 
-            await this.save(handle);
-        });
+            await this.save({ handle });
+        }
     }
 
     static async saveFile(slot: number, hash: string, storagePath?: string, processing?: Function): Promise<boolean> {
@@ -556,14 +618,16 @@ export class HandleStore {
             }
 
             const { handles, slot, hash } = handlesContent;
-            Object.keys(handles ?? {}).forEach(async (k) => {
-                const handle = handles[k];
+            const keys = Object.keys(handles);
+            for (let i = 0; i < keys.length; i++) {
+                const hex = keys[i];
+                const handle = handles[hex];
                 const newHandle = {
                     ...handle
                 };
                 delete newHandle.personalization;
-                await HandleStore.save(newHandle, handle.personalization);
-            });
+                await HandleStore.save({ handle: newHandle, personalization: handle.personalization });
+            }
 
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${
@@ -641,7 +705,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
-                await this.save(updatedHandle);
+                await this.save({ handle: updatedHandle, isRewinding: true });
             }
 
             // delete the slot key since we are rolling back to it

@@ -34,14 +34,6 @@ describe('HandleStore tests', () => {
             } = handle;
             await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
         }
-
-        // set the slotHistoryIndex
-        HandleStore.slotHistoryIndex = new Map(
-            Object.keys(slotHistoryFixture).map((k) => {
-                const slot = parseInt(k);
-                return [slot, slotHistoryFixture[slot]];
-            })
-        );
     });
 
     afterEach(() => {
@@ -110,9 +102,12 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og: 0,
                 image: 'ipfs://123',
-                slotNumber: 1234
+                slotNumber: 100
             });
+
             const handle = HandleStore.get('nachos-hex');
+
+            // expect to get the correct handle properties
             expect(handle).toEqual({
                 background: '',
                 holder_address: 'stake123',
@@ -131,18 +126,26 @@ describe('HandleStore tests', () => {
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number)
             });
+
+            // expect to get the correct slot history with all new handles
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [expect.any(Number), { 'nachos-hex': { new: { name: 'nachos' }, old: null } }]
+            ]);
         });
     });
 
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
-            HandleStore.saveMintedHandle({
+            await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
                 image: 'ipfs://123',
-                slotNumber: 1234
+                slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -163,7 +166,7 @@ describe('HandleStore tests', () => {
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 1234
+                slotNumber: 200
             });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');
@@ -180,6 +183,36 @@ describe('HandleStore tests', () => {
                     trimColor: 'todo'
                 }
             });
+
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                // expect the initial create
+                [100, { 'nachos-hex': { new: { name: 'nachos' }, old: null } }],
+                // expect the personalization update
+                [
+                    200,
+                    {
+                        'nachos-hex': {
+                            new: {
+                                background: 'todo',
+                                default_in_wallet: '',
+                                nft_image: 'todo',
+                                profile_pic: 'todo',
+                                updated_slot_number: 200
+                            },
+                            old: {
+                                background: '',
+                                default_in_wallet: 'taco',
+                                nft_image: 'ipfs://123',
+                                profile_pic: '',
+                                updated_slot_number: 100
+                            }
+                        }
+                    }
+                ]
+            ]);
         });
 
         it('Should log an error if handle is not found', async () => {
@@ -204,6 +237,8 @@ describe('HandleStore tests', () => {
         it('Should only update the ada address', async () => {
             const stakeKey = 'stake123';
             const updatedStakeKey = 'stake123_new';
+            const address = 'addr123';
+            const newAddress = 'addr123_new';
             jest.spyOn(addresses, 'getAddressHolderDetails')
                 .mockResolvedValueOnce({
                     address: stakeKey,
@@ -217,34 +252,33 @@ describe('HandleStore tests', () => {
                 });
 
             await HandleStore.saveMintedHandle({
-                hexName: 'nachos-hex',
-                name: 'nachos',
-                adaAddress: 'addr123',
+                hexName: 'salsa-hex',
+                name: 'salsa',
+                adaAddress: address,
                 og: 0,
                 image: 'ipfs://123',
-                slotNumber: 1234
+                slotNumber: 100
             });
 
-            const existingHandle = HandleStore.get('nachos-hex');
-            expect(existingHandle?.resolved_addresses.ada).toEqual('addr123');
+            const existingHandle = HandleStore.get('salsa-hex');
+            expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder_address).toEqual(stakeKey);
 
-            const newAddress = 'addr123_new';
             await HandleStore.saveWalletAddressMove({
-                hexName: 'nachos-hex',
+                hexName: 'salsa-hex',
                 adaAddress: newAddress,
-                slotNumber: 1234
+                slotNumber: 200
             });
 
-            const handle = HandleStore.get('nachos-hex');
+            const handle = HandleStore.get('salsa-hex');
             expect(handle).toEqual({
                 holder_address: updatedStakeKey,
-                default_in_wallet: 'nachos',
+                default_in_wallet: 'salsa',
                 background: '',
                 characters: 'letters',
-                hex: 'nachos-hex',
-                length: 6,
-                name: 'nachos',
+                hex: 'salsa-hex',
+                length: 5,
+                name: 'salsa',
                 nft_image: 'ipfs://123',
                 numeric_modifiers: '',
                 og: 0,
@@ -255,6 +289,31 @@ describe('HandleStore tests', () => {
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number)
             });
+
+            // expect to get the correct slot history with all new handles
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [100, { 'salsa-hex': { new: { name: 'salsa' }, old: null } }],
+                [
+                    200,
+                    {
+                        'salsa-hex': {
+                            new: {
+                                holder_address: updatedStakeKey,
+                                resolved_addresses: { ada: newAddress },
+                                updated_slot_number: 200
+                            },
+                            old: {
+                                holder_address: stakeKey,
+                                resolved_addresses: { ada: address },
+                                updated_slot_number: 100
+                            }
+                        }
+                    }
+                ]
+            ]);
         });
 
         it('Should log an error if handle is not found', async () => {

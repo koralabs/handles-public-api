@@ -46,7 +46,7 @@ describe('rewindChangesToSlot', () => {
         jest.clearAllMocks();
     });
 
-    it('Should rewind to the slot 1 and remove all handle', async () => {
+    it('Should rewind to the slot 0 and remove all handle', async () => {
         const loggerSpy = jest.spyOn(Logger, 'log');
 
         // We should have 3 handles before the rollback
@@ -65,7 +65,7 @@ describe('rewindChangesToSlot', () => {
         });
     });
 
-    it('Should rewind to the slot 2 and and reset the ada address to the old', async () => {
+    it('Should rewind to the slot 2 and and reset the ada address to the old address', async () => {
         await HandleStore.rewindChangesToSlot(2);
 
         // and none after the rollback

@@ -106,7 +106,7 @@ class App {
 
     private async initializeMockStorage() {
         Logger.log('Initializing Mock Storage');
-        HandleStore.buildStorage();
+        await HandleStore.buildStorage();
     }
 
     private async initializeSwagger() {
