@@ -1,5 +1,5 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { PointOrOrigin } from '@cardano-ogmios/schema';
+import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
@@ -43,9 +43,12 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(response: { point: PointOrOrigin }, requestNext: () => void): Promise<void> {
-        const { point } = response;
-        processRollback(point);
+    private async rollBackward(
+        response: { point: PointOrOrigin; tip: TipOrOrigin },
+        requestNext: () => void
+    ): Promise<void> {
+        const { point, tip } = response;
+        processRollback(point, tip);
         requestNext();
     }
 

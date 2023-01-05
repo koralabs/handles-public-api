@@ -775,7 +775,15 @@ export class HandleStore {
         this.lengthIndex = new Map<string, Set<string>>();
     }
 
-    static async rewindChangesToSlot(slot: number): Promise<void> {
+    static async rewindChangesToSlot({
+        slot,
+        hash,
+        lastSlot
+    }: {
+        slot: number;
+        hash: string;
+        lastSlot: number;
+    }): Promise<void> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
 
@@ -790,6 +798,9 @@ export class HandleStore {
                     category: LogCategory.INFO,
                     event: 'HandleStore.rewindChangesToSlot'
                 });
+
+                // Set metrics to get the correct slot saving and percentage if there are no new blocks
+                HandleStore.setMetrics({ currentSlot: slot, currentBlockHash: hash, lastSlot });
                 break;
             }
 

@@ -48,11 +48,16 @@ describe('rewindChangesToSlot', () => {
 
     it('Should rewind to the slot 0 and remove all handle', async () => {
         const loggerSpy = jest.spyOn(Logger, 'log');
+        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
 
         // We should have 3 handles before the rollback
         expect(HandleStore.getHandles()).toHaveLength(3);
 
-        await HandleStore.rewindChangesToSlot(0);
+        const slot = 0;
+        const hash = 'hash0';
+        const lastSlot = 10;
+
+        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
         expect(HandleStore.getHandles().length).toEqual(0);
@@ -63,13 +68,20 @@ describe('rewindChangesToSlot', () => {
             event: 'HandleStore.rewindChangesToSlot',
             message: 'Rewound to slot 0'
         });
+        expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
 
     it('Should rewind to the slot 2 and and reset the ada address to the old address', async () => {
-        await HandleStore.rewindChangesToSlot(2);
+        const slot = 2;
+        const hash = 'hash2';
+        const lastSlot = 10;
+        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
 
         // and none after the rollback
         expect(HandleStore.get('burrito-hex')?.resolved_addresses.ada).toEqual('123');
         expect(HandleStore.get('barbacoa-hex')?.resolved_addresses.ada).toEqual('456');
+
+        expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
 });
