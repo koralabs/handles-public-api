@@ -1,4 +1,5 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { ISlotHistoryIndex } from '../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: IHandle[] = [
     {
@@ -13,7 +14,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -33,7 +34,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -53,7 +54,7 @@ export const handlesFixture: IHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: ''
+            ada: '123'
         },
         default_in_wallet: 'taco',
         profile_pic: '',
@@ -62,3 +63,33 @@ export const handlesFixture: IHandle[] = [
         updated_slot_number: Date.now() + 20
     }
 ];
+
+export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
+    0: {},
+    1: {
+        'barbacoa-hex': {
+            old: null
+        },
+        'burrito-hex': {
+            old: null
+        },
+        'taco-hex': {
+            old: null
+        }
+    },
+    2: {
+        'barbacoa-hex': {
+            old: { resolved_addresses: { ada: '123' } }
+        }
+    },
+    3: {
+        'burrito-hex': {
+            old: { resolved_addresses: { ada: '123' } }
+        }
+    },
+    4: {
+        'barbacoa-hex': {
+            old: { resolved_addresses: { ada: '456' } }
+        }
+    }
+};

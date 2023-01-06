@@ -110,17 +110,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return handles.map((handle) => handle.name);
     }
 
-    public async getHandleByName(handleName: string): Promise<IHandle> {
+    public async getHandleByName(handleName: string): Promise<IHandle | null> {
         const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
             if (handle) return handle;
         }
 
-        throw new HttpException(404, 'Not found');
+        return null;
     }
 
-    public async getPersonalizedHandleByName(handleName: string): Promise<IPersonalizedHandle> {
+    public async getPersonalizedHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
         const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
@@ -135,7 +135,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             }
         }
 
-        throw new HttpException(404, 'Not found');
+        return null;
     }
 
     public async getHolderAddressDetails(key: string): Promise<HolderAddressDetailsResponse> {

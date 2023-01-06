@@ -65,8 +65,7 @@ describe('OgmiosService Tests', () => {
         it('Should use starting point from prepareHandlesStorage', async () => {
             jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue({
                 slot: 2,
-                hash: 'b',
-                handles: {}
+                hash: 'b'
             });
             const ogmiosService = new OgmiosService();
             const startingPoint = await ogmiosService.getStartingPoint();

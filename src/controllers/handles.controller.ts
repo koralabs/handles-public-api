@@ -67,20 +67,24 @@ class HandlesController {
     ): Promise<void> => {
         try {
             const handleName = req.params.handle;
+            const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleData = await handleRepo.getHandleByName(handleName);
 
-            const result = await ProtectedWords.checkAvailability(handleName);
-            if (!result.available) {
-                res.status(result.code).send({
+            if (!handleData && !protectedWordsResult.available) {
+                res.status(protectedWordsResult.code).send({
                     message:
-                        result.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
-                            ? result.reason
-                            : result.message
+                        protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
+                            ? protectedWordsResult.reason
+                            : protectedWordsResult.message
                 });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const handleData = await handleRepo.getHandleByName(handleName);
+            if (!handleData) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
 
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
         } catch (error) {
@@ -91,20 +95,24 @@ class HandlesController {
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
             const handleName = req.params.handle;
+            const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
 
-            const result = await ProtectedWords.checkAvailability(handleName);
-            if (!result.available) {
-                res.status(result.code).send({
+            if (!handleData && !protectedWordsResult.available) {
+                res.status(protectedWordsResult.code).send({
                     message:
-                        result.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
-                            ? result.reason
-                            : result.message
+                        protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
+                            ? protectedWordsResult.reason
+                            : protectedWordsResult.message
                 });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
+            if (!handleData) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
 
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
         } catch (error) {

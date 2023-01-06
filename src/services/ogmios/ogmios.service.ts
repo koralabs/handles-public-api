@@ -1,10 +1,12 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
+import { processRollback } from './processRollback';
 import { memoryWatcher } from './utils';
 import { createLocalChainSyncClient } from './utils/localChainSync';
 
@@ -41,9 +43,12 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(response: { point: unknown }, requestNext: () => void): Promise<void> {
-        // TODO: Figure out how to Handle rollbacks!
-        Logger.log(`ROLLBACK POINT: ${JSON.stringify(response.point)}`);
+    private async rollBackward(
+        response: { point: PointOrOrigin; tip: TipOrOrigin },
+        requestNext: () => void
+    ): Promise<void> {
+        const { point, tip } = response;
+        processRollback(point, tip);
         requestNext();
     }
 
@@ -68,9 +73,10 @@ class OgmiosService {
             );
         }, 1000);
 
-        const saveFileInterval = setInterval(async () => {
+        const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
-            await HandleStore.saveFile(currentSlot, currentBlockHash);
+            await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
+            await HandleStore.saveSlotHistoryFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
         }, 30000);
@@ -80,7 +86,7 @@ class OgmiosService {
             HandleStore.setMetrics({ memorySize });
         }, 60000);
 
-        this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
+        this.intervals = [metricsInterval, saveFilesInterval, setMemoryInterval];
     }
 
     public async getStartingPoint(): Promise<Point> {

@@ -71,6 +71,8 @@ export const createLocalChainSyncClient = async (
 
         const processMessage = async (message: string) => {
             const policyId = POLICY_IDS[process.env.NETWORK ?? 'testnet'][0];
+
+            // check if the message contains the Handle policy ID or is a RollBackward
             if (message.indexOf('"result":{"RollBackward"') >= 0 || message.indexOf(policyId) >= 0) {
                 const response: Ogmios['RequestNextResponse'] = safeJSON.parse(message);
                 if (response.methodname === 'RequestNext') {
