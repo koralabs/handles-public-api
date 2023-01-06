@@ -264,12 +264,7 @@ export class HandleStore {
     ): HandleHistory | null {
         const { name } = newHandle;
         if (!oldHandle) {
-            return {
-                old: null,
-                new: {
-                    name
-                }
-            };
+            return { old: null };
         }
 
         // the diff will give us only properties that have been updated
@@ -284,10 +279,7 @@ export class HandleStore {
             return agg;
         }, {});
 
-        return {
-            old,
-            new: difference
-        };
+        return { old };
     }
 
     static saveSlotHistory({

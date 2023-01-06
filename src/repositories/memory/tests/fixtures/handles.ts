@@ -68,40 +68,28 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     0: {},
     1: {
         'barbacoa-hex': {
-            old: null,
-            new: {
-                resolved_addresses: { ada: handlesFixture[0].resolved_addresses.ada }
-            }
+            old: null
         },
         'burrito-hex': {
-            old: null,
-            new: {
-                resolved_addresses: { ada: handlesFixture[1].resolved_addresses.ada }
-            }
+            old: null
         },
         'taco-hex': {
-            old: null,
-            new: {
-                resolved_addresses: { ada: handlesFixture[2].resolved_addresses.ada }
-            }
+            old: null
         }
     },
     2: {
         'barbacoa-hex': {
-            old: { resolved_addresses: { ada: '123' } },
-            new: { resolved_addresses: { ada: '456' } }
+            old: { resolved_addresses: { ada: '123' } }
         }
     },
     3: {
         'burrito-hex': {
-            old: { resolved_addresses: { ada: '123' } },
-            new: { resolved_addresses: { ada: '456' } }
+            old: { resolved_addresses: { ada: '123' } }
         }
     },
     4: {
         'barbacoa-hex': {
-            old: { resolved_addresses: { ada: '456' } },
-            new: { resolved_addresses: { ada: '789' } }
+            old: { resolved_addresses: { ada: '456' } }
         }
     }
 };

@@ -20,8 +20,7 @@ describe('saveSlotHistory', () => {
     it('should save slot history', () => {
         const hex = 'nacho-hex';
         const history: HandleHistory = {
-            old: null,
-            new: { name: 'nacho' }
+            old: null
         };
         HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: 5 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -29,16 +28,15 @@ describe('saveSlotHistory', () => {
             [
                 1,
                 {
-                    'barbacoa-hex': { new: { resolved_addresses: { ada: '123' } }, old: null },
-                    'burrito-hex': { new: { resolved_addresses: { ada: '123' } }, old: null },
-                    'taco-hex': { new: { resolved_addresses: { ada: '123' } }, old: null }
+                    'barbacoa-hex': { old: null },
+                    'burrito-hex': { old: null },
+                    'taco-hex': { old: null }
                 }
             ],
             [
                 2,
                 {
                     'barbacoa-hex': {
-                        new: { resolved_addresses: { ada: '456' } },
                         old: { resolved_addresses: { ada: '123' } }
                     }
                 }
@@ -47,7 +45,6 @@ describe('saveSlotHistory', () => {
                 3,
                 {
                     'burrito-hex': {
-                        new: { resolved_addresses: { ada: '456' } },
                         old: { resolved_addresses: { ada: '123' } }
                     }
                 }
@@ -56,20 +53,18 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     'barbacoa-hex': {
-                        new: { resolved_addresses: { ada: '789' } },
                         old: { resolved_addresses: { ada: '456' } }
                     }
                 }
             ],
-            [5, { 'nacho-hex': { new: { name: 'nacho' }, old: null } }]
+            [5, { 'nacho-hex': { old: null } }]
         ]);
     });
 
     it('should remove slot indexes from the storage if they are old', () => {
         const hex = 'nacho-hex';
         const history: HandleHistory = {
-            old: null,
-            new: { name: 'nacho' }
+            old: null
         };
 
         // setting max slot to 2 which means it will be 3 (5 - 2)
@@ -81,8 +76,7 @@ describe('saveSlotHistory', () => {
         // saving new slot history should remove 3 and add 6
         const hex2 = 'nacho-hex2';
         const history2: HandleHistory = {
-            old: null,
-            new: { name: 'nacho2' }
+            old: null
         };
 
         HandleStore.saveSlotHistory({ handleHistory: history2, hex: hex2, slotNumber: 6, maxSlots: 2 });
@@ -93,8 +87,7 @@ describe('saveSlotHistory', () => {
     it('should update slot with new handle history', () => {
         const hex = 'nacho-hex';
         const history: HandleHistory = {
-            old: null,
-            new: { name: 'nacho' }
+            old: null
         };
         HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: 4 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -106,10 +99,9 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     'barbacoa-hex': {
-                        new: { resolved_addresses: { ada: '789' } },
                         old: { resolved_addresses: { ada: '456' } }
                     },
-                    'nacho-hex': { new: { name: 'nacho' }, old: null }
+                    'nacho-hex': { old: null }
                 }
             ]
         ]);
