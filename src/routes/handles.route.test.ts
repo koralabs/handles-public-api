@@ -197,6 +197,12 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('Legendary handles are not available yet.');
         });
 
+        it('should return legendary handle if available', async () => {
+            const response = await request(app?.getServer()).get('/handles/j/personalized');
+            expect(response.status).toEqual(200);
+            expect(response.body.handle).toEqual('j');
+        });
+
         it('should return invalid message', async () => {
             const response = await request(app?.getServer()).get('/handles/***/personalized');
             expect(response.status).toEqual(406);
