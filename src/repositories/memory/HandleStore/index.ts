@@ -290,17 +290,23 @@ export class HandleStore {
         };
     }
 
-    static saveSlotHistory(handleHistory: HandleHistory, hex: string, slotNumber: number) {
-        const slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
+    static saveSlotHistory(handleHistory: HandleHistory, hex: string, slotNumber: number, maxSlots = 43200) {
+        let slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
         if (!slotHistory) {
-            const newSlotHistory: ISlotHistoryIndex = {
+            slotHistory = {
                 [hex]: handleHistory
             };
-            HandleStore.slotHistoryIndex.set(slotNumber, newSlotHistory);
-            return;
+        } else {
+            slotHistory[hex] = handleHistory;
         }
 
-        slotHistory[hex] = handleHistory;
+        const oldestSlot = slotNumber - maxSlots;
+        HandleStore.slotHistoryIndex.forEach((_, slot) => {
+            if (slot < oldestSlot) {
+                HandleStore.slotHistoryIndex.delete(slot);
+            }
+        });
+
         HandleStore.slotHistoryIndex.set(slotNumber, slotHistory);
     }
 
