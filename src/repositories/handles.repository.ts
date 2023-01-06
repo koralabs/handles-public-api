@@ -6,8 +6,8 @@ import { HandleSearchModel } from '../models/HandleSearch.model';
 interface IHandlesRepository {
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<IHandle[]>;
     getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
-    getHandleByName: (handleName: string) => Promise<IHandle>;
-    getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle>;
+    getHandleByName: (handleName: string) => Promise<IHandle | null>;
+    getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getHandleStats: () => IHandleStats;
     getIsCaughtUp: () => boolean;
