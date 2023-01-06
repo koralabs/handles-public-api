@@ -2,6 +2,7 @@ import { IHandle, IPersonalization, IPersonalizedHandle } from '@koralabs/handle
 
 export interface HandleHistory {
     old: Partial<IHandle> | null;
+    new?: Partial<IHandle> | null;
 }
 
 export interface ISlotHistoryIndex {

@@ -264,7 +264,7 @@ export class HandleStore {
     ): HandleHistory | null {
         const { name } = newHandle;
         if (!oldHandle) {
-            return { old: null };
+            return NODE_ENV !== 'production' ? { old: null, new: { name } } : { old: null };
         }
 
         // the diff will give us only properties that have been updated
@@ -279,7 +279,7 @@ export class HandleStore {
             return agg;
         }, {});
 
-        return { old };
+        return NETWORK !== 'production' ? { old, new: difference } : { old };
     }
 
     static saveSlotHistory({
@@ -464,29 +464,6 @@ export class HandleStore {
         return date < now - 60000 && percentageComplete != `100.00`;
     }
 
-    static async buildStorage() {
-        // used to quickly build a large datastore
-        for (const number in Array.from(Array(1000000).keys())) {
-            const hex = `hash-${number}`;
-            const name = `${number}`.padStart(8, 'a');
-            const image = 'QmUtUk9Yi2LafdaYRcYdSgTVMaaDewPXoxP9wc18MhHygW';
-
-            const handle = this.buildHandle({
-                hexName: hex,
-                name,
-                adaAddress:
-                    'addr_test1qqrvwfds2vxvzagdrejjpwusas4j0k64qju5ul7hfnjl853lqpk6tq05pf67hwvmplvu0gc2xn75vvy3gyuxe6f7e5fsw0ever',
-                image,
-                og: 0,
-                slotNumber: Date.now(),
-                background: image,
-                profile_pic: image
-            });
-
-            await this.save({ handle });
-        }
-    }
-
     static async saveHandlesFile(
         slot: number,
         hash: string,
@@ -558,7 +535,7 @@ export class HandleStore {
             Logger.log({
                 message: `Error writing file: ${error.message}`,
                 event: 'saveFileContents.errorSavingFile',
-                category: LogCategory.ERROR
+                category: error.message === 'Lock file is already being held' ? LogCategory.INFO : LogCategory.ERROR
             });
             return false;
         }

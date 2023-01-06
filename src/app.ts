@@ -76,11 +76,6 @@ class App {
             return;
         }
 
-        if (this.env === 'development') {
-            this.initializeMockStorage();
-            return;
-        }
-
         if (this.env === 'local') {
             const localService = new LocalService();
             localService.startSync();
@@ -102,11 +97,6 @@ class App {
         }, 30000);
 
         await startOgmios();
-    }
-
-    private async initializeMockStorage() {
-        Logger.log('Initializing Mock Storage');
-        await HandleStore.buildStorage();
     }
 
     private async initializeSwagger() {

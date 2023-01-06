@@ -129,10 +129,10 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { old: null } }],
-                [expect.any(Number), { 'burrito-hex': { old: null } }],
-                [expect.any(Number), { 'taco-hex': { old: null } }],
-                [expect.any(Number), { 'nachos-hex': { old: null } }]
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [expect.any(Number), { 'nachos-hex': { new: { name: 'nachos' }, old: null } }]
             ]);
         });
     });
@@ -185,16 +185,23 @@ describe('HandleStore tests', () => {
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { old: null } }],
-                [expect.any(Number), { 'burrito-hex': { old: null } }],
-                [expect.any(Number), { 'taco-hex': { old: null } }],
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
                 // expect the initial create
-                [100, { 'nachos-hex': { old: null } }],
+                [100, { 'nachos-hex': { new: { name: 'nachos' }, old: null } }],
                 // expect the personalization update
                 [
                     200,
                     {
                         'nachos-hex': {
+                            new: {
+                                background: 'todo',
+                                default_in_wallet: '',
+                                nft_image: 'todo',
+                                profile_pic: 'todo',
+                                updated_slot_number: 200
+                            },
                             old: {
                                 background: '',
                                 default_in_wallet: 'taco',
@@ -285,14 +292,21 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { old: null } }],
-                [expect.any(Number), { 'burrito-hex': { old: null } }],
-                [expect.any(Number), { 'taco-hex': { old: null } }],
-                [100, { 'salsa-hex': { old: null } }],
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [100, { 'salsa-hex': { new: { name: 'salsa' }, old: null } }],
                 [
                     200,
                     {
                         'salsa-hex': {
+                            new: {
+                                holder_address: 'stake123_new',
+                                resolved_addresses: {
+                                    ada: 'addr123_new'
+                                },
+                                updated_slot_number: 200
+                            },
                             old: {
                                 holder_address: stakeKey,
                                 resolved_addresses: { ada: address },

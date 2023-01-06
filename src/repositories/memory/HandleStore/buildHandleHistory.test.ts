@@ -14,6 +14,11 @@ describe('buildHandleHistory', () => {
         const history = HandleStore.buildHandleHistory(newHandle, oldHandle);
 
         expect(history).toEqual({
+            new: {
+                resolved_addresses: {
+                    ada: 'taco_addr'
+                }
+            },
             old: { resolved_addresses: { ada: '123' } }
         });
     });
