@@ -149,7 +149,7 @@ export class HandleStore {
 
         if (saveHistory) {
             const history = HandleStore.buildHandleHistory(handle, oldHandle, personalization);
-            if (history) HandleStore.saveSlotHistory(history, hex, updated_slot_number);
+            if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
     };
 
@@ -290,7 +290,17 @@ export class HandleStore {
         };
     }
 
-    static saveSlotHistory(handleHistory: HandleHistory, hex: string, slotNumber: number, maxSlots = 43200) {
+    static saveSlotHistory({
+        handleHistory,
+        hex,
+        slotNumber,
+        maxSlots = 43200 // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
+    }: {
+        handleHistory: HandleHistory;
+        hex: string;
+        slotNumber: number;
+        maxSlots?: number;
+    }) {
         let slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
         if (!slotHistory) {
             slotHistory = {

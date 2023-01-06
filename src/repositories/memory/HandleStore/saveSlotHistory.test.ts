@@ -23,7 +23,7 @@ describe('saveSlotHistory', () => {
             old: null,
             new: { name: 'nacho' }
         };
-        HandleStore.saveSlotHistory(history, hex, 5);
+        HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: 5 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
             [0, {}],
             [
@@ -73,7 +73,7 @@ describe('saveSlotHistory', () => {
         };
 
         // setting max slot to 2 which means it will be 3 (5 - 2)
-        HandleStore.saveSlotHistory(history, hex, 5, 2);
+        HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: 5, maxSlots: 2 });
 
         // expecting 0, 1, 2 to be removed
         expect(Array.from(HandleStore.slotHistoryIndex.keys())).toEqual([3, 4, 5]);
@@ -85,7 +85,7 @@ describe('saveSlotHistory', () => {
             new: { name: 'nacho2' }
         };
 
-        HandleStore.saveSlotHistory(history2, hex2, 6, 2);
+        HandleStore.saveSlotHistory({ handleHistory: history2, hex: hex2, slotNumber: 6, maxSlots: 2 });
 
         expect(Array.from(HandleStore.slotHistoryIndex.keys())).toEqual([4, 5, 6]);
     });
@@ -96,7 +96,7 @@ describe('saveSlotHistory', () => {
             old: null,
             new: { name: 'nacho' }
         };
-        HandleStore.saveSlotHistory(history, hex, 4);
+        HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: 4 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
             [0, {}],
             [1, expect.any(Object)],
