@@ -498,7 +498,7 @@ export class HandleStore {
         };
         const path = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${this.handles.size} handles`);
-        const result = await HandleStore.saveFileContents({ handles }, path, slot, hash, processing);
+        const result = await HandleStore.saveFileContents({ content: { handles }, path, slot, hash, processing });
         return result;
     }
 
@@ -511,17 +511,23 @@ export class HandleStore {
         const history = Array.from(HandleStore.slotHistoryIndex);
         const path = storagePath ?? this.historyFilePath;
         Logger.log(`Saving file with ${history.length} history entries`);
-        const result = await HandleStore.saveFileContents({ history }, path, slot, hash, processing);
+        const result = await HandleStore.saveFileContents({ content: { history }, path, slot, hash, processing });
         return result;
     }
 
-    static async saveFileContents(
-        content: any,
-        path: string,
-        slot: number,
-        hash: string,
-        processing?: Function
-    ): Promise<boolean> {
+    static async saveFileContents({
+        content,
+        path,
+        slot,
+        hash,
+        processing
+    }: {
+        path: string;
+        content?: any;
+        slot?: number;
+        hash?: string;
+        processing?: Function;
+    }): Promise<boolean> {
         try {
             const isLocked = await lockfile.check(path);
             if (isLocked) {
@@ -531,15 +537,18 @@ export class HandleStore {
 
             const release = await lockfile.lock(path);
 
-            fs.writeFileSync(
-                path,
-                JSON.stringify({
-                    slot,
-                    hash,
-                    schemaVersion: this.storageSchemaVersion,
-                    ...content
-                })
-            );
+            // if there is no content, hash or slot we can assume we are going to clear the file
+            const fileContent =
+                content && hash && slot
+                    ? JSON.stringify({
+                          slot,
+                          hash,
+                          schemaVersion: this.storageSchemaVersion,
+                          ...content
+                      })
+                    : '';
+
+            fs.writeFileSync(path, fileContent);
 
             if (processing) await processing();
 
@@ -766,12 +775,14 @@ export class HandleStore {
         return { slot, hash };
     }
 
-    static rollBackToGenesis() {
+    static async rollBackToGenesis() {
         Logger.log({
             message: 'Rolling back to genesis',
             category: LogCategory.INFO,
             event: 'HandleStore.rollBackToGenesis'
         });
+
+        // erase all indexes
         this.handles = new Map<string, IHandle>();
         this.personalization = new Map<string, IPersonalization>();
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
@@ -781,6 +792,10 @@ export class HandleStore {
         this.charactersIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();
+
+        // clear storage files
+        await HandleStore.saveFileContents({ path: HandleStore.storageFilePath });
+        await HandleStore.saveFileContents({ path: HandleStore.historyFilePath });
     }
 
     static async rewindChangesToSlot({
