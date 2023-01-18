@@ -2,7 +2,7 @@
 
 NODE_SOCKET_IP_preview='35.87.23.190'
 NODE_SOCKET_IP_preprod='35.87.161.239'
-NODE_SOCKET_IP_mainnet='54.203.112.220'
+NODE_SOCKET_IP_mainnet='35.93.36.48'
 MODE=${MODE:-socat}
 NETWORK=${NETWORK:-mainnet}
 SOCKET_PATH=${SOCKET_PATH:-${HOME}/cardano/${NETWORK}/ipc}
@@ -30,10 +30,12 @@ fi
 if [ "${MODE}" == "socat" ]; then
     SOCAT_PID=$(lsof -t ${SOCKET_PATH}/node.socket 2>/dev/null || echo '')
     if [ ! -z ${SOCAT_PID} ]; then
+        echo "Previous node.socket found for ${NETWORK}. Killing and deleting."
         kill -9 ${SOCAT_PID}
     fi
     rm -f ${SOCKET_PATH}/node.socket
     NODE_SOCKET_IP=$(eval echo "\${NODE_SOCKET_IP_$NETWORK}")
     SOCAT_COMMAND="socat UNIX-LISTEN:${SOCKET_PATH}/node.socket,fork TCP-CONNECT:${NODE_SOCKET_IP:-}:4001 &"
+    echo "Executing ${SOCAT_COMMAND}"
     eval $SOCAT_COMMAND
 fi
