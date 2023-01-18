@@ -48,25 +48,27 @@ class OgmiosService {
     }
 
     private startIntervals() {
-        const metricsInterval = setInterval(() => {
-            const metrics = HandleStore.getMetrics();
-            if (!metrics) return;
-
-            const {
-                percentageComplete,
-                currentMemoryUsed,
-                buildingElapsed,
-                memorySize,
-                handleCount,
-                ogmiosElapsed,
-                slotDate
-            } = metrics;
-
-            writeConsoleLine(
-                this.startTime,
-                `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
-            );
-        }, 1000);
+        // const metricsInterval = setInterval(() => {
+        //     if (process.env.CONSOLE_STATUS === 'true') {
+        //         const metrics = HandleStore.getMetrics();
+        //         if (!metrics) return;
+    
+        //         const {
+        //             percentageComplete,
+        //             currentMemoryUsed,
+        //             buildingElapsed,
+        //             memorySize,
+        //             handleCount,
+        //             ogmiosElapsed,
+        //             slotDate
+        //         } = metrics;
+    
+        //         writeConsoleLine(
+        //             this.startTime,
+        //             `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
+        //         );
+        //     }
+        // }, 1000);
 
         const saveFileInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
@@ -80,7 +82,7 @@ class OgmiosService {
             HandleStore.setMetrics({ memorySize });
         }, 60000);
 
-        this.intervals = [metricsInterval, saveFileInterval, setMemoryInterval];
+        this.intervals = [saveFileInterval, setMemoryInterval];
     }
 
     public async getStartingPoint(): Promise<Point> {

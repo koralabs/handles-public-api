@@ -87,6 +87,7 @@ export class HandleStore {
     };
 
     static save = async (handle: IHandle, personalization?: IPersonalization) => {
+        const updatedHandle = JSON.parse(JSON.stringify(handle))
         const {
             name,
             rarity,
@@ -96,13 +97,13 @@ export class HandleStore {
             length,
             hex,
             resolved_addresses: { ada }
-        } = handle;
+        } = updatedHandle;
 
-        const holderAddressDetails = await getAddressHolderDetails(ada);
-        handle.holder_address = holderAddressDetails.address;
+        //const holderAddressDetails = await getAddressHolderDetails(ada);
+        //handle.holder_address = holderAddressDetails.address;
 
         // Set the main index
-        this.handles.set(hex, handle);
+        this.handles.set(hex, updatedHandle);
 
         // set the personalization index
         if (personalization) {
@@ -120,7 +121,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        await this.setHolderAddressIndex(holderAddressDetails, hex);
+        //this.setHolderAddressIndex(holderAddressDetails, hex);
     };
 
     static setHolderAddressIndex = async (
@@ -209,6 +210,7 @@ export class HandleStore {
 
         existingHandle.resolved_addresses.ada = adaAddress;
         existingHandle.updated_slot_number = slotNumber;
+
         await HandleStore.save(existingHandle);
     };
 
