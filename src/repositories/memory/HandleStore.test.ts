@@ -4,7 +4,6 @@ import { delay } from '../../utils/util';
 import { handlesFixture } from './tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
-import * as serialization from '../../utils/serialization';
 import * as addresses from '../../utils/addresses';
 
 jest.mock('fs');
@@ -16,14 +15,13 @@ jest.mock('../../utils/addresses');
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
 
-    beforeAll(() => {
+    beforeAll(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
             address: 'stake123',
             type: 'base',
             knownOwnerName: 'unknown'
         });
-        // populate storage
-        handlesFixture.forEach((handle) => {
+        for (const handle of handlesFixture) {
             const {
                 hex: hexName,
                 original_nft_image: image,
@@ -32,8 +30,8 @@ describe('HandleStore tests', () => {
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
-        });
+            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+        }
 
         // create test file
         writeFileSync(filePath, '{}');

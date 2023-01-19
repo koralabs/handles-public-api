@@ -1,6 +1,5 @@
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { InspectAddress, inspectAddress } from 'cardano-addresses';
-import { buildStakeKey } from './serialization';
+import { buildStakeKey, getAddressType } from './serialization';
 
 export interface AddressDetails {
     address: string;
@@ -8,29 +7,8 @@ export interface AddressDetails {
     knownOwnerName: string;
 }
 
-export enum AddressType {
-    Wallet = 'stake',
-    Enterprise = 'enterprise',
-    Script = 'script',
-    Other = 'other'
-}
-
-const getAddressType = (addressType: number): AddressType => {
-    // https://cips.cardano.org/cips/cip19/#shelleyaddresses
-    if (addressType >= 8) {
-        return AddressType.Other;
-    } else if (addressType === 6) {
-        return AddressType.Enterprise;
-    } else if (addressType % 2 === 0) {
-        return AddressType.Wallet;
-    } else {
-        return AddressType.Script;
-    }
-};
-
 export const getAddressHolderDetails = async (addr: string): Promise<AddressDetails> => {
-    const details = await inspectAddress(addr);
-    const addressType = getAddressType(details.address_type);
+    const addressType = await getAddressType(addr);
 
     try {
         const stakeKey = await buildStakeKey(addr);

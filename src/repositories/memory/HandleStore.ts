@@ -87,6 +87,7 @@ export class HandleStore {
     };
 
     static save = async (handle: IHandle, personalization?: IPersonalization) => {
+        const updatedHandle = JSON.parse(JSON.stringify(handle));
         const {
             name,
             rarity,
@@ -96,13 +97,13 @@ export class HandleStore {
             length,
             hex,
             resolved_addresses: { ada }
-        } = handle;
+        } = updatedHandle;
 
         const holderAddressDetails = await getAddressHolderDetails(ada);
-        handle.holder_address = holderAddressDetails.address;
+        updatedHandle.holder_address = holderAddressDetails.address;
 
         // Set the main index
-        this.handles.set(hex, handle);
+        this.handles.set(hex, updatedHandle);
 
         // set the personalization index
         if (personalization) {
@@ -120,7 +121,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        await this.setHolderAddressIndex(holderAddressDetails, hex);
+        this.setHolderAddressIndex(holderAddressDetails, hex);
     };
 
     static setHolderAddressIndex = async (
@@ -209,6 +210,7 @@ export class HandleStore {
 
         existingHandle.resolved_addresses.ada = adaAddress;
         existingHandle.updated_slot_number = slotNumber;
+
         await HandleStore.save(existingHandle);
     };
 
@@ -509,14 +511,16 @@ export class HandleStore {
             }
 
             const { handles, slot, hash } = handlesContent;
-            Object.keys(handles ?? {}).forEach(async (k) => {
-                const handle = handles[k];
+            const keys = Object.keys(handles ?? {});
+            for (let i = 0; i < keys.length; i++) {
+                const hex = keys[i];
+                const handle = handles[hex];
                 const newHandle = {
                     ...handle
                 };
                 delete newHandle.personalization;
                 await HandleStore.save(newHandle, handle.personalization);
-            });
+            }
 
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${
