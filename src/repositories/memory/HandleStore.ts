@@ -87,7 +87,7 @@ export class HandleStore {
     };
 
     static save = async (handle: IHandle, personalization?: IPersonalization) => {
-        const updatedHandle = JSON.parse(JSON.stringify(handle))
+        const updatedHandle = JSON.parse(JSON.stringify(handle));
         const {
             name,
             rarity,
@@ -99,8 +99,8 @@ export class HandleStore {
             resolved_addresses: { ada }
         } = updatedHandle;
 
-        //const holderAddressDetails = await getAddressHolderDetails(ada);
-        //handle.holder_address = holderAddressDetails.address;
+        const holderAddressDetails = await getAddressHolderDetails(ada);
+        updatedHandle.holder_address = holderAddressDetails.address;
 
         // Set the main index
         this.handles.set(hex, updatedHandle);
@@ -121,7 +121,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, hex);
 
         // TODO: set default name during personalization
-        //this.setHolderAddressIndex(holderAddressDetails, hex);
+        this.setHolderAddressIndex(holderAddressDetails, hex);
     };
 
     static setHolderAddressIndex = async (
@@ -511,14 +511,16 @@ export class HandleStore {
             }
 
             const { handles, slot, hash } = handlesContent;
-            Object.keys(handles ?? {}).forEach(async (k) => {
-                const handle = handles[k];
+            const keys = Object.keys(handles ?? {});
+            for (let i = 0; i < keys.length; i++) {
+                const hex = keys[i];
+                const handle = handles[hex];
                 const newHandle = {
                     ...handle
                 };
                 delete newHandle.personalization;
                 await HandleStore.save(newHandle, handle.personalization);
-            });
+            }
 
             Logger.log(
                 `Handle storage found at slot: ${slot} and hash: ${hash} with ${
