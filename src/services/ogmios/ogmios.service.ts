@@ -1,6 +1,6 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
 import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
-import { Logger } from '@koralabs/kora-labs-common';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';
@@ -53,25 +53,27 @@ class OgmiosService {
     }
 
     private startIntervals() {
-        const metricsInterval = setInterval(() => {
-            const metrics = HandleStore.getMetrics();
-            if (!metrics) return;
+        // const metricsInterval = setInterval(() => {
+        //     if (process.env.CONSOLE_STATUS === 'true') {
+        //         const metrics = HandleStore.getMetrics();
+        //         if (!metrics) return;
 
-            const {
-                percentageComplete,
-                currentMemoryUsed,
-                buildingElapsed,
-                memorySize,
-                handleCount,
-                ogmiosElapsed,
-                slotDate
-            } = metrics;
+        //         const {
+        //             percentageComplete,
+        //             currentMemoryUsed,
+        //             buildingElapsed,
+        //             memorySize,
+        //             handleCount,
+        //             ogmiosElapsed,
+        //             slotDate
+        //         } = metrics;
 
-            writeConsoleLine(
-                this.startTime,
-                `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
-            );
-        }, 1000);
+        //         writeConsoleLine(
+        //             this.startTime,
+        //             `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
+        //         );
+        //     }
+        // }, 1000);
 
         const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
@@ -86,7 +88,7 @@ class OgmiosService {
             HandleStore.setMetrics({ memorySize });
         }, 60000);
 
-        this.intervals = [metricsInterval, saveFilesInterval, setMemoryInterval];
+        this.intervals = [saveFilesInterval, setMemoryInterval];
     }
 
     public async getStartingPoint(): Promise<Point> {
@@ -112,7 +114,12 @@ class OgmiosService {
             (err) => console.error(err),
             () => {
                 this.intervals.map((i) => clearInterval(i));
-                Logger.log('Connection closed.');
+                Logger.log({
+                    message: 'Connection closed.',
+                    category: LogCategory.WARN,
+                    event: 'OgmiosService.createInteractionContext.closeHandler'
+                });
+                process.exit(2);
             },
             { connection: { port: 1337 } }
         );

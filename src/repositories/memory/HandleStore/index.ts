@@ -111,6 +111,7 @@ export class HandleStore {
         personalization?: IPersonalization;
         saveHistory?: boolean;
     }) => {
+        const updatedHandle = JSON.parse(JSON.stringify(handle));
         const {
             name,
             rarity,
@@ -121,13 +122,13 @@ export class HandleStore {
             hex,
             resolved_addresses: { ada },
             updated_slot_number
-        } = handle;
+        } = updatedHandle;
 
         const holderAddressDetails = await getAddressHolderDetails(ada);
-        handle.holder_address = holderAddressDetails.address;
+        updatedHandle.holder_address = holderAddressDetails.address;
 
         // Set the main index
-        this.handles.set(hex, handle);
+        this.handles.set(hex, updatedHandle);
 
         // set the personalization index
         if (personalization) {
@@ -148,7 +149,7 @@ export class HandleStore {
         this.setHolderAddressIndex(holderAddressDetails, hex);
 
         if (saveHistory) {
-            const history = HandleStore.buildHandleHistory(handle, oldHandle, personalization);
+            const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, personalization);
             if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
     };
@@ -724,7 +725,7 @@ export class HandleStore {
         } = filesContent;
 
         // save all the individual handles to the store
-        const keys = Object.keys(handles);
+        const keys = Object.keys(handles ?? {});
         for (let i = 0; i < keys.length; i++) {
             const hex = keys[i];
             const handle = handles[hex];

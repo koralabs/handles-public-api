@@ -12,12 +12,13 @@ const errorMiddleware = (error: HttpException, req: Request, res: Response, next
         } else if (error instanceof HttpException) {
             status = error.status;
         }
-
-        Logger.log({
-            message: `[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`,
-            category: LogCategory.ERROR,
-            event: 'middleware.error'
-        });
+        if (status >= 500) {
+            Logger.log({
+                message: `[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`,
+                category: LogCategory.ERROR,
+                event: 'http.exception'
+            });
+        }
         res.status(status).json({ message });
     } catch (error) {
         next(error);

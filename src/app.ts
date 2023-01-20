@@ -10,7 +10,6 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
-import { loadCardanoWasm } from './utils/serialization';
 
 class App {
     public app: express.Application;
@@ -27,7 +26,6 @@ class App {
         this.initializeMiddleware();
         this.initializeDynamicHandlers();
         this.initializeStorage();
-        loadCardanoWasm();
     }
 
     public listen() {
@@ -87,15 +85,10 @@ class App {
             try {
                 const ogmiosService = new OgmiosService();
                 await ogmiosService.startSync();
-                clearInterval(interval);
             } catch (error: any) {
                 writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`);
             }
         };
-
-        const interval = setInterval(async () => {
-            await startOgmios();
-        }, 30000);
 
         await startOgmios();
     }
