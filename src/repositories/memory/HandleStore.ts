@@ -377,7 +377,7 @@ export class HandleStore {
             Logger.log(`Saving file with ${this.handles.size} handles`);
             const isLocked = await lockfile.check(path);
             if (isLocked) {
-                Logger.log('Unable to save. File is locked');
+                Logger.log({message: 'Unable to save. File is locked', event: 'saveFile.locked'});
                 return false;
             }
 
@@ -398,11 +398,20 @@ export class HandleStore {
             await release();
             return true;
         } catch (error: any) {
-            Logger.log({
-                message: `Error writing file: ${error.message}`,
-                event: 'saveFile.errorSavingFile',
-                category: LogCategory.ERROR
-            });
+            if (error.message == 'Lock file is already being held') {
+                Logger.log({
+                    message: `${error.message}`,
+                    event: 'saveFile.locked',
+                    category: LogCategory.INFO
+                });
+            }
+            else {
+                Logger.log({
+                    message: `Error writing file: ${error.message}`,
+                    event: 'saveFile.errorSavingFile',
+                    category: LogCategory.ERROR
+                });
+            }
             return false;
         }
     }
