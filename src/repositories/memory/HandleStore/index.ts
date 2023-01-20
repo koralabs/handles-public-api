@@ -34,7 +34,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 3;
+    static storageSchemaVersion = 4;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -692,7 +692,9 @@ export class HandleStore {
         HandleStore.slotHistoryIndex = new Map(history);
 
         Logger.log(
-            `Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles`
+            `Handle storage found at slot: ${slot} and hash: ${hash} with ${
+                Object.keys(handles ?? {}).length
+            } handles and ${history?.length} history entries`
         );
 
         // if the file contents are new (from the external source), save the handles and history to the store.
