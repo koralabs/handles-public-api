@@ -1,5 +1,5 @@
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { buildStakeKey, getAddressType } from './serialization';
+import { buildStakeKey, buildPaymentAddressType, AddressType } from './serialization';
 
 export interface AddressDetails {
     address: string;
@@ -8,38 +8,20 @@ export interface AddressDetails {
 }
 
 export const getAddressHolderDetails = async (addr: string): Promise<AddressDetails> => {
-    const addressType = await getAddressType(addr);
+    const addressType = buildPaymentAddressType(addr);
+    let knownOwnerName = checkKnownSmartContracts(addr);
+    let stakeKey = null;
 
-    try {
-        const stakeKey = await buildStakeKey(addr);
-        const knownOwnerName = checkKnownSmartContracts(addr, stakeKey);
-
-        return {
-            address: stakeKey ?? addr,
-            type: addressType,
-            knownOwnerName
-        };
-    } catch (error: any) {
-        Logger.log({
-            message: `${addr} is invalid: ${JSON.stringify(error)}`,
-            event: 'serialization.getAddressHolderAddress.errorSerializing',
-            category: LogCategory.INFO
-        });
-
-        let knownOwnerName = checkKnownSmartContracts(addr);
-        if (
-            error == 'mixed-case strings not allowed' ||
-            error.toString().startsWith('missing human-readable separator')
-        ) {
-            knownOwnerName = `contract:exchange`;
-        }
-
-        return {
-            address: addr,
-            type: addressType,
-            knownOwnerName
-        };
+    if (addressType === AddressType.Wallet || addressType === AddressType.Script) {
+        stakeKey = buildStakeKey(addr);
+        knownOwnerName = checkKnownSmartContracts(addr, stakeKey);
     }
+
+    return {
+        address: stakeKey ?? addr,
+        type: addressType,
+        knownOwnerName
+    };
 };
 
 export const checkKnownSmartContracts = (address: string, stake?: string | null): string => {

@@ -1,5 +1,5 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { Logger } from '@koralabs/kora-labs-common';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { writeConsoleLine } from '../../utils/util';
@@ -52,7 +52,7 @@ class OgmiosService {
         //     if (process.env.CONSOLE_STATUS === 'true') {
         //         const metrics = HandleStore.getMetrics();
         //         if (!metrics) return;
-    
+
         //         const {
         //             percentageComplete,
         //             currentMemoryUsed,
@@ -62,7 +62,7 @@ class OgmiosService {
         //             ogmiosElapsed,
         //             slotDate
         //         } = metrics;
-    
+
         //         writeConsoleLine(
         //             this.startTime,
         //             `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
@@ -108,7 +108,12 @@ class OgmiosService {
             (err) => console.error(err),
             () => {
                 this.intervals.map((i) => clearInterval(i));
-                Logger.log('Connection closed.');
+                Logger.log({
+                    message: 'Connection closed.',
+                    category: LogCategory.WARN,
+                    event: 'OgmiosService.createInteractionContext.closeHandler'
+                });
+                process.exit(2);
             },
             { connection: { port: 1337 } }
         );
