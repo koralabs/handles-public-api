@@ -452,13 +452,15 @@ components:
       example: wallet
       description: |
         <br />If it is a Shelley address and a script, it will say `script`.
-        <br />If it is Shelley, is not a script, and has a stake key, it will be `wallet`.
+        <br />If it is a Shelley rewards address, it will say `reward`.
+        <br />If it is Shelley, is not a script or reward address, and has a stake key, it will be `wallet`.
         <br />If it is Shelley, is not a script, and doesn't have a stake key, it will be `enterprise`.
         <br />If the address is not a Shelley address, it will be `other`.
       enum:
       - wallet
       - script
       - enterprise
+      - reward
       - other
   requestBodies:
     Handle:
