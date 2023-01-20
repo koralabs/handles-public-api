@@ -6,7 +6,6 @@ import yaml from 'yamljs';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
-import { HandleStore } from './repositories/memory/HandleStore';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
@@ -30,12 +29,14 @@ class App {
     }
 
     public listen() {
-        this.app.listen(this.port, () => {
+        const server = this.app.listen(this.port, () => {
             Logger.log(`=========================================`);
             Logger.log(`============ENV: ${this.env} ============`);
             Logger.log(`🚀 App listening on the port ${this.port}`);
             Logger.log(`=========================================`);
         });
+
+        server.keepAliveTimeout = 61 * 1000;
     }
 
     public getServer() {
@@ -74,11 +75,6 @@ class App {
             return;
         }
 
-        if (this.env === 'development') {
-            this.initializeMockStorage();
-            return;
-        }
-
         if (this.env === 'local') {
             const localService = new LocalService();
             localService.startSync();
@@ -95,11 +91,6 @@ class App {
         };
 
         await startOgmios();
-    }
-
-    private async initializeMockStorage() {
-        Logger.log('Initializing Mock Storage');
-        HandleStore.buildStorage();
     }
 
     private async initializeSwagger() {

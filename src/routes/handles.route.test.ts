@@ -9,18 +9,14 @@ jest.mock('../ioc', () => ({
     registry: {
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
-                if (handleName === 'nope') {
-                    throw new HttpException(404, 'Not found');
-                }
+                if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 return {
                     handle: handleName
                 };
             },
             getPersonalizedHandleByName: (handleName: string) => {
-                if (handleName === 'nope') {
-                    throw new HttpException(404, 'Not found');
-                }
+                if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 return {
                     handle: handleName
@@ -146,7 +142,7 @@ describe('Testing Handles Routes', () => {
         it('should throw error if handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/nope');
             expect(response.status).toEqual(404);
-            expect(response.body.message).toEqual('Not found');
+            expect(response.body.message).toEqual('Handle not found');
         });
 
         it('should return valid handle', async () => {
@@ -155,8 +151,14 @@ describe('Testing Handles Routes', () => {
             expect(response.body.handle).toEqual('burritos');
         });
 
-        it('should return legendary message', async () => {
+        it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
+            expect(response.status).toEqual(200);
+            expect(response.body.handle).toEqual('1');
+        });
+
+        it('should return legendary message when handle does not exist', async () => {
+            const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Legendary handles are not available yet.');
         });
@@ -180,7 +182,7 @@ describe('Testing Handles Routes', () => {
         it('should throw error if handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/nope/personalized');
             expect(response.status).toEqual(404);
-            expect(response.body.message).toEqual('Not found');
+            expect(response.body.message).toEqual('Handle not found');
         });
 
         it('should return valid handle', async () => {
@@ -190,9 +192,15 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return legendary message', async () => {
-            const response = await request(app?.getServer()).get('/handles/1/personalized');
+            const response = await request(app?.getServer()).get('/handles/l/personalized');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Legendary handles are not available yet.');
+        });
+
+        it('should return legendary handle if available', async () => {
+            const response = await request(app?.getServer()).get('/handles/j/personalized');
+            expect(response.status).toEqual(200);
+            expect(response.body.handle).toEqual('j');
         });
 
         it('should return invalid message', async () => {

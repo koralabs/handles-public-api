@@ -7,8 +7,9 @@
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
   "scripts": {
-    "start": "mkdir -p handles && touch handles/handles.json && node express.js",
-    "start:forever": "mkdir -p handles && touch handles/handles.json && mkdir -p forever && forever -p ./forever start express.js",
+    "create_paths": "mkdir -p handles && touch handles/handles.json",
+    "start": "yarn create_paths && node express.js",
+    "start:forever": "yarn create_paths && mkdir -p forever && forever -p ./forever start express.js",
     "start:containers": "chmod +x ./start_containers.sh && ./start_containers.sh",
     "forever:list": "forever list",
     "forever:stop": "forever stopall",
@@ -20,7 +21,7 @@
     "dev": "cross-env NODE_ENV=development nodemon",
     "dev:local": "cross-env NODE_ENV=local ORIGIN=* nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
-    "dev:preprod": "cross-env NODE_ENV=production NETWORK=preprod nodemon",
+    "dev:preprod": "cross-env NODE_ENV=development NETWORK=preprod nodemon",
     "test": "jest --silent --forceExit --detectOpenHandles --coverage",
     "lint": "eslint --ignore-path .gitignore --ext .ts src/",
     "lint:fix": "npm run lint -- --fix"
@@ -58,6 +59,7 @@
     "bech32": "^2.0.0",
     "cors": "^2.8.5",
     "cross-fetch": "^3.1.5",
+    "deep-object-diff": "^1.1.9",
     "dotenv": "^16.0.2",
     "express": "^4.18.1",
     "fastq": "^1.14.0",

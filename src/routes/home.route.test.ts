@@ -9,9 +9,7 @@ jest.mock('../ioc', () => ({
     registry: {
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
-                if (handleName === 'nope') {
-                    throw new HttpException(404, 'Not found');
-                }
+                if (['nope'].includes(handleName)) return null;
 
                 return {
                     handle: handleName
