@@ -33,6 +33,7 @@ export class HandleStore {
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
 
+    static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     static storageSchemaVersion = 3;
     static metrics: IHandleStoreMetrics = {
@@ -148,7 +149,11 @@ export class HandleStore {
         // TODO: set default name during personalization
         this.setHolderAddressIndex(holderAddressDetails, hex);
 
-        if (saveHistory) {
+        const isWithinMaxSlot = true;
+        this.metrics.lastSlot &&
+            this.metrics.currentSlot &&
+            this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+        if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, personalization);
             if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
@@ -287,7 +292,7 @@ export class HandleStore {
         handleHistory,
         hex,
         slotNumber,
-        maxSlots = 43200 // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
+        maxSlots = this.twelveHourSlot
     }: {
         handleHistory: HandleHistory;
         hex: string;
@@ -565,16 +570,6 @@ export class HandleStore {
                     message: `${path} file does not exist`,
                     category: LogCategory.INFO,
                     event: 'HandleStore.getFile.doesNotExist'
-                });
-                return null;
-            }
-
-            const isLocked = await lockfile.check(path);
-            if (isLocked) {
-                Logger.log({
-                    message: `${path} file is locked`,
-                    category: LogCategory.INFO,
-                    event: 'HandleStore.getFile.locked'
                 });
                 return null;
             }

@@ -16,6 +16,7 @@ describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
 
     beforeEach(async () => {
+        HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
             address: 'stake123',
             type: 'base',
