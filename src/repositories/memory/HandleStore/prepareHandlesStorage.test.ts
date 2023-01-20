@@ -79,7 +79,6 @@ describe('prepareHandlesStorage', () => {
 
     it('Should get starting point from the local file when schema is unavailable', async () => {
         const saveHandlesFileSpy = jest.spyOn(HandleStore, 'saveHandlesFile');
-        const saveSlotHistoryFileSpy = jest.spyOn(HandleStore, 'saveSlotHistoryFile');
         jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
             slot: 42971872,
             hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
@@ -97,12 +96,10 @@ describe('prepareHandlesStorage', () => {
             slot: 75171663
         });
         expect(saveHandlesFileSpy).toHaveBeenCalledTimes(0);
-        expect(saveSlotHistoryFileSpy).toHaveBeenCalledTimes(0);
     });
 
     it('Should get starting point from the local file when online file is unavailable', async () => {
         const saveHandlesFileSpy = jest.spyOn(HandleStore, 'saveHandlesFile');
-        const saveSlotHistoryFileSpy = jest.spyOn(HandleStore, 'saveSlotHistoryFile');
         jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
         jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
             slot: 1,
@@ -116,12 +113,10 @@ describe('prepareHandlesStorage', () => {
             slot: 1
         });
         expect(saveHandlesFileSpy).toHaveBeenCalledTimes(0);
-        expect(saveSlotHistoryFileSpy).toHaveBeenCalledTimes(0);
     });
 
     it('Should get starting point from the online file when local available', async () => {
         const saveHandlesFileSpy = jest.spyOn(HandleStore, 'saveHandlesFile');
-        const saveSlotHistoryFileSpy = jest.spyOn(HandleStore, 'saveSlotHistoryFile');
         jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
             slot: 2,
             hash: 'b',
@@ -135,7 +130,6 @@ describe('prepareHandlesStorage', () => {
             slot: 2
         });
         expect(saveHandlesFileSpy).toHaveBeenCalledTimes(1);
-        expect(saveSlotHistoryFileSpy).toHaveBeenCalledTimes(1);
     });
 
     it('Should use starting point from constants if both AWS and local file are not found', async () => {

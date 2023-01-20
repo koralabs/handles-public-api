@@ -14,12 +14,6 @@ export interface IHandleFileContent {
     hash: string;
     schemaVersion?: number;
     handles: Record<string, IPersonalizedHandle>;
-}
-
-export interface IHandleHistoryFileContent {
-    slot: number;
-    hash: string;
-    schemaVersion?: number;
     history: [number, ISlotHistoryIndex][];
 }
 

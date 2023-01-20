@@ -1,4 +1,4 @@
-import { IHandle, IHandleStats, IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { IHandle, IHandleStats, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import fs from 'fs';
@@ -17,8 +17,7 @@ import {
     SaveWalletAddressMoveInput,
     HolderAddressIndex,
     ISlotHistoryIndex,
-    HandleHistory,
-    IHandleHistoryFileContent
+    HandleHistory
 } from '../interfaces/handleStore.interfaces';
 export class HandleStore {
     // Indexes
@@ -57,9 +56,6 @@ export class HandleStore {
 
     static storageFileName = `handles${HandleStore.buildNetworkForNaming()}.json`;
     static storageFilePath = `${HandleStore.storageFolder}/${HandleStore.storageFileName}`;
-
-    static historyFileName = `history${HandleStore.buildNetworkForNaming()}.json`;
-    static historyFilePath = `${HandleStore.storageFolder}/${HandleStore.historyFileName}`;
 
     static get = (key: string): IHandle | null => {
         const handle = HandleStore.handles.get(key);
@@ -479,22 +475,16 @@ export class HandleStore {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
-        const path = storagePath ?? this.storageFilePath;
-        Logger.log(`Saving file with ${this.handles.size} handles`);
-        const result = await HandleStore.saveFileContents({ content: { handles }, path, slot, hash, processing });
-        return result;
-    }
-
-    static async saveSlotHistoryFile(
-        slot: number,
-        hash: string,
-        storagePath?: string,
-        processing?: Function
-    ): Promise<boolean> {
         const history = Array.from(HandleStore.slotHistoryIndex);
-        const path = storagePath ?? this.historyFilePath;
-        Logger.log(`Saving file with ${history.length} history entries`);
-        const result = await HandleStore.saveFileContents({ content: { history }, path, slot, hash, processing });
+        const path = storagePath ?? this.storageFilePath;
+        Logger.log(`Saving file with ${this.handles.size} handles & ${history.length} history entries`);
+        const result = await HandleStore.saveFileContents({
+            content: { handles, history },
+            path,
+            slot,
+            hash,
+            processing
+        });
         return result;
     }
 
@@ -615,41 +605,16 @@ export class HandleStore {
         slot: number;
         hash: string;
     } | null> {
-        const [externalHandles, externalHistory, localHandles, localHistory] = await Promise.all([
+        const [externalHandles, localHandles] = await Promise.all([
             HandleStore.getFileOnline<IHandleFileContent>(this.storageFileName),
-            HandleStore.getFileOnline<IHandleHistoryFileContent>(this.historyFileName),
-            HandleStore.getFile<IHandleFileContent>(this.storageFilePath),
-            HandleStore.getFile<IHandleHistoryFileContent>(this.historyFilePath)
+            HandleStore.getFile<IHandleFileContent>(this.storageFilePath)
         ]);
 
-        const fileContentsMatch = (
-            handleFileContent: IHandleFileContent,
-            historyFileContent: IHandleHistoryFileContent
-        ) => {
-            return (
-                handleFileContent &&
-                historyFileContent &&
-                handleFileContent.slot === historyFileContent.slot &&
-                handleFileContent.schemaVersion === historyFileContent.schemaVersion
-            );
-        };
-
-        // first, do some validation on the files by checking if the slot and schema version match
-        const externalContent =
-            externalHandles && externalHistory && fileContentsMatch(externalHandles, externalHistory)
-                ? { handles: externalHandles, history: externalHistory }
-                : null;
-
         const localContent =
-            localHandles &&
-            localHistory &&
-            fileContentsMatch(localHandles, localHistory) &&
-            (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion
-                ? { handles: localHandles, history: localHistory }
-                : null;
+            localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
 
         // If we don't have any valid files, return null
-        if (!externalContent && !localContent) {
+        if (!externalHandles && !localContent) {
             Logger.log({
                 message: 'No valid files found',
                 category: LogCategory.INFO,
@@ -658,23 +623,20 @@ export class HandleStore {
             return null;
         }
 
-        const buildFilesContent = (
-            content: { handles: IHandleFileContent; history: IHandleHistoryFileContent },
-            isNew = false
-        ) => {
+        const buildFilesContent = (content: IHandleFileContent, isNew = false) => {
             return {
                 handles: content.handles,
                 history: content.history,
-                slot: content.handles.slot,
-                schemaVersion: content.handles.schemaVersion ?? 0,
-                hash: content.handles.hash,
+                slot: content.slot,
+                schemaVersion: content.schemaVersion ?? 0,
+                hash: content.hash,
                 isNew
             };
         };
 
         let filesContent: {
-            handles: IHandleFileContent;
-            history: IHandleHistoryFileContent;
+            handles: Record<string, IPersonalizedHandle>;
+            history: [number, ISlotHistoryIndex][];
             slot: number;
             schemaVersion: number;
             hash: string;
@@ -682,26 +644,26 @@ export class HandleStore {
         } | null = null;
 
         // only the local file exists
-        if (localContent && !externalContent) {
+        if (localContent && !externalHandles) {
             filesContent = buildFilesContent(localContent);
         }
 
         // only the external file exists
-        if (externalContent && !localContent) {
-            filesContent = buildFilesContent(externalContent, true);
+        if (externalHandles && !localContent) {
+            filesContent = buildFilesContent(externalHandles, true);
         }
 
         // both files exist and we need to compare them to see which one to use.
-        if (externalContent && localContent) {
+        if (externalHandles && localContent) {
             if (
                 // check to see if the local file slot and schema version are greater than the external file
                 // if so, use the local file otherwise use the external file
-                localContent.handles.slot > externalContent.handles.slot &&
-                (localContent.handles.schemaVersion ?? 0) >= (externalContent.handles.schemaVersion ?? 0)
+                localContent.slot > externalHandles.slot &&
+                (localContent.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
             ) {
                 filesContent = buildFilesContent(localContent);
             } else {
-                filesContent = buildFilesContent(externalContent, true);
+                filesContent = buildFilesContent(externalHandles, true);
             }
         }
 
@@ -711,13 +673,7 @@ export class HandleStore {
             return null;
         }
 
-        const {
-            handles: { handles },
-            slot,
-            hash,
-            history: { history },
-            isNew
-        } = filesContent;
+        const { handles, slot, hash, history, isNew } = filesContent;
 
         // save all the individual handles to the store
         const keys = Object.keys(handles ?? {});
@@ -742,7 +698,6 @@ export class HandleStore {
         // if the file contents are new (from the external source), save the handles and history to the store.
         if (isNew) {
             await HandleStore.saveHandlesFile(slot, hash);
-            await HandleStore.saveSlotHistoryFile(slot, hash);
         }
 
         return { slot, hash };
@@ -768,7 +723,6 @@ export class HandleStore {
 
         // clear storage files
         await HandleStore.saveFileContents({ path: HandleStore.storageFilePath });
-        await HandleStore.saveFileContents({ path: HandleStore.historyFilePath });
     }
 
     static async rewindChangesToSlot({

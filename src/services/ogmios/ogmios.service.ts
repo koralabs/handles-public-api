@@ -78,7 +78,6 @@ class OgmiosService {
         const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
             await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
-            await HandleStore.saveSlotHistoryFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
         }, 30000);
