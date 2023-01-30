@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { Logger } from '@koralabs/kora-labs-common';
+import { Logger, LogCategory } from '@koralabs/kora-labs-common';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yamljs';
@@ -86,7 +86,17 @@ class App {
                 const ogmiosService = new OgmiosService();
                 await ogmiosService.startSync();
             } catch (error: any) {
-                writeConsoleLine(this.startTimer, `Trying to start Ogmios: ${error.message}`);
+                Logger.log({
+                    message: `Unable to start Ogmios: ${error.message}`,
+                    category: LogCategory.ERROR,
+                    event: 'startOgmios.failed.errorMessage'
+                });
+                Logger.log({
+                    message: `Error: ${JSON.stringify(error)}`,
+                    category: LogCategory.INFO,
+                    event: 'startOgmios.failed.error'
+                });
+                process.exit(1);
             }
         };
 
