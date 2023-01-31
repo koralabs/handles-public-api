@@ -47,8 +47,15 @@ class OgmiosService {
         response: { point: PointOrOrigin; tip: TipOrOrigin },
         requestNext: () => void
     ): Promise<void> {
+        const { currentSlot } = HandleStore.getMetrics();
+        Logger.log({
+            message: `Rollback ocurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.point)}`,
+            event: 'OgmiosService.rollBackward',
+            category: LogCategory.INFO
+        });
+
         const { point, tip } = response;
-        processRollback(point, tip);
+        await processRollback(point, tip);
         requestNext();
     }
 
