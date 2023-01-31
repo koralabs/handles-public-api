@@ -155,11 +155,16 @@ export class HandleStore {
         }
     };
 
-    static remove = async (hexName: string) => {
+    static remove = (hexName: string) => {
         Logger.log({ category: LogCategory.INFO, message: `Removing handle ${hexName}`, event: 'HandleStore.remove' });
 
         const handle = this.handles.get(hexName);
         if (!handle) {
+            Logger.log({
+                message: `Handle ${hexName} not found`,
+                event: 'HandleStore.remove',
+                category: LogCategory.WARN
+            });
             return;
         }
 
@@ -212,7 +217,19 @@ export class HandleStore {
         // add the new hex to the set
         existingHolderAddressDetails.hexes.add(newHex);
 
-        const handles = [...existingHolderAddressDetails.hexes].map((hex) => this.handles.get(hex) as IHandle);
+        const handles = [...existingHolderAddressDetails.hexes].reduce<IHandle[]>((agg, hex) => {
+            const handle = this.handles.get(hex);
+            if (handle) {
+                agg.push(handle);
+            } else {
+                Logger.log({
+                    message: `Handle ${hex} not found in holder address index, removing from hexes index`,
+                    category: LogCategory.WARN
+                });
+                existingHolderAddressDetails.hexes.delete(hex);
+            }
+            return agg;
+        }, []);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
@@ -738,15 +755,17 @@ export class HandleStore {
     }): Promise<void> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
+        let updates = 0;
+        let deletes = 0;
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {
             const [slotKey, history] = item;
 
             // once we reach the slot we want to rewind to, we can stop
-            if (slotKey === slot) {
+            if (slotKey <= slot) {
                 Logger.log({
-                    message: `Rewound to slot ${slot}`,
+                    message: `Finished Rewinding to slot ${slot} with ${updates} updates and ${deletes} deletes`,
                     category: LogCategory.INFO,
                     event: 'HandleStore.rewindChangesToSlot'
                 });
@@ -772,6 +791,7 @@ export class HandleStore {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
                     this.remove(hex);
+                    deletes++;
                     continue;
                 }
 
@@ -782,6 +802,7 @@ export class HandleStore {
                 };
 
                 await this.save({ handle: updatedHandle, saveHistory: false });
+                updates++;
             }
 
             // delete the slot key since we are rolling back to it
