@@ -84,6 +84,18 @@ class OgmiosService {
 
         const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
+
+            // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+            // Once restarted, we should have a valid file to read from.
+            if (currentSlot === 0) {
+                Logger.log({
+                    message: 'Slot is zero. Exiting process.',
+                    category: LogCategory.NOTIFY,
+                    event: 'OgmiosService.saveFilesInterval'
+                });
+                process.exit(2);
+            }
+
             await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
