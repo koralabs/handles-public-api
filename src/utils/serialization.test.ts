@@ -1,4 +1,4 @@
-import { AddressType, buildStakeKey, buildPaymentAddressType } from './serialization';
+import { AddressType, buildStakeKey, buildPaymentAddressType, decodeDatum } from './serialization';
 
 const addresses = [
     'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
@@ -54,6 +54,25 @@ describe('Serialization Test', () => {
                 '37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na'
             );
             expect(type).toEqual(AddressType.Other);
+        });
+    });
+
+    describe('decodeDatum', () => {
+        it('should debug JSON datum', () => {
+            const decoded = decodeDatum(
+                'a24768616e646c65739fa243756d6d447965616842796f43686579ff44736f6d65a14477656c70a1457468696e67457269676874'
+            );
+
+            expect(decoded).toEqual({ handles: [{ umm: 'yeah', yo: 'hey' }], some: { welp: { thing: 'right' } } });
+        });
+
+        it('should convert other datum style', () => {
+            const decoded = decodeDatum('d8799f182aff');
+            expect(decoded).toEqual({ err: undefined, tag: 121, value: [42] });
+        });
+
+        it.skip('should go the other way', () => {
+            // TODO: implement this
         });
     });
 });
