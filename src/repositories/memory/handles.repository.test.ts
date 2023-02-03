@@ -20,10 +20,11 @@ describe('MemoryHandlesRepository Tests', () => {
                 original_nft_image: image,
                 name,
                 og,
+                utxo,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
         });
         await Promise.all(saves);
     });

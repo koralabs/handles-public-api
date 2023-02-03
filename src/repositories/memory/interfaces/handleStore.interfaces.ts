@@ -35,6 +35,7 @@ export interface SaveMintingTxInput {
     og: number;
     image: string;
     slotNumber: number;
+    utxo: string;
     background?: string;
     default_in_wallet?: string;
     profile_pic?: string;
@@ -44,6 +45,7 @@ export interface SaveWalletAddressMoveInput {
     slotNumber: number;
     hexName: string;
     adaAddress: string;
+    utxo: string;
 }
 
 export interface SavePersonalizationInput {

@@ -1,7 +1,7 @@
 import { IHandle, IHandleStats, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
-import fs from 'fs';
+import fs, { promises as fsPromise } from 'fs';
 import lockfile from 'proper-lockfile';
 import { diff } from 'deep-object-diff';
 import { NETWORK, NODE_ENV } from '../../../config';
@@ -34,7 +34,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 4;
+    static storageSchemaVersion = 5;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -248,6 +248,7 @@ export class HandleStore {
         og,
         image,
         slotNumber,
+        utxo,
         background = '',
         default_in_wallet = '',
         profile_pic = ''
@@ -257,6 +258,7 @@ export class HandleStore {
             name,
             holder_address: '', // Populate on save
             length: name.length,
+            utxo,
             rarity: getRarity(name),
             characters: buildCharacters(name),
             numeric_modifiers: buildNumericModifiers(name),
@@ -336,7 +338,7 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveWalletAddressMove = async ({ hexName, adaAddress, slotNumber }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({ hexName, adaAddress, utxo, slotNumber }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -349,6 +351,7 @@ export class HandleStore {
 
         const updatedHandle = {
             ...existingHandle,
+            utxo,
             resolved_addresses: { ada: adaAddress },
             updated_slot_number: slotNumber
         };
@@ -808,5 +811,17 @@ export class HandleStore {
             // delete the slot key since we are rolling back to it
             this.slotHistoryIndex.delete(slotKey);
         }
+    }
+
+    static async saveDatumFile({ utxo, datum }: { utxo: string; datum: string | Record<string, unknown> }) {
+        const datumString = typeof datum === 'string' ? datum : JSON.stringify(datum);
+        // first we need to delete old datum so we don't add unnecessary files
+        // We also have to think about how rollbacks work.
+        // if we need to rollback to a previous slot, we need to delete the datum files
+
+        // save datum to the file system
+        await fsPromise.appendFile(`${HandleStore.storageFolder}/datum/${utxo}`, datumString, {
+            encoding: 'utf8'
+        });
     }
 }

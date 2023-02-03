@@ -66,11 +66,15 @@ const processAssetToken = async ({
     assetName,
     slotNumber,
     address,
+    utxo,
+    datum,
     handleMetadata
 }: {
     assetName: string;
     slotNumber: number;
     address: string;
+    utxo: string;
+    datum: string | Record<string, unknown> | null;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
 }) => {
     const hexName = assetName?.split('.')[1];
@@ -82,14 +86,18 @@ const processAssetToken = async ({
     const name = Buffer.from(hexName, 'hex').toString('utf8');
     const data = handleMetadata && handleMetadata[name];
 
+    if (datum) {
+        await HandleStore.saveDatumFile({ utxo, datum });
+    }
+
     if (data) {
         const {
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, adaAddress: address });
+        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, utxo, adaAddress: address });
     } else {
-        await HandleStore.saveWalletAddressMove({ hexName, adaAddress: address, slotNumber });
+        await HandleStore.saveHandleUpdate({ hexName, adaAddress: address, slotNumber, utxo });
     }
 };
 
@@ -119,15 +127,12 @@ export const processBlock = async ({
 
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
+        const txId = txBody?.id;
         // get metadata so we can use it later when we need to get OG data.
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
-
-        // const filteredOutputs = txBody.body.outputs.filter((o) =>
-        //     Object.keys(o.value.assets ?? {}).some((a) => a.startsWith(policyId))
-        // );
 
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
@@ -136,8 +141,9 @@ export const processBlock = async ({
                 for (let j = 0; j < keys.length; j++) {
                     if (keys[j].toString().startsWith(policyId)) {
                         const assetName = keys[j].toString();
+                        const { datum = null } = o;
+
                         if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
-                            const { datum } = o;
                             await processAssetReferenceToken({ assetName, slotNumber: currentSlot, datum });
                         } else {
                             const data =
@@ -149,7 +155,9 @@ export const processBlock = async ({
                                 assetName,
                                 address,
                                 slotNumber: currentSlot,
-                                handleMetadata: data
+                                datum,
+                                handleMetadata: data,
+                                utxo: `${txId}#${i}`
                             });
                         }
                     }
