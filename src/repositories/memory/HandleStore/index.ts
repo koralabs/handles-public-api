@@ -382,11 +382,12 @@ export class HandleStore {
             delete addresses.ada;
         }
 
-        const updatedHandle = {
+        const updatedHandle: IHandle = {
             ...existingHandle,
-            nft_image: personalization?.nft_appearance?.image ?? '',
-            background: personalization?.nft_appearance?.background ?? '',
-            profile_pic: personalization?.nft_appearance?.profilePic ?? '',
+            // TODO: Change this to the correct property
+            nft_image: personalization?.nft_appearance?.pfpImageUrl ?? '',
+            background: personalization?.nft_appearance?.backgroundImageUrl ?? '',
+            profile_pic: personalization?.nft_appearance?.pfpImageUrl ?? '',
             default_in_wallet: '', // TODO: figure out how this is updated
             updated_slot_number: slotNumber,
             resolved_addresses: {

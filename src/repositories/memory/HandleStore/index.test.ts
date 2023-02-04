@@ -168,13 +168,19 @@ describe('HandleStore tests', () => {
 
             const personalizationUpdates: IPersonalization = {
                 nft_appearance: {
-                    image: 'todo',
-                    background: 'todo',
-                    profilePic: 'todo',
-                    theme: 'todo',
-                    textBackground: 'todo',
-                    border: 'todo',
-                    trimColor: 'todo',
+                    handleTextShadowColor: 'todo',
+                    handleTextBgColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
+                    pfpBorderColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    backgroundColor: 'todo',
+                    backgroundBorderColor: 'todo',
+                    qrEnabled: true,
+                    qrColor: 'todo',
+                    socials: [],
+                    socialsEnabled: true,
                     selectedAttributes: [],
                     purchasedAttributes: []
                 }
@@ -190,15 +196,21 @@ describe('HandleStore tests', () => {
             const personalization = HandleStore.getPersonalization('nachos-hex');
             expect(personalization).toEqual({
                 nft_appearance: {
-                    background: 'todo',
-                    border: 'todo',
-                    image: 'todo',
-                    profilePic: 'todo',
+                    backgroundBorderColor: 'todo',
+                    backgroundColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    handleTextBgColor: 'todo',
+                    handleTextShadowColor: 'todo',
+                    pfpBorderColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
                     purchasedAttributes: [],
+                    qrColor: 'todo',
+                    qrEnabled: true,
                     selectedAttributes: [],
-                    textBackground: 'todo',
-                    theme: 'todo',
-                    trimColor: 'todo'
+                    socials: [],
+                    socialsEnabled: true
                 }
             });
 
