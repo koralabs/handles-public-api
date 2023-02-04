@@ -4,8 +4,10 @@ import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
+import * as stateQueryService from '../../services/ogmios/stateQuery/ogmios.stateQuery.service';
 
 jest.mock('../../utils/addresses');
+jest.mock('../../services/ogmios/stateQuery/ogmios.stateQuery.service');
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
@@ -168,6 +170,47 @@ describe('MemoryHandlesRepository Tests', () => {
                 percentageComplete: '0.00',
                 slotDate: expect.any(Date)
             });
+        });
+    });
+
+    describe('getHandleDatumByName', () => {
+        it('should get handle datum by name', async () => {
+            const datum = 'a2some2key6another2key';
+            jest.spyOn(HandleStore, 'getDatumFromFileSystem').mockResolvedValue(datum);
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getHandleDatumByName('barbacoa');
+            expect(result).toEqual(datum);
+        });
+
+        it('should not find datum in the local file system and instead find it using ogmios', async () => {
+            const datum = 'a2some2key6another2key';
+            jest.spyOn(HandleStore, 'getDatumFromFileSystem').mockResolvedValue(null);
+            jest.spyOn(HandleStore, 'saveDatumFile').mockImplementation();
+            jest.spyOn(stateQueryService, 'queryStateByUtxo').mockResolvedValue([
+                [
+                    { txId: 'txId', index: 0 },
+                    { address: 'addr', value: { coins: BigInt(1) }, datum }
+                ]
+            ]);
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getHandleDatumByName('barbacoa');
+            expect(result).toEqual(datum);
+        });
+
+        it('should return null when no data is found and save null to the file system', async () => {
+            jest.spyOn(HandleStore, 'getDatumFromFileSystem').mockResolvedValue(null);
+            jest.spyOn(stateQueryService, 'queryStateByUtxo').mockResolvedValue([
+                [
+                    { txId: 'txId', index: 0 },
+                    { address: 'addr', value: { coins: BigInt(1) } }
+                ]
+            ]);
+            const saveSpy = jest.spyOn(HandleStore, 'saveDatumFile').mockImplementation();
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getHandleDatumByName('barbacoa');
+
+            expect(saveSpy).toHaveBeenCalledWith({ datum: null, handleHex: 'barbacoa-hex', utxo: 'utxo1#0' });
+            expect(result).toEqual(null);
         });
     });
 });

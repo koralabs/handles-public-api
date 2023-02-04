@@ -86,10 +86,6 @@ const processAssetToken = async ({
     const name = Buffer.from(hexName, 'hex').toString('utf8');
     const data = handleMetadata && handleMetadata[name];
 
-    if (datum) {
-        await HandleStore.saveDatumFile({ utxo, datum });
-    }
-
     if (data) {
         const {
             image,

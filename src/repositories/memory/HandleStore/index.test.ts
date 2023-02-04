@@ -6,7 +6,20 @@ import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 
-jest.mock('fs');
+jest.mock('fs', () => ({
+    promises: {
+        writeFile: jest.fn().mockImplementation(),
+        readFile: jest.fn().mockImplementation(async (path, content) => {
+            if (path.includes('taco.datum')) {
+                return JSON.stringify({ utxo: '123#1', datum: 'abc123' });
+            }
+
+            return Promise.reject({ code: 'ENOENT' });
+        })
+    },
+    writeFileSync: jest.fn().mockImplementation(),
+    unlinkSync: jest.fn().mockImplementation()
+}));
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
 jest.mock('../../../utils/serialization');
@@ -344,6 +357,25 @@ describe('HandleStore tests', () => {
                 event: 'saveWalletAddressMove.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
+        });
+    });
+
+    describe('getDatumFromFileSystem', () => {
+        it('Should return the datum if it exists', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#1', handleHex: 'taco' });
+
+            // expect datum from mocked implementation above.
+            expect(datum).toEqual('abc123');
+        });
+
+        it('Should return the null if utxos do not match', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#2', handleHex: 'taco' });
+            expect(datum).toEqual(null);
+        });
+
+        it('should return null if file does not exist', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#3', handleHex: 'burrito' });
+            expect(datum).toEqual(null);
         });
     });
 });

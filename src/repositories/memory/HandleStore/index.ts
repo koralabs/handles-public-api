@@ -19,6 +19,7 @@ import {
     ISlotHistoryIndex,
     HandleHistory
 } from '../interfaces/handleStore.interfaces';
+
 export class HandleStore {
     // Indexes
     private static handles = new Map<string, IHandle>();
@@ -813,15 +814,62 @@ export class HandleStore {
         }
     }
 
-    static async saveDatumFile({ utxo, datum }: { utxo: string; datum: string | Record<string, unknown> }) {
-        const datumString = typeof datum === 'string' ? datum : JSON.stringify(datum);
-        // first we need to delete old datum so we don't add unnecessary files
-        // We also have to think about how rollbacks work.
-        // if we need to rollback to a previous slot, we need to delete the datum files
+    static async saveDatumFile({
+        handleHex,
+        utxo,
+        datum
+    }: {
+        handleHex: string;
+        utxo: string;
+        datum: string | Record<string, unknown> | null;
+    }) {
+        const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+        const datumString = !datum || typeof datum === 'string' ? datum : JSON.stringify(datum);
+
+        const datumFileContents = {
+            utxo,
+            datum: datumString
+        };
 
         // save datum to the file system
-        await fsPromise.appendFile(`${HandleStore.storageFolder}/datum/${utxo}`, datumString, {
+        await fsPromise.writeFile(filePath, JSON.stringify(datumFileContents), {
             encoding: 'utf8'
         });
+    }
+
+    static async getDatumFromFileSystem({
+        handleHex,
+        utxo
+    }: {
+        handleHex: string;
+        utxo: string;
+    }): Promise<string | null> {
+        try {
+            const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+
+            // first we need to check if the datum file exists
+            const result = await fsPromise.readFile(filePath, {
+                encoding: 'utf8'
+            });
+
+            // if file exists we need to check if the utxo matches
+            const datumFileContents = JSON.parse(result);
+
+            // if the utxo matches, return the datum
+            if (datumFileContents.utxo === utxo) {
+                return datumFileContents.datum;
+            }
+
+            // if the utxo doesn't match, return null and check ogmios later. The file will be overridden with a new utxo and datum
+            return null;
+        } catch (error: any) {
+            // if the file doesn't exist, return null and check ogmios later
+            if (error.code === 'ENOENT') {
+                return null;
+            }
+
+            // otherwise, throw the error
+            throw error;
+        }
     }
 }
