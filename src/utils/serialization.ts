@@ -1,5 +1,6 @@
 import { Logger } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
+import cbor from 'borc';
 
 export enum AddressType {
     Wallet = 'wallet',
@@ -90,4 +91,34 @@ export const buildStakeKey = (address: string): string | null => {
         Logger.log(`Error building stake key ${error.message}`);
         return null;
     }
+};
+
+const buildJsonFromMap = (map: Map<string, unknown>): Record<string, unknown> => {
+    let newObj: Record<string, unknown> = {};
+    for (let [k, v] of map) {
+        if (v instanceof Map) {
+            newObj[k] = buildJsonFromMap(v);
+        } else if (Array.isArray(v)) {
+            newObj[k] = v.map((v: any) => {
+                if (v instanceof Map) {
+                    return buildJsonFromMap(v);
+                }
+                return v;
+            });
+        } else if (v instanceof Buffer) {
+            newObj[k] = v.toString();
+        } else {
+            newObj[k] = v;
+        }
+    }
+    return newObj;
+};
+
+export const decodeDatum = (datum: string): string | Record<string, unknown> => {
+    const decoded = cbor.decode(datum);
+    if (decoded instanceof Map) {
+        return buildJsonFromMap(decoded);
+    }
+
+    return decoded;
 };

@@ -45,6 +45,11 @@ jest.mock('../ioc', () => ({
             },
             getIsCaughtUp: () => {
                 return true;
+            },
+            getHandleDatumByName: (handleName: string) => {
+                if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
+
+                return `${handleName}_datum`;
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -233,6 +238,20 @@ describe('Testing Handles Routes', () => {
                 default_handle: 'burritos',
                 manually_set: false
             });
+        });
+    });
+
+    describe('[GET] /handles/:handle/datum', () => {
+        it('should throw error if address does not exist', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope/datum');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle datum not found');
+        });
+
+        it('should return valid handle', async () => {
+            const response = await request(app?.getServer()).get('/handles/taco/datum');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ datum: 'taco_datum' });
         });
     });
 });

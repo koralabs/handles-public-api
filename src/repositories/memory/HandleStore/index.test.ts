@@ -6,7 +6,20 @@ import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 
-jest.mock('fs');
+jest.mock('fs', () => ({
+    promises: {
+        writeFile: jest.fn().mockImplementation(),
+        readFile: jest.fn().mockImplementation(async (path, content) => {
+            if (path.includes('taco.datum')) {
+                return JSON.stringify({ utxo: '123#1', datum: 'abc123' });
+            }
+
+            return Promise.reject({ code: 'ENOENT' });
+        })
+    },
+    writeFileSync: jest.fn().mockImplementation(),
+    unlinkSync: jest.fn().mockImplementation()
+}));
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
 jest.mock('../../../utils/serialization');
@@ -30,10 +43,11 @@ describe('HandleStore tests', () => {
                 original_nft_image: image,
                 name,
                 og,
+                utxo,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber });
+            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
         }
     });
 
@@ -102,6 +116,7 @@ describe('HandleStore tests', () => {
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
+                utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100
             });
@@ -111,10 +126,11 @@ describe('HandleStore tests', () => {
             // expect to get the correct handle properties
             expect(handle).toEqual({
                 background: '',
-                holder_address: 'stake123',
-                default_in_wallet: 'taco',
                 characters: 'letters',
+                created_slot_number: 100,
+                default_in_wallet: 'taco',
                 hex: 'nachos-hex',
+                holder_address: 'stake123',
                 length: 6,
                 name: 'nachos',
                 nft_image: 'ipfs://123',
@@ -124,8 +140,8 @@ describe('HandleStore tests', () => {
                 profile_pic: '',
                 rarity: 'common',
                 resolved_addresses: { ada: 'addr123' },
-                created_slot_number: expect.any(Number),
-                updated_slot_number: expect.any(Number)
+                updated_slot_number: 100,
+                utxo: 'utxo123#0'
             });
 
             // expect to get the correct slot history with all new handles
@@ -145,19 +161,26 @@ describe('HandleStore tests', () => {
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
+                utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
                 nft_appearance: {
-                    image: 'todo',
-                    background: 'todo',
-                    profilePic: 'todo',
-                    theme: 'todo',
-                    textBackground: 'todo',
-                    border: 'todo',
-                    trimColor: 'todo',
+                    handleTextShadowColor: 'todo',
+                    handleTextBgColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
+                    pfpBorderColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    backgroundColor: 'todo',
+                    backgroundBorderColor: 'todo',
+                    qrEnabled: true,
+                    qrColor: 'todo',
+                    socials: [],
+                    socialsEnabled: true,
                     selectedAttributes: [],
                     purchasedAttributes: []
                 }
@@ -173,15 +196,21 @@ describe('HandleStore tests', () => {
             const personalization = HandleStore.getPersonalization('nachos-hex');
             expect(personalization).toEqual({
                 nft_appearance: {
-                    background: 'todo',
-                    border: 'todo',
-                    image: 'todo',
-                    profilePic: 'todo',
+                    backgroundBorderColor: 'todo',
+                    backgroundColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    handleTextBgColor: 'todo',
+                    handleTextShadowColor: 'todo',
+                    pfpBorderColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
                     purchasedAttributes: [],
+                    qrColor: 'todo',
+                    qrEnabled: true,
                     selectedAttributes: [],
-                    textBackground: 'todo',
-                    theme: 'todo',
-                    trimColor: 'todo'
+                    socials: [],
+                    socialsEnabled: true
                 }
             });
 
@@ -257,6 +286,7 @@ describe('HandleStore tests', () => {
                 name: 'salsa',
                 adaAddress: address,
                 og: 0,
+                utxo: 'utxo_salsa1#0',
                 image: 'ipfs://123',
                 slotNumber: 100
             });
@@ -265,9 +295,10 @@ describe('HandleStore tests', () => {
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder_address).toEqual(stakeKey);
 
-            await HandleStore.saveWalletAddressMove({
+            await HandleStore.saveHandleUpdate({
                 hexName: 'salsa-hex',
                 adaAddress: newAddress,
+                utxo: 'utxo_salsa2#0',
                 slotNumber: 200
             });
 
@@ -278,6 +309,7 @@ describe('HandleStore tests', () => {
                 background: '',
                 characters: 'letters',
                 hex: 'salsa-hex',
+                utxo: 'utxo_salsa2#0',
                 length: 5,
                 name: 'salsa',
                 nft_image: 'ipfs://123',
@@ -306,12 +338,14 @@ describe('HandleStore tests', () => {
                                 resolved_addresses: {
                                     ada: 'addr123_new'
                                 },
-                                updated_slot_number: 200
+                                updated_slot_number: 200,
+                                utxo: 'utxo_salsa2#0'
                             },
                             old: {
                                 holder_address: stakeKey,
                                 resolved_addresses: { ada: address },
-                                updated_slot_number: 100
+                                updated_slot_number: 100,
+                                utxo: 'utxo_salsa1#0'
                             }
                         }
                     }
@@ -324,12 +358,36 @@ describe('HandleStore tests', () => {
             jest.spyOn(HandleStore, 'get').mockReturnValue(null);
 
             const newAddress = 'addr123_new';
-            await HandleStore.saveWalletAddressMove({ hexName: '123', adaAddress: newAddress, slotNumber: 1234 });
+            await HandleStore.saveHandleUpdate({
+                hexName: '123',
+                adaAddress: newAddress,
+                slotNumber: 1234,
+                utxo: 'utxo'
+            });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveWalletAddressMove.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
+        });
+    });
+
+    describe('getDatumFromFileSystem', () => {
+        it('Should return the datum if it exists', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#1', handleHex: 'taco' });
+
+            // expect datum from mocked implementation above.
+            expect(datum).toEqual('abc123');
+        });
+
+        it('Should return the null if utxos do not match', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#2', handleHex: 'taco' });
+            expect(datum).toEqual(null);
+        });
+
+        it('should return null if file does not exist', async () => {
+            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#3', handleHex: 'burrito' });
+            expect(datum).toEqual(null);
         });
     });
 });

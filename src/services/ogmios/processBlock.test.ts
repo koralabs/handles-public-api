@@ -124,6 +124,7 @@ describe('processBlock Tests', () => {
         length: 8,
         name,
         nft_image: 'some_hash_test1234',
+        utxo: 'utxo1#0',
         numeric_modifiers: '',
         og: 1,
         original_nft_image: 'some_hash_test1234',
@@ -149,7 +150,8 @@ describe('processBlock Tests', () => {
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
             og: 1,
-            slotNumber: 0
+            slotNumber: 0,
+            utxo: 'some_id#0'
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -163,19 +165,19 @@ describe('processBlock Tests', () => {
 
     it('Should not save a new handle because it already exists in store', async () => {
         const newAddress = 'addr456';
-        const saveSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
+        const saveSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
         await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith({ adaAddress: newAddress, hexName, slotNumber: 0 });
+        expect(saveSpy).toHaveBeenCalledWith({ adaAddress: newAddress, hexName, slotNumber: 0, utxo: 'some_id#0' });
     });
 
     it('Should not save anything is policyId does not match', async () => {
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
-        const saveAddressSpy = jest.spyOn(HandleStore, 'saveWalletAddressMove');
+        const saveAddressSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
 
         await processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
 

@@ -11,6 +11,7 @@ interface IHandlesRepository {
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getHandleStats: () => IHandleStats;
     getIsCaughtUp: () => boolean;
+    getHandleDatumByName: (handleName: string) => Promise<any>;
 }
 
 export default IHandlesRepository;
