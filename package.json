@@ -7,9 +7,9 @@
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
   "scripts": {
-    "create_paths": "mkdir -p handles && touch handles/handles.json && mkdir -p handles/datum",
-    "start": "yarn create_paths && node express.js",
-    "start:forever": "yarn create_paths && mkdir -p forever && forever -p ./forever start express.js",
+    "setup_env": "chmod +x setup_env.sh && ./setup_env.sh",
+    "start": "yarn setup_env && node express.js",
+    "start:forever": "yarn setup_env && mkdir -p forever && forever -p ./forever start express.js",
     "start:containers": "chmod +x ./start_containers.sh && ./start_containers.sh",
     "forever:list": "forever list",
     "forever:stop": "forever stopall",
