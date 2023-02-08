@@ -7,7 +7,7 @@
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
   "scripts": {
-    "create_paths": "mkdir -p handles && touch handles/handles.json",
+    "create_paths": "mkdir -p handles && touch handles/handles.json && mkdir -p handles/datum",
     "start": "yarn create_paths && node express.js",
     "start:forever": "yarn create_paths && mkdir -p forever && forever -p ./forever start express.js",
     "start:containers": "chmod +x ./start_containers.sh && ./start_containers.sh",
