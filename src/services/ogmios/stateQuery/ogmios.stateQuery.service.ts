@@ -1,17 +1,27 @@
 import { createInteractionContext, createStateQueryClient, InteractionContext } from '@cardano-ogmios/client';
 import { StateQueryClient } from '@cardano-ogmios/client/dist/StateQuery';
-import { Logger } from '@koralabs/kora-labs-common';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+
+let client: StateQueryClient | null = null;
 
 const connectToStateClient = async (): Promise<StateQueryClient> => {
     const context: InteractionContext = await createInteractionContext(
-        (err) => console.error(err),
+        (err) => {
+            Logger.log({
+                message: `Error creating context: ${JSON.stringify(err)}`,
+                event: 'OgmiosService.connectToStateClient',
+                category: LogCategory.ERROR
+            });
+            client = null;
+        },
         () => {
             Logger.log('Connection closed.');
+            client = null;
         },
         { connection: { port: 1337 } }
     );
 
-    return await createStateQueryClient(context);
+    return client ?? (await createStateQueryClient(context));
 };
 
 export const queryStateByUtxo = async (utxo: string) => {
@@ -24,9 +34,6 @@ export const queryStateByUtxo = async (utxo: string) => {
             index: parseInt(index)
         }
     ]);
-
-    // Close the connection when done.
-    await client.shutdown();
 
     return utxoResult;
 };

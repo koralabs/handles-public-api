@@ -5,6 +5,7 @@ import { HandleStore } from './HandleStore';
 import { handlesFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
 import * as stateQueryService from '../../services/ogmios/stateQuery/ogmios.stateQuery.service';
+import { SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 
 jest.mock('../../utils/addresses');
 jest.mock('../../services/ogmios/stateQuery/ogmios.stateQuery.service');
@@ -16,6 +17,7 @@ describe('MemoryHandlesRepository Tests', () => {
             type: 'ScriptHash',
             knownOwnerName: 'unknown'
         });
+
         const saves = handlesFixture.map(async (handle) => {
             const {
                 hex: hexName,
@@ -24,9 +26,10 @@ describe('MemoryHandlesRepository Tests', () => {
                 og,
                 utxo,
                 updated_slot_number: slotNumber,
-                resolved_addresses: { ada: adaAddress }
+                resolved_addresses: { ada: adaAddress },
+                hasDatum
             } = handle;
-            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
+            return HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo, hasDatum });
         });
         await Promise.all(saves);
     });
@@ -174,11 +177,35 @@ describe('MemoryHandlesRepository Tests', () => {
     });
 
     describe('getHandleDatumByName', () => {
+        beforeAll(async () => {
+            const saveHandleInput: SaveMintingTxInput = {
+                hexName: 'salsa-hex',
+                name: 'salsa',
+                adaAddress: 'addr1salsa',
+                og: 0,
+                image: '',
+                slotNumber: 0,
+                utxo: 'test_tx#0',
+                hasDatum: true
+            };
+            await HandleStore.saveMintedHandle(saveHandleInput);
+        });
+
+        it('should not get datum if hasDatum is false', async () => {
+            const datum = 'a2some2key6another2key';
+            const getDatumFileSpy = jest.spyOn(HandleStore, 'getDatumFromFileSystem').mockResolvedValue(datum);
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getHandleDatumByName('barbacoa');
+
+            expect(result).toEqual(null);
+            expect(getDatumFileSpy).toHaveBeenCalledTimes(0);
+        });
+
         it('should get handle datum by name', async () => {
             const datum = 'a2some2key6another2key';
             jest.spyOn(HandleStore, 'getDatumFromFileSystem').mockResolvedValue(datum);
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getHandleDatumByName('barbacoa');
+            const result = await repo.getHandleDatumByName('salsa');
             expect(result).toEqual(datum);
         });
 
@@ -193,7 +220,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 ]
             ]);
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getHandleDatumByName('barbacoa');
+            const result = await repo.getHandleDatumByName('salsa');
             expect(result).toEqual(datum);
         });
 
@@ -207,9 +234,9 @@ describe('MemoryHandlesRepository Tests', () => {
             ]);
             const saveSpy = jest.spyOn(HandleStore, 'saveDatumFile').mockImplementation();
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getHandleDatumByName('barbacoa');
+            const result = await repo.getHandleDatumByName('salsa');
 
-            expect(saveSpy).toHaveBeenCalledWith({ datum: null, handleHex: 'barbacoa-hex', utxo: 'utxo1#0' });
+            expect(saveSpy).toHaveBeenCalledWith({ datum: null, handleHex: 'salsa-hex', utxo: 'test_tx#0' });
             expect(result).toEqual(null);
         });
     });

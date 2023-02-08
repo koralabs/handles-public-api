@@ -20,7 +20,8 @@ export const ogHandles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: 'og2-hex',
@@ -41,7 +42,8 @@ export const ogHandles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: 'og3-hex',
@@ -62,7 +64,8 @@ export const ogHandles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     }
 ];
 
@@ -86,7 +89,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: '10-hex',
@@ -107,7 +111,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: '1000-hex',
@@ -128,7 +133,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     }
 ];
 
@@ -152,7 +158,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: '11-hex',
@@ -173,7 +180,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now() + 10,
-        updated_slot_number: Date.now() + 10
+        updated_slot_number: Date.now() + 10,
+        hasDatum: false
     },
     {
         hex: '12-hex',
@@ -194,7 +202,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now() + 20,
-        updated_slot_number: Date.now() + 20
+        updated_slot_number: Date.now() + 20,
+        hasDatum: false
     }
 ];
 
@@ -218,7 +227,8 @@ export const handles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: '10-hex',
@@ -239,7 +249,8 @@ export const handles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: '12-hex',
@@ -260,6 +271,7 @@ export const handles: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     }
 ];

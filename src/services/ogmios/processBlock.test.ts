@@ -134,7 +134,8 @@ describe('processBlock Tests', () => {
         profile_pic: 'some_hash_test1234',
         background: 'some_hash_test1234',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
@@ -151,7 +152,8 @@ describe('processBlock Tests', () => {
             name: 'test1234',
             og: 1,
             slotNumber: 0,
-            utxo: 'some_id#0'
+            utxo: 'some_id#0',
+            hasDatum: false
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -172,7 +174,13 @@ describe('processBlock Tests', () => {
 
         await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
 
-        expect(saveSpy).toHaveBeenCalledWith({ adaAddress: newAddress, hexName, slotNumber: 0, utxo: 'some_id#0' });
+        expect(saveSpy).toHaveBeenCalledWith({
+            adaAddress: newAddress,
+            hexName,
+            slotNumber: 0,
+            utxo: 'some_id#0',
+            hasDatum: false
+        });
     });
 
     it('Should not save anything is policyId does not match', async () => {

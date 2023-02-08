@@ -39,6 +39,7 @@ export interface SaveMintingTxInput {
     background?: string;
     default_in_wallet?: string;
     profile_pic?: string;
+    hasDatum: boolean;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -46,12 +47,14 @@ export interface SaveWalletAddressMoveInput {
     hexName: string;
     adaAddress: string;
     utxo: string;
+    hasDatum: boolean;
 }
 
 export interface SavePersonalizationInput {
     slotNumber: number;
     hexName: string;
     personalization: IPersonalization;
+    hasDatum: boolean;
     addresses: {
         [chain: string]: string;
     };

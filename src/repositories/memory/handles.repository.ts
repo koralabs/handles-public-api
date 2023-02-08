@@ -160,7 +160,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const handle = await this.getHandleByName(handleName);
         if (!handle) throw new HttpException(404, 'Not found');
 
-        const { hex, utxo } = handle;
+        const { hex, utxo, hasDatum } = handle;
+
+        if (!hasDatum) return null;
 
         const datum = await HandleStore.getDatumFromFileSystem({ handleHex: hex, utxo });
         if (datum) return datum;
