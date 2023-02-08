@@ -48,16 +48,9 @@ export class HandleStore {
         memorySize: 0
     };
 
-    static buildNetworkForNaming = () => {
-        if (NETWORK === 'mainnet') {
-            return '';
-        }
-
-        return `-${NETWORK}`;
-    };
-
-    static storageFileName = `handles${HandleStore.buildNetworkForNaming()}.json`;
-    static storageFilePath = `${HandleStore.storageFolder}/${HandleStore.storageFileName}`;
+    static storageFileName = `handles.json`;
+    static storageFilePath = `${HandleStore.storageFolder}/${NETWORK}/snapshot/${HandleStore.storageFileName}`;
+    static datumStoragePath = `${HandleStore.storageFolder}/${NETWORK}/datum`;
 
     static get = (key: string): IHandle | null => {
         const handle = HandleStore.handles.get(key);
@@ -842,7 +835,7 @@ export class HandleStore {
         utxo: string;
         datum: string | Record<string, unknown> | null;
     }) {
-        const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+        const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
         const datumString = !datum || typeof datum === 'string' ? datum : JSON.stringify(datum);
 
         const datumFileContents = {
@@ -867,7 +860,7 @@ export class HandleStore {
     }
 
     static async removeHandleDatumFile(handleHex: string) {
-        const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+        const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
 
         try {
             await fsPromise.unlink(filePath);
@@ -891,7 +884,7 @@ export class HandleStore {
         utxo: string;
     }): Promise<string | null> {
         try {
-            const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+            const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
 
             // first we need to check if the datum file exists
             const result = await fsPromise.readFile(filePath, {
