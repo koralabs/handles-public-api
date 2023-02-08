@@ -102,14 +102,12 @@ export class HandleStore {
         handle,
         oldHandle,
         personalization,
-        saveHistory = true,
-        deleteDatumFile = false
+        saveHistory = true
     }: {
         handle: IHandle;
         oldHandle?: IHandle;
         personalization?: IPersonalization;
         saveHistory?: boolean;
-        deleteDatumFile?: boolean;
     }) => {
         const updatedHandle = JSON.parse(JSON.stringify(handle));
         const {
@@ -158,7 +156,7 @@ export class HandleStore {
         }
 
         // If oldHandle has datum and new does not, remove the file.
-        if (deleteDatumFile) {
+        if (oldHandle?.hasDatum && !handle.hasDatum) {
             await HandleStore.removeHandleDatumFile(hex);
         }
     };
@@ -370,8 +368,7 @@ export class HandleStore {
 
         await HandleStore.save({
             handle: updatedHandle,
-            oldHandle: existingHandle,
-            deleteDatumFile: existingHandle.hasDatum && !hasDatum
+            oldHandle: existingHandle
         });
     };
 
@@ -415,8 +412,7 @@ export class HandleStore {
         await HandleStore.save({
             handle: updatedHandle,
             oldHandle: existingHandle,
-            personalization,
-            deleteDatumFile: existingHandle.hasDatum && !hasDatum
+            personalization
         });
     }
 
@@ -827,9 +823,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
-                const shouldDeleteDatumFile = existingHandle.hasDatum && !updatedHandle.hasDatum;
-
-                await this.save({ handle: updatedHandle, saveHistory: false, deleteDatumFile: shouldDeleteDatumFile });
+                await this.save({ handle: updatedHandle, oldHandle: existingHandle, saveHistory: false });
                 updates++;
             }
 
