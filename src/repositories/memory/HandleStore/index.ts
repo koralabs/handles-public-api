@@ -19,6 +19,7 @@ import {
     ISlotHistoryIndex,
     HandleHistory
 } from '../interfaces/handleStore.interfaces';
+import { HttpException } from '../../../exceptions/HttpException';
 
 export class HandleStore {
     // Indexes
@@ -849,10 +850,20 @@ export class HandleStore {
             datum: datumString
         };
 
-        // save datum to the file system
-        await fsPromise.writeFile(filePath, JSON.stringify(datumFileContents), {
-            encoding: 'utf8'
-        });
+        try {
+            // save datum to the file system
+            await fsPromise.writeFile(filePath, JSON.stringify(datumFileContents), {
+                encoding: 'utf8'
+            });
+        } catch (error: any) {
+            Logger.log({
+                message: `Error saving datum file ${filePath} with error: ${error.message}`,
+                category: LogCategory.ERROR,
+                event: 'HandleStore.saveDatumFile'
+            });
+
+            throw new HttpException(500, `Error caching ${handleHex} datum`);
+        }
     }
 
     static async removeHandleDatumFile(handleHex: string) {
