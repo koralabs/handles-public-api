@@ -410,14 +410,10 @@ describe('HandleStore tests', () => {
     });
 
     describe('removeHandleDatumFile', () => {
-        it('should throw error if file does not exit', async () => {
+        it('should not log an error if file does not exit', async () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
             await HandleStore.removeHandleDatumFile('hex1234');
-            expect(loggerSpy).toHaveBeenCalledWith({
-                category: 'ERROR',
-                event: 'HandleStore.removeHandleDatumFile',
-                message: expect.any(String)
-            });
+            expect(loggerSpy).toHaveBeenCalledTimes(0);
         });
     });
 });

@@ -861,11 +861,14 @@ export class HandleStore {
         try {
             await fsPromise.unlink(filePath);
         } catch (error: any) {
-            Logger.log({
-                message: `Error deleting file ${filePath} with error: ${error.message}`,
-                category: LogCategory.ERROR,
-                event: 'HandleStore.removeHandleDatumFile'
-            });
+            if (error.code !== 'ENOENT') {
+                // If we don't get an ENOENT error, then we need to log it
+                Logger.log({
+                    message: `Error deleting file ${filePath} with error: ${error.message}`,
+                    category: LogCategory.ERROR,
+                    event: 'HandleStore.removeHandleDatumFile'
+                });
+            }
         }
     }
 
