@@ -251,7 +251,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/taco/datum');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ datum: 'taco_datum' });
+            expect(response.text).toEqual('taco_datum');
         });
     });
 });

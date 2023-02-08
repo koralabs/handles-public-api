@@ -59,7 +59,13 @@ const processAssetReferenceToken = async ({
     const personalization = await buildPersonalization(referenceTokenData);
 
     // TODO: get addresses from personalization data
-    await HandleStore.savePersonalizationChange({ hexName, personalization, addresses: {}, slotNumber });
+    await HandleStore.savePersonalizationChange({
+        hexName,
+        personalization,
+        addresses: {},
+        slotNumber,
+        hasDatum: !!datum
+    });
 };
 
 const processAssetToken = async ({
@@ -67,14 +73,14 @@ const processAssetToken = async ({
     slotNumber,
     address,
     utxo,
-    datum,
+    hasDatum,
     handleMetadata
 }: {
     assetName: string;
     slotNumber: number;
     address: string;
     utxo: string;
-    datum: string | Record<string, unknown> | null;
+    hasDatum: boolean;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
 }) => {
     const hexName = assetName?.split('.')[1];
@@ -91,9 +97,18 @@ const processAssetToken = async ({
             image,
             core: { og }
         } = data;
-        await HandleStore.saveMintedHandle({ hexName, name, og, image, slotNumber, utxo, adaAddress: address });
+        await HandleStore.saveMintedHandle({
+            hexName,
+            name,
+            og,
+            image,
+            slotNumber,
+            utxo,
+            hasDatum,
+            adaAddress: address
+        });
     } else {
-        await HandleStore.saveHandleUpdate({ hexName, adaAddress: address, slotNumber, utxo });
+        await HandleStore.saveHandleUpdate({ hexName, adaAddress: address, slotNumber, utxo, hasDatum });
     }
 };
 
@@ -151,7 +166,7 @@ export const processBlock = async ({
                                 assetName,
                                 address,
                                 slotNumber: currentSlot,
-                                datum,
+                                hasDatum: !!datum,
                                 handleMetadata: data,
                                 utxo: `${txId}#${i}`
                             });

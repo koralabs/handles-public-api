@@ -21,7 +21,8 @@ export const handlesFixture: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now(),
-        updated_slot_number: Date.now()
+        updated_slot_number: Date.now(),
+        hasDatum: false
     },
     {
         hex: 'burrito-hex',
@@ -42,7 +43,8 @@ export const handlesFixture: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now() + 10,
-        updated_slot_number: Date.now() + 10
+        updated_slot_number: Date.now() + 10,
+        hasDatum: false
     },
     {
         hex: 'taco-hex',
@@ -63,7 +65,8 @@ export const handlesFixture: IHandle[] = [
         profile_pic: '',
         background: '',
         created_slot_number: Date.now() + 20,
-        updated_slot_number: Date.now() + 20
+        updated_slot_number: Date.now() + 20,
+        hasDatum: false
     }
 ];
 

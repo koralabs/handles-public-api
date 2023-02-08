@@ -131,7 +131,9 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json({ datum: handleDatum });
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202)
+                .contentType('text/plain; charset=utf-8')
+                .send(handleDatum);
         } catch (error) {
             next(error);
         }

@@ -7,7 +7,7 @@
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
   "scripts": {
-    "create_paths": "mkdir -p handles && touch handles/handles.json",
+    "create_paths": "mkdir -p handles && touch handles/handles.json && mkdir -p handles/datum",
     "start": "yarn create_paths && node express.js",
     "start:forever": "yarn create_paths && mkdir -p forever && forever -p ./forever start express.js",
     "start:containers": "chmod +x ./start_containers.sh && ./start_containers.sh",
@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
-    "@koralabs/handles-public-api-interfaces": "1.4.1",
+    "@koralabs/handles-public-api-interfaces": "1.4.2",
     "@koralabs/kora-labs-common": "^1.0.5",
     "@koralabs/protected-words": "^1.0.0",
     "bech32": "^2.0.0",

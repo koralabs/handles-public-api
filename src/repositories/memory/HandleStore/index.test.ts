@@ -14,8 +14,9 @@ jest.mock('fs', () => ({
                 return JSON.stringify({ utxo: '123#1', datum: 'abc123' });
             }
 
-            return Promise.reject({ code: 'ENOENT' });
-        })
+            return Promise.reject({ code: 'ENOENT', message: 'File not found' });
+        }),
+        unlink: jest.fn().mockImplementation(async () => Promise.reject({ code: 'ENOENT', message: 'File not found' }))
     },
     writeFileSync: jest.fn().mockImplementation(),
     unlinkSync: jest.fn().mockImplementation()
@@ -45,9 +46,10 @@ describe('HandleStore tests', () => {
                 og,
                 utxo,
                 updated_slot_number: slotNumber,
-                resolved_addresses: { ada: adaAddress }
+                resolved_addresses: { ada: adaAddress },
+                hasDatum
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
+            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo, hasDatum });
         }
     });
 
@@ -118,7 +120,8 @@ describe('HandleStore tests', () => {
                 og: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
-                slotNumber: 100
+                slotNumber: 100,
+                hasDatum: false
             });
 
             const handle = HandleStore.get('nachos-hex');
@@ -141,7 +144,8 @@ describe('HandleStore tests', () => {
                 rarity: 'common',
                 resolved_addresses: { ada: 'addr123' },
                 updated_slot_number: 100,
-                utxo: 'utxo123#0'
+                utxo: 'utxo123#0',
+                hasDatum: false
             });
 
             // expect to get the correct slot history with all new handles
@@ -163,7 +167,8 @@ describe('HandleStore tests', () => {
                 og: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
-                slotNumber: 100
+                slotNumber: 100,
+                hasDatum: false
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -190,7 +195,8 @@ describe('HandleStore tests', () => {
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 200
+                slotNumber: 200,
+                hasDatum: false
             });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');
@@ -253,22 +259,25 @@ describe('HandleStore tests', () => {
                 hexName: '123',
                 personalization,
                 addresses: {},
-                slotNumber: 1234
+                slotNumber: 1234,
+                hasDatum: false
             });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
-                event: 'saveWalletAddressMove.noHandleFound',
+                event: 'savePersonalizationChange.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
         });
     });
 
-    describe('saveWalletAddressMove tests', () => {
-        it('Should only update the ada address', async () => {
+    describe('saveHandleUpdate tests', () => {
+        it('Should update a handle and the slot history', async () => {
+            const handleHex = 'salsa-hex';
             const stakeKey = 'stake123';
             const updatedStakeKey = 'stake123_new';
             const address = 'addr123';
             const newAddress = 'addr123_new';
+            const removeFileSpy = jest.spyOn(HandleStore, 'removeHandleDatumFile');
             jest.spyOn(addresses, 'getAddressHolderDetails')
                 .mockResolvedValueOnce({
                     address: stakeKey,
@@ -282,33 +291,35 @@ describe('HandleStore tests', () => {
                 });
 
             await HandleStore.saveMintedHandle({
-                hexName: 'salsa-hex',
+                hexName: handleHex,
                 name: 'salsa',
                 adaAddress: address,
                 og: 0,
                 utxo: 'utxo_salsa1#0',
                 image: 'ipfs://123',
-                slotNumber: 100
+                slotNumber: 100,
+                hasDatum: true
             });
 
-            const existingHandle = HandleStore.get('salsa-hex');
+            const existingHandle = HandleStore.get(handleHex);
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder_address).toEqual(stakeKey);
 
             await HandleStore.saveHandleUpdate({
-                hexName: 'salsa-hex',
+                hexName: handleHex,
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
-                slotNumber: 200
+                slotNumber: 200,
+                hasDatum: false
             });
 
-            const handle = HandleStore.get('salsa-hex');
+            const handle = HandleStore.get(handleHex);
             expect(handle).toEqual({
                 holder_address: updatedStakeKey,
                 default_in_wallet: 'salsa',
                 background: '',
                 characters: 'letters',
-                hex: 'salsa-hex',
+                hex: handleHex,
                 utxo: 'utxo_salsa2#0',
                 length: 5,
                 name: 'salsa',
@@ -320,7 +331,8 @@ describe('HandleStore tests', () => {
                 rarity: 'common',
                 resolved_addresses: { ada: newAddress },
                 created_slot_number: expect.any(Number),
-                updated_slot_number: expect.any(Number)
+                updated_slot_number: expect.any(Number),
+                hasDatum: false
             });
 
             // expect to get the correct slot history with all new handles
@@ -328,16 +340,17 @@ describe('HandleStore tests', () => {
                 [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
                 [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
                 [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                [100, { 'salsa-hex': { new: { name: 'salsa' }, old: null } }],
+                [100, { [handleHex]: { new: { name: 'salsa' }, old: null } }],
                 [
                     200,
                     {
-                        'salsa-hex': {
+                        [handleHex]: {
                             new: {
                                 holder_address: 'stake123_new',
                                 resolved_addresses: {
                                     ada: 'addr123_new'
                                 },
+                                hasDatum: false,
                                 updated_slot_number: 200,
                                 utxo: 'utxo_salsa2#0'
                             },
@@ -345,12 +358,16 @@ describe('HandleStore tests', () => {
                                 holder_address: stakeKey,
                                 resolved_addresses: { ada: address },
                                 updated_slot_number: 100,
-                                utxo: 'utxo_salsa1#0'
+                                utxo: 'utxo_salsa1#0',
+                                hasDatum: true
                             }
                         }
                     }
                 ]
             ]);
+
+            expect(removeFileSpy).toHaveBeenCalledTimes(1);
+            expect(removeFileSpy).toHaveBeenCalledWith(handleHex);
         });
 
         it('Should log an error if handle is not found', async () => {
@@ -362,11 +379,12 @@ describe('HandleStore tests', () => {
                 hexName: '123',
                 adaAddress: newAddress,
                 slotNumber: 1234,
-                utxo: 'utxo'
+                utxo: 'utxo',
+                hasDatum: false
             });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
-                event: 'saveWalletAddressMove.noHandleFound',
+                event: 'saveHandleUpdate.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
         });
@@ -388,6 +406,18 @@ describe('HandleStore tests', () => {
         it('should return null if file does not exist', async () => {
             const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#3', handleHex: 'burrito' });
             expect(datum).toEqual(null);
+        });
+    });
+
+    describe('removeHandleDatumFile', () => {
+        it('should throw error if file does not exit', async () => {
+            const loggerSpy = jest.spyOn(Logger, 'log');
+            await HandleStore.removeHandleDatumFile('hex1234');
+            expect(loggerSpy).toHaveBeenCalledWith({
+                category: 'ERROR',
+                event: 'HandleStore.removeHandleDatumFile',
+                message: expect.any(String)
+            });
         });
     });
 });

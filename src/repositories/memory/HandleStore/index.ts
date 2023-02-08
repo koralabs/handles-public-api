@@ -35,7 +35,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 5;
+    static storageSchemaVersion = 6;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -154,9 +154,14 @@ export class HandleStore {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, personalization);
             if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
+
+        // If oldHandle has datum and new does not, remove the file.
+        if (oldHandle?.hasDatum && !handle.hasDatum) {
+            await HandleStore.removeHandleDatumFile(hex);
+        }
     };
 
-    static remove = (hexName: string) => {
+    static remove = async (hexName: string) => {
         Logger.log({ category: LogCategory.INFO, message: `Removing handle ${hexName}`, event: 'HandleStore.remove' });
 
         const handle = this.handles.get(hexName);
@@ -169,17 +174,7 @@ export class HandleStore {
             return;
         }
 
-        const {
-            name,
-            rarity,
-            holder_address,
-            og,
-            characters,
-            numeric_modifiers,
-            length,
-            hex,
-            resolved_addresses: { ada }
-        } = handle;
+        const { name, rarity, holder_address, og, characters, numeric_modifiers, length, hex, hasDatum } = handle;
 
         // Set the main index
         this.handles.delete(hex);
@@ -199,6 +194,11 @@ export class HandleStore {
 
         // remove the stake key index
         this.holderAddressIndex.get(holder_address)?.hexes.delete(hex);
+
+        // if the handle has datum, we also need to remove the datum file
+        if (hasDatum) {
+            await HandleStore.removeHandleDatumFile(hex);
+        }
     };
 
     static setHolderAddressIndex(holderAddressDetails: AddressDetails, newHex: string, defaultName?: string) {
@@ -250,6 +250,7 @@ export class HandleStore {
         image,
         slotNumber,
         utxo,
+        hasDatum,
         background = '',
         default_in_wallet = '',
         profile_pic = ''
@@ -273,7 +274,8 @@ export class HandleStore {
             default_in_wallet,
             profile_pic,
             created_slot_number: slotNumber,
-            updated_slot_number: slotNumber
+            updated_slot_number: slotNumber,
+            hasDatum
         };
 
         return newHandle;
@@ -339,13 +341,19 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({ hexName, adaAddress, utxo, slotNumber }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({
+        hexName,
+        adaAddress,
+        utxo,
+        slotNumber,
+        hasDatum
+    }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
                 message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
                 category: LogCategory.ERROR,
-                event: 'saveWalletAddressMove.noHandleFound'
+                event: 'saveHandleUpdate.noHandleFound'
             });
             return;
         }
@@ -354,24 +362,29 @@ export class HandleStore {
             ...existingHandle,
             utxo,
             resolved_addresses: { ada: adaAddress },
-            updated_slot_number: slotNumber
+            updated_slot_number: slotNumber,
+            hasDatum
         };
 
-        await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle });
+        await HandleStore.save({
+            handle: updatedHandle,
+            oldHandle: existingHandle
+        });
     };
 
     static async savePersonalizationChange({
         hexName,
         personalization,
         addresses,
-        slotNumber
+        slotNumber,
+        hasDatum
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
                 message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
                 category: LogCategory.ERROR,
-                event: 'saveWalletAddressMove.noHandleFound'
+                event: 'savePersonalizationChange.noHandleFound'
             });
             return;
         }
@@ -396,7 +409,11 @@ export class HandleStore {
             }
         };
 
-        await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle, personalization });
+        await HandleStore.save({
+            handle: updatedHandle,
+            oldHandle: existingHandle,
+            personalization
+        });
     }
 
     static convertMapsToObjects = <T>(mapInstance: Map<string, T>) => {
@@ -795,7 +812,7 @@ export class HandleStore {
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
-                    this.remove(hex);
+                    await this.remove(hex);
                     deletes++;
                     continue;
                 }
@@ -806,7 +823,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
-                await this.save({ handle: updatedHandle, saveHistory: false });
+                await this.save({ handle: updatedHandle, oldHandle: existingHandle, saveHistory: false });
                 updates++;
             }
 
@@ -836,6 +853,20 @@ export class HandleStore {
         await fsPromise.writeFile(filePath, JSON.stringify(datumFileContents), {
             encoding: 'utf8'
         });
+    }
+
+    static async removeHandleDatumFile(handleHex: string) {
+        const filePath = `${HandleStore.storageFolder}/datum/${handleHex}.datum`;
+
+        try {
+            await fsPromise.unlink(filePath);
+        } catch (error: any) {
+            Logger.log({
+                message: `Error deleting file ${filePath} with error: ${error.message}`,
+                category: LogCategory.ERROR,
+                event: 'HandleStore.removeHandleDatumFile'
+            });
+        }
     }
 
     static async getDatumFromFileSystem({

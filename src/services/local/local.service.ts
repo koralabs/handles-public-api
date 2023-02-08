@@ -21,7 +21,8 @@ export class LocalService {
                         hexName: hex,
                         personalization,
                         addresses,
-                        slotNumber: fileContents.slot
+                        slotNumber: fileContents.slot,
+                        hasDatum: false
                     });
                 });
             }
