@@ -25,7 +25,10 @@ paths:
       tags:
       - handles
       summary: Get all minted handles
-      description: Get all minted handles
+      description: Get all minted handles.
+        This endpoint will return a plain text list of all Handle names if the
+        `Accepts` header is set to `text/plain`. If the `Accepts` header is set
+        tp `application/json` it will return a paginated list of JSON Handle objects instead.
       parameters:
       - name: characters
         in: query
@@ -146,6 +149,48 @@ paths:
           description: Handle not found
       security:
       - api-key: []
+  "/handles/{handle}/datum":
+    get:
+      tags:
+      - handles
+      description: Get the datum in the same UTxO as the Handle, if present.
+        This endpoint will return a plain text response of just the Cbor string if the 
+        `Accepts` header is `text/plain`. If the `Accepts` header is `application/json` 
+        the API will attempt to convert the Cbor to JSON, but may fail of the object 
+        isn't actually JSON.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                description: Cbor/hex encoded string of datum from the blockchain
+                example: A2446E616D654B436C65766572204769726C4469706673582E516D50636B3439384379355457594A53354E69667832523834466A596A4A4C693662386F484D4E6B666878705334
+            application/json:
+              schema:
+                type: string
+                description: Attempt to convert the Cbor into a json object string
+                example: '{ "name": "Clever Girl", "ipfs": "QmPck498Cy5TWYJS5Nifx2R84FjYjJLi6b8oHMNkfhxpS4" }'
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                description: Cbor/hex encoded string of datum from the blockchain
+                example: A2446E616D654B436C65766572204769726C4469706673582E516D50636B3439384379355457594A53354E69667832523834466A596A4A4C693662386F484D4E6B666878705334
+            application/json:
+              schema:
+                type: string
+                description: Attempt to convert the Cbor into a json object string
+                example: '{ "name": "Clever Girl", "ipfs": "QmPck498Cy5TWYJS5Nifx2R84FjYjJLi6b8oHMNkfhxpS4" }'
+        '400':
+          description: If Cbor to JSON conversion fails or the Handle is an invalid format
+        '404':
+          description: Datum not found
+      security:
+      - api-key: []
   "/handles/{handle}/personalized":
     get:
       tags:
@@ -180,8 +225,8 @@ paths:
     get:
       tags:
       - holders
-      summary: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
-      description: NOT YET IMPLEMENTED. Lists the wallets/scripts/exchanges that hold Handles.
+      summary: NOT YET IMPLEMENTED. Lists the wallet/script/enterprise addresses that hold Handles.
+      description: NOT YET IMPLEMENTED. Lists the wallet/script/enterprise addresses that hold Handles.
       parameters:
       - name: records_per_page
         in: query
@@ -222,7 +267,7 @@ paths:
       parameters:
       - name: holder_address
         in: path
-        description: The stake/enterprise/script/exchange address of the Holder
+        description: The stake/enterprise/script/other address of the Holder
         required: true
         schema:
           type: string
@@ -343,6 +388,9 @@ components:
           type: string
           description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
           example: 8f1d7ec063ce83d93d1bad658886e81568d19ca9bd8dd0e6e268d7be3e33c653#1
+        has_datum:
+          type: boolean
+          description: "`true` if the UTxO that the Handle is in also has a datum value"
         created_slot_number:
           type: integer
           description: The slot number this Handle was minted
@@ -359,7 +407,7 @@ components:
         address:
           type: string
           example: stake1d4fg5dghrdxxxxxxxxxxxxxxxxxxx
-          description: Stake Key, Enterprise Address, Script Address, or Exchange Address
+          description: Stake Key, Enterprise Address, Script Address, or Other Address
         type:
           "$ref": "#/components/schemas/AddressType"
         known_owner_name:
@@ -400,7 +448,7 @@ components:
         total_holders:
           type: integer
           example: 42167
-          description: Total number of Handle Holders including wallets/scripts/enterprise/exchange and unknown addresses
+          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses
     Personalization:
       type: object
       properties:
@@ -452,15 +500,13 @@ components:
       example: wallet
       description: |
         <br />If it is a Shelley address and a script, it will say `script`.
-        <br />If it is a Shelley rewards address, it will say `reward`.
-        <br />If it is Shelley, is not a script or reward address, and has a stake key, it will be `wallet`.
+        <br />If it is Shelley, is not a script, and has a stake key, it will be `wallet`.
         <br />If it is Shelley, is not a script, and doesn't have a stake key, it will be `enterprise`.
         <br />If the address is not a Shelley address, it will be `other`.
       enum:
       - wallet
       - script
       - enterprise
-      - reward
       - other
   requestBodies:
     Handle:
