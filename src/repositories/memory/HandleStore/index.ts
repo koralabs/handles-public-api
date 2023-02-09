@@ -617,7 +617,7 @@ export class HandleStore {
         }
 
         try {
-            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${this.storageSchemaVersion}/${fileName}`;
+            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.storageSchemaVersion}/${fileName}`;
             Logger.log(`Fetching ${url}`);
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
