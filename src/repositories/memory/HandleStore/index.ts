@@ -4,7 +4,7 @@ import fetch from 'cross-fetch';
 import fs, { promises as fsPromise } from 'fs';
 import lockfile from 'proper-lockfile';
 import { diff } from 'deep-object-diff';
-import { NETWORK, NODE_ENV } from '../../../config';
+import { isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
@@ -36,7 +36,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 6;
+    static storageSchemaVersion = 7;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -50,7 +50,6 @@ export class HandleStore {
 
     static storageFileName = `handles.json`;
     static storageFilePath = `${HandleStore.storageFolder}/${NETWORK}/snapshot/${HandleStore.storageFileName}`;
-    static datumStoragePath = `${HandleStore.storageFolder}/${NETWORK}/datum`;
 
     static get = (key: string): IHandle | null => {
         const handle = HandleStore.handles.get(key);
@@ -148,11 +147,6 @@ export class HandleStore {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, personalization);
             if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
-
-        // If oldHandle has datum and new does not, remove the file.
-        if (oldHandle?.hasDatum && !handle.hasDatum) {
-            await HandleStore.removeHandleDatumFile(hex);
-        }
     };
 
     static remove = async (hexName: string) => {
@@ -188,11 +182,6 @@ export class HandleStore {
 
         // remove the stake key index
         this.holderAddressIndex.get(holder_address)?.hexes.delete(hex);
-
-        // if the handle has datum, we also need to remove the datum file
-        if (hasDatum) {
-            await HandleStore.removeHandleDatumFile(hex);
-        }
     };
 
     static setHolderAddressIndex(holderAddressDetails: AddressDetails, newHex: string, defaultName?: string) {
@@ -244,7 +233,7 @@ export class HandleStore {
         image,
         slotNumber,
         utxo,
-        hasDatum,
+        datum,
         background = '',
         default_in_wallet = '',
         profile_pic = ''
@@ -269,7 +258,8 @@ export class HandleStore {
             profile_pic,
             created_slot_number: slotNumber,
             updated_slot_number: slotNumber,
-            hasDatum
+            hasDatum: !!datum,
+            datum: isDatumEndpointEnabled() && datum ? datum : undefined
         };
 
         return newHandle;
@@ -335,13 +325,7 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({
-        hexName,
-        adaAddress,
-        utxo,
-        slotNumber,
-        hasDatum
-    }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({ hexName, adaAddress, utxo, slotNumber, datum }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
@@ -357,7 +341,8 @@ export class HandleStore {
             utxo,
             resolved_addresses: { ada: adaAddress },
             updated_slot_number: slotNumber,
-            hasDatum
+            hasDatum: !!datum,
+            datum: isDatumEndpointEnabled() && datum ? datum : undefined
         };
 
         await HandleStore.save({
@@ -823,92 +808,6 @@ export class HandleStore {
 
             // delete the slot key since we are rolling back to it
             this.slotHistoryIndex.delete(slotKey);
-        }
-    }
-
-    static async saveDatumFile({
-        handleHex,
-        utxo,
-        datum
-    }: {
-        handleHex: string;
-        utxo: string;
-        datum: string | Record<string, unknown> | null;
-    }) {
-        const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
-        const datumString = !datum || typeof datum === 'string' ? datum : JSON.stringify(datum);
-
-        const datumFileContents = {
-            utxo,
-            datum: datumString
-        };
-
-        try {
-            // save datum to the file system
-            await fsPromise.writeFile(filePath, JSON.stringify(datumFileContents), {
-                encoding: 'utf8'
-            });
-        } catch (error: any) {
-            Logger.log({
-                message: `Error saving datum file ${filePath} with error: ${error.message}`,
-                category: LogCategory.ERROR,
-                event: 'HandleStore.saveDatumFile'
-            });
-
-            throw new HttpException(500, `Error caching ${handleHex} datum`);
-        }
-    }
-
-    static async removeHandleDatumFile(handleHex: string) {
-        const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
-
-        try {
-            await fsPromise.unlink(filePath);
-        } catch (error: any) {
-            if (error.code !== 'ENOENT') {
-                // If we don't get an ENOENT error, then we need to log it
-                Logger.log({
-                    message: `Error deleting file ${filePath} with error: ${error.message}`,
-                    category: LogCategory.ERROR,
-                    event: 'HandleStore.removeHandleDatumFile'
-                });
-            }
-        }
-    }
-
-    static async getDatumFromFileSystem({
-        handleHex,
-        utxo
-    }: {
-        handleHex: string;
-        utxo: string;
-    }): Promise<string | null> {
-        try {
-            const filePath = `${this.datumStoragePath}/${handleHex}.datum`;
-
-            // first we need to check if the datum file exists
-            const result = await fsPromise.readFile(filePath, {
-                encoding: 'utf8'
-            });
-
-            // if file exists we need to check if the utxo matches
-            const datumFileContents = JSON.parse(result);
-
-            // if the utxo matches, return the datum
-            if (datumFileContents.utxo === utxo) {
-                return datumFileContents.datum;
-            }
-
-            // if the utxo doesn't match, return null and check ogmios later. The file will be overridden with a new utxo and datum
-            return null;
-        } catch (error: any) {
-            // if the file doesn't exist, return null and check ogmios later
-            if (error.code === 'ENOENT') {
-                return null;
-            }
-
-            // otherwise, throw the error
-            throw error;
         }
     }
 }
