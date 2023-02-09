@@ -79,7 +79,15 @@ describe('processBlock Tests', () => {
         policy = policyId,
         handleHexName = hexName,
         handleName = name,
-        isMint = true
+        isMint = true,
+        datum = undefined
+    }: {
+        address?: string | undefined;
+        policy?: string | undefined;
+        handleHexName?: string | undefined;
+        handleName?: string | undefined;
+        isMint?: boolean | undefined;
+        datum?: string;
     }) => ({
         babbage: {
             body: [
@@ -88,6 +96,7 @@ describe('processBlock Tests', () => {
                     body: {
                         outputs: [
                             {
+                                datum,
                                 address,
                                 value: {
                                     coins: 1,
@@ -152,8 +161,7 @@ describe('processBlock Tests', () => {
             name: 'test1234',
             og: 1,
             slotNumber: 0,
-            utxo: 'some_id#0',
-            hasDatum: false
+            utxo: 'some_id#0'
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -163,6 +171,26 @@ describe('processBlock Tests', () => {
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
+    });
+
+    it('Should save datum if ENABLE_DATUM_ENDPOINT is enabled', async () => {
+        const datum = 'a2some_datum';
+        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
+
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+
+        await processBlock({ policyId, txBlock: txBlock({ datum }) as TxBlock, tip });
+
+        expect(saveSpy).toHaveBeenCalledWith({
+            adaAddress: 'addr123',
+            hexName: '7465737431323334',
+            image: 'ifps://some_hash_test1234',
+            name: 'test1234',
+            og: 1,
+            slotNumber: 0,
+            utxo: 'some_id#0',
+            datum
+        });
     });
 
     it('Should not save a new handle because it already exists in store', async () => {
@@ -178,8 +206,7 @@ describe('processBlock Tests', () => {
             adaAddress: newAddress,
             hexName,
             slotNumber: 0,
-            utxo: 'some_id#0',
-            hasDatum: false
+            utxo: 'some_id#0'
         });
     });
 

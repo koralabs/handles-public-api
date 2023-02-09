@@ -23,10 +23,9 @@ describe('rewindChangesToSlot', () => {
                 og,
                 updated_slot_number: slotNumber,
                 utxo,
-                resolved_addresses: { ada: adaAddress },
-                hasDatum
+                resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo, hasDatum });
+            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
         }
 
         // set the slotHistoryIndex

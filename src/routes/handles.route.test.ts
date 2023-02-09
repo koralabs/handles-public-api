@@ -1,5 +1,6 @@
 import request from 'supertest';
 import App from '../app';
+import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 
@@ -243,15 +244,24 @@ describe('Testing Handles Routes', () => {
 
     describe('[GET] /handles/:handle/datum', () => {
         it('should throw error if address does not exist', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/handles/nope/datum');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Handle datum not found');
         });
 
         it('should return valid handle', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/handles/taco/datum');
             expect(response.status).toEqual(200);
             expect(response.text).toEqual('taco_datum');
+        });
+
+        it('should return error if ENABLE_DATUM_ENDPOINT is false', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
+            const response = await request(app?.getServer()).get('/handles/taco/datum');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('Datum endpoint is disabled');
         });
     });
 });
