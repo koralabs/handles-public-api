@@ -1,7 +1,9 @@
 import { IHandle, IHandleStats, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
-import fs, { promises as fsPromise } from 'fs';
+import { inflate } from 'zlib';
+import { promisify } from 'util';
+import fs from 'fs';
 import lockfile from 'proper-lockfile';
 import { diff } from 'deep-object-diff';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
@@ -19,7 +21,6 @@ import {
     ISlotHistoryIndex,
     HandleHistory
 } from '../interfaces/handleStore.interfaces';
-import { HttpException } from '../../../exceptions/HttpException';
 
 export class HandleStore {
     // Indexes
@@ -60,6 +61,10 @@ export class HandleStore {
         const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder_address);
         if (holderAddressIndex) {
             handle.default_in_wallet = holderAddressIndex.defaultHandle;
+        }
+
+        if (!isDatumEndpointEnabled()) {
+            handle.datum = undefined;
         }
 
         return handle;
@@ -606,7 +611,13 @@ export class HandleStore {
             Logger.log(`Fetching ${url}`);
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
-                const text = await awsResponse.text();
+                const buff = await awsResponse.arrayBuffer();
+
+                const unZipPromise = promisify(inflate);
+
+                const result = await unZipPromise(buff);
+                const text = result.toString('utf8');
+
                 Logger.log(`Found ${url}`);
                 return JSON.parse(text) as T;
             }
@@ -623,8 +634,9 @@ export class HandleStore {
         slot: number;
         hash: string;
     } | null> {
+        const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
         const [externalHandles, localHandles] = await Promise.all([
-            HandleStore.getFileOnline<IHandleFileContent>(this.storageFileName),
+            HandleStore.getFileOnline<IHandleFileContent>(fileName),
             HandleStore.getFile<IHandleFileContent>(this.storageFilePath)
         ]);
 

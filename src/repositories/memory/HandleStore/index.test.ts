@@ -33,6 +33,7 @@ describe('HandleStore tests', () => {
 
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
+        jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
         jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
             address: 'stake123',
             type: 'base',
@@ -50,7 +51,16 @@ describe('HandleStore tests', () => {
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
+            await HandleStore.saveMintedHandle({
+                adaAddress,
+                hexName,
+                image,
+                name,
+                og,
+                slotNumber,
+                utxo,
+                datum: `some_datum_${key}`
+            });
         }
     });
 
@@ -102,6 +112,40 @@ describe('HandleStore tests', () => {
             await delay(100);
             const locked = await HandleStore.getFile(filePath);
             expect(locked).toEqual(null);
+        });
+    });
+
+    describe('get', () => {
+        it('should return a handle', () => {
+            const handle = HandleStore.get('barbacoa-hex');
+            expect(handle).toEqual({
+                background: '',
+                characters: 'letters',
+                created_slot_number: expect.any(Number),
+                datum: 'some_datum_0',
+                default_in_wallet: 'taco',
+                hasDatum: true,
+                hex: 'barbacoa-hex',
+                holder_address: 'stake123',
+                length: 8,
+                name: 'barbacoa',
+                nft_image: '',
+                numeric_modifiers: '',
+                og: 0,
+                original_nft_image: '',
+                profile_pic: '',
+                rarity: 'basic',
+                resolved_addresses: { ada: '123' },
+                updated_slot_number: expect.any(Number),
+                utxo: 'utxo1#0'
+            });
+        });
+
+        it('should return null datum if datum is not enabled', () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
+            const handle = HandleStore.get('barbacoa-hex');
+            expect(handle?.datum).toEqual(undefined);
+            expect(handle?.hasDatum).toEqual(true);
         });
     });
 
