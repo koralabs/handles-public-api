@@ -2,7 +2,7 @@ import { IHandle } from '@koralabs/handles-public-api-interfaces';
 import { IRegistry } from '../ioc';
 
 export interface IGetAllQueryParams {
-    handles_per_page?: string;
+    records_per_page?: string;
     page?: string;
     sort?: 'asc' | 'desc';
     characters?: string;
@@ -12,6 +12,12 @@ export interface IGetAllQueryParams {
     slot_number?: string;
     search?: string;
     holder_address?: string;
+}
+
+export interface IGetAllHoldersQueryParams {
+    records_per_page?: string;
+    page?: string;
+    sort?: 'asc' | 'desc';
 }
 
 export interface IGetHandleRequest {

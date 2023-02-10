@@ -38,8 +38,8 @@ export const POLICY_IDS: PolicyIds = {
 };
 
 export enum ERROR_TEXT {
-    HANDLE_LIMIT_EXCEEDED = "'handles_per_page' must be a number",
-    HANDLE_LIMIT_INVALID_FORMAT = "'handles_per_page' can't be more than 1000",
+    HANDLE_LIMIT_EXCEEDED = "'records_per_page' must be a number",
+    HANDLE_LIMIT_INVALID_FORMAT = "'records_per_page' can't be more than 1000",
     HANDLE_SORT_INVALID = "'sort' must be 'desc' or 'asc'",
     HANDLE_PAGE_INVALID = "'page' must be a number",
     HANDLE_SLOT_NUMBER_INVALID = "'slot_number' must be a number",

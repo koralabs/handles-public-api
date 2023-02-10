@@ -15,7 +15,7 @@ class HandlesController {
     ): Promise<void> => {
         try {
             const {
-                handles_per_page,
+                records_per_page,
                 sort,
                 page,
                 characters,
@@ -39,7 +39,7 @@ class HandlesController {
             const pagination = new HandlePaginationModel({
                 page,
                 sort,
-                handlesPerPage: handles_per_page,
+                handlesPerPage: records_per_page,
                 slotNumber: slot_number
             });
 

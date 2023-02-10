@@ -5,11 +5,12 @@ import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface'
 
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
+import { HolderPaginationModel } from '../../models/holderPagination.model';
 import { queryStateByUtxo } from '../../services/ogmios/stateQuery/ogmios.stateQuery.service';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
-class MemoryHandlesRepository implements IHandlesRepository {
+class MemoryHandlesRepository implements IHandlesRepository {    
     private search(searchModel: HandleSearchModel) {
         const EMPTY = 'empty';
         const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
@@ -104,6 +105,33 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
         return handles;
+    }
+
+    public async getAllHolders({pagination}: { pagination: HolderPaginationModel; }): Promise<HolderAddressDetailsResponse[]>{
+        const { page, sort, recordsPerPage } = pagination;
+
+        const items = new Array<HolderAddressDetailsResponse>
+        Object.keys(HandleStore.holderAddressIndex).forEach(function(key) {
+            const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
+            if (holderAddressDetails){
+                const { hexes,  defaultHandle, manuallySet, type, knownOwnerName } = holderAddressDetails;
+                items.push({
+                    total_handles: hexes.size,
+                    default_handle: defaultHandle,
+                    manually_set: manuallySet,
+                    address: key,
+                    known_owner_name: knownOwnerName,
+                    type
+                })
+            }
+          });
+
+        items.sort((a, b) => (sort === 'desc' ? b.total_handles - a.total_handles: a.total_handles - b.total_handles));
+        const startIndex = (page - 1) * recordsPerPage;
+        const handles = items.slice(startIndex, startIndex + recordsPerPage);
+
+        return handles;
+
     }
 
     public async getAllHandleNames(search: HandleSearchModel, sort: string) {

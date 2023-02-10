@@ -2,6 +2,7 @@ import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-pu
 import { HolderAddressDetailsResponse } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
+import { HolderPaginationModel } from '../models/holderPagination.model';
 
 interface IHandlesRepository {
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<IHandle[]>;
@@ -9,6 +10,7 @@ interface IHandlesRepository {
     getHandleByName: (handleName: string) => Promise<IHandle | null>;
     getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
+    getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;
     getIsCaughtUp: () => boolean;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;

@@ -73,21 +73,21 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /handles', () => {
-        it('should throw error if handles_per_page is invalid', async () => {
-            const response = await request(app?.getServer()).get('/handles?handles_per_page=two');
+        it('should throw error if records_per_page is invalid', async () => {
+            const response = await request(app?.getServer()).get('/handles?records_per_page=two');
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
         });
 
         it('should throw error if sort is invalid', async () => {
-            const response = await request(app?.getServer()).get('/handles?handles_per_page=1&sort=hmm');
+            const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=hmm');
 
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_SORT_INVALID);
         });
 
         it('should return handles', async () => {
-            const response = await request(app?.getServer()).get('/handles?handles_per_page=1&sort=asc');
+            const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
             expect(response.body).toEqual([{ handle: 'burritos' }]);

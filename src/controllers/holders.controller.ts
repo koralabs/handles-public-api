@@ -1,16 +1,31 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
+import { IGetAllHoldersQueryParams, IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
+import { HolderPaginationModel } from '../models/holderPagination.model';
 import IHandlesRepository from '../repositories/handles.repository';
 
 class HoldersController {
     public getAll = async (
-        req: Request<RequestWithRegistry, {}, {}, {}>,
+        req: Request<RequestWithRegistry, {}, {}, IGetAllHoldersQueryParams>,
         res: Response,
         next: NextFunction
     ): Promise<void> => {
         try {
-            res.status(200).json({ message: 'Coming Soon' });
+            const {
+                records_per_page,
+                sort,
+                page,
+            } = req.query;
+
+            const pagination = new HolderPaginationModel({
+                page,
+                sort,
+                recordsPerPage: records_per_page
+            });
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const holders = await handleRepo.getAllHolders({ pagination });
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(holders);
         } catch (error) {
             next(error);
         }
