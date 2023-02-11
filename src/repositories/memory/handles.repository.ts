@@ -1,11 +1,9 @@
 import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 
 import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
-import { queryStateByUtxo } from '../../services/ogmios/stateQuery/ogmios.stateQuery.service';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
@@ -160,29 +158,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const handle = await this.getHandleByName(handleName);
         if (!handle) throw new HttpException(404, 'Not found');
 
-        const { hex, utxo, hasDatum } = handle;
-
+        const { hasDatum, datum = null } = handle;
         if (!hasDatum) return null;
-
-        const datum = await HandleStore.getDatumFromFileSystem({ handleHex: hex, utxo });
-        if (datum) return datum;
-
-        const result = await queryStateByUtxo(utxo);
-        if (!result) {
-            Logger.log({
-                message: `${utxo} not found for handle ${handleName}`,
-                category: LogCategory.ERROR,
-                event: 'getHandleDatumByName.queryStateByUtxo.noResults'
-            });
-            throw new HttpException(500, 'Unable to query state');
-        }
-
-        const [_, txOut] = result[0];
-        const txOutDatum = txOut.datum ?? null;
-
-        // save file for quicker access next time
-        await HandleStore.saveDatumFile({ handleHex: hex, utxo, datum: txOutDatum });
-        return !txOutDatum || typeof txOutDatum === 'string' ? txOutDatum : JSON.stringify(txOutDatum);
+        return datum;
     }
 
     public getHandleStats(): IHandleStats {

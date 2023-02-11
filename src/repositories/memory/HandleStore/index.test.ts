@@ -5,6 +5,7 @@ import { handlesFixture } from '../tests/fixtures/handles';
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
+import * as config from '../../../config';
 
 jest.mock('fs', () => ({
     promises: {
@@ -21,6 +22,7 @@ jest.mock('fs', () => ({
     writeFileSync: jest.fn().mockImplementation(),
     unlinkSync: jest.fn().mockImplementation()
 }));
+
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
 jest.mock('../../../utils/serialization');
@@ -31,6 +33,7 @@ describe('HandleStore tests', () => {
 
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
+        jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
         jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
             address: 'stake123',
             type: 'base',
@@ -46,10 +49,18 @@ describe('HandleStore tests', () => {
                 og,
                 utxo,
                 updated_slot_number: slotNumber,
-                resolved_addresses: { ada: adaAddress },
-                hasDatum
+                resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo, hasDatum });
+            await HandleStore.saveMintedHandle({
+                adaAddress,
+                hexName,
+                image,
+                name,
+                og,
+                slotNumber,
+                utxo,
+                datum: `some_datum_${key}`
+            });
         }
     });
 
@@ -104,6 +115,40 @@ describe('HandleStore tests', () => {
         });
     });
 
+    describe('get', () => {
+        it('should return a handle', () => {
+            const handle = HandleStore.get('barbacoa-hex');
+            expect(handle).toEqual({
+                background: '',
+                characters: 'letters',
+                created_slot_number: expect.any(Number),
+                datum: 'some_datum_0',
+                default_in_wallet: 'taco',
+                hasDatum: true,
+                hex: 'barbacoa-hex',
+                holder_address: 'stake123',
+                length: 8,
+                name: 'barbacoa',
+                nft_image: '',
+                numeric_modifiers: '',
+                og: 0,
+                original_nft_image: '',
+                profile_pic: '',
+                rarity: 'basic',
+                resolved_addresses: { ada: '123' },
+                updated_slot_number: expect.any(Number),
+                utxo: 'utxo1#0'
+            });
+        });
+
+        it('should return null datum if datum is not enabled', () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
+            const handle = HandleStore.get('barbacoa-hex');
+            expect(handle?.datum).toEqual(undefined);
+            expect(handle?.hasDatum).toEqual(true);
+        });
+    });
+
     describe('saveMintedHandle tests', () => {
         it('Should save a new handle', async () => {
             const stakeKey = 'stake123';
@@ -113,6 +158,8 @@ describe('HandleStore tests', () => {
                 knownOwnerName: 'unknown'
             });
 
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+
             await HandleStore.saveMintedHandle({
                 hexName: 'nachos-hex',
                 name: 'nachos',
@@ -121,7 +168,7 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                hasDatum: false
+                datum: 'datum123'
             });
 
             const handle = HandleStore.get('nachos-hex');
@@ -145,7 +192,8 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr123' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
-                hasDatum: false
+                hasDatum: true,
+                datum: 'datum123'
             });
 
             // expect to get the correct slot history with all new handles
@@ -167,8 +215,7 @@ describe('HandleStore tests', () => {
                 og: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
-                slotNumber: 100,
-                hasDatum: false
+                slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -277,7 +324,6 @@ describe('HandleStore tests', () => {
             const updatedStakeKey = 'stake123_new';
             const address = 'addr123';
             const newAddress = 'addr123_new';
-            const removeFileSpy = jest.spyOn(HandleStore, 'removeHandleDatumFile');
             jest.spyOn(addresses, 'getAddressHolderDetails')
                 .mockResolvedValueOnce({
                     address: stakeKey,
@@ -290,6 +336,8 @@ describe('HandleStore tests', () => {
                     knownOwnerName: 'unknown'
                 });
 
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+
             await HandleStore.saveMintedHandle({
                 hexName: handleHex,
                 name: 'salsa',
@@ -298,7 +346,7 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo_salsa1#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                hasDatum: true
+                datum: 'a2datum_salsa'
             });
 
             const existingHandle = HandleStore.get(handleHex);
@@ -310,7 +358,7 @@ describe('HandleStore tests', () => {
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
                 slotNumber: 200,
-                hasDatum: false
+                datum: undefined
             });
 
             const handle = HandleStore.get(handleHex);
@@ -351,12 +399,14 @@ describe('HandleStore tests', () => {
                                     ada: 'addr123_new'
                                 },
                                 hasDatum: false,
+                                datum: undefined,
                                 updated_slot_number: 200,
                                 utxo: 'utxo_salsa2#0'
                             },
                             old: {
                                 holder_address: stakeKey,
                                 resolved_addresses: { ada: address },
+                                datum: 'a2datum_salsa',
                                 updated_slot_number: 100,
                                 utxo: 'utxo_salsa1#0',
                                 hasDatum: true
@@ -365,9 +415,6 @@ describe('HandleStore tests', () => {
                     }
                 ]
             ]);
-
-            expect(removeFileSpy).toHaveBeenCalledTimes(1);
-            expect(removeFileSpy).toHaveBeenCalledWith(handleHex);
         });
 
         it('Should log an error if handle is not found', async () => {
@@ -379,41 +426,13 @@ describe('HandleStore tests', () => {
                 hexName: '123',
                 adaAddress: newAddress,
                 slotNumber: 1234,
-                utxo: 'utxo',
-                hasDatum: false
+                utxo: 'utxo'
             });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveHandleUpdate.noHandleFound',
                 message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
             });
-        });
-    });
-
-    describe('getDatumFromFileSystem', () => {
-        it('Should return the datum if it exists', async () => {
-            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#1', handleHex: 'taco' });
-
-            // expect datum from mocked implementation above.
-            expect(datum).toEqual('abc123');
-        });
-
-        it('Should return the null if utxos do not match', async () => {
-            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#2', handleHex: 'taco' });
-            expect(datum).toEqual(null);
-        });
-
-        it('should return null if file does not exist', async () => {
-            const datum = await HandleStore.getDatumFromFileSystem({ utxo: '123#3', handleHex: 'burrito' });
-            expect(datum).toEqual(null);
-        });
-    });
-
-    describe('removeHandleDatumFile', () => {
-        it('should not log an error if file does not exit', async () => {
-            const loggerSpy = jest.spyOn(Logger, 'log');
-            await HandleStore.removeHandleDatumFile('hex1234');
-            expect(loggerSpy).toHaveBeenCalledTimes(0);
         });
     });
 });

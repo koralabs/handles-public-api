@@ -1,5 +1,5 @@
 import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
-import { Logger } from '@koralabs/kora-labs-common';
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,
@@ -9,13 +9,11 @@ import {
     PersonalizationOnChainMetadata,
     TxBlock,
     TxBlockBody,
-    TxBody,
-    TxOutput
+    TxBody
 } from '../../interfaces/ogmios.interfaces';
 import { Buffer } from 'buffer';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { awaitForEach } from '../../utils/util';
-import { buildOnChainObject, stringifyBlock } from './utils';
+import { buildOnChainObject } from './utils';
 
 const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): Promise<IPersonalization> => {
     const { personalContactInfo, additionalHandleSettings, socialContactInfo } = metadata;
@@ -73,14 +71,14 @@ const processAssetToken = async ({
     slotNumber,
     address,
     utxo,
-    hasDatum,
+    datum,
     handleMetadata
 }: {
     assetName: string;
     slotNumber: number;
     address: string;
     utxo: string;
-    hasDatum: boolean;
+    datum?: string;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
 }) => {
     const hexName = assetName?.split('.')[1];
@@ -92,23 +90,27 @@ const processAssetToken = async ({
     const name = Buffer.from(hexName, 'hex').toString('utf8');
     const data = handleMetadata && handleMetadata[name];
 
+    const input = {
+        hexName,
+        adaAddress: address,
+        slotNumber,
+        utxo,
+        datum
+    };
+
     if (data) {
         const {
             image,
             core: { og }
         } = data;
         await HandleStore.saveMintedHandle({
-            hexName,
+            ...input,
             name,
             og,
-            image,
-            slotNumber,
-            utxo,
-            hasDatum,
-            adaAddress: address
+            image
         });
     } else {
-        await HandleStore.saveHandleUpdate({ hexName, adaAddress: address, slotNumber, utxo, hasDatum });
+        await HandleStore.saveHandleUpdate(input);
     }
 };
 
@@ -153,6 +155,20 @@ export const processBlock = async ({
                     if (keys[j].toString().startsWith(policyId)) {
                         const assetName = keys[j].toString();
                         const { datum = null } = o;
+                        let datumString;
+                        try {
+                            datumString = !datum
+                                ? undefined
+                                : typeof datum === 'string'
+                                ? datum
+                                : JSON.stringify(datum);
+                        } catch (error) {
+                            Logger.log({
+                                message: `Error decoding datum for ${txId}`,
+                                category: LogCategory.ERROR,
+                                event: 'processBlock.decodingDatum'
+                            });
+                        }
 
                         if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
                             await processAssetReferenceToken({ assetName, slotNumber: currentSlot, datum });
@@ -166,9 +182,9 @@ export const processBlock = async ({
                                 assetName,
                                 address,
                                 slotNumber: currentSlot,
-                                hasDatum: !!datum,
                                 handleMetadata: data,
-                                utxo: `${txId}#${i}`
+                                utxo: `${txId}#${i}`,
+                                datum: datumString
                             });
                         }
                     }
