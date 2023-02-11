@@ -1,11 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest, IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
 import ProtectedWords from '@koralabs/protected-words';
 import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfaces';
+import { isDatumEndpointEnabled } from '../config';
 
 class HandlesController {
     public getAll = async (
@@ -122,6 +123,11 @@ class HandlesController {
 
     public async getHandleDatum(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
+            if (!isDatumEndpointEnabled()) {
+                res.status(400).send({ message: 'Datum endpoint is disabled' });
+                return;
+            }
+
             const handleName = req.params.handle;
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const handleDatum = await handleRepo.getHandleDatumByName(handleName);
