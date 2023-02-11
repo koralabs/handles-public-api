@@ -19,6 +19,13 @@ jest.mock('../ioc', () => ({
                     manually_set: false
                 };
             },
+            getAllHolders: () => {
+                return [
+                    {
+                        holder: 'addr1'
+                    }
+                ];
+            },
             getIsCaughtUp: () => {
                 return true;
             }
@@ -44,10 +51,24 @@ describe('Testing Holders Routes', () => {
     });
 
     describe('[GET] /holders', () => {
-        it('should return coming soon', async () => {
-            const response = await request(app?.getServer()).get('/holders');
+        it('should throw error if records_per_page is invalid', async () => {
+            const response = await request(app?.getServer()).get('/holders?records_per_page=two');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
+        });
+
+        it('should throw error if sort is invalid', async () => {
+            const response = await request(app?.getServer()).get('/holders?records_per_page=1&sort=hmm');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_SORT_INVALID);
+        });
+
+        it('should return holders', async () => {
+            const response = await request(app?.getServer()).get('/holders?records_per_page=1&sort=asc');
+
             expect(response.status).toEqual(200);
-            expect(response.body.message).toEqual('Coming Soon');
+            expect(response.body).toEqual([{ holder: 'addr1' }]);
         });
     });
 

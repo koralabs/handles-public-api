@@ -225,8 +225,8 @@ paths:
     get:
       tags:
       - holders
-      summary: NOT YET IMPLEMENTED. Lists the wallet/script/enterprise addresses that hold Handles.
-      description: NOT YET IMPLEMENTED. Lists the wallet/script/enterprise addresses that hold Handles.
+      summary: Lists the wallet/script/enterprise addresses that hold Handles.
+      description: Lists the wallet/script/enterprise addresses that hold Handles.
       parameters:
       - name: records_per_page
         in: query
@@ -431,7 +431,7 @@ components:
       properties:
         total_handles:
           type: integer
-          example: 185123
+          example: 195874
           description: "Total of all Handles minted"
         # network_load_percent:
         #   type: integer
@@ -447,7 +447,7 @@ components:
         #   description: Comma-separated Handle price list. (basic,common,rare,ultra_rare)
         total_holders:
           type: integer
-          example: 42167
+          example: 52167
           description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses
     Personalization:
       type: object
@@ -462,8 +462,7 @@ components:
         and decimal numbers. Combining them does an 'AND' search. Ex - `letters,numbers`
         will find Handles that have both letters and numbers.
         <br />`letters` - All characters are letters
-        <br />`numbers` - All characters are valid numeric characters (including decimals
-        and negative)
+        <br />`numbers` - All characters are valid numeric characters (including decimals and negative)
         <br />`special` - All characters are dash, period, or underscore"
     Rarity:
       type: string
