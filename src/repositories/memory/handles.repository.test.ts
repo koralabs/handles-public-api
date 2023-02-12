@@ -2,10 +2,11 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture } from './tests/fixtures/handles';
+import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
-import { SaveMintingTxInput } from './interfaces/handleStore.interfaces';
+import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
+import { HolderPaginationModel } from '../../models/holderPagination.model';
 
 jest.mock('../../utils/addresses');
 
@@ -163,6 +164,36 @@ describe('MemoryHandlesRepository Tests', () => {
                 total_handles: 3,
                 type: 'ScriptHash'
             });
+        });
+    });
+    describe('getAllHolders', () => {
+        it('should get holderAddress list', async () => {
+            jest.mock('./HandleStore', () => ({
+              __esModule: true,
+              holderAddressIndex: holdersFixture
+            }));
+            const mockHandleStore = HandleStore as { holderAddressIndex:Map<string, HolderAddressIndex> }
+            mockHandleStore.holderAddressIndex = holdersFixture
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getAllHolders({pagination: new HolderPaginationModel()});
+            expect(result).toEqual([
+                {
+                    total_handles: 2,
+                    default_handle: 'tacos',
+                    manually_set: false,
+                    address: 'addr2',
+                    known_owner_name: '',
+                    type: 'wallet'
+                },
+                {
+                    total_handles: 1,
+                    default_handle: 'burritos',
+                    manually_set: false,
+                    address: 'addr1',
+                    known_owner_name: 'funnable.token',
+                    type: 'script'
+                },
+            ]);
         });
     });
 

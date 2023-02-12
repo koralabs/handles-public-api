@@ -108,15 +108,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const { page, sort, recordsPerPage } = pagination;
 
         const items = new Array<HolderAddressDetailsResponse>
-        Object.keys(HandleStore.holderAddressIndex).forEach(function(key) {
-            const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
-            if (holderAddressDetails){
-                const { hexes,  defaultHandle, manuallySet, type, knownOwnerName } = holderAddressDetails;
+        HandleStore.holderAddressIndex.forEach((holder, address) =>{
+            if (holder){
+                const { hexes,  defaultHandle, manuallySet, type, knownOwnerName } = holder;
                 items.push({
                     total_handles: hexes.size,
                     default_handle: defaultHandle,
                     manually_set: manuallySet,
-                    address: key,
+                    address,
                     known_owner_name: knownOwnerName,
                     type
                 })
@@ -125,10 +124,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         items.sort((a, b) => (sort === 'desc' ? b.total_handles - a.total_handles: a.total_handles - b.total_handles));
         const startIndex = (page - 1) * recordsPerPage;
-        const handles = items.slice(startIndex, startIndex + recordsPerPage);
+        const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
-        return handles;
-
+        return holders;
     }
 
     public async getAllHandleNames(search: HandleSearchModel, sort: string) {

@@ -22,7 +22,12 @@ jest.mock('../ioc', () => ({
             getAllHolders: () => {
                 return [
                     {
-                        holder: 'addr1'
+                        total_handles: 1001,
+                        default_handle: 'my_default',
+                        manually_set: false,
+                        address: 'addr1',
+                        known_owner_name: 'funnable.token',
+                        type: 'script'
                     }
                 ];
             },
@@ -68,7 +73,14 @@ describe('Testing Holders Routes', () => {
             const response = await request(app?.getServer()).get('/holders?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ holder: 'addr1' }]);
+            expect(response.body).toEqual([{
+                total_handles: 1001,
+                default_handle: 'my_default',
+                manually_set: false,
+                address: 'addr1',
+                known_owner_name: 'funnable.token',
+                type: 'script'
+            }]);
         });
     });
 

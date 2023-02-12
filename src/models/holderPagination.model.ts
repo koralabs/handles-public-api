@@ -20,7 +20,7 @@ export class HolderPaginationModel {
         this.validateHolderPagination(recordsPerPage, sort, page);
         this.recordsPerPage = recordsPerPage ? parseInt(recordsPerPage) : 100;
         this.page = page ? parseInt(page) : 1;
-        this.sort = sort ?? 'asc';
+        this.sort = sort ?? 'desc';
     }
 
     private validateHolderPagination(recordsPerPage?: string, sort?: Sort, page?: string): void {
