@@ -99,7 +99,7 @@ class OgmiosService {
             await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
-        }, 30000);
+        }, 120000);
 
         const setMemoryInterval = setInterval(() => {
             const memorySize = HandleStore.memorySize();
