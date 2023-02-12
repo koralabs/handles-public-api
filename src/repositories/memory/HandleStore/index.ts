@@ -4,7 +4,8 @@ import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
 import { promisify } from 'util';
 import fs from 'fs';
-import lockfile from 'proper-lockfile';
+import path from 'path'
+import { Worker } from 'worker_threads';
 import { diff } from 'deep-object-diff';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
@@ -493,63 +494,53 @@ export class HandleStore {
         slot: number,
         hash: string,
         storagePath?: string,
-        processing?: Function
+        testDelay?: boolean
     ): Promise<boolean> {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
         const history = Array.from(HandleStore.slotHistoryIndex);
-        const path = storagePath ?? this.storageFilePath;
+        storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${this.handles.size} handles & ${history.length} history entries`);
         const result = await HandleStore.saveFileContents({
             content: { handles, history },
-            path,
+            storagePath,
             slot,
             hash,
-            processing
+            testDelay
         });
         return result;
     }
 
     static async saveFileContents({
         content,
-        path,
+        storagePath,
         slot,
         hash,
-        processing
+        testDelay
     }: {
-        path: string;
+        storagePath: string;
         content?: any;
         slot?: number;
         hash?: string;
-        processing?: Function;
+        testDelay?: boolean;
     }): Promise<boolean> {
         try {
-            const isLocked = await lockfile.check(path);
-            if (isLocked) {
-                Logger.log('Unable to save. History file is locked');
-                return false;
-            }
-
-            const release = await lockfile.lock(path);
-
-            // if there is no content, hash or slot we can assume we are going to clear the file
-            const fileContent =
-                content && hash && slot
-                    ? JSON.stringify({
-                          slot,
-                          hash,
-                          schemaVersion: this.storageSchemaVersion,
-                          ...content
-                      })
-                    : '';
-
-            fs.writeFileSync(path, fileContent);
-
-            if (processing) await processing();
-
-            await release();
-            return true;
+            const worker = new Worker(path.resolve(__dirname, "../../../workers/saveFile.worker.js"), {
+                workerData: {
+                    content,
+                    storagePath,
+                    slot,
+                    hash,
+                    testDelay,
+                    storageSchemaVersion: this.storageSchemaVersion
+                }});
+            worker.on("message", (data) => {
+              return data;
+            });
+            worker.on("error", (msg) => {
+              throw msg;
+            });
         } catch (error: any) {
             Logger.log({
                 message: `Error writing file: ${error.message}`,
@@ -558,11 +549,12 @@ export class HandleStore {
             });
             return false;
         }
+        return true;
     }
 
-    static checkIfExists(path: string): boolean {
+    static checkIfExists(storagePath: string): boolean {
         try {
-            const exists = fs.statSync(path);
+            const exists = fs.statSync(storagePath);
             if (exists) {
                 return true;
             }
@@ -574,29 +566,29 @@ export class HandleStore {
     }
 
     static async getFile<T>(storagePath: string): Promise<T | null> {
-        const path = NODE_ENV === 'local' ? 'storage/local.json' : storagePath;
+        const thePath = NODE_ENV === 'local' ? 'storage/local.json' : storagePath;
 
         try {
-            const exists = this.checkIfExists(path);
+            const exists = this.checkIfExists(thePath);
             if (!exists) {
                 Logger.log({
-                    message: `${path} file does not exist`,
+                    message: `${thePath} file does not exist`,
                     category: LogCategory.INFO,
                     event: 'HandleStore.getFile.doesNotExist'
                 });
                 return null;
             }
 
-            const file = fs.readFileSync(path, { encoding: 'utf8' });
+            const file = fs.readFileSync(thePath, { encoding: 'utf8' });
             Logger.log({
-                message: `${path} found`,
+                message: `${thePath} found`,
                 category: LogCategory.INFO,
                 event: 'HandleStore.getFile.fileFound'
             });
 
             return JSON.parse(file) as T;
         } catch (error: any) {
-            Logger.log(`Error getting file from ${path} with error: ${error.message}`);
+            Logger.log(`Error getting file from ${thePath} with error: ${error.message}`);
             return null;
         }
     }
@@ -754,7 +746,7 @@ export class HandleStore {
         this.lengthIndex = new Map<string, Set<string>>();
 
         // clear storage files
-        await HandleStore.saveFileContents({ path: HandleStore.storageFilePath });
+        await HandleStore.saveFileContents({ storagePath: HandleStore.storageFilePath });
     }
 
     static async rewindChangesToSlot({

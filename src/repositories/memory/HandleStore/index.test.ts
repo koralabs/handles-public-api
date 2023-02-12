@@ -86,9 +86,7 @@ describe('HandleStore tests', () => {
 
     describe.skip('saveHandlesFile tests', () => {
         it('should not allow saving if file is locked', async () => {
-            HandleStore.saveHandlesFile(123, 'some-hash', filePath, async () => {
-                await delay(1000);
-            });
+            HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
             const saved = await HandleStore.saveHandlesFile(345, 'some-hash', filePath);
             await delay(1000);
@@ -106,9 +104,7 @@ describe('HandleStore tests', () => {
                 schemaVersion: 1,
                 handles: expect.any(Object)
             });
-            HandleStore.saveHandlesFile(123, 'some-hash', filePath, async () => {
-                await delay(1000);
-            });
+            HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
             const locked = await HandleStore.getFile(filePath);
             expect(locked).toEqual(null);
