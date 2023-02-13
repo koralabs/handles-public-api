@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 ENV NETWORK=mainnet
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
-ADD ./dist/ entrypoint.sh ./
+ADD ./dist/ entrypoint.sh setup_env.sh ./
 RUN \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 && \
     curl -fsSL https://update-cardano-mainnet.iohk.io/cardano-node-releases/cardano-node-1.35.4-linux.tar.gz | tar -xz && \
