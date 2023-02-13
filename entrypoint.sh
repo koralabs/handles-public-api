@@ -3,6 +3,8 @@
 # export NODE_OPTIONS=--max-old-space-size=12288
 export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
+export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}
+DISABLE_NODE_SNAPSHOT=${DISABLE_NODE_SNAPSHOT:-false}
 MODE=${MODE:-both}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
@@ -33,8 +35,10 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
         exit $ogmios_status
     fi
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
+fi
 
-    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} npm run start:forever
+if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "api-only" ]]; then
+    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}  npm run start:forever
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
