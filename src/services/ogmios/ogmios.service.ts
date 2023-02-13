@@ -1,5 +1,5 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { PointOrOrigin, TipOrOrigin, Origin } from '@cardano-ogmios/schema';
+import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
