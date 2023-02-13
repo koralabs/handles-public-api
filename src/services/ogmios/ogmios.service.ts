@@ -1,9 +1,8 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
+import { PointOrOrigin, TipOrOrigin, Origin } from '@cardano-ogmios/schema';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { writeConsoleLine } from '../../utils/util';
 import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
 import { processRollback } from './processRollback';
@@ -150,7 +149,7 @@ class OgmiosService {
         const startingPoint = await this.getStartingPoint();
         this.startIntervals();
 
-        await client.startSync([startingPoint]);
+        await client.startSync(startingPoint.slot == 0 ? ["origin"] : [startingPoint]);
     }
 }
 

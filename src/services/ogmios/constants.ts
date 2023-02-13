@@ -21,8 +21,8 @@ export const handleEraBoundaries: EraBoundaries = {
         hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6'
     },
     preprod: {
-        slot: 12020907,
-        hash: 'fcf421659ac4b4544a1b0e86908ade48da18b73287b993779ded002c1db93222'
+        slot: 0,
+        hash: ''
     },
     preview: {
         slot: 0,
