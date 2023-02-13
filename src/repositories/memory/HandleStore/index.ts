@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path'
 import { Worker } from 'worker_threads';
 import { diff } from 'deep-object-diff';
-import { isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
+import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
@@ -594,7 +594,7 @@ export class HandleStore {
     }
 
     static async getFileOnline<T>(fileName: string): Promise<T | null> {
-        if (NODE_ENV === 'local') {
+        if (NODE_ENV === 'local' || DISABLE_HANDLES_SNAPSHOT == 'true') {
             return null;
         }
 

@@ -8,6 +8,8 @@ import { processBlock } from './processBlock';
 import { processRollback } from './processRollback';
 import { memoryWatcher } from './utils';
 import { createLocalChainSyncClient } from './utils/localChainSync';
+import { OGMIOS_HOST } from '../../config';
+import * as url from 'url'
 
 let startOgmiosExec = 0;
 
@@ -127,6 +129,8 @@ class OgmiosService {
             firstMemoryUsage: this.firstMemoryUsage
         });
 
+        const ogmiosUrl = new url.URL(OGMIOS_HOST)
+
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
             () => {
@@ -138,7 +142,11 @@ class OgmiosService {
                 });
                 process.exit(2);
             },
-            { connection: { port: 1337 } }
+            { connection: {
+                host: ogmiosUrl.host,
+                port: parseInt(ogmiosUrl.port),
+                tls: ogmiosUrl.protocol.startsWith('https')
+            } }
         );
 
         const client = await createLocalChainSyncClient(context, {

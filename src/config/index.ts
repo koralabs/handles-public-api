@@ -10,6 +10,7 @@ export const {
     LOG_FORMAT = '',
     LOG_DIR = '',
     ORIGIN = '',
-    OGMIOS_ENDPOINT = 'http://localhost:1337',
-    NETWORK = ''
+    OGMIOS_HOST = 'http://localhost:1337',
+    NETWORK = '',
+    DISABLE_HANDLES_SNAPSHOT = ''
 } = process.env;

@@ -8,7 +8,6 @@ Our Decentralized API uses Ogmios to scan a cardano-node for Handles related tra
 
 &nbsp;
 
-
 # Getting Started
 
 ### Prerequisites
@@ -38,13 +37,26 @@ docker run -p 3141:3141 -v <path_to_node.socket_folder>:/ipc -v handles:/app/han
 # Testing the API 
 - Open a browser to [http://localhost:3141/swagger](http://localhost:3141/swagger)
 - You can also see the current API status at [http://localhost:3141/health](http://localhost:3141/health)
-- 🚩WARNING: The health endpoint will return a <span style="color:red">202</span> when it is running but the scan hasn't reached the tip of the chain yet. It is not recommended to use the results until a <span style="color:green">200</span> status is returned.
+- **🚩WARNING:** All endpoints will return a <span style="color:red">202</span> when it is running but the scan hasn't reached the tip of the chain yet. It is not recommended to use the results until a <span style="color:green">200</span> status is returned.
 
 &nbsp;
 
 ## TESTNET ENVIRONMENTS
-To use Preview or PreProd environments just add `-e NETWORK=preview` or `-e NETWORK=preprod` to either of the `docker run` commands.
+To use Preview or PreProd environments just add `-e NETWORK=preview` or `-e NETWORK=preprod` to either of the `docker run...` commands.
 
+&nbsp;
+
+## OTHER OPTIONS
+All of the options below can be passed into the container using `-e ENV_VAR=value` arguments on the `docker run...` command.
+> `MODE=api-only` will skip cardano-node and ogmios and will only run the API NodeJS Express app. This requires `OGMIOS_HOST` to be set.
+
+> `OGMIOS_HOST=<http url with port>` Required for running with `MODE=api-only`.
+
+> `DISABLE_NODE_SNAPSHOT=true` By default, the container will try and download a cardano-node snapshot from https://csnapshots.io/ to reduce spin-up time. Use this option to skip the snapshot download and start cardano-node from origin. **🚩WARNING:** this can take a few days.
+
+> `DISABLE_HANDLES_SNAPSHOT=true` By default, the container will try and download a Handles snapshot from S3 to reduce spin-up time. Use this option to skip the snapshot download and start the Ogmios Handles scan from origin. **🚩WARNING:** this can take a few hours.
+
+&nbsp;
 
 ## NOTES
 

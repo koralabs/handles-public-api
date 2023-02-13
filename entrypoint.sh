@@ -1,7 +1,8 @@
 #!/bin/bash
 # DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
 # export NODE_OPTIONS=--max-old-space-size=12288
-NETWORK=${NETWORK:-mainnet}
+export NETWORK=${NETWORK:-mainnet}
+export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 MODE=${MODE:-both}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
@@ -38,10 +39,12 @@ fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     DB_FILE=${NODE_DB}/protocolMagicId
-    if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
-        echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
-        curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x --strip-components=1 -C ${NODE_DB}
-        echo "Download complete."
+    if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
+        if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
+            echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
+            curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x --strip-components=1 -C ${NODE_DB}
+            echo "Download complete."
+        fi
     fi
     
     trap cleanup INT TERM KILL QUIT ABRT
