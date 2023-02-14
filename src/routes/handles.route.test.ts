@@ -3,6 +3,7 @@ import App from '../app';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
+import * as serialization from '../utils/serialization';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -49,6 +50,10 @@ jest.mock('../ioc', () => ({
             },
             getHandleDatumByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
+
+                if (handleName === 'burrito') {
+                    return 'a24768616e646c65739fa243756d6d447965616842796f43686579ff44736f6d65a14477656c70a1457468696e67457269676874';
+                }
 
                 return `${handleName}_datum`;
             }
@@ -243,6 +248,13 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /handles/:handle/datum', () => {
+        it('should return error if ENABLE_DATUM_ENDPOINT is false', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
+            const response = await request(app?.getServer()).get('/handles/taco/datum');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('Datum endpoint is disabled');
+        });
+
         it('should throw error if address does not exist', async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/handles/nope/datum');
@@ -250,18 +262,35 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('Handle datum not found');
         });
 
-        it('should return valid handle', async () => {
+        it('should decode json if accept is application/json', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+            const response = await request(app?.getServer())
+                .get('/handles/burrito/datum')
+                .set('Accept', 'application/json');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({
+                handles: [{ umm: 'yeah', yo: 'hey' }],
+                some: { welp: { thing: 'right' } }
+            });
+        });
+
+        it('should return valid handle as text', async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/handles/taco/datum');
             expect(response.status).toEqual(200);
             expect(response.text).toEqual('taco_datum');
         });
 
-        it('should return error if ENABLE_DATUM_ENDPOINT is false', async () => {
-            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
-            const response = await request(app?.getServer()).get('/handles/taco/datum');
+        it('should error trying to decode json and throw 400', async () => {
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+            jest.spyOn(serialization, 'decodeDatum').mockImplementation(() => {
+                throw new Error('test');
+            });
+            const response = await request(app?.getServer())
+                .get('/handles/taco/datum')
+                .set('Accept', 'application/json');
             expect(response.status).toEqual(400);
-            expect(response.body.message).toEqual('Datum endpoint is disabled');
+            expect(response.body.message).toEqual('Unable to decode datum to json');
         });
     });
 });

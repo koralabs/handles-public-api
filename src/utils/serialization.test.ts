@@ -60,10 +60,13 @@ describe('Serialization Test', () => {
     describe('decodeDatum', () => {
         it('should debug JSON datum', () => {
             const decoded = decodeDatum(
-                'a24768616e646c65739fa243756d6d447965616842796f43686579ff44736f6d65a14477656c70a1457468696e67457269676874'
+                'a21904d2a1517e62672d7061747465726e2d6d61746368a3412d05487e7061747465726e14497e7061747465726e320a58386562363664323135396435316365633762643436396330646165663861393365306432303636663535643363316139636635626330333933a1412da1412d00'
             );
 
-            expect(decoded).toEqual({ handles: [{ umm: 'yeah', yo: 'hey' }], some: { welp: { thing: 'right' } } });
+            expect(decoded).toEqual({
+                '1234': { '~bg-pattern-match': { '-': 5, '~pattern': 20, '~pattern2': 10 } },
+                eb66d2159d51cec7bd469c0daef8a93e0d2066f55d3c1a9cf5bc0393: { '-': { '-': 0 } }
+            });
         });
 
         it('should convert other datum style', () => {

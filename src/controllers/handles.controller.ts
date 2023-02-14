@@ -7,6 +7,7 @@ import IHandlesRepository from '../repositories/handles.repository';
 import ProtectedWords from '@koralabs/protected-words';
 import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfaces';
 import { isDatumEndpointEnabled } from '../config';
+import { decodeDatum } from '../utils/serialization';
 
 class HandlesController {
     public getAll = async (
@@ -135,6 +136,18 @@ class HandlesController {
             if (!handleDatum) {
                 res.status(404).send({ message: 'Handle datum not found' });
                 return;
+            }
+
+            if (req.headers?.accept?.startsWith('application/json')) {
+                try {
+                    const decodedDatum = decodeDatum(handleDatum);
+                    res.set('Content-Type', 'application/json');
+                    res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(decodedDatum);
+                    return;
+                } catch (error) {
+                    res.status(400).send({ message: 'Unable to decode datum to json' });
+                    return;
+                }
             }
 
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202)
