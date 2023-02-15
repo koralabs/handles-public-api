@@ -143,7 +143,7 @@ class OgmiosService {
                 process.exit(2);
             },
             { connection: {
-                host: ogmiosUrl.host,
+                host: ogmiosUrl.hostname,
                 port: parseInt(ogmiosUrl.port),
                 tls: ogmiosUrl.protocol.startsWith('https')
             } }
