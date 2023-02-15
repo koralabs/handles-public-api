@@ -9,7 +9,7 @@ import { processRollback } from './processRollback';
 import { memoryWatcher } from './utils';
 import { createLocalChainSyncClient } from './utils/localChainSync';
 import { OGMIOS_HOST } from '../../config';
-import * as url from 'url'
+import * as url from 'url';
 
 let startOgmiosExec = 0;
 
@@ -129,7 +129,7 @@ class OgmiosService {
             firstMemoryUsage: this.firstMemoryUsage
         });
 
-        const ogmiosUrl = new url.URL(OGMIOS_HOST)
+        const ogmiosUrl = new url.URL(OGMIOS_HOST);
 
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
@@ -142,11 +142,13 @@ class OgmiosService {
                 });
                 process.exit(2);
             },
-            { connection: {
-                host: ogmiosUrl.hostname,
-                port: parseInt(ogmiosUrl.port),
-                tls: ogmiosUrl.protocol.startsWith('https')
-            } }
+            {
+                connection: {
+                    host: ogmiosUrl.hostname,
+                    port: parseInt(ogmiosUrl.port),
+                    tls: ogmiosUrl.protocol.startsWith('https')
+                }
+            }
         );
 
         const client = await createLocalChainSyncClient(context, {
@@ -157,7 +159,7 @@ class OgmiosService {
         const startingPoint = await this.getStartingPoint();
         this.startIntervals();
 
-        await client.startSync(startingPoint.slot == 0 ? ["origin"] : [startingPoint]);
+        await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint]);
     }
 }
 
