@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch via NPM",
+            "name": "Start Preprod",
             "request": "launch",
             "runtimeArgs": ["run", "dev:preprod"],
             "runtimeExecutable": "npm",

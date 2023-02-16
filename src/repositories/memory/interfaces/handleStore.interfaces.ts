@@ -54,7 +54,6 @@ export interface SavePersonalizationInput {
     slotNumber: number;
     hexName: string;
     personalization: IPersonalization;
-    hasDatum: boolean;
     addresses: {
         [chain: string]: string;
     };

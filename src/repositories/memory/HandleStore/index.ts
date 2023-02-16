@@ -4,7 +4,7 @@ import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
 import { promisify } from 'util';
 import fs from 'fs';
-import path from 'path'
+import path from 'path';
 import { Worker } from 'worker_threads';
 import { diff } from 'deep-object-diff';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
@@ -29,6 +29,7 @@ export class HandleStore {
     static personalization = new Map<string, IPersonalization>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
+    static orphanedPersonalizationIndex = new Map<string, IPersonalization>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
@@ -38,7 +39,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 7;
+    static storageSchemaVersion = 8;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -65,6 +66,7 @@ export class HandleStore {
         }
 
         if (!isDatumEndpointEnabled()) {
+            // TODO: Always remove this unless it's at the datum route
             handle.datum = undefined;
         }
 
@@ -127,11 +129,6 @@ export class HandleStore {
         // Set the main index
         this.handles.set(hex, updatedHandle);
 
-        // set the personalization index
-        if (personalization) {
-            this.personalization.set(hex, personalization);
-        }
-
         // set all one-to-one indexes
         this.nameIndex.set(name, hex);
 
@@ -145,12 +142,24 @@ export class HandleStore {
         // TODO: set default name during personalization
         this.setHolderAddressIndex(holderAddressDetails, hex);
 
+        // Check for orphaned personalization data and delete if found.
+        let updatedPersonalization = { ...personalization };
+        const orphanedPersonalizationData = this.orphanedPersonalizationIndex.get(hex);
+        if (!personalization && orphanedPersonalizationData) {
+            updatedPersonalization = orphanedPersonalizationData;
+            this.orphanedPersonalizationIndex.delete(hex);
+        }
+
+        if (updatedPersonalization) {
+            this.personalization.set(hex, updatedPersonalization);
+        }
+
         const isWithinMaxSlot = true;
         this.metrics.lastSlot &&
             this.metrics.currentSlot &&
             this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
         if (saveHistory && isWithinMaxSlot) {
-            const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, personalization);
+            const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle, updatedPersonalization);
             if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
         }
     };
@@ -327,6 +336,7 @@ export class HandleStore {
     }
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
+        // TODO Check for existing handle. If there is one already, increase the amount property
         const newHandle: IHandle = HandleStore.buildHandle(input);
         await HandleStore.save({ handle: newHandle });
     };
@@ -361,16 +371,14 @@ export class HandleStore {
         hexName,
         personalization,
         addresses,
-        slotNumber,
-        hasDatum
+        slotNumber
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
-            Logger.log({
-                message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
-                category: LogCategory.ERROR,
-                event: 'savePersonalizationChange.noHandleFound'
-            });
+            // If there is no handle, it means we have not received the 222 handle yet.
+            // We will save the personalization in the orphaned personalization index and wait for the 222 handle.
+            // TODO: we need to save this to history and rollback if needed
+            HandleStore.orphanedPersonalizationIndex.set(hexName, personalization);
             return;
         }
 
@@ -526,7 +534,7 @@ export class HandleStore {
         testDelay?: boolean;
     }): Promise<boolean> {
         try {
-            const worker = new Worker(path.resolve(__dirname, "../../../workers/saveFile.worker.js"), {
+            const worker = new Worker(path.resolve(__dirname, '../../../workers/saveFile.worker.js'), {
                 workerData: {
                     content,
                     storagePath,
@@ -534,12 +542,13 @@ export class HandleStore {
                     hash,
                     testDelay,
                     storageSchemaVersion: this.storageSchemaVersion
-                }});
-            worker.on("message", (data) => {
-              return data;
+                }
             });
-            worker.on("error", (msg) => {
-              throw msg;
+            worker.on('message', (data) => {
+                return data;
+            });
+            worker.on('error', (msg) => {
+                throw msg;
             });
         } catch (error: any) {
             Logger.log({

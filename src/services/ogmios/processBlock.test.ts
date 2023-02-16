@@ -219,4 +219,8 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledTimes(0);
         expect(saveAddressSpy).toHaveBeenCalledTimes(0);
     });
+
+    it('Should process 222 asset class tokens mint', async () => {});
+    it('Should process 222 update', async () => {});
+    it('Should process 100 asset class tokens', async () => {});
 });

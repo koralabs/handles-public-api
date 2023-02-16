@@ -3,11 +3,17 @@ export enum MetadataLabel {
     'HANDLE_PERSONALIZATION' = 5508
 }
 
+/**
+ * The asset label is a string that is used to identify the asset type.
+ * First, remove the first and last 0.
+ * Next, use the first 4 characters as the hex and convert to decimal. https://www.rapidtables.com/convert/number/hex-to-decimal.html
+ * Finally, use the decimal number and convert to CRC8. It should match the last 2 characters. https://crccalc.com/
+ */
 export enum MetadatumAssetLabel {
     // TODO: Figure out hex labels
-    REFERENCE_NFT = '0x000de140', // 100
-    SUB_STANDARD_NFT = '0x000de140', // 222
-    SUB_STANDARD_FT = '0x000de140'
+    REFERENCE_NFT = '000643b0', // 100
+    SUB_STANDARD_NFT = '000de140', // 222
+    SUB_STANDARD_FT = '0014df10' // 333
 }
 
 export interface HandleOnChainData {
@@ -158,4 +164,14 @@ export interface HealthResponseBody {
     connectionStatus: string;
     currentEpoch: number;
     slotInEpoch: number;
+}
+
+export interface ProcessAssetTokenInput {
+    assetName: string;
+    slotNumber: number;
+    address: string;
+    utxo: string;
+    datum?: string;
+    handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
+    isMintTx: boolean;
 }

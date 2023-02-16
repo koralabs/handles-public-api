@@ -33,7 +33,10 @@ export const handleEraBoundaries: EraBoundaries = {
 export const POLICY_IDS: PolicyIds = {
     mainnet: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'],
     testnet: ['8d18d786e92776c824607fd8e193ec535c79dc61ea2405ddf3b09fe3'],
-    preprod: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'],
+    preprod: [
+        'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+        '5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6'
+    ],
     preview: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a']
 };
 

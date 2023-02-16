@@ -238,8 +238,7 @@ describe('HandleStore tests', () => {
                 hexName: 'nachos-hex',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 200,
-                hasDatum: false
+                slotNumber: 200
             });
 
             const personalization = HandleStore.getPersonalization('nachos-hex');
@@ -294,7 +293,7 @@ describe('HandleStore tests', () => {
             ]);
         });
 
-        it('Should log an error if handle is not found', async () => {
+        it('Should add to orphanedPersonalizationIndex if handle is not found', async () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const personalization: IPersonalization = {};
@@ -302,14 +301,10 @@ describe('HandleStore tests', () => {
                 hexName: '123',
                 personalization,
                 addresses: {},
-                slotNumber: 1234,
-                hasDatum: false
+                slotNumber: 1234
             });
-            expect(loggerSpy).toHaveBeenCalledWith({
-                category: 'ERROR',
-                event: 'savePersonalizationChange.noHandleFound',
-                message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
-            });
+
+            expect(HandleStore.orphanedPersonalizationIndex).toEqual(new Map([['123', personalization]]));
         });
     });
 
