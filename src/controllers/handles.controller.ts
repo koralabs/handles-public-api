@@ -9,6 +9,7 @@ import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfac
 import { isDatumEndpointEnabled } from '../config';
 import { decodeDatum } from '../utils/serialization';
 import { HandleViewModel } from '../models/view/handle.view.model';
+import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 
 class HandlesController {
     public getAll = async (
@@ -102,7 +103,7 @@ class HandlesController {
             const handleName = req.params.handle;
             const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const handleData = await handleRepo.getPersonalizedHandleByName(handleName);
+            const handleData = await handleRepo.getHandleByName(handleName);
 
             if (!handleData && !protectedWordsResult.available) {
                 res.status(protectedWordsResult.code).send({
@@ -119,7 +120,7 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new HandleViewModel(handleData));
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new PersonalizedHandleViewModel(handleData));
         } catch (error) {
             next(error);
         }
