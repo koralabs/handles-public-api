@@ -65,11 +65,6 @@ export class HandleStore {
             handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
 
-        if (!isDatumEndpointEnabled()) {
-            // TODO: Always remove this unless it's at the datum route
-            handle.datum = undefined;
-        }
-
         return handle;
     };
 
@@ -177,7 +172,7 @@ export class HandleStore {
             return;
         }
 
-        const { name, rarity, holder_address, og, characters, numeric_modifiers, length, hex, hasDatum } = handle;
+        const { name, rarity, holder_address, og, characters, numeric_modifiers, length, hex } = handle;
 
         // Set the main index
         this.handles.delete(hex);

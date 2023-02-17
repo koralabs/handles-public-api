@@ -7,7 +7,7 @@ import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
 
-class MemoryHandlesRepository implements IHandlesRepository {    
+class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = 'empty';
         const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
@@ -104,13 +104,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return handles;
     }
 
-    public async getAllHolders({pagination}: { pagination: HolderPaginationModel; }): Promise<HolderAddressDetailsResponse[]>{
+    public async getAllHolders({
+        pagination
+    }: {
+        pagination: HolderPaginationModel;
+    }): Promise<HolderAddressDetailsResponse[]> {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items = new Array<HolderAddressDetailsResponse>
-        HandleStore.holderAddressIndex.forEach((holder, address) =>{
-            if (holder){
-                const { hexes,  defaultHandle, manuallySet, type, knownOwnerName } = holder;
+        const items: HolderAddressDetailsResponse[] = new Array();
+        HandleStore.holderAddressIndex.forEach((holder, address) => {
+            if (holder) {
+                const { hexes, defaultHandle, manuallySet, type, knownOwnerName } = holder;
                 items.push({
                     total_handles: hexes.size,
                     default_handle: defaultHandle,
@@ -118,11 +122,11 @@ class MemoryHandlesRepository implements IHandlesRepository {
                     address,
                     known_owner_name: knownOwnerName,
                     type
-                })
+                });
             }
-          });
+        });
 
-        items.sort((a, b) => (sort === 'desc' ? b.total_handles - a.total_handles: a.total_handles - b.total_handles));
+        items.sort((a, b) => (sort === 'desc' ? b.total_handles - a.total_handles : a.total_handles - b.total_handles));
         const startIndex = (page - 1) * recordsPerPage;
         const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
@@ -180,8 +184,11 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }
 
     public async getHandleDatumByName(handleName: string): Promise<string | null> {
-        const handle = await this.getHandleByName(handleName);
-        if (!handle) throw new HttpException(404, 'Not found');
+        const handleHex = HandleStore.getFromNameIndex(handleName);
+        const handle = HandleStore.get(handleHex ?? '');
+        if (!handle) {
+            throw new HttpException(404, 'Not found');
+        }
 
         const { hasDatum, datum = null } = handle;
         if (!hasDatum) return null;

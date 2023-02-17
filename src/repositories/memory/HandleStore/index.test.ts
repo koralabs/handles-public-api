@@ -136,13 +136,6 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo1#0'
             });
         });
-
-        it('should return null datum if datum is not enabled', () => {
-            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
-            const handle = HandleStore.get('barbacoa-hex');
-            expect(handle?.datum).toEqual(undefined);
-            expect(handle?.hasDatum).toEqual(true);
-        });
     });
 
     describe('saveMintedHandle tests', () => {

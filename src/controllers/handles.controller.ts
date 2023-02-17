@@ -8,6 +8,7 @@ import ProtectedWords from '@koralabs/protected-words';
 import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfaces';
 import { isDatumEndpointEnabled } from '../config';
 import { decodeDatum } from '../utils/serialization';
+import { HandleViewModel } from '../models/view/handle.view.model';
 
 class HandlesController {
     public getAll = async (
@@ -56,7 +57,9 @@ class HandlesController {
             }
 
             const handles = await handleRepo.getAll({ pagination, search });
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handles);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
+                handles.map((handle) => new HandleViewModel(handle))
+            );
         } catch (error) {
             next(error);
         }
@@ -88,7 +91,7 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new HandleViewModel(handleData));
         } catch (error) {
             next(error);
         }
@@ -116,7 +119,7 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new HandleViewModel(handleData));
         } catch (error) {
             next(error);
         }

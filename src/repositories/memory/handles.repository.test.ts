@@ -169,13 +169,13 @@ describe('MemoryHandlesRepository Tests', () => {
     describe('getAllHolders', () => {
         it('should get holderAddress list', async () => {
             jest.mock('./HandleStore', () => ({
-              __esModule: true,
-              holderAddressIndex: holdersFixture
+                __esModule: true,
+                holderAddressIndex: holdersFixture
             }));
-            const mockHandleStore = HandleStore as { holderAddressIndex:Map<string, HolderAddressIndex> }
-            mockHandleStore.holderAddressIndex = holdersFixture
+            const mockHandleStore = HandleStore as { holderAddressIndex: Map<string, HolderAddressIndex> };
+            mockHandleStore.holderAddressIndex = holdersFixture;
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getAllHolders({pagination: new HolderPaginationModel()});
+            const result = await repo.getAllHolders({ pagination: new HolderPaginationModel() });
             expect(result).toEqual([
                 {
                     total_handles: 2,
@@ -192,7 +192,7 @@ describe('MemoryHandlesRepository Tests', () => {
                     address: 'addr1',
                     known_owner_name: 'funnable.token',
                     type: 'script'
-                },
+                }
             ]);
         });
     });

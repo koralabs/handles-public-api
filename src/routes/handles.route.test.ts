@@ -14,20 +14,20 @@ jest.mock('../ioc', () => ({
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 return {
-                    handle: handleName
+                    name: handleName
                 };
             },
             getPersonalizedHandleByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 return {
-                    handle: handleName
+                    name: handleName
                 };
             },
             getAll: () => {
                 return [
                     {
-                        handle: 'burritos'
+                        name: 'burritos'
                     }
                 ];
             },
@@ -96,7 +96,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ handle: 'burritos' }]);
+            expect(response.body).toEqual([{ name: 'burritos' }]);
         });
 
         it('should throw error if characters is invalid', async () => {
@@ -159,13 +159,13 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual('burritos');
+            expect(response.body.name).toEqual('burritos');
         });
 
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual('1');
+            expect(response.body.name).toEqual('1');
         });
 
         it('should return legendary message when handle does not exist', async () => {
@@ -199,7 +199,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual('burritos');
+            expect(response.body.name).toEqual('burritos');
         });
 
         it('should return legendary message', async () => {
@@ -211,7 +211,7 @@ describe('Testing Handles Routes', () => {
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/j/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body.handle).toEqual('j');
+            expect(response.body.name).toEqual('j');
         });
 
         it('should return invalid message', async () => {
