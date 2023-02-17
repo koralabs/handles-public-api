@@ -84,8 +84,94 @@ describe('HandleStore tests', () => {
         unlinkSync(filePath);
     });
 
-    describe.skip('saveHandlesFile tests', () => {
-        it('should not allow saving if file is locked', async () => {
+    describe('saveHandlesFile tests', () => {
+        it('should save the file', async () => {
+            const saveFileContentsSpy = jest.spyOn(HandleStore, 'saveFileContents').mockImplementation();
+            await HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
+            expect(saveFileContentsSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    content: expect.objectContaining({
+                        handles: expect.objectContaining({
+                            'barbacoa-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_0',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'barbacoa-hex',
+                                holder_address: 'stake123',
+                                length: 8,
+                                name: 'barbacoa',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'basic',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo1#0'
+                            }),
+                            'burrito-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_1',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'burrito-hex',
+                                holder_address: 'stake123',
+                                length: 8,
+                                name: 'burritos',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'basic',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo2#0'
+                            }),
+                            'taco-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_2',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'taco-hex',
+                                holder_address: 'stake123',
+                                length: 4,
+                                name: 'taco',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'common',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo3#0'
+                            })
+                        }),
+                        history: [
+                            [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                            [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                            [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }]
+                        ],
+                        orphanedPz: []
+                    }),
+                    hash: 'some-hash',
+                    slot: 123,
+                    storagePath: 'storage/handles-test.json',
+                    testDelay: true
+                })
+            );
+        });
+
+        it.skip('should not allow saving if file is locked', async () => {
             HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
             const saved = await HandleStore.saveHandlesFile(345, 'some-hash', filePath);
@@ -193,6 +279,44 @@ describe('HandleStore tests', () => {
                 [expect.any(Number), { 'nachos-hex': { new: { name: 'nachos' }, old: null } }]
             ]);
         });
+
+        it('Should look for orphaned reference data and add to the handle', async () => {
+            const orphanedData = { nft_appearance: { handleTextShadowColor: 'todo' } };
+            HandleStore.orphanedPersonalizationIndex = new Map([['nachos-hex', orphanedData]]);
+
+            await HandleStore.saveMintedHandle({
+                hexName: 'nachos-hex',
+                name: 'nachos',
+                adaAddress: 'addr123',
+                og: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100
+            });
+
+            const handle = HandleStore.get('nachos-hex');
+
+            // expect the personalization data to be added to the handle
+            expect(handle?.personalization).toEqual(orphanedData);
+
+            // expect the orphanedPersonalizationIndex to be removed
+            expect(Array.from(HandleStore.orphanedPersonalizationIndex)).toEqual([]);
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [
+                    100,
+                    {
+                        '000643b0nachos-hex': {
+                            new: null,
+                            old: { personalization: { nft_appearance: { handleTextShadowColor: 'todo' } } }
+                        },
+                        'nachos-hex': { new: { name: 'nachos' }, old: null }
+                    }
+                ]
+            ]);
+        });
     });
 
     describe('savePersonalizationChange tests', () => {
@@ -234,8 +358,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 200
             });
 
-            const personalization = HandleStore.getPersonalization('nachos-hex');
-            expect(personalization).toEqual({
+            const handle = HandleStore.get('nachos-hex');
+            expect(handle?.personalization).toEqual({
                 nft_appearance: {
                     backgroundBorderColor: 'todo',
                     backgroundColor: 'todo',
@@ -271,14 +395,34 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 nft_image: 'todo',
                                 profile_pic: 'todo',
-                                updated_slot_number: 200
+                                updated_slot_number: 200,
+                                personalization: {
+                                    nft_appearance: {
+                                        backgroundBorderColor: 'todo',
+                                        backgroundColor: 'todo',
+                                        backgroundImageUrl: 'todo',
+                                        backgroundImageUrlEnabled: true,
+                                        handleTextBgColor: 'todo',
+                                        handleTextShadowColor: 'todo',
+                                        pfpBorderColor: 'todo',
+                                        pfpImageUrl: 'todo',
+                                        pfpImageUrlEnabled: true,
+                                        purchasedAttributes: [],
+                                        qrColor: 'todo',
+                                        qrEnabled: true,
+                                        selectedAttributes: [],
+                                        socials: [],
+                                        socialsEnabled: true
+                                    }
+                                }
                             },
                             old: {
                                 background: '',
                                 default_in_wallet: 'taco',
                                 nft_image: 'ipfs://123',
                                 profile_pic: '',
-                                updated_slot_number: 100
+                                updated_slot_number: 100,
+                                personalization: undefined
                             }
                         }
                     }
@@ -286,18 +430,38 @@ describe('HandleStore tests', () => {
             ]);
         });
 
-        it('Should add to orphanedPersonalizationIndex if handle is not found', async () => {
-            const loggerSpy = jest.spyOn(Logger, 'log');
+        it('Should update personalization data and add to the orphanedPersonalizationIndex', async () => {
+            const saveOrphanedSpy = jest.spyOn(HandleStore, 'saveOrphanedPersonalizationData').mockImplementation();
+            const saveSpy = jest.spyOn(HandleStore, 'save');
+            const personalizationUpdates: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: 'todo',
+                    handleTextBgColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
+                    pfpBorderColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    backgroundColor: 'todo',
+                    backgroundBorderColor: 'todo',
+                    qrEnabled: true,
+                    qrColor: 'todo',
+                    socials: [],
+                    socialsEnabled: true,
+                    selectedAttributes: [],
+                    purchasedAttributes: []
+                }
+            };
 
-            const personalization: IPersonalization = {};
             await HandleStore.savePersonalizationChange({
-                hexName: '123',
-                personalization,
+                hexName: 'sour-cream-hex',
+                personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 1234
+                slotNumber: 200
             });
 
-            expect(HandleStore.orphanedPersonalizationIndex).toEqual(new Map([['123', personalization]]));
+            expect(saveOrphanedSpy).toHaveBeenCalledTimes(1);
+            expect(saveSpy).toHaveBeenCalledTimes(0);
         });
     });
 

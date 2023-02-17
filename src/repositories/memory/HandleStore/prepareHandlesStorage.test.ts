@@ -162,4 +162,26 @@ describe('prepareHandlesStorage', () => {
         expect(saveSpy).toHaveBeenCalledTimes(0);
         expect(saveHandlesFileSpy).toHaveBeenCalledTimes(0);
     });
+
+    it('Should get orphaned handles and load them', async () => {
+        const saveSpy = jest.spyOn(HandleStore, 'save').mockImplementation();
+        jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue(null);
+        jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
+            slot: 1,
+            hash: 'a',
+            handles: {
+                hndl_1: {
+                    name: 'hndl_1'
+                }
+            },
+            orphanedPz: [['pz1', { name: 'hndl_2' }]],
+            schemaVersion: HandleStore.storageSchemaVersion
+        });
+
+        const startingPoint = await HandleStore.prepareHandlesStorage();
+        expect(startingPoint).toEqual({ hash: 'a', slot: 1 });
+
+        expect(saveSpy).toHaveBeenCalledWith({ handle: { name: 'hndl_1' }, saveHistory: false });
+        expect(HandleStore.orphanedPersonalizationIndex).toEqual(new Map([['pz1', { name: 'hndl_2' }]]));
+    });
 });

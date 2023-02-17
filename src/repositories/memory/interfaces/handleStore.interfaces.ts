@@ -1,8 +1,8 @@
-import { IHandle, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
-    old: Partial<IHandle> | null;
-    new?: Partial<IHandle> | null;
+    old: Partial<IPersonalizedHandle> | null;
+    new?: Partial<IPersonalizedHandle> | null;
 }
 
 export interface ISlotHistoryIndex {
@@ -15,6 +15,7 @@ export interface IHandleFileContent {
     schemaVersion?: number;
     handles: Record<string, IPersonalizedHandle>;
     history: [number, ISlotHistoryIndex][];
+    orphanedPz: [string, IPersonalization][];
 }
 
 export interface IHandleStoreMetrics {
@@ -40,6 +41,7 @@ export interface SaveMintingTxInput {
     default_in_wallet?: string;
     profile_pic?: string;
     datum?: string;
+    personalization?: IPersonalization;
 }
 
 export interface SaveWalletAddressMoveInput {
