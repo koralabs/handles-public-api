@@ -57,7 +57,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         const array =
             characters || length || rarity || numeric_modifiers || holder_address
-                ? nonEmptyHexes.reduce<IHandle[]>((agg, hex) => {
+                ? nonEmptyHexes.reduce<IPersonalizedHandle[]>((agg, hex) => {
                       const handle = HandleStore.get(hex);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
@@ -65,7 +65,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       }
                       return agg;
                   }, [])
-                : HandleStore.getHandles().reduce<IHandle[]>((agg, handle) => {
+                : HandleStore.getHandles().reduce<IPersonalizedHandle[]>((agg, handle) => {
                       if (search && !handle.name.includes(search)) return agg;
                       agg.push(handle);
                       return agg;
@@ -80,7 +80,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }: {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
-    }): Promise<IHandle[]> {
+    }): Promise<IPersonalizedHandle[]> {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
         const items = this.search(search);
@@ -139,29 +139,11 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return handles.map((handle) => handle.name);
     }
 
-    public async getHandleByName(handleName: string): Promise<IHandle | null> {
+    public async getHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
         const handleHex = HandleStore.getFromNameIndex(handleName);
         if (handleHex) {
             const handle = HandleStore.get(handleHex);
             if (handle) return handle;
-        }
-
-        return null;
-    }
-
-    public async getPersonalizedHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
-        const handleHex = HandleStore.getFromNameIndex(handleName);
-        if (handleHex) {
-            const handle = HandleStore.get(handleHex);
-            const personalization = HandleStore.getPersonalization(handleHex) ?? {};
-            if (handle) {
-                const personalizedHandle: IPersonalizedHandle = {
-                    ...handle,
-                    personalization
-                };
-
-                return personalizedHandle;
-            }
         }
 
         return null;

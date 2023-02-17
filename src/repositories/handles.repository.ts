@@ -5,10 +5,12 @@ import { HandleSearchModel } from '../models/HandleSearch.model';
 import { HolderPaginationModel } from '../models/holderPagination.model';
 
 interface IHandlesRepository {
-    getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<IHandle[]>;
+    getAll: (params: {
+        pagination: HandlePaginationModel;
+        search: HandleSearchModel;
+    }) => Promise<IPersonalizedHandle[]>;
     getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
-    getHandleByName: (handleName: string) => Promise<IHandle | null>;
-    getPersonalizedHandleByName: (handleName: string) => Promise<IPersonalizedHandle | null>;
+    getHandleByName: (handleName: string) => Promise<IPersonalizedHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;
