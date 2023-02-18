@@ -13,8 +13,19 @@ jest.mock('../ioc', () => ({
             getHandleByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
+                if (handleName === 'no-utxo') {
+                    return {
+                        name: handleName,
+                        personalization: {
+                            p: 'z'
+                        },
+                        datum: 'a247'
+                    };
+                }
+
                 return {
                     name: handleName,
+                    utxo: 'utxo#0',
                     personalization: {
                         p: 'z'
                     },
@@ -25,6 +36,7 @@ jest.mock('../ioc', () => ({
                 return [
                     {
                         name: 'burritos',
+                        utxo: 'utxo#0',
                         personalization: {
                             p: 'z'
                         },
@@ -97,7 +109,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
         });
 
         it('should throw error if characters is invalid', async () => {
@@ -160,13 +172,13 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos' });
+            expect(response.body).toEqual({ name: 'burritos', utxo: 'utxo#0' });
         });
 
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: '1' });
+            expect(response.body).toEqual({ name: '1', utxo: 'utxo#0' });
         });
 
         it('should return legendary message when handle does not exist', async () => {
@@ -188,6 +200,12 @@ describe('Testing Handles Routes', () => {
             expect(response.status).toEqual(451);
             expect(response.body.message).toEqual("Protected word match on 'jap,an'");
         });
+
+        it('should throw error if handle does not have a utxo', async () => {
+            const response = await request(app?.getServer()).get('/handles/no-utxo');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('Handle not found');
+        });
     });
 
     describe('[GET] /handles/:handle/personalized', () => {
@@ -200,7 +218,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', personalization: { p: 'z' } });
+            expect(response.body).toEqual({ name: 'burritos', personalization: { p: 'z' }, utxo: 'utxo#0' });
         });
 
         it('should return legendary message', async () => {
@@ -212,7 +230,7 @@ describe('Testing Handles Routes', () => {
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/j/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'j', personalization: { p: 'z' } });
+            expect(response.body).toEqual({ name: 'j', personalization: { p: 'z' }, utxo: 'utxo#0' });
         });
 
         it('should return invalid message', async () => {

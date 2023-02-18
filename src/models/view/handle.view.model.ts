@@ -1,4 +1,5 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { HttpException } from '../../exceptions/HttpException';
 
 export class HandleViewModel {
     hex: string;
@@ -21,6 +22,10 @@ export class HandleViewModel {
     hasDatum: boolean;
 
     constructor(handle: IHandle) {
+        if (!handle.utxo) {
+            throw new HttpException(400, 'Handle not found');
+        }
+
         this.hex = handle.hex;
         this.name = handle.name;
         this.nft_image = handle.nft_image;

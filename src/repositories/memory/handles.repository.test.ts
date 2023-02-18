@@ -142,6 +142,25 @@ describe('MemoryHandlesRepository Tests', () => {
             const result = await repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['taco']);
         });
+
+        it('should remove handles without a UTxO', async () => {
+            const newHandle = HandleStore.buildHandle({
+                hexName: 'new-handle-hex',
+                name: 'new-handle',
+                adaAddress: '',
+                utxo: '',
+                og: 0,
+                image: '',
+                slotNumber: 0,
+                datum: ''
+            });
+            const handles = [...handlesFixture, newHandle];
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
+            const repo = new MemoryHandlesRepository();
+            const search = new HandleSearchModel();
+            const result = await repo.getAllHandleNames(search, 'asc');
+            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
+        });
     });
 
     describe('getHandleByName', () => {
@@ -229,7 +248,15 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo: 'test_tx#0',
                 datum
             };
-            await HandleStore.saveMintedHandle(saveHandleInput);
+            await Promise.all([
+                HandleStore.saveMintedHandle(saveHandleInput),
+                HandleStore.saveMintedHandle({
+                    ...saveHandleInput,
+                    hexName: 'pollo-verde-hex',
+                    name: 'pollo-verde',
+                    utxo: ''
+                })
+            ]);
         });
 
         it('should not get datum if hasDatum is false', async () => {
@@ -243,6 +270,16 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHandleDatumByName('salsa');
             expect(result).toEqual(datum);
+        });
+
+        it('should get handle datum by name', async () => {
+            const repo = new MemoryHandlesRepository();
+            try {
+                await repo.getHandleDatumByName('pollo-verde');
+                throw new Error('expected error');
+            } catch (error: any) {
+                expect(error.message).toEqual('Not found');
+            }
         });
     });
 });

@@ -1,4 +1,5 @@
 import { IHandle, IPersonalization, IPersonalizedHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { HttpException } from '../../exceptions/HttpException';
 
 export class PersonalizedHandleViewModel {
     hex: string;
@@ -22,6 +23,10 @@ export class PersonalizedHandleViewModel {
     personalization?: IPersonalization;
 
     constructor(handle: IPersonalizedHandle) {
+        if (!handle.utxo) {
+            throw new HttpException(400, 'Handle not found');
+        }
+
         this.hex = handle.hex;
         this.name = handle.name;
         this.nft_image = handle.nft_image;

@@ -1,4 +1,4 @@
-import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -135,8 +135,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public async getAllHandleNames(search: HandleSearchModel, sort: string) {
         const handles = this.search(search);
-        handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-        return handles.map((handle) => handle.name);
+        const filteredHandles = handles.filter((handle) => !!handle.utxo);
+        filteredHandles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+        return filteredHandles.map((handle) => handle.name);
     }
 
     public async getHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
@@ -168,7 +169,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public async getHandleDatumByName(handleName: string): Promise<string | null> {
         const handleHex = HandleStore.getFromNameIndex(handleName);
         const handle = HandleStore.get(handleHex ?? '');
-        if (!handle) {
+        if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }
 

@@ -59,7 +59,7 @@ class HandlesController {
 
             const handles = await handleRepo.getAll({ pagination, search });
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
-                handles.map((handle) => new HandleViewModel(handle))
+                handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle))
             );
         } catch (error) {
             next(error);
