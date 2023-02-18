@@ -87,25 +87,16 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     2: {
         'barbacoa-hex': {
             old: { resolved_addresses: { ada: '123' } }
-        },
-        [`${MetadatumAssetLabel.REFERENCE_NFT}taco-hex`]: {
-            old: null
         }
     },
     3: {
         'burrito-hex': {
             old: { resolved_addresses: { ada: '123' } }
-        },
-        [`${MetadatumAssetLabel.REFERENCE_NFT}taco-hex`]: {
-            old: { personalization: { nft_appearance: { handleTextShadowColor: '#fff' } } }
         }
     },
     4: {
         'barbacoa-hex': {
             old: { resolved_addresses: { ada: '456' } }
-        },
-        [`${MetadatumAssetLabel.REFERENCE_NFT}taco-hex`]: {
-            old: { personalization: { nft_appearance: { handleTextShadowColor: '#000' } } }
         }
     }
 };

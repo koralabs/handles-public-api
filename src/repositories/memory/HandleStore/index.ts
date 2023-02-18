@@ -29,7 +29,6 @@ export class HandleStore {
     private static handles = new Map<string, IPersonalizedHandle>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
-    static orphanedPersonalizationIndex = new Map<string, IPersonalization>();
     static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
@@ -313,31 +312,22 @@ export class HandleStore {
     }
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        // TODO Check for existing handle. If there is one already, increase the amount property
-        const newHandle = HandleStore.buildHandle(input);
-
-        // Check for orphaned personalization data and delete if found.
-        const { hex } = newHandle;
-        const orphanedPersonalizationData = this.orphanedPersonalizationIndex.get(hex);
-        if (orphanedPersonalizationData) {
-            // if found, delete the orphaned personalization from the index
-            this.orphanedPersonalizationIndex.delete(hex);
-
-            // update history with the deleted personalization just in case there is a rollback
-            const handleHistory: HandleHistory = {
-                old: { personalization: orphanedPersonalizationData },
-                new: null
+        const existingHandle = HandleStore.get(input.hexName);
+        if (existingHandle) {
+            // TODO Check for existing handle. If there is one already, increase the amount property
+            // if there is an existing handle, it means we already received a 100 token.
+            const inputWithExistingHandle: SaveMintingTxInput = {
+                ...input,
+                image: existingHandle.nft_image,
+                og: existingHandle.og,
+                personalization: existingHandle.personalization
             };
-
-            HandleStore.saveSlotHistory({
-                handleHistory,
-                hex: `${MetadatumAssetLabel.REFERENCE_NFT}${hex}`,
-                slotNumber: input.slotNumber
-            });
-
-            newHandle.personalization = orphanedPersonalizationData;
+            const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
+            await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });
+            return;
         }
 
+        const newHandle = HandleStore.buildHandle(input);
         await HandleStore.save({ handle: newHandle });
     };
 
@@ -345,7 +335,7 @@ export class HandleStore {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
             Logger.log({
-                message: `Wallet moved, but there is no existing handle in storage with hex: ${hexName}`,
+                message: `Handle was updated but there is no existing handle in storage with hex: ${hexName}`,
                 category: LogCategory.ERROR,
                 event: 'saveHandleUpdate.noHandleFound'
             });
@@ -367,51 +357,27 @@ export class HandleStore {
         });
     };
 
-    static saveOrphanedPersonalizationData = async ({
-        hexName,
-        personalization,
-        slotNumber
-    }: {
-        hexName: string;
-        personalization: IPersonalization;
-        slotNumber: number;
-    }) => {
-        // If there is no handle, it means we have not received the 222 handle yet.
-        // We will save the personalization in the orphaned personalization index and wait for the 222 handle.
-        const existingOrphanedPersonalization = HandleStore.orphanedPersonalizationIndex.get(hexName);
-
-        const updatedPersonalization = existingOrphanedPersonalization
-            ? {
-                  ...existingOrphanedPersonalization,
-                  ...personalization
-              }
-            : { ...personalization };
-
-        const orphanedPersonalizationHistory = HandleStore.buildHandleHistory(
-            { personalization: updatedPersonalization },
-            existingOrphanedPersonalization ? { personalization: existingOrphanedPersonalization } : undefined
-        );
-
-        if (orphanedPersonalizationHistory) {
-            HandleStore.saveSlotHistory({
-                handleHistory: orphanedPersonalizationHistory,
-                hex: `${MetadatumAssetLabel.REFERENCE_NFT}${hexName}`,
-                slotNumber
-            });
-        }
-
-        HandleStore.orphanedPersonalizationIndex.set(hexName, personalization);
-    };
-
     static async savePersonalizationChange({
         hexName,
+        name,
         personalization,
         addresses,
         slotNumber
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(hexName);
         if (!existingHandle) {
-            HandleStore.saveOrphanedPersonalizationData({ hexName, personalization, slotNumber });
+            const buildHandleInput: SaveMintingTxInput = {
+                hexName,
+                name,
+                slotNumber,
+                adaAddress: '', // address will come from the 222 token
+                og: 0, // TODO: get og from personalization
+                image: '', // TODO: get image from personalization
+                utxo: '', // utxo will come from the 222 token,
+                personalization
+            };
+            const handle = HandleStore.buildHandle(buildHandleInput);
+            await HandleStore.save({ handle });
             return;
         }
 
@@ -541,11 +507,10 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.handles)
         };
         const history = Array.from(HandleStore.slotHistoryIndex);
-        const orphanedPz = Array.from(HandleStore.orphanedPersonalizationIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${this.handles.size} handles & ${history.length} history entries`);
         const result = await HandleStore.saveFileContents({
-            content: { handles, history, orphanedPz },
+            content: { handles, history },
             storagePath,
             slot,
             hash,
@@ -692,7 +657,6 @@ export class HandleStore {
             return {
                 handles: content.handles,
                 history: content.history,
-                orphanedPz: content.orphanedPz,
                 slot: content.slot,
                 schemaVersion: content.schemaVersion ?? 0,
                 hash: content.hash,
@@ -703,7 +667,6 @@ export class HandleStore {
         let filesContent: {
             handles: Record<string, IPersonalizedHandle>;
             history: [number, ISlotHistoryIndex][];
-            orphanedPz: [string, IPersonalization][];
             slot: number;
             schemaVersion: number;
             hash: string;
@@ -740,7 +703,7 @@ export class HandleStore {
             return null;
         }
 
-        const { handles, slot, hash, history, orphanedPz, isNew } = filesContent;
+        const { handles, slot, hash, history, isNew } = filesContent;
 
         // save all the individual handles to the store
         const keys = Object.keys(handles ?? {});
@@ -756,7 +719,6 @@ export class HandleStore {
 
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
-        HandleStore.orphanedPersonalizationIndex = new Map(orphanedPz);
 
         Logger.log(
             `Handle storage found at slot: ${slot} and hash: ${hash} with ${
@@ -781,7 +743,6 @@ export class HandleStore {
 
         // erase all indexes
         this.handles = new Map<string, IPersonalizedHandle>();
-        this.orphanedPersonalizationIndex = new Map<string, IPersonalization>();
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
         this.nameIndex = new Map<string, string>();
         this.rarityIndex = new Map<string, Set<string>>();
@@ -807,8 +768,6 @@ export class HandleStore {
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
         let handleDeletes = 0;
-        let orphanedPzUpdates = 0;
-        let orphanedPzDeletes = 0;
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {
@@ -817,7 +776,7 @@ export class HandleStore {
             // once we reach the slot we want to rewind to, we can stop
             if (slotKey <= slot) {
                 Logger.log({
-                    message: `Finished Rewinding to slot ${slot} with ${handleUpdates} handle updates, ${handleDeletes} handle deletes, ${orphanedPzUpdates} orphaned personalization updates, and ${orphanedPzDeletes} orphaned personalization deletes`,
+                    message: `Finished Rewinding to slot ${slot} with ${handleUpdates} updates and ${handleDeletes} deletes.`,
                     category: LogCategory.INFO,
                     event: 'HandleStore.rewindChangesToSlot'
                 });
@@ -831,33 +790,6 @@ export class HandleStore {
             const keys = Object.keys(history);
             for (let i = 0; i < keys.length; i++) {
                 const hex = keys[i];
-
-                // check to see if it's a reference token. If so, update the reference token
-                if (hex.startsWith(MetadatumAssetLabel.REFERENCE_NFT)) {
-                    const hexWithoutTokenClass = hex.replace(MetadatumAssetLabel.REFERENCE_NFT, '');
-                    const existingOrphanedPersonalization =
-                        HandleStore.orphanedPersonalizationIndex.get(hexWithoutTokenClass);
-                    if (!existingOrphanedPersonalization) {
-                        Logger.log(`Orphaned Personalization ${hexWithoutTokenClass} does not exist`);
-                        continue;
-                    }
-
-                    const personalizationHistory = history[hex];
-                    if (personalizationHistory.old === null) {
-                        HandleStore.orphanedPersonalizationIndex.delete(hexWithoutTokenClass);
-                        orphanedPzDeletes++;
-                        continue;
-                    }
-
-                    const updatedPersonalization: IPersonalization = {
-                        ...existingOrphanedPersonalization,
-                        ...personalizationHistory.old.personalization
-                    };
-
-                    HandleStore.orphanedPersonalizationIndex.set(hexWithoutTokenClass, updatedPersonalization);
-                    orphanedPzUpdates++;
-                    continue;
-                }
 
                 const existingHandle = this.get(hex);
                 if (!existingHandle) {

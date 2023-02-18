@@ -36,9 +36,6 @@ describe('saveSlotHistory', () => {
             [
                 2,
                 {
-                    '000643b0taco-hex': {
-                        old: null
-                    },
                     'barbacoa-hex': {
                         old: { resolved_addresses: { ada: '123' } }
                     }
@@ -47,15 +44,6 @@ describe('saveSlotHistory', () => {
             [
                 3,
                 {
-                    '000643b0taco-hex': {
-                        old: {
-                            personalization: {
-                                nft_appearance: {
-                                    handleTextShadowColor: '#fff'
-                                }
-                            }
-                        }
-                    },
                     'burrito-hex': {
                         old: { resolved_addresses: { ada: '123' } }
                     }
@@ -64,15 +52,6 @@ describe('saveSlotHistory', () => {
             [
                 4,
                 {
-                    '000643b0taco-hex': {
-                        old: {
-                            personalization: {
-                                nft_appearance: {
-                                    handleTextShadowColor: '#000'
-                                }
-                            }
-                        }
-                    },
                     'barbacoa-hex': {
                         old: { resolved_addresses: { ada: '456' } }
                     }
@@ -119,15 +98,6 @@ describe('saveSlotHistory', () => {
             [
                 4,
                 {
-                    '000643b0taco-hex': {
-                        old: {
-                            personalization: {
-                                nft_appearance: {
-                                    handleTextShadowColor: '#000'
-                                }
-                            }
-                        }
-                    },
                     'barbacoa-hex': {
                         old: { resolved_addresses: { ada: '456' } }
                     },

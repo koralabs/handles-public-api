@@ -50,6 +50,8 @@ const processAssetReferenceToken = async ({
         return;
     }
 
+    const name = Buffer.from(hexName, 'hex').toString('utf8');
+
     if (!datum) {
         // our reference token should always have datum.
         // If we do not have datum, something is wrong.
@@ -77,6 +79,7 @@ const processAssetReferenceToken = async ({
     // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
         hexName,
+        name,
         personalization,
         addresses: {},
         slotNumber

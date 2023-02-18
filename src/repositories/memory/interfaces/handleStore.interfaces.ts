@@ -15,7 +15,6 @@ export interface IHandleFileContent {
     schemaVersion?: number;
     handles: Record<string, IPersonalizedHandle>;
     history: [number, ISlotHistoryIndex][];
-    orphanedPz: [string, IPersonalization][];
 }
 
 export interface IHandleStoreMetrics {
@@ -55,6 +54,7 @@ export interface SaveWalletAddressMoveInput {
 export interface SavePersonalizationInput {
     slotNumber: number;
     hexName: string;
+    name: string;
     personalization: IPersonalization;
     addresses: {
         [chain: string]: string;

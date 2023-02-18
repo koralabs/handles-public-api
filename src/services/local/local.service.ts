@@ -19,6 +19,7 @@ export class LocalService {
                     console.log(`${name} changed! saving personalization`);
                     await HandleStore.savePersonalizationChange({
                         hexName: hex,
+                        name,
                         personalization,
                         addresses,
                         slotNumber: fileContents.slot

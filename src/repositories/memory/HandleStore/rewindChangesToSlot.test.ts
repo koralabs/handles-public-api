@@ -34,10 +34,6 @@ describe('rewindChangesToSlot', () => {
                 return [slot, slotHistoryFixture[slot]];
             })
         );
-
-        HandleStore.orphanedPersonalizationIndex = new Map([
-            ['taco-hex', { nft_appearance: { handleTextShadowColor: '#CCC' } }]
-        ]);
     });
 
     afterEach(() => {
@@ -47,7 +43,6 @@ describe('rewindChangesToSlot', () => {
         }
 
         HandleStore.slotHistoryIndex = new Map();
-        HandleStore.orphanedPersonalizationIndex = new Map();
 
         jest.clearAllMocks();
     });
@@ -72,8 +67,7 @@ describe('rewindChangesToSlot', () => {
         expect(loggerSpy).toHaveBeenNthCalledWith(4, {
             category: 'INFO',
             event: 'HandleStore.rewindChangesToSlot',
-            message:
-                'Finished Rewinding to slot 0 with 3 handle updates, 3 handle deletes, 2 orphaned personalization updates, and 1 orphaned personalization deletes'
+            message: 'Finished Rewinding to slot 0 with 3 updates and 3 deletes.'
         });
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -88,9 +82,6 @@ describe('rewindChangesToSlot', () => {
         // and none after the rollback
         expect(HandleStore.get('burrito-hex')?.resolved_addresses.ada).toEqual('123');
         expect(HandleStore.get('barbacoa-hex')?.resolved_addresses.ada).toEqual('456');
-        expect(HandleStore.orphanedPersonalizationIndex.get('taco-hex')).toEqual({
-            nft_appearance: { handleTextShadowColor: '#fff' }
-        });
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
