@@ -23,7 +23,7 @@ export class HandleViewModel {
 
     constructor(handle: IHandle) {
         if (!handle.utxo) {
-            throw new HttpException(400, 'Handle not found');
+            throw new HttpException(404, 'Handle not found');
         }
 
         this.hex = handle.hex;

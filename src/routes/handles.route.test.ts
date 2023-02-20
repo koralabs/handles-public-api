@@ -203,7 +203,7 @@ describe('Testing Handles Routes', () => {
 
         it('should throw error if handle does not have a utxo', async () => {
             const response = await request(app?.getServer()).get('/handles/no-utxo');
-            expect(response.status).toEqual(400);
+            expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Handle not found');
         });
     });
