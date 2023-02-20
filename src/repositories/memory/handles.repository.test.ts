@@ -272,7 +272,7 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual(datum);
         });
 
-        it('should get handle datum by name', async () => {
+        it('should not find handle when utxo is empty (100 before 222 token)', async () => {
             const repo = new MemoryHandlesRepository();
             try {
                 await repo.getHandleDatumByName('pollo-verde');
