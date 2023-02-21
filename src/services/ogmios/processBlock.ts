@@ -9,11 +9,13 @@ import {
     PersonalizationOnChainMetadata,
     TxBlock,
     TxBlockBody,
-    TxBody
+    TxBody,
+    ProcessAssetTokenInput
 } from '../../interfaces/ogmios.interfaces';
 import { Buffer } from 'buffer';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject } from './utils';
+import { decodeDatum } from '../../utils/serialization';
 
 const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): Promise<IPersonalization> => {
     const { personalContactInfo, additionalHandleSettings, socialContactInfo } = metadata;
@@ -28,6 +30,11 @@ const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): P
     return personalization;
 };
 
+function isValidDatum(datumObject: PersonalizationOnChainMetadata): boolean {
+    // TODO: validate datum
+    return true;
+}
+
 const processAssetReferenceToken = async ({
     assetName,
     slotNumber,
@@ -35,34 +42,89 @@ const processAssetReferenceToken = async ({
 }: {
     assetName: string;
     slotNumber: number;
-    datum:
-        | string
-        | {
-              [k: string]: unknown;
-          }
-        | null
-        | undefined;
+    datum?: string;
 }) => {
-    const hexName = assetName?.split(MetadatumAssetLabel.SUB_STANDARD_NFT)[1];
+    const hexName = assetName?.split(MetadatumAssetLabel.REFERENCE_NFT)[1];
     if (!hexName) {
-        Logger.log(`unable to decode ${hexName}`);
+        Logger.log(`unable to decode reference token name: ${hexName}`);
         return;
     }
 
-    // TODO: get the metadata from the datum
-    const referenceTokenData = buildOnChainObject<PersonalizationOnChainMetadata>(datum);
-    if (!referenceTokenData) return;
+    const name = Buffer.from(hexName, 'hex').toString('utf8');
+
+    if (!datum) {
+        // our reference token should always have datum.
+        // If we do not have datum, something is wrong.
+        // TODO: what happens during a token burn?
+        Logger.log({
+            message: `no datum for reference token ${assetName}`,
+            category: LogCategory.ERROR,
+            event: 'processBlock.processAssetReferenceToken.noDatum'
+        });
+        return;
+    }
+
+    const decodedDatum = decodeDatum(datum);
+    const datumObject: PersonalizationOnChainMetadata =
+        typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+
+    if (!isValidDatum(datumObject)) {
+        Logger.log(`invalid datum for reference token ${assetName}`);
+        return;
+    }
 
     // populate personalization from the reference token
-    const personalization = await buildPersonalization(referenceTokenData);
+    const personalization = await buildPersonalization(datumObject);
 
     // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
         hexName,
+        name,
         personalization,
         addresses: {},
-        slotNumber,
-        hasDatum: !!datum
+        slotNumber
+    });
+};
+
+const processAssetClassToken = async ({
+    assetName,
+    slotNumber,
+    address,
+    utxo,
+    datum,
+    handleMetadata,
+    isMintTx
+}: ProcessAssetTokenInput) => {
+    const assetNameLabel = assetName.split('.')[1];
+
+    if (assetNameLabel.startsWith(MetadatumAssetLabel.SUB_STANDARD_NFT)) {
+        const assetNameWithoutClass = assetName.replace(MetadatumAssetLabel.SUB_STANDARD_NFT, '');
+        await processAssetToken({
+            assetName: assetNameWithoutClass,
+            slotNumber,
+            address,
+            utxo,
+            datum,
+            handleMetadata,
+            isMintTx
+        });
+        return;
+    }
+
+    if (assetNameLabel.startsWith(MetadatumAssetLabel.REFERENCE_NFT)) {
+        await processAssetReferenceToken({ assetName, slotNumber, datum });
+        return;
+    }
+
+    if (assetNameLabel.startsWith(MetadatumAssetLabel.SUB_STANDARD_FT)) {
+        Logger.log(`FT token found ${assetName}. Not implemented yet`);
+        return;
+    }
+
+    Logger.log({
+        message: `unknown asset name ${assetName}`,
+        category: LogCategory.ERROR,
+        event: 'processBlock.processAssetClassToken.unknownAssetName'
     });
 };
 
@@ -72,15 +134,9 @@ const processAssetToken = async ({
     address,
     utxo,
     datum,
-    handleMetadata
-}: {
-    assetName: string;
-    slotNumber: number;
-    address: string;
-    utxo: string;
-    datum?: string;
-    handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
-}) => {
+    handleMetadata,
+    isMintTx
+}: ProcessAssetTokenInput) => {
     const hexName = assetName?.split('.')[1];
     if (!hexName) {
         Logger.log(`unable to decode ${hexName}`);
@@ -88,7 +144,6 @@ const processAssetToken = async ({
     }
 
     const name = Buffer.from(hexName, 'hex').toString('utf8');
-    const data = handleMetadata && handleMetadata[name];
 
     const input = {
         hexName,
@@ -98,11 +153,10 @@ const processAssetToken = async ({
         datum
     };
 
-    if (data) {
-        const {
-            image,
-            core: { og }
-        } = data;
+    if (isMintTx) {
+        const data = handleMetadata && handleMetadata[name];
+        const image = data?.image ?? '';
+        const og = data?.core?.og ?? 0;
         await HandleStore.saveMintedHandle({
             ...input,
             name,
@@ -170,22 +224,24 @@ export const processBlock = async ({
                             });
                         }
 
-                        if (assetName.startsWith(`${policyId}${MetadatumAssetLabel.REFERENCE_NFT}`)) {
-                            await processAssetReferenceToken({ assetName, slotNumber: currentSlot, datum });
+                        const isMintTx = isMintingTransaction(txBody, assetName);
+                        const data = handleMetadata ? handleMetadata[policyId] : undefined;
+                        const { address } = o;
+
+                        const input: ProcessAssetTokenInput = {
+                            assetName,
+                            address,
+                            slotNumber: currentSlot,
+                            utxo: `${txId}#${i}`,
+                            datum: datumString,
+                            handleMetadata: data,
+                            isMintTx
+                        };
+
+                        if (Object.values(MetadatumAssetLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                            await processAssetClassToken(input);
                         } else {
-                            const data =
-                                isMintingTransaction(txBody, assetName) && handleMetadata
-                                    ? handleMetadata[policyId]
-                                    : undefined;
-                            const { address } = o;
-                            await processAssetToken({
-                                assetName,
-                                address,
-                                slotNumber: currentSlot,
-                                handleMetadata: data,
-                                utxo: `${txId}#${i}`,
-                                datum: datumString
-                            });
+                            await processAssetToken(input);
                         }
                     }
                 }
