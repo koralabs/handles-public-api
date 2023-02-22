@@ -142,6 +142,25 @@ describe('MemoryHandlesRepository Tests', () => {
             const result = await repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['taco']);
         });
+
+        it('should remove handles without a UTxO', async () => {
+            const newHandle = HandleStore.buildHandle({
+                hexName: 'new-handle-hex',
+                name: 'new-handle',
+                adaAddress: '',
+                utxo: '',
+                og: 0,
+                image: '',
+                slotNumber: 0,
+                datum: ''
+            });
+            const handles = [...handlesFixture, newHandle];
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
+            const repo = new MemoryHandlesRepository();
+            const search = new HandleSearchModel();
+            const result = await repo.getAllHandleNames(search, 'asc');
+            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
+        });
     });
 
     describe('getHandleByName', () => {
@@ -169,13 +188,13 @@ describe('MemoryHandlesRepository Tests', () => {
     describe('getAllHolders', () => {
         it('should get holderAddress list', async () => {
             jest.mock('./HandleStore', () => ({
-              __esModule: true,
-              holderAddressIndex: holdersFixture
+                __esModule: true,
+                holderAddressIndex: holdersFixture
             }));
-            const mockHandleStore = HandleStore as { holderAddressIndex:Map<string, HolderAddressIndex> }
-            mockHandleStore.holderAddressIndex = holdersFixture
+            const mockHandleStore = HandleStore as { holderAddressIndex: Map<string, HolderAddressIndex> };
+            mockHandleStore.holderAddressIndex = holdersFixture;
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getAllHolders({pagination: new HolderPaginationModel()});
+            const result = await repo.getAllHolders({ pagination: new HolderPaginationModel() });
             expect(result).toEqual([
                 {
                     total_handles: 2,
@@ -192,7 +211,7 @@ describe('MemoryHandlesRepository Tests', () => {
                     address: 'addr1',
                     known_owner_name: 'funnable.token',
                     type: 'script'
-                },
+                }
             ]);
         });
     });
@@ -229,7 +248,15 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo: 'test_tx#0',
                 datum
             };
-            await HandleStore.saveMintedHandle(saveHandleInput);
+            await Promise.all([
+                HandleStore.saveMintedHandle(saveHandleInput),
+                HandleStore.saveMintedHandle({
+                    ...saveHandleInput,
+                    hexName: 'pollo-verde-hex',
+                    name: 'pollo-verde',
+                    utxo: ''
+                })
+            ]);
         });
 
         it('should not get datum if hasDatum is false', async () => {
@@ -243,6 +270,16 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHandleDatumByName('salsa');
             expect(result).toEqual(datum);
+        });
+
+        it('should not find handle when utxo is empty (100 before 222 token)', async () => {
+            const repo = new MemoryHandlesRepository();
+            try {
+                await repo.getHandleDatumByName('pollo-verde');
+                throw new Error('expected error');
+            } catch (error: any) {
+                expect(error.message).toEqual('Not found');
+            }
         });
     });
 });

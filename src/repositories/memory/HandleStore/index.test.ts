@@ -84,8 +84,93 @@ describe('HandleStore tests', () => {
         unlinkSync(filePath);
     });
 
-    describe.skip('saveHandlesFile tests', () => {
-        it('should not allow saving if file is locked', async () => {
+    describe('saveHandlesFile tests', () => {
+        it('should save the file', async () => {
+            const saveFileContentsSpy = jest.spyOn(HandleStore, 'saveFileContents').mockImplementation();
+            await HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
+            expect(saveFileContentsSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    content: expect.objectContaining({
+                        handles: expect.objectContaining({
+                            'barbacoa-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_0',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'barbacoa-hex',
+                                holder_address: 'stake123',
+                                length: 8,
+                                name: 'barbacoa',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'basic',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo1#0'
+                            }),
+                            'burrito-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_1',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'burrito-hex',
+                                holder_address: 'stake123',
+                                length: 8,
+                                name: 'burritos',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'basic',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo2#0'
+                            }),
+                            'taco-hex': expect.objectContaining({
+                                background: '',
+                                characters: 'letters',
+                                created_slot_number: expect.any(Number),
+                                datum: 'some_datum_2',
+                                default_in_wallet: '',
+                                hasDatum: true,
+                                hex: 'taco-hex',
+                                holder_address: 'stake123',
+                                length: 4,
+                                name: 'taco',
+                                nft_image: '',
+                                numeric_modifiers: '',
+                                og: 0,
+                                original_nft_image: '',
+                                profile_pic: '',
+                                rarity: 'common',
+                                resolved_addresses: { ada: '123' },
+                                updated_slot_number: expect.any(Number),
+                                utxo: 'utxo3#0'
+                            })
+                        }),
+                        history: [
+                            [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                            [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                            [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }]
+                        ]
+                    }),
+                    hash: 'some-hash',
+                    slot: 123,
+                    storagePath: 'storage/handles-test.json',
+                    testDelay: true
+                })
+            );
+        });
+
+        it.skip('should not allow saving if file is locked', async () => {
             HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
             const saved = await HandleStore.saveHandlesFile(345, 'some-hash', filePath);
@@ -135,13 +220,6 @@ describe('HandleStore tests', () => {
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0'
             });
-        });
-
-        it('should return null datum if datum is not enabled', () => {
-            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(false);
-            const handle = HandleStore.get('barbacoa-hex');
-            expect(handle?.datum).toEqual(undefined);
-            expect(handle?.hasDatum).toEqual(true);
         });
     });
 
@@ -200,13 +278,68 @@ describe('HandleStore tests', () => {
                 [expect.any(Number), { 'nachos-hex': { new: { name: 'nachos' }, old: null } }]
             ]);
         });
+
+        it('Should find existing handle and add personalization', async () => {
+            const personalizationData = { nft_appearance: { handleTextShadowColor: 'todo' } };
+
+            await HandleStore.savePersonalizationChange({
+                hexName: 'chimichanga-hex',
+                name: 'chimichanga',
+                slotNumber: 99,
+                personalization: personalizationData,
+                addresses: { ada: 'addr123' }
+            });
+
+            await HandleStore.saveMintedHandle({
+                hexName: 'chimichanga-hex',
+                name: 'chimichanga',
+                adaAddress: 'addr123',
+                og: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100
+            });
+
+            const handle = HandleStore.get('chimichanga-hex');
+
+            // expect the personalization data to be added to the handle
+            expect(handle?.personalization).toEqual(personalizationData);
+
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
+                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
+                [99, { 'chimichanga-hex': { new: { name: 'chimichanga' }, old: null } }],
+                [
+                    100,
+                    {
+                        'chimichanga-hex': {
+                            new: {
+                                created_slot_number: 100,
+                                default_in_wallet: '',
+                                resolved_addresses: { ada: 'addr123' },
+                                updated_slot_number: 100,
+                                utxo: 'utxo123#0'
+                            },
+                            old: {
+                                created_slot_number: 99,
+                                default_in_wallet: 'taco',
+                                resolved_addresses: { ada: '' },
+                                updated_slot_number: 99,
+                                utxo: ''
+                            }
+                        }
+                    }
+                ]
+            ]);
+        });
     });
 
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
             await HandleStore.saveMintedHandle({
-                hexName: 'nachos-hex',
-                name: 'nachos',
+                hexName: 'nacho-cheese-hex',
+                name: 'nachos-cheese',
                 adaAddress: 'addr123',
                 og: 0,
                 utxo: 'utxo123#0',
@@ -235,15 +368,15 @@ describe('HandleStore tests', () => {
             };
 
             await HandleStore.savePersonalizationChange({
-                hexName: 'nachos-hex',
+                hexName: 'nacho-cheese-hex',
+                name: 'nachos-cheese',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 200,
-                hasDatum: false
+                slotNumber: 200
             });
 
-            const personalization = HandleStore.getPersonalization('nachos-hex');
-            expect(personalization).toEqual({
+            const handle = HandleStore.get('nacho-cheese-hex');
+            expect(handle?.personalization).toEqual({
                 nft_appearance: {
                     backgroundBorderColor: 'todo',
                     backgroundColor: 'todo',
@@ -267,17 +400,34 @@ describe('HandleStore tests', () => {
                 [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
                 [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
                 [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                // expect the initial create
-                [100, { 'nachos-hex': { new: { name: 'nachos' }, old: null } }],
-                // expect the personalization update
+                [100, { 'nacho-cheese-hex': { new: { name: 'nachos-cheese' }, old: null } }],
                 [
                     200,
                     {
-                        'nachos-hex': {
+                        'nacho-cheese-hex': {
                             new: {
                                 background: 'todo',
                                 default_in_wallet: '',
                                 nft_image: 'todo',
+                                personalization: {
+                                    nft_appearance: {
+                                        backgroundBorderColor: 'todo',
+                                        backgroundColor: 'todo',
+                                        backgroundImageUrl: 'todo',
+                                        backgroundImageUrlEnabled: true,
+                                        handleTextBgColor: 'todo',
+                                        handleTextShadowColor: 'todo',
+                                        pfpBorderColor: 'todo',
+                                        pfpImageUrl: 'todo',
+                                        pfpImageUrlEnabled: true,
+                                        purchasedAttributes: [],
+                                        qrColor: 'todo',
+                                        qrEnabled: true,
+                                        selectedAttributes: [],
+                                        socials: [],
+                                        socialsEnabled: true
+                                    }
+                                },
                                 profile_pic: 'todo',
                                 updated_slot_number: 200
                             },
@@ -285,6 +435,7 @@ describe('HandleStore tests', () => {
                                 background: '',
                                 default_in_wallet: 'taco',
                                 nft_image: 'ipfs://123',
+                                personalization: undefined,
                                 profile_pic: '',
                                 updated_slot_number: 100
                             }
@@ -294,21 +445,59 @@ describe('HandleStore tests', () => {
             ]);
         });
 
-        it('Should log an error if handle is not found', async () => {
-            const loggerSpy = jest.spyOn(Logger, 'log');
+        it('Should update personalization data before 222 data', async () => {
+            const saveSpy = jest.spyOn(HandleStore, 'save');
+            const personalizationUpdates: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: 'todo',
+                    handleTextBgColor: 'todo',
+                    pfpImageUrl: 'todo',
+                    pfpImageUrlEnabled: true,
+                    pfpBorderColor: 'todo',
+                    backgroundImageUrl: 'todo',
+                    backgroundImageUrlEnabled: true,
+                    backgroundColor: 'todo',
+                    backgroundBorderColor: 'todo',
+                    qrEnabled: true,
+                    qrColor: 'todo',
+                    socials: [],
+                    socialsEnabled: true,
+                    selectedAttributes: [],
+                    purchasedAttributes: []
+                }
+            };
 
-            const personalization: IPersonalization = {};
             await HandleStore.savePersonalizationChange({
-                hexName: '123',
-                personalization,
+                hexName: 'sour-cream-hex',
+                name: 'sour-cream',
+                personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 1234,
-                hasDatum: false
+                slotNumber: 200
             });
-            expect(loggerSpy).toHaveBeenCalledWith({
-                category: 'ERROR',
-                event: 'savePersonalizationChange.noHandleFound',
-                message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
+
+            expect(saveSpy).toHaveBeenCalledWith({
+                handle: {
+                    background: '',
+                    characters: 'letters,special',
+                    created_slot_number: 200,
+                    datum: undefined,
+                    default_in_wallet: '',
+                    hasDatum: false,
+                    hex: 'sour-cream-hex',
+                    holder_address: '',
+                    length: 10,
+                    name: 'sour-cream',
+                    nft_image: '',
+                    numeric_modifiers: '',
+                    og: 0,
+                    original_nft_image: '',
+                    personalization: personalizationUpdates,
+                    profile_pic: '',
+                    rarity: 'basic',
+                    resolved_addresses: { ada: '' },
+                    updated_slot_number: 200,
+                    utxo: ''
+                }
             });
         });
     });
@@ -427,7 +616,7 @@ describe('HandleStore tests', () => {
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveHandleUpdate.noHandleFound',
-                message: 'Wallet moved, but there is no existing handle in storage with hex: 123'
+                message: 'Handle was updated but there is no existing handle in storage with hex: 123'
             });
         });
     });

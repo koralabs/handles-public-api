@@ -1,8 +1,8 @@
-import { IHandle, IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
-    old: Partial<IHandle> | null;
-    new?: Partial<IHandle> | null;
+    old: Partial<IPersonalizedHandle> | null;
+    new?: Partial<IPersonalizedHandle> | null;
 }
 
 export interface ISlotHistoryIndex {
@@ -40,6 +40,7 @@ export interface SaveMintingTxInput {
     default_in_wallet?: string;
     profile_pic?: string;
     datum?: string;
+    personalization?: IPersonalization;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -53,8 +54,8 @@ export interface SaveWalletAddressMoveInput {
 export interface SavePersonalizationInput {
     slotNumber: number;
     hexName: string;
+    name: string;
     personalization: IPersonalization;
-    hasDatum: boolean;
     addresses: {
         [chain: string]: string;
     };

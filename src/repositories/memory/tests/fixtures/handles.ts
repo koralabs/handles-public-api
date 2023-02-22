@@ -1,4 +1,5 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { MetadatumAssetLabel } from '../../../../interfaces/ogmios.interfaces';
 import { ISlotHistoryIndex, HolderAddressIndex } from '../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: IHandle[] = [
@@ -101,21 +102,23 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
 };
 export const holdersFixture = new Map<string, HolderAddressIndex>([
     [
-        "addr1", {
+        'addr1',
+        {
             hexes: new Set(['']),
-            defaultHandle: "burritos",
+            defaultHandle: 'burritos',
             manuallySet: false,
             type: 'script',
             knownOwnerName: 'funnable.token'
         }
     ],
     [
-        "addr2", {
-            hexes: new Set(['7461636F73','66616A69746173']),
-            defaultHandle: "tacos",
+        'addr2',
+        {
+            hexes: new Set(['7461636F73', '66616A69746173']),
+            defaultHandle: 'tacos',
             manuallySet: false,
             type: 'wallet',
             knownOwnerName: ''
         }
     ]
-])
+]);
