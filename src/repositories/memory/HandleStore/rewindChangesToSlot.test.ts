@@ -16,7 +16,7 @@ describe('rewindChangesToSlot', () => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
             const {
-                hex: hexName,
+                hex,
                 original_nft_image: image,
                 name,
                 og,
@@ -24,7 +24,7 @@ describe('rewindChangesToSlot', () => {
                 utxo,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hexName, image, name, og, slotNumber, utxo });
+            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og, slotNumber, utxo });
         }
 
         // set the slotHistoryIndex
@@ -39,7 +39,7 @@ describe('rewindChangesToSlot', () => {
     afterEach(() => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            HandleStore.remove(handle.hex);
+            HandleStore.remove(handle.name);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -49,7 +49,7 @@ describe('rewindChangesToSlot', () => {
 
     it('Should rewind to the slot 0 and remove all handle', async () => {
         const loggerSpy = jest.spyOn(Logger, 'log');
-        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
+        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
 
         // We should have 3 handles before the rollback
         expect(HandleStore.getHandles()).toHaveLength(3);
@@ -76,12 +76,13 @@ describe('rewindChangesToSlot', () => {
         const slot = 2;
         const hash = 'hash2';
         const lastSlot = 10;
+        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
+
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
-        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
 
         // and none after the rollback
-        expect(HandleStore.get('burrito-hex')?.resolved_addresses.ada).toEqual('123');
-        expect(HandleStore.get('barbacoa-hex')?.resolved_addresses.ada).toEqual('456');
+        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('123');
+        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('456');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });

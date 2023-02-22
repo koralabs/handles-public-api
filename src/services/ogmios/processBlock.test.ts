@@ -157,7 +157,7 @@ describe('processBlock Tests', () => {
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
-            hexName: '7465737431323334',
+            hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
             og: 1,
@@ -184,7 +184,7 @@ describe('processBlock Tests', () => {
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
-            hexName: '7465737431323334',
+            hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
             og: 1,
@@ -205,7 +205,8 @@ describe('processBlock Tests', () => {
 
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: newAddress,
-            hexName,
+            hex: hexName,
+            name,
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -236,7 +237,7 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hexName: '6275727269746f73',
+            hex: '6275727269746f73',
             image: '',
             name: handleName,
             og: 0,
@@ -260,7 +261,8 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hexName: '6275727269746f73',
+            hex: '6275727269746f73',
+            name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -284,7 +286,7 @@ describe('processBlock Tests', () => {
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            hexName: '6275727269746f73',
+            hex: '6275727269746f73',
             name: 'burritos',
             personalization: {}, // TODO: add test that builds personalization
             slotNumber: 0

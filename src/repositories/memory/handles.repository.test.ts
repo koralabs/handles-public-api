@@ -20,7 +20,7 @@ describe('MemoryHandlesRepository Tests', () => {
 
         const saves = handlesFixture.map(async (handle) => {
             const {
-                hex: hexName,
+                hex,
                 original_nft_image: image,
                 name,
                 og,
@@ -31,7 +31,7 @@ describe('MemoryHandlesRepository Tests', () => {
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
-                hexName,
+                hex,
                 image,
                 name,
                 og,
@@ -61,7 +61,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual([handlesFixture[2]]);
+            expect(result).toEqual([handlesFixture[1], handlesFixture[2]]);
         });
 
         it('should no handles with compounded searches', async () => {
@@ -130,7 +130,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel({});
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
+            expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
         });
 
         it('should search all handle names', async () => {
@@ -145,7 +145,7 @@ describe('MemoryHandlesRepository Tests', () => {
 
         it('should remove handles without a UTxO', async () => {
             const newHandle = HandleStore.buildHandle({
-                hexName: 'new-handle-hex',
+                hex: 'new-handle-hex',
                 name: 'new-handle',
                 adaAddress: '',
                 utxo: '',
@@ -159,7 +159,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel();
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['barbacoa', 'burritos', 'taco']);
+            expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
         });
     });
 
@@ -239,7 +239,7 @@ describe('MemoryHandlesRepository Tests', () => {
         beforeAll(async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
             const saveHandleInput: SaveMintingTxInput = {
-                hexName: 'salsa-hex',
+                hex: 'salsa-hex',
                 name: 'salsa',
                 adaAddress: 'addr1salsa',
                 og: 0,
@@ -252,7 +252,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 HandleStore.saveMintedHandle(saveHandleInput),
                 HandleStore.saveMintedHandle({
                     ...saveHandleInput,
-                    hexName: 'pollo-verde-hex',
+                    hex: 'pollo-verde-hex',
                     name: 'pollo-verde',
                     utxo: ''
                 })
