@@ -38,7 +38,8 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "api-only" ]]; then
-    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}  npm run start:forever
+    sleep 5
+    NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
 fi
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
