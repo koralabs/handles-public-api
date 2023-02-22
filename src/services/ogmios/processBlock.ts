@@ -44,13 +44,13 @@ const processAssetReferenceToken = async ({
     slotNumber: number;
     datum?: string;
 }) => {
-    const hexName = assetName?.split(MetadatumAssetLabel.REFERENCE_NFT)[1];
-    if (!hexName) {
-        Logger.log(`unable to decode reference token name: ${hexName}`);
+    const hex = assetName?.split(MetadatumAssetLabel.REFERENCE_NFT)[1];
+    if (!hex) {
+        Logger.log(`unable to decode reference token name: ${hex}`);
         return;
     }
 
-    const name = Buffer.from(hexName, 'hex').toString('utf8');
+    const name = Buffer.from(hex, 'hex').toString('utf8');
 
     if (!datum) {
         // our reference token should always have datum.
@@ -78,7 +78,7 @@ const processAssetReferenceToken = async ({
 
     // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
-        hexName,
+        hex,
         name,
         personalization,
         addresses: {},
@@ -137,16 +137,17 @@ const processAssetToken = async ({
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
-    const hexName = assetName?.split('.')[1];
-    if (!hexName) {
-        Logger.log(`unable to decode ${hexName}`);
+    const hex = assetName?.split('.')[1];
+    if (!hex) {
+        Logger.log(`unable to decode ${hex}`);
         return;
     }
 
-    const name = Buffer.from(hexName, 'hex').toString('utf8');
+    const name = Buffer.from(hex, 'hex').toString('utf8');
 
     const input = {
-        hexName,
+        hex,
+        name,
         adaAddress: address,
         slotNumber,
         utxo,
@@ -159,7 +160,6 @@ const processAssetToken = async ({
         const og = data?.core?.og ?? 0;
         await HandleStore.saveMintedHandle({
             ...input,
-            name,
             og,
             image
         });

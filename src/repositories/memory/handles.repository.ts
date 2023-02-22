@@ -13,27 +13,27 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
-        const getHashes = (index: Map<string, Set<string>>, key: string | undefined) => {
+        const getHandles = (index: Map<string, Set<string>>, key: string | undefined) => {
             if (!key) return [];
 
             const array = Array.from(index.get(key) ?? [], (value) => value);
             return array.length === 0 ? [EMPTY] : array;
         };
 
-        // get hex arrays for all the search parameters
-        const characterArray = getHashes(HandleStore.charactersIndex, characters);
-        const lengthArray = getHashes(HandleStore.lengthIndex, length);
-        const rarityArray = getHashes(HandleStore.rarityIndex, rarity);
-        const numericModifiersArray = getHashes(HandleStore.numericModifiersIndex, numeric_modifiers);
+        // get handle name arrays for all the search parameters
+        const characterArray = getHandles(HandleStore.charactersIndex, characters);
+        const lengthArray = getHandles(HandleStore.lengthIndex, length);
+        const rarityArray = getHandles(HandleStore.rarityIndex, rarity);
+        const numericModifiersArray = getHandles(HandleStore.numericModifiersIndex, numeric_modifiers);
 
-        const getHolderAddressHashes = (key: string | undefined) => {
+        const getHolderAddressHandles = (key: string | undefined) => {
             if (!key) return [];
 
-            const array = Array.from(HandleStore.holderAddressIndex.get(key)?.hexes ?? [], (value) => value);
+            const array = Array.from(HandleStore.holderAddressIndex.get(key)?.handles ?? [], (value) => value);
             return array.length === 0 ? [EMPTY] : array;
         };
 
-        const holderAddressItemsArray = getHolderAddressHashes(holder_address);
+        const holderAddressItemsArray = getHolderAddressHandles(holder_address);
 
         // filter out any empty arrays
         const filteredArrays = [
@@ -45,20 +45,20 @@ class MemoryHandlesRepository implements IHandlesRepository {
         ].filter((a) => a.length);
 
         // get the intersection of all the arrays
-        const handleHexes = filteredArrays.length
+        const handleNames = filteredArrays.length
             ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c)))
             : [];
 
-        // remove duplicates by getting the unique hexes
-        const uniqueHexes = [...new Set(handleHexes)];
+        // remove duplicates by getting the unique names
+        const uniqueHandleNames = [...new Set(handleNames)];
 
-        // remove the empty hexes
-        const nonEmptyHexes = uniqueHexes.filter((hex) => hex !== EMPTY);
+        // remove the empty names
+        const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== EMPTY);
 
         const array =
             characters || length || rarity || numeric_modifiers || holder_address
-                ? nonEmptyHexes.reduce<IPersonalizedHandle[]>((agg, hex) => {
-                      const handle = HandleStore.get(hex);
+                ? nonEmptyHandles.reduce<IPersonalizedHandle[]>((agg, name) => {
+                      const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
                           agg.push(handle);
@@ -114,9 +114,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const items: HolderAddressDetailsResponse[] = new Array();
         HandleStore.holderAddressIndex.forEach((holder, address) => {
             if (holder) {
-                const { hexes, defaultHandle, manuallySet, type, knownOwnerName } = holder;
+                const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
                 items.push({
-                    total_handles: hexes.size,
+                    total_handles: handles.size,
                     default_handle: defaultHandle,
                     manually_set: manuallySet,
                     address,
@@ -141,11 +141,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }
 
     public async getHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
-        const handleHex = HandleStore.getFromNameIndex(handleName);
-        if (handleHex) {
-            const handle = HandleStore.get(handleHex);
-            if (handle) return handle;
-        }
+        const handle = HandleStore.get(handleName);
+        if (handle) return handle;
 
         return null;
     }
@@ -154,10 +151,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
         if (!holderAddressDetails) throw new HttpException(404, 'Not found');
 
-        const { defaultHandle, manuallySet, hexes, knownOwnerName, type } = holderAddressDetails;
+        const { defaultHandle, manuallySet, handles, knownOwnerName, type } = holderAddressDetails;
 
         return {
-            total_handles: hexes.size,
+            total_handles: handles.size,
             default_handle: defaultHandle,
             manually_set: manuallySet,
             address: key,
@@ -167,8 +164,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }
 
     public async getHandleDatumByName(handleName: string): Promise<string | null> {
-        const handleHex = HandleStore.getFromNameIndex(handleName);
-        const handle = HandleStore.get(handleHex ?? '');
+        const handle = HandleStore.get(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }

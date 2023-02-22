@@ -29,7 +29,7 @@ export interface IHandleStoreMetrics {
 }
 
 export interface SaveMintingTxInput {
-    hexName: string;
+    hex: string;
     name: string;
     adaAddress: string;
     og: number;
@@ -45,7 +45,7 @@ export interface SaveMintingTxInput {
 
 export interface SaveWalletAddressMoveInput {
     slotNumber: number;
-    hexName: string;
+    name: string;
     adaAddress: string;
     utxo: string;
     datum?: string;
@@ -53,7 +53,7 @@ export interface SaveWalletAddressMoveInput {
 
 export interface SavePersonalizationInput {
     slotNumber: number;
-    hexName: string;
+    hex: string;
     name: string;
     personalization: IPersonalization;
     addresses: {
@@ -62,7 +62,7 @@ export interface SavePersonalizationInput {
 }
 
 export interface HolderAddressIndex {
-    hexes: Set<string>;
+    handles: Set<string>;
     defaultHandle: string;
     manuallySet: boolean;
     type: string;

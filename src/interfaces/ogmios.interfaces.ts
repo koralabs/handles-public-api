@@ -10,7 +10,6 @@ export enum MetadataLabel {
  * Finally, use the decimal number and convert to CRC8. It should match the last 2 characters. https://crccalc.com/
  */
 export enum MetadatumAssetLabel {
-    // TODO: Figure out hex labels
     REFERENCE_NFT = '000643b0', // 100
     SUB_STANDARD_NFT = '000de140', // 222
     SUB_STANDARD_FT = '0014df10' // 333

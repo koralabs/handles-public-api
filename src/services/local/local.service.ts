@@ -18,7 +18,7 @@ export class LocalService {
                     const { hex, name, personalization, resolved_addresses: addresses } = v as PersonalizationUpdates;
                     console.log(`${name} changed! saving personalization`);
                     await HandleStore.savePersonalizationChange({
-                        hexName: hex,
+                        hex,
                         name,
                         personalization,
                         addresses,
