@@ -1,9 +1,10 @@
-import { NODE_ENV, OGMIOS_HOST } from '../../../config';
 import fetch from 'cross-fetch';
+import { Buffer } from 'buffer';
 import { Rarity } from '@koralabs/handles-public-api-interfaces';
-import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
+import { HealthResponseBody, MetadatumAssetLabel } from '../../../interfaces/ogmios.interfaces';
+import { NODE_ENV, OGMIOS_HOST } from '../../../config';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -65,11 +66,23 @@ export const buildOnChainObject = <T>(cborData: any): T | null => {
     }
 };
 
-export const hex2String = (hex: string) => {
-    var hexString = hex.toString(); //force conversion
-    var str = '';
-    for (var i = 0; i < hexString.length; i += 2) str += String.fromCharCode(parseInt(hexString.substr(i, 2), 16));
-    return str;
+export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string } => {
+    let name = `${assetName}`;
+
+    // check if asset name has a period. If so, it includes the policyId
+    if (name.includes('.')) {
+        name = name.split('.')[1];
+    }
+
+    const nameWithoutLabel: string = Object.values(MetadatumAssetLabel).reduce(
+        (acc, label) => acc.replace(label, ''),
+        name
+    );
+
+    return {
+        name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
+        hex: nameWithoutLabel
+    };
 };
 
 export const buildCharacters = (name: string): string => {

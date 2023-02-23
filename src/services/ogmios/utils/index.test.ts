@@ -1,6 +1,14 @@
 import { Logger } from '@koralabs/kora-labs-common';
-import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher } from '.';
+import {
+    buildNumericModifiers,
+    getRarity,
+    stringifyBlock,
+    buildOnChainObject,
+    memoryWatcher,
+    getHandleNameFromAssetName
+} from '.';
 import v8 from 'v8';
+import { MetadatumAssetLabel } from '../../../interfaces/ogmios.interfaces';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 
@@ -153,6 +161,35 @@ describe('Utils Tests', () => {
                 event: 'memoryWatcher.limit.close',
                 message: 'Memory usage close to the limit (82%)'
             });
+        });
+    });
+
+    describe('getHandleNameFromAssetName', () => {
+        const expectedHandle = { hex: '6275727269746f', name: 'burrito' };
+        it('should return handle name from hex', () => {
+            const handle = getHandleNameFromAssetName('6275727269746f');
+            expect(handle).toEqual(expectedHandle);
+        });
+
+        it('should return handle name from policyId.hex', () => {
+            const handle = getHandleNameFromAssetName(
+                'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.6275727269746f'
+            );
+            expect(handle).toEqual(expectedHandle);
+        });
+
+        it('should strip off 222 asset name label and return handle name', () => {
+            const handle = getHandleNameFromAssetName(
+                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f`
+            );
+            expect(handle).toEqual(expectedHandle);
+        });
+
+        it('should strip off 100 asset name label and return handle name', () => {
+            const handle = getHandleNameFromAssetName(
+                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f`
+            );
+            expect(handle).toEqual(expectedHandle);
         });
     });
 });
