@@ -182,14 +182,20 @@ describe('Utils Tests', () => {
             const handle = getHandleNameFromAssetName(
                 `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f`
             );
-            expect(handle).toEqual(expectedHandle);
+            expect(handle).toEqual({
+                hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f`,
+                name: 'burrito'
+            });
         });
 
         it('should strip off 100 asset name label and return handle name', () => {
             const handle = getHandleNameFromAssetName(
                 `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f`
             );
-            expect(handle).toEqual(expectedHandle);
+            expect(handle).toEqual({
+                hex: `${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f`,
+                name: 'burrito'
+            });
         });
     });
 });

@@ -67,21 +67,21 @@ export const buildOnChainObject = <T>(cborData: any): T | null => {
 };
 
 export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string } => {
-    let name = `${assetName}`;
+    let hex = `${assetName}`;
 
     // check if asset name has a period. If so, it includes the policyId
-    if (name.includes('.')) {
-        name = name.split('.')[1];
+    if (hex.includes('.')) {
+        hex = hex.split('.')[1];
     }
 
     const nameWithoutLabel: string = Object.values(MetadatumAssetLabel).reduce(
         (acc, label) => acc.replace(label, ''),
-        name
+        hex
     );
 
     return {
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
-        hex: nameWithoutLabel
+        hex
     };
 };
 
