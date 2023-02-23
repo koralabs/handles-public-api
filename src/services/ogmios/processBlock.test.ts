@@ -237,7 +237,7 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: '6275727269746f73',
+            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
             image: '',
             name: handleName,
             og: 0,
@@ -261,7 +261,7 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: '6275727269746f73',
+            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0'
@@ -286,7 +286,7 @@ describe('processBlock Tests', () => {
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            hex: '6275727269746f73',
+            hex: `${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f73`,
             name: 'burritos',
             personalization: {}, // TODO: add test that builds personalization
             slotNumber: 0
