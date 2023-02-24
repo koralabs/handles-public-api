@@ -43,7 +43,7 @@ describe('HandleStore tests', () => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
             const {
-                hex: hexName,
+                hex,
                 original_nft_image: image,
                 name,
                 og,
@@ -53,7 +53,7 @@ describe('HandleStore tests', () => {
             } = handle;
             await HandleStore.saveMintedHandle({
                 adaAddress,
-                hexName,
+                hex,
                 image,
                 name,
                 og,
@@ -67,7 +67,7 @@ describe('HandleStore tests', () => {
     afterEach(() => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            HandleStore.remove(handle.hex);
+            HandleStore.remove(handle.name);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -92,7 +92,7 @@ describe('HandleStore tests', () => {
                 expect.objectContaining({
                     content: expect.objectContaining({
                         handles: expect.objectContaining({
-                            'barbacoa-hex': expect.objectContaining({
+                            barbacoa: expect.objectContaining({
                                 background: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
@@ -113,7 +113,7 @@ describe('HandleStore tests', () => {
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo1#0'
                             }),
-                            'burrito-hex': expect.objectContaining({
+                            burrito: expect.objectContaining({
                                 background: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
@@ -122,19 +122,19 @@ describe('HandleStore tests', () => {
                                 hasDatum: true,
                                 hex: 'burrito-hex',
                                 holder_address: 'stake123',
-                                length: 8,
-                                name: 'burritos',
+                                length: 7,
+                                name: 'burrito',
                                 nft_image: '',
                                 numeric_modifiers: '',
                                 og: 0,
                                 original_nft_image: '',
                                 profile_pic: '',
-                                rarity: 'basic',
+                                rarity: 'common',
                                 resolved_addresses: { ada: '123' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo2#0'
                             }),
-                            'taco-hex': expect.objectContaining({
+                            taco: expect.objectContaining({
                                 background: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
@@ -157,9 +157,9 @@ describe('HandleStore tests', () => {
                             })
                         }),
                         history: [
-                            [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
-                            [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
-                            [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }]
+                            [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                            [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                            [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }]
                         ]
                     }),
                     hash: 'some-hash',
@@ -198,7 +198,7 @@ describe('HandleStore tests', () => {
 
     describe('get', () => {
         it('should return a handle', () => {
-            const handle = HandleStore.get('barbacoa-hex');
+            const handle = HandleStore.get('barbacoa');
             expect(handle).toEqual({
                 background: '',
                 characters: 'letters',
@@ -235,7 +235,7 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await HandleStore.saveMintedHandle({
-                hexName: 'nachos-hex',
+                hex: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr123',
                 og: 0,
@@ -245,7 +245,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123'
             });
 
-            const handle = HandleStore.get('nachos-hex');
+            const handle = HandleStore.get('nachos');
 
             // expect to get the correct handle properties
             expect(handle).toEqual({
@@ -272,10 +272,10 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
-                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
-                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                [expect.any(Number), { 'nachos-hex': { new: { name: 'nachos' }, old: null } }]
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [expect.any(Number), { nachos: { new: { name: 'nachos' }, old: null } }]
             ]);
         });
 
@@ -283,7 +283,7 @@ describe('HandleStore tests', () => {
             const personalizationData = { nft_appearance: { handleTextShadowColor: 'todo' } };
 
             await HandleStore.savePersonalizationChange({
-                hexName: 'chimichanga-hex',
+                hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 slotNumber: 99,
                 personalization: personalizationData,
@@ -291,7 +291,7 @@ describe('HandleStore tests', () => {
             });
 
             await HandleStore.saveMintedHandle({
-                hexName: 'chimichanga-hex',
+                hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 adaAddress: 'addr123',
                 og: 0,
@@ -300,20 +300,20 @@ describe('HandleStore tests', () => {
                 slotNumber: 100
             });
 
-            const handle = HandleStore.get('chimichanga-hex');
+            const handle = HandleStore.get('chimichanga');
 
             // expect the personalization data to be added to the handle
             expect(handle?.personalization).toEqual(personalizationData);
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
-                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
-                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                [99, { 'chimichanga-hex': { new: { name: 'chimichanga' }, old: null } }],
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [99, { chimichanga: { new: { name: 'chimichanga' }, old: null } }],
                 [
                     100,
                     {
-                        'chimichanga-hex': {
+                        chimichanga: {
                             new: {
                                 created_slot_number: 100,
                                 default_in_wallet: '',
@@ -338,8 +338,8 @@ describe('HandleStore tests', () => {
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
             await HandleStore.saveMintedHandle({
-                hexName: 'nacho-cheese-hex',
-                name: 'nachos-cheese',
+                hex: 'nacho-cheese-hex',
+                name: 'nacho-cheese',
                 adaAddress: 'addr123',
                 og: 0,
                 utxo: 'utxo123#0',
@@ -368,14 +368,14 @@ describe('HandleStore tests', () => {
             };
 
             await HandleStore.savePersonalizationChange({
-                hexName: 'nacho-cheese-hex',
-                name: 'nachos-cheese',
+                hex: 'nacho-cheese-hex',
+                name: 'nacho-cheese',
                 personalization: personalizationUpdates,
                 addresses: {},
                 slotNumber: 200
             });
 
-            const handle = HandleStore.get('nacho-cheese-hex');
+            const handle = HandleStore.get('nacho-cheese');
             expect(handle?.personalization).toEqual({
                 nft_appearance: {
                     backgroundBorderColor: 'todo',
@@ -397,14 +397,14 @@ describe('HandleStore tests', () => {
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
-                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
-                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                [100, { 'nacho-cheese-hex': { new: { name: 'nachos-cheese' }, old: null } }],
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [100, { 'nacho-cheese': { new: { name: 'nacho-cheese' }, old: null } }],
                 [
                     200,
                     {
-                        'nacho-cheese-hex': {
+                        'nacho-cheese': {
                             new: {
                                 background: 'todo',
                                 default_in_wallet: '',
@@ -468,7 +468,7 @@ describe('HandleStore tests', () => {
             };
 
             await HandleStore.savePersonalizationChange({
-                hexName: 'sour-cream-hex',
+                hex: 'sour-cream-hex',
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
                 addresses: {},
@@ -505,6 +505,7 @@ describe('HandleStore tests', () => {
     describe('saveHandleUpdate tests', () => {
         it('Should update a handle and the slot history', async () => {
             const handleHex = 'salsa-hex';
+            const handleName = 'salsa';
             const stakeKey = 'stake123';
             const updatedStakeKey = 'stake123_new';
             const address = 'addr123';
@@ -524,8 +525,8 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await HandleStore.saveMintedHandle({
-                hexName: handleHex,
-                name: 'salsa',
+                hex: handleHex,
+                name: handleName,
                 adaAddress: address,
                 og: 0,
                 utxo: 'utxo_salsa1#0',
@@ -534,19 +535,19 @@ describe('HandleStore tests', () => {
                 datum: 'a2datum_salsa'
             });
 
-            const existingHandle = HandleStore.get(handleHex);
+            const existingHandle = HandleStore.get(handleName);
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder_address).toEqual(stakeKey);
 
             await HandleStore.saveHandleUpdate({
-                hexName: handleHex,
+                name: handleName,
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
                 slotNumber: 200,
                 datum: undefined
             });
 
-            const handle = HandleStore.get(handleHex);
+            const handle = HandleStore.get(handleName);
             expect(handle).toEqual({
                 holder_address: updatedStakeKey,
                 default_in_wallet: 'salsa',
@@ -570,14 +571,14 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
-                [expect.any(Number), { 'barbacoa-hex': { new: { name: 'barbacoa' }, old: null } }],
-                [expect.any(Number), { 'burrito-hex': { new: { name: 'burritos' }, old: null } }],
-                [expect.any(Number), { 'taco-hex': { new: { name: 'taco' }, old: null } }],
-                [100, { [handleHex]: { new: { name: 'salsa' }, old: null } }],
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [100, { [handleName]: { new: { name: 'salsa' }, old: null } }],
                 [
                     200,
                     {
-                        [handleHex]: {
+                        [handleName]: {
                             new: {
                                 holder_address: 'stake123_new',
                                 resolved_addresses: {
@@ -608,7 +609,7 @@ describe('HandleStore tests', () => {
 
             const newAddress = 'addr123_new';
             await HandleStore.saveHandleUpdate({
-                hexName: '123',
+                name: '123',
                 adaAddress: newAddress,
                 slotNumber: 1234,
                 utxo: 'utxo'
@@ -616,7 +617,7 @@ describe('HandleStore tests', () => {
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveHandleUpdate.noHandleFound',
-                message: 'Handle was updated but there is no existing handle in storage with hex: 123'
+                message: 'Handle was updated but there is no existing handle in storage with name: 123'
             });
         });
     });

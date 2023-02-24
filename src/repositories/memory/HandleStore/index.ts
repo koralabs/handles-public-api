@@ -29,7 +29,6 @@ export class HandleStore {
     private static handles = new Map<string, IPersonalizedHandle>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
-    static nameIndex = new Map<string, string>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
@@ -38,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 8;
+    static storageSchemaVersion = 9;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -74,18 +73,14 @@ export class HandleStore {
     static getHandles = () => {
         const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as IPersonalizedHandle));
         return handles.map((handle) => {
-            const existingHandle = HandleStore.get(handle.hex) as IPersonalizedHandle;
+            const existingHandle = HandleStore.get(handle.name) as IPersonalizedHandle;
             return existingHandle;
         });
     };
 
-    static getFromNameIndex = (name: string) => {
-        return this.nameIndex.get(name);
-    };
-
-    static addIndexSet = (indexSet: Map<string, Set<string>>, indexKey: string, hexName: string) => {
+    static addIndexSet = (indexSet: Map<string, Set<string>>, indexKey: string, handleName: string) => {
         const set = indexSet.get(indexKey) ?? new Set();
-        set.add(hexName);
+        set.add(handleName);
         indexSet.set(indexKey, set);
     };
 
@@ -115,20 +110,17 @@ export class HandleStore {
         updatedHandle.holder_address = holderAddressDetails.address;
 
         // Set the main index
-        this.handles.set(hex, updatedHandle);
-
-        // set all one-to-one indexes
-        this.nameIndex.set(name, hex);
+        this.handles.set(name, updatedHandle);
 
         // set all one-to-many indexes
-        this.addIndexSet(this.rarityIndex, rarity, hex);
-        this.addIndexSet(this.ogIndex, `${og}`, hex);
-        this.addIndexSet(this.charactersIndex, characters, hex);
-        this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, hex);
-        this.addIndexSet(this.lengthIndex, `${length}`, hex);
+        this.addIndexSet(this.rarityIndex, rarity, name);
+        this.addIndexSet(this.ogIndex, `${og}`, name);
+        this.addIndexSet(this.charactersIndex, characters, name);
+        this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
+        this.addIndexSet(this.lengthIndex, `${length}`, name);
 
         // TODO: set default name during personalization
-        this.setHolderAddressIndex(holderAddressDetails, hex);
+        this.setHolderAddressIndex(holderAddressDetails, name);
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot &&
@@ -136,48 +128,54 @@ export class HandleStore {
             this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
         if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle);
-            if (history) HandleStore.saveSlotHistory({ handleHistory: history, hex, slotNumber: updated_slot_number });
+            if (history)
+                HandleStore.saveSlotHistory({
+                    handleHistory: history,
+                    handleName: name,
+                    slotNumber: updated_slot_number
+                });
         }
     };
 
-    static remove = async (hexName: string) => {
-        Logger.log({ category: LogCategory.INFO, message: `Removing handle ${hexName}`, event: 'HandleStore.remove' });
+    static remove = async (handleName: string) => {
+        Logger.log({
+            category: LogCategory.INFO,
+            message: `Removing handle ${handleName}`,
+            event: 'HandleStore.remove'
+        });
 
-        const handle = this.handles.get(hexName);
+        const handle = this.handles.get(handleName);
         if (!handle) {
             Logger.log({
-                message: `Handle ${hexName} not found`,
+                message: `Handle ${handleName} not found`,
                 event: 'HandleStore.remove',
                 category: LogCategory.WARN
             });
             return;
         }
 
-        const { name, rarity, holder_address, og, characters, numeric_modifiers, length, hex } = handle;
+        const { name, rarity, holder_address, og, characters, numeric_modifiers, length } = handle;
 
         // Set the main index
-        this.handles.delete(hex);
-
-        // set all one-to-one indexes
-        this.nameIndex.delete(name);
+        this.handles.delete(handleName);
 
         // set all one-to-many indexes
-        this.rarityIndex.get(rarity)?.delete(hex);
-        this.ogIndex.get(`${og}`)?.delete(hex);
-        this.charactersIndex.get(characters)?.delete(hex);
-        this.numericModifiersIndex.get(numeric_modifiers)?.delete(hex);
-        this.lengthIndex.get(`${length}`)?.delete(hex);
+        this.rarityIndex.get(rarity)?.delete(handleName);
+        this.ogIndex.get(`${og}`)?.delete(handleName);
+        this.charactersIndex.get(characters)?.delete(handleName);
+        this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
+        this.lengthIndex.get(`${length}`)?.delete(handleName);
 
         // remove the stake key index
-        this.holderAddressIndex.get(holder_address)?.hexes.delete(hex);
+        this.holderAddressIndex.get(holder_address)?.handles.delete(handleName);
     };
 
-    static setHolderAddressIndex(holderAddressDetails: AddressDetails, newHex: string, defaultName?: string) {
+    static setHolderAddressIndex(holderAddressDetails: AddressDetails, newHandleName: string, defaultName?: string) {
         // first get all the handles for the stake key
         const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
 
         const initialHolderAddressDetails: HolderAddressIndex = {
-            hexes: new Set(),
+            handles: new Set(),
             defaultHandle: '',
             manuallySet: false,
             type,
@@ -186,19 +184,19 @@ export class HandleStore {
 
         const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? initialHolderAddressDetails;
 
-        // add the new hex to the set
-        existingHolderAddressDetails.hexes.add(newHex);
+        // add the new name to the set
+        existingHolderAddressDetails.handles.add(newHandleName);
 
-        const handles = [...existingHolderAddressDetails.hexes].reduce<IPersonalizedHandle[]>((agg, hex) => {
-            const handle = this.handles.get(hex);
+        const handles = [...existingHolderAddressDetails.handles].reduce<IPersonalizedHandle[]>((agg, name) => {
+            const handle = this.handles.get(name);
             if (handle) {
                 agg.push(handle);
             } else {
                 Logger.log({
-                    message: `Handle ${hex} not found in holder address index, removing from hexes index`,
+                    message: `Handle ${name} not found in holder address index, removing from handles index`,
                     category: LogCategory.WARN
                 });
-                existingHolderAddressDetails.hexes.delete(hex);
+                existingHolderAddressDetails.handles.delete(name);
             }
             return agg;
         }, []);
@@ -214,7 +212,7 @@ export class HandleStore {
     }
 
     static buildHandle = ({
-        hexName,
+        hex,
         name,
         adaAddress,
         og,
@@ -228,8 +226,8 @@ export class HandleStore {
         personalization
     }: SaveMintingTxInput): IPersonalizedHandle => {
         const newHandle: IPersonalizedHandle = {
-            hex: hexName,
             name,
+            hex,
             holder_address: '', // Populate on save
             length: name.length,
             utxo,
@@ -283,22 +281,22 @@ export class HandleStore {
 
     static saveSlotHistory({
         handleHistory,
-        hex,
+        handleName,
         slotNumber,
         maxSlots = this.twelveHourSlot
     }: {
         handleHistory: HandleHistory;
-        hex: string;
+        handleName: string;
         slotNumber: number;
         maxSlots?: number;
     }) {
         let slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
         if (!slotHistory) {
             slotHistory = {
-                [hex]: handleHistory
+                [handleName]: handleHistory
             };
         } else {
-            slotHistory[hex] = handleHistory;
+            slotHistory[handleName] = handleHistory;
         }
 
         const oldestSlot = slotNumber - maxSlots;
@@ -312,7 +310,7 @@ export class HandleStore {
     }
 
     static saveMintedHandle = async (input: SaveMintingTxInput) => {
-        const existingHandle = HandleStore.get(input.hexName);
+        const existingHandle = HandleStore.get(input.name);
         if (existingHandle) {
             // TODO Check for existing handle. If there is one already, increase the amount property
             // if there is an existing handle, it means we already received a 100 token.
@@ -331,11 +329,11 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({ hexName, adaAddress, utxo, slotNumber, datum }: SaveWalletAddressMoveInput) => {
-        const existingHandle = HandleStore.get(hexName);
+    static saveHandleUpdate = async ({ name, adaAddress, utxo, slotNumber, datum }: SaveWalletAddressMoveInput) => {
+        const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             Logger.log({
-                message: `Handle was updated but there is no existing handle in storage with hex: ${hexName}`,
+                message: `Handle was updated but there is no existing handle in storage with name: ${name}`,
                 category: LogCategory.ERROR,
                 event: 'saveHandleUpdate.noHandleFound'
             });
@@ -358,17 +356,17 @@ export class HandleStore {
     };
 
     static async savePersonalizationChange({
-        hexName,
         name,
+        hex,
         personalization,
         addresses,
         slotNumber
     }: SavePersonalizationInput) {
-        const existingHandle = HandleStore.get(hexName);
+        const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             const buildHandleInput: SaveMintingTxInput = {
-                hexName,
                 name,
+                hex,
                 slotNumber,
                 adaAddress: '', // address will come from the 222 token
                 og: 0, // TODO: get og from personalization
@@ -418,7 +416,6 @@ export class HandleStore {
     static memorySize() {
         const object = {
             ...this.convertMapsToObjects(this.handles),
-            ...this.convertMapsToObjects(this.nameIndex),
             ...this.convertMapsToObjects(this.rarityIndex),
             ...this.convertMapsToObjects(this.ogIndex),
             ...this.convertMapsToObjects(this.lengthIndex),
@@ -708,8 +705,8 @@ export class HandleStore {
         // save all the individual handles to the store
         const keys = Object.keys(handles ?? {});
         for (let i = 0; i < keys.length; i++) {
-            const hex = keys[i];
-            const handle = handles[hex];
+            const name = keys[i];
+            const handle = handles[name];
             const newHandle = {
                 ...handle
             };
@@ -744,7 +741,6 @@ export class HandleStore {
         // erase all indexes
         this.handles = new Map<string, IPersonalizedHandle>();
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
-        this.nameIndex = new Map<string, string>();
         this.rarityIndex = new Map<string, Set<string>>();
         this.ogIndex = new Map<string, Set<string>>();
         this.charactersIndex = new Map<string, Set<string>>();
@@ -789,20 +785,20 @@ export class HandleStore {
             // iterate through each handle hex in the history and revert it to the previous state
             const keys = Object.keys(history);
             for (let i = 0; i < keys.length; i++) {
-                const hex = keys[i];
+                const name = keys[i];
 
-                const existingHandle = this.get(hex);
+                const existingHandle = this.get(name);
                 if (!existingHandle) {
-                    Logger.log(`Handle ${hex} does not exist`);
+                    Logger.log(`Handle ${name} does not exist`);
                     continue;
                 }
 
-                const handleHistory = history[hex];
+                const handleHistory = history[name];
 
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
-                    await this.remove(hex);
+                    await this.remove(name);
                     handleDeletes++;
                     continue;
                 }

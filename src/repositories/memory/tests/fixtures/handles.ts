@@ -27,14 +27,14 @@ export const handlesFixture: IHandle[] = [
     },
     {
         hex: 'burrito-hex',
-        name: 'burritos',
+        name: 'burrito',
         holder_address: 'stake-key1',
         nft_image: '',
         original_nft_image: '',
-        length: 8,
+        length: 7,
         og: 0,
         utxo: 'utxo2#0',
-        rarity: Rarity.basic,
+        rarity: Rarity.common,
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
@@ -74,28 +74,28 @@ export const handlesFixture: IHandle[] = [
 export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     0: {},
     1: {
-        'barbacoa-hex': {
+        barbacoa: {
             old: null
         },
-        'burrito-hex': {
+        burrito: {
             old: null
         },
-        'taco-hex': {
+        taco: {
             old: null
         }
     },
     2: {
-        'barbacoa-hex': {
+        barbacoa: {
             old: { resolved_addresses: { ada: '123' } }
         }
     },
     3: {
-        'burrito-hex': {
+        burrito: {
             old: { resolved_addresses: { ada: '123' } }
         }
     },
     4: {
-        'barbacoa-hex': {
+        barbacoa: {
             old: { resolved_addresses: { ada: '456' } }
         }
     }
@@ -104,7 +104,7 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
     [
         'addr1',
         {
-            hexes: new Set(['']),
+            handles: new Set(['']),
             defaultHandle: 'burritos',
             manuallySet: false,
             type: 'script',
@@ -114,7 +114,7 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
     [
         'addr2',
         {
-            hexes: new Set(['7461636F73', '66616A69746173']),
+            handles: new Set(['7461636F73', '66616A69746173']),
             defaultHandle: 'tacos',
             manuallySet: false,
             type: 'wallet',
