@@ -372,7 +372,8 @@ describe('HandleStore tests', () => {
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 200
+                slotNumber: 200,
+                customImage: 'ipfs://123'
             });
 
             const handle = HandleStore.get('nacho-cheese');
@@ -407,8 +408,6 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 background: 'todo',
-                                default_in_wallet: '',
-                                nft_image: 'todo',
                                 personalization: {
                                     nft_appearance: {
                                         backgroundBorderColor: 'todo',
@@ -433,8 +432,6 @@ describe('HandleStore tests', () => {
                             },
                             old: {
                                 background: '',
-                                default_in_wallet: 'taco',
-                                nft_image: 'ipfs://123',
                                 personalization: undefined,
                                 profile_pic: '',
                                 updated_slot_number: 100
@@ -500,6 +497,164 @@ describe('HandleStore tests', () => {
                 }
             });
         });
+
+        it('Should update personalization data and save the default handle', async () => {
+            const handleName = 'tortilla-soup';
+            const handleHex = `${handleName}-hex`;
+            await HandleStore.saveMintedHandle({
+                hex: handleHex,
+                name: handleName,
+                adaAddress: 'addr123',
+                og: 0,
+                utxo: 'utxo123#0',
+                image: '',
+                slotNumber: 100
+            });
+
+            const personalizationUpdates: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#000',
+                    handleTextBgColor: '#CCC'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                addresses: {},
+                slotNumber: 200,
+                setDefault: true
+            });
+
+            const handle = HandleStore.get(handleName);
+
+            // Expect the personalization data to be set
+            // Expect the default_in_wallet to be set (this uses the getter in the HandleStore.get)
+            expect(handle?.default_in_wallet).toEqual(handleName);
+            expect(handle?.personalization).toEqual(personalizationUpdates);
+
+            // Expect the handles array to have the new handle with defaultHandle and manuallySet true
+            const holderAddress = HandleStore.holderAddressIndex.get('stake123');
+            expect(holderAddress).toEqual(
+                expect.objectContaining({
+                    defaultHandle: 'tortilla-soup',
+                    knownOwnerName: 'unknown',
+                    manuallySet: true,
+                    type: 'base'
+                })
+            );
+
+            expect([...(holderAddress?.handles ?? [])]).toEqual(
+                expect.arrayContaining(['barbacoa', 'burrito', 'taco', 'tortilla-soup'])
+            );
+        });
+
+        it('Should save the correct history during personalization updates', async () => {
+            const handleName = 'pork-belly';
+            const handleHex = `${handleName}-hex`;
+            await HandleStore.saveMintedHandle({
+                hex: handleHex,
+                name: handleName,
+                adaAddress: 'addr123',
+                og: 0,
+                utxo: 'utxo123#0',
+                image: '',
+                slotNumber: 100
+            });
+
+            const personalizationUpdates: IPersonalization = {
+                social_links: {
+                    twitter: '@twitter_sauce'
+                },
+                nft_appearance: {
+                    handleTextShadowColor: '#000',
+                    handleTextBgColor: '#CCC'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                addresses: {},
+                slotNumber: 200,
+                setDefault: true
+            });
+
+            const handle = HandleStore.get(handleName);
+            expect(handle?.personalization).toEqual(personalizationUpdates);
+            expect(handle?.default_in_wallet).toEqual(handleName);
+
+            const newPersonalizationUpdates: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#EEE'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: newPersonalizationUpdates,
+                addresses: {},
+                slotNumber: 300,
+                setDefault: false
+            });
+
+            const updatedHandle = HandleStore.get(handleName);
+            expect(updatedHandle?.personalization).toEqual(newPersonalizationUpdates);
+            expect(updatedHandle?.default_in_wallet).toEqual('taco');
+
+            // expect the first to be old null, meaning it was minted
+            expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([
+                100,
+                { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }
+            ]);
+
+            // expect the second to have the first pz updates.
+            // personalization should be undefined because it was not set before
+            expect(Array.from(HandleStore.slotHistoryIndex)[4]).toEqual([
+                200,
+                {
+                    'pork-belly': {
+                        new: {
+                            default_in_wallet: 'pork-belly',
+                            personalization: {
+                                nft_appearance: { handleTextBgColor: '#CCC', handleTextShadowColor: '#000' },
+                                social_links: { twitter: '@twitter_sauce' }
+                            },
+                            updated_slot_number: 200
+                        },
+                        old: { default_in_wallet: 'taco', personalization: undefined, updated_slot_number: 100 }
+                    }
+                }
+            ]);
+
+            // expect the third to have the second pz updates which didn't include social links and default handle is false
+            expect(Array.from(HandleStore.slotHistoryIndex)[5]).toEqual([
+                300,
+                {
+                    'pork-belly': {
+                        new: {
+                            default_in_wallet: '',
+                            personalization: {
+                                nft_appearance: { handleTextBgColor: undefined, handleTextShadowColor: '#EEE' },
+                                social_links: undefined
+                            },
+                            updated_slot_number: 300
+                        },
+                        old: {
+                            default_in_wallet: 'pork-belly',
+                            personalization: {
+                                nft_appearance: { handleTextBgColor: '#CCC', handleTextShadowColor: '#000' },
+                                social_links: { twitter: '@twitter_sauce' }
+                            },
+                            updated_slot_number: 200
+                        }
+                    }
+                }
+            ]);
+        });
     });
 
     describe('saveHandleUpdate tests', () => {
@@ -550,7 +705,7 @@ describe('HandleStore tests', () => {
             const handle = HandleStore.get(handleName);
             expect(handle).toEqual({
                 holder_address: updatedStakeKey,
-                default_in_wallet: 'salsa',
+                default_in_wallet: 'taco',
                 background: '',
                 characters: 'letters',
                 hex: handleHex,
