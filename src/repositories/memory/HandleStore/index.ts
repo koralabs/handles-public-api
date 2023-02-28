@@ -103,7 +103,8 @@ export class HandleStore {
             length,
             hex,
             resolved_addresses: { ada },
-            updated_slot_number
+            updated_slot_number,
+            default_in_wallet
         } = updatedHandle;
 
         const holderAddressDetails = await getAddressHolderDetails(ada);
@@ -119,8 +120,8 @@ export class HandleStore {
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
-        // TODO: set default name during personalization
-        this.setHolderAddressIndex(holderAddressDetails, name);
+        // Set default name during personalization
+        this.setHolderAddressIndex(holderAddressDetails, name, default_in_wallet);
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot &&
@@ -154,7 +155,7 @@ export class HandleStore {
             return;
         }
 
-        const { name, rarity, holder_address, og, characters, numeric_modifiers, length } = handle;
+        const { rarity, holder_address, og, characters, numeric_modifiers, length } = handle;
 
         // Set the main index
         this.handles.delete(handleName);
@@ -202,7 +203,7 @@ export class HandleStore {
         }, []);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
-        const defaultHandle = defaultName ?? getDefaultHandle(handles)?.name ?? '';
+        const defaultHandle = !!defaultName ? defaultName : getDefaultHandle(handles)?.name ?? '';
 
         this.holderAddressIndex.set(holderAddress, {
             ...existingHolderAddressDetails,
@@ -360,7 +361,9 @@ export class HandleStore {
         hex,
         personalization,
         addresses,
-        slotNumber
+        slotNumber,
+        setDefault,
+        customImage
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
@@ -387,11 +390,9 @@ export class HandleStore {
 
         const updatedHandle: IPersonalizedHandle = {
             ...existingHandle,
-            // TODO: Change this to the correct property
-            nft_image: personalization?.nft_appearance?.pfpImageUrl ?? '',
+            nft_image: customImage ?? '',
             background: personalization?.nft_appearance?.backgroundImageUrl ?? '',
             profile_pic: personalization?.nft_appearance?.pfpImageUrl ?? '',
-            default_in_wallet: '', // TODO: figure out how this is updated
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,
@@ -399,6 +400,12 @@ export class HandleStore {
             },
             personalization
         };
+
+        // If setDefault is provided, update the default_in_wallet property
+        // set the name if setDefault is true, otherwise set it to an empty string
+        if (setDefault !== undefined) {
+            updatedHandle.default_in_wallet = setDefault ? name : '';
+        }
 
         await HandleStore.save({
             handle: updatedHandle,

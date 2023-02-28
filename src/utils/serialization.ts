@@ -114,10 +114,31 @@ const buildJsonFromMap = (map: Map<string, unknown>): Record<string, unknown> =>
     return newObj;
 };
 
-export const decodeDatum = (datum: string): string | Record<string, unknown> => {
+const buildJsonFromArray = (array: unknown[]): unknown[] => {
+    const newArray: unknown[] = [];
+    for (let i = 0; i < array.length; i++) {
+        let element = array[i];
+        if (element instanceof Buffer) {
+            element = element.toString();
+        }
+        if (element instanceof Map) {
+            newArray.push(buildJsonFromMap(element));
+        } else if (Array.isArray(element)) {
+            newArray.push(buildJsonFromArray(element));
+        } else {
+            newArray.push(element);
+        }
+    }
+
+    return newArray;
+};
+
+export const decodeDatum = (datum: string): string | Record<string, unknown> | unknown[] => {
     const decoded = cbor.decode(datum);
     if (decoded instanceof Map) {
         return buildJsonFromMap(decoded);
+    } else if (Array.isArray(decoded.value)) {
+        return buildJsonFromArray(decoded.value);
     }
 
     return decoded;

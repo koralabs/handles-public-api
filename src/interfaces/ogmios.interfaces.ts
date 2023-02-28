@@ -23,22 +23,19 @@ export interface HandleOnChainData {
 
 export interface PersonalizationOnChainData {
     [policyId: string]: {
-        [handleName: string]: PersonalizationOnChainMetadata;
+        [handleName: string]: PersonalizationDatum;
     };
 }
 
-export interface PersonalizationOnChainMetadata {
-    personalizedHandle: string; // 'ipfs://<personalizedHandleHash>'
-    nftImage: string; // 'ipfs://<nftHash>'
-    originalNftImage: string; // 'ipfs://<nftHash>'
-    profilePic: string; // 'ipfs://<nftHash>'
-    background: string; // 'ipfs://<nftHash>'
-    additionalHandleSettings: string; // 'ipfs://<additionalHandleSettingsHash>'
-    socialContactInfo: string; // 'ipfs://<socialContactInfoHash>'
-    personalContactInfo: string; // 'ipfs://<personalContactInformationHash>'
-    version: string;
-    darkMode: boolean;
+export interface PersonalizationDatum {
+    custom_image: string; // "ipfs://<nftHash>",
+    bg_image: string; // "ipfs://<nftHash>",
+    pfp_image: string; // "ipfs://<nftHash>",
+    settings: string; // "ipfs://<settings_ipfs>",
+    socials: string; // "ipfs://<socials_ipfs>",
+    vendor: string; // "ipfs://<vendor_ipfs>",
     default: boolean;
+    holder: string; // "stake1....."
 }
 
 export interface HandleOnChainMetadata {
