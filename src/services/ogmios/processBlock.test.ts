@@ -1,12 +1,11 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
-import * as crossFetch from 'cross-fetch';
 import { BlockTip, MetadatumAssetLabel, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { processBlock } from './processBlock';
+import * as ipfs from '../../utils/ipfs';
 
 jest.mock('../../repositories/memory/HandleStore');
-jest.mock('cross-fetch');
 
 describe('processBlock Tests', () => {
     afterEach(() => {
@@ -276,9 +275,7 @@ describe('processBlock Tests', () => {
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
-        jest.spyOn(crossFetch, 'fetch').mockResolvedValue({
-            json: () => ({ test: 'data' })
-        } as any);
+        jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         await processBlock({
             policyId,
@@ -298,8 +295,7 @@ describe('processBlock Tests', () => {
             personalization: {
                 social_links: {
                     test: 'data'
-                },
-                test: 'data'
+                }
             },
             setDefault: 'true',
             slotNumber: 0

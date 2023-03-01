@@ -31,11 +31,13 @@ export interface PersonalizationDatum {
     custom_image: string; // "ipfs://<nftHash>",
     bg_image: string; // "ipfs://<nftHash>",
     pfp_image: string; // "ipfs://<nftHash>",
-    settings: string; // "ipfs://<settings_ipfs>",
+    portal: string; // "ipfs://<portal_ipfs>",
+    designer: string; // "ipfs://<designer_ipfs>",
     socials: string; // "ipfs://<socials_ipfs>",
     vendor: string; // "ipfs://<vendor_ipfs>",
     default: boolean;
     holder: string; // "stake1....."
+    // root_handle_settings?: string; // "ipfs://<root_handle_settings_ipfs>"
 }
 
 export interface HandleOnChainMetadata {

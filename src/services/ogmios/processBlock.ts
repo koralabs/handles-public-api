@@ -14,42 +14,38 @@ import {
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
 import { decodeDatum } from '../../utils/serialization';
-import fetch from 'cross-fetch';
+import { IPFS_GATEWAY } from '../../config';
+import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 
-const blackListedIpfsCids = ['ipfs://QmfFxJcdztnqdMkJ2Xtgox2fHfqpdjxLFC2w3s6mD7tLH3'];
+const blackListedIpfsCids: string[] = [];
+
+const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
+    if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
+
+    const cid = link.split('ipfs://')[1];
+    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
+};
 
 const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPersonalization> => {
-    const { settings, socials, vendor } = datum;
-    const [ipfsSettings, ipfsSocials, ipfsVendor] = await Promise.all(
-        [settings, socials, vendor].map((link) => {
-            if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) {
-                return;
-            }
-
-            const cid = link.split('ipfs://')[1];
-            const url = `https://ipfs.io/ipfs/${cid}`;
-
-            return fetch(url)
-                .then((res) => res.json())
-                .catch((err: any) => {
-                    Logger.log({
-                        message: `error fetching ${url} data with error ${err.message}`,
-                        category: LogCategory.ERROR,
-                        event: 'processBlock.buildPersonalization.fetchIpfsData'
-                    });
-                });
-        })
+    const { portal, designer, socials, vendor } = datum;
+    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
+        [portal, designer, socials, vendor].map(getDataFromIPFSLink)
     );
 
     let personalization: IPersonalization = {};
 
-    if (ipfsSettings) {
-        personalization = { ...ipfsSettings };
+    if (ipfsDesigner) {
+        personalization.nft_appearance = ipfsDesigner;
+    }
+
+    if (ipfsPortal) {
+        personalization.my_page = ipfsPortal;
     }
 
     if (ipfsSocials) {
         personalization.social_links = ipfsSocials;
     }
+
     // add vendor settings
     // if (ipfsVendor) {
     //     personalization.vendor = ipfsVendor;
