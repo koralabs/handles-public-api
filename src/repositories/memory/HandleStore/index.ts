@@ -219,9 +219,16 @@ export class HandleStore {
         }, []);
 
         const updatedHolderAddressDetails = {
-            ...existingHolderAddressDetails,
-            manuallySet: !!defaultName
+            ...existingHolderAddressDetails
         };
+
+        if (existingHolderAddressDetails.manuallySet) {
+            if (existingHolderAddressDetails.defaultHandle === handleName && !!!defaultName) {
+                updatedHolderAddressDetails.manuallySet = false;
+            }
+        } else {
+            updatedHolderAddressDetails.manuallySet = !!defaultName;
+        }
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         const { manuallySet, defaultHandle, handles: existingHandles } = updatedHolderAddressDetails;
@@ -408,7 +415,8 @@ export class HandleStore {
                 og: 0, // TODO: get og from personalization
                 image: '', // TODO: get image from personalization
                 utxo: '', // utxo will come from the 222 token,
-                personalization
+                personalization,
+                default_in_wallet: setDefault ? name : ''
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -431,14 +439,9 @@ export class HandleStore {
                 ada: existingHandle.resolved_addresses.ada,
                 ...addresses
             },
+            default_in_wallet: setDefault ? name : '',
             personalization
         };
-
-        // If setDefault is provided, update the default_in_wallet property
-        // set the name if setDefault is true, otherwise set it to an empty string
-        if (setDefault !== undefined) {
-            updatedHandle.default_in_wallet = setDefault ? name : '';
-        }
 
         await HandleStore.save({
             handle: updatedHandle,

@@ -60,7 +60,7 @@ export interface SavePersonalizationInput {
     addresses: {
         [chain: string]: string;
     };
-    setDefault?: boolean;
+    setDefault: boolean;
     customImage?: string;
 }
 

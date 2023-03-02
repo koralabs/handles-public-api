@@ -101,14 +101,13 @@ const processAssetReferenceToken = async ({
     // populate personalization from the reference token
     const personalization = await buildPersonalization(personalizationData);
 
-    // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
         hex,
         name,
         personalization,
-        addresses: {},
+        addresses: {}, // TODO: get addresses from personalization data
         slotNumber,
-        setDefault: personalizationData.default,
+        setDefault: personalizationData.default ?? false,
         customImage: personalizationData.custom_image
     });
 };

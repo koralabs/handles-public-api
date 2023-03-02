@@ -290,7 +290,8 @@ describe('HandleStore tests', () => {
                 name: 'chimichanga',
                 slotNumber: 99,
                 personalization: personalizationData,
-                addresses: { ada: 'addr123' }
+                addresses: { ada: 'addr123' },
+                setDefault: false
             });
 
             await HandleStore.saveMintedHandle({
@@ -376,10 +377,12 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 addresses: {},
                 slotNumber: 200,
-                customImage: 'ipfs://123'
+                customImage: 'ipfs://123',
+                setDefault: false
             });
 
             const handle = HandleStore.get('nacho-cheese');
+            expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.personalization).toEqual({
                 nft_appearance: {
                     backgroundBorderColor: 'todo',
@@ -411,6 +414,7 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 background: 'todo',
+                                default_in_wallet: '',
                                 personalization: {
                                     nft_appearance: {
                                         backgroundBorderColor: 'todo',
@@ -435,6 +439,7 @@ describe('HandleStore tests', () => {
                             },
                             old: {
                                 background: '',
+                                default_in_wallet: 'taco',
                                 personalization: undefined,
                                 profile_pic: '',
                                 updated_slot_number: 100
@@ -472,7 +477,8 @@ describe('HandleStore tests', () => {
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
                 addresses: {},
-                slotNumber: 200
+                slotNumber: 200,
+                setDefault: false
             });
 
             expect(saveSpy).toHaveBeenCalledWith({
@@ -554,7 +560,7 @@ describe('HandleStore tests', () => {
             );
         });
 
-        it('Should save the correct history during personalization updates', async () => {
+        it('Should save default handle and history correctly when saving multiple times', async () => {
             const handleName = 'pork-belly';
             const handleHex = `${handleName}-hex`;
             await HandleStore.saveMintedHandle({
@@ -602,12 +608,35 @@ describe('HandleStore tests', () => {
                 personalization: newPersonalizationUpdates,
                 addresses: {},
                 slotNumber: 300,
-                setDefault: false
+                setDefault: true
             });
 
             const updatedHandle = HandleStore.get(handleName);
             expect(updatedHandle?.personalization).toEqual(newPersonalizationUpdates);
-            expect(updatedHandle?.default_in_wallet).toEqual('taco');
+
+            // Default in wallet should not change because it was not updated or removed.
+            expect(updatedHandle?.default_in_wallet).toEqual(handleName);
+
+            const PersonalizationUpdatesWithDefaultWalletChange: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#111'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: PersonalizationUpdatesWithDefaultWalletChange,
+                addresses: {},
+                slotNumber: 400,
+                setDefault: false
+            });
+
+            const finalHandle = HandleStore.get(handleName);
+            expect(finalHandle?.personalization).toEqual(PersonalizationUpdatesWithDefaultWalletChange);
+
+            // Default should be changed because we removed it.
+            expect(finalHandle?.default_in_wallet).toEqual('taco');
 
             // expect the first to be old null, meaning it was minted
             expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([
@@ -634,13 +663,12 @@ describe('HandleStore tests', () => {
                 }
             ]);
 
-            // expect the third to have the second pz updates which didn't include social links and default handle is false
+            // expect the third to have the second pz updates which didn't include social links
             expect(Array.from(HandleStore.slotHistoryIndex)[5]).toEqual([
                 300,
                 {
                     'pork-belly': {
                         new: {
-                            default_in_wallet: '',
                             personalization: {
                                 nft_appearance: { handleTextBgColor: undefined, handleTextShadowColor: '#EEE' },
                                 social_links: undefined
@@ -648,7 +676,6 @@ describe('HandleStore tests', () => {
                             updated_slot_number: 300
                         },
                         old: {
-                            default_in_wallet: 'pork-belly',
                             personalization: {
                                 nft_appearance: { handleTextBgColor: '#CCC', handleTextShadowColor: '#000' },
                                 social_links: { twitter: '@twitter_sauce' }
@@ -658,6 +685,103 @@ describe('HandleStore tests', () => {
                     }
                 }
             ]);
+
+            // expect the fourth to have the last pz updates default handle should have been removed
+            expect(Array.from(HandleStore.slotHistoryIndex)[6]).toEqual([
+                400,
+                {
+                    'pork-belly': {
+                        new: {
+                            default_in_wallet: '',
+                            personalization: {
+                                nft_appearance: { handleTextShadowColor: '#111' }
+                            },
+                            updated_slot_number: 400
+                        },
+                        old: {
+                            default_in_wallet: 'pork-belly',
+                            personalization: {
+                                nft_appearance: { handleTextShadowColor: '#EEE' }
+                            },
+                            updated_slot_number: 300
+                        }
+                    }
+                }
+            ]);
+        });
+
+        it('should save default handle properly', async () => {
+            const tacoPzUpdate: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#aaa'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'taco-hex',
+                name: 'taco',
+                personalization: tacoPzUpdate,
+                addresses: {},
+                slotNumber: 100,
+                setDefault: false
+            });
+
+            const tacoHandle = HandleStore.get('taco');
+            expect(tacoHandle?.default_in_wallet).toEqual('taco');
+
+            const burritoPzUpdate: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#aaa'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'burrito-hex',
+                name: 'burrito',
+                personalization: burritoPzUpdate,
+                addresses: {},
+                slotNumber: 200,
+                setDefault: false
+            });
+
+            const burritoHandle = HandleStore.get('burrito');
+            expect(burritoHandle?.default_in_wallet).toEqual('taco');
+
+            const barbacoaPzUpdate: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#aaa'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'barbacoa-hex',
+                name: 'barbacoa',
+                personalization: barbacoaPzUpdate,
+                addresses: {},
+                slotNumber: 300,
+                setDefault: true
+            });
+
+            const barbacoaHandle = HandleStore.get('barbacoa');
+            expect(barbacoaHandle?.default_in_wallet).toEqual('barbacoa');
+
+            const tacoPzUpdate2: IPersonalization = {
+                nft_appearance: {
+                    handleTextShadowColor: '#aaa'
+                }
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'taco-hex',
+                name: 'taco',
+                personalization: tacoPzUpdate2,
+                addresses: {},
+                slotNumber: 400,
+                setDefault: false
+            });
+
+            const tacoHandle2 = HandleStore.get('taco');
+            expect(tacoHandle2?.default_in_wallet).toEqual('barbacoa');
         });
     });
 
