@@ -858,15 +858,19 @@ export class HandleStore {
             const keys = Object.keys(history);
             for (let i = 0; i < keys.length; i++) {
                 const name = keys[i];
+                const handleHistory = history[name];
 
                 const existingHandle = this.get(name);
                 if (!existingHandle) {
-                    // TODO: it's possible the handle was removed and we need to repopulate the indexes
+                    if (handleHistory.old) {
+                        await this.save({ handle: handleHistory.old as Handle, saveHistory: false });
+                        handleUpdates++;
+                        continue;
+                    }
+
                     Logger.log(`Handle ${name} does not exist`);
                     continue;
                 }
-
-                const handleHistory = history[name];
 
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
