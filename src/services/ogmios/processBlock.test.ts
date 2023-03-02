@@ -3,6 +3,7 @@ import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, MetadatumAssetLabel, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { processBlock } from './processBlock';
+import * as ipfs from '../../utils/ipfs';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -271,24 +272,32 @@ describe('processBlock Tests', () => {
     it('Should process 100 asset class tokens', async () => {
         const handleName = `burritos`;
         const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         await processBlock({
             policyId,
             txBlock: txBlock({
                 handleHexName,
                 isMint: false,
-                datum: 'a247746573746b6579486b6579303031323348746573746b657932187b'
+                datum: 'd8799fbf446e616d654a24742d646174756d2d3145696d6167655835697066733a2f2f516d62514561755a5243503233765369487058314d33636a6d694134715075437068594663763436617a4c4b6d41496d656469615479706549696d6167652f706e67426f674566616c736546726172697479456261736963466c656e67746841394e6368617261637465725f74797065576c6574746572732c6e756d626572732c7370656369616c506e756d657269635f6d6f646966696572404776657273696f6e4131ff01bf4c637573746f6d5f696d616765404862675f696d61676540497066705f696d616765404873657474696e67735835697066733a2f2f516d5846324d33676857794431357a5474457145574452466e5163754456635a6a426154564c643366544d33356747736f6369616c735835697066733a2f2f516d524a444a4134663846646d6b635772413552594348726d3736714c7a6a6271377239726d384777364c7662724676656e646f72404764656661756c74447472756546686f6c64657240ffff'
             }) as TxBlock,
             tip
         });
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            hex: `${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f73`,
-            name: 'burritos',
-            personalization: {}, // TODO: add test that builds personalization
+            customImage: '',
+            hex: handleHexName,
+            name: handleName,
+            personalization: {
+                social_links: {
+                    test: 'data'
+                }
+            },
+            setDefault: 'true',
             slotNumber: 0
         });
     });

@@ -3,10 +3,9 @@ import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,
-    HandleOnChainMetadata,
     MetadataLabel,
     MetadatumAssetLabel,
-    PersonalizationOnChainMetadata,
+    PersonalizationDatum,
     TxBlock,
     TxBlockBody,
     TxBody,
@@ -15,23 +14,53 @@ import {
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
 import { decodeDatum } from '../../utils/serialization';
+import { IPFS_GATEWAY } from '../../config';
+import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 
-const buildPersonalization = async (metadata: PersonalizationOnChainMetadata): Promise<IPersonalization> => {
-    const { personalContactInfo, additionalHandleSettings, socialContactInfo } = metadata;
-    const [personal, settings, social] = await Promise.all(
-        [personalContactInfo, additionalHandleSettings, socialContactInfo].map((link) => {
-            // TODO: fetch details from ipfs
-        })
+const blackListedIpfsCids: string[] = [];
+
+const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
+    if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
+
+    const cid = link.split('ipfs://')[1];
+    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
+};
+
+const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPersonalization> => {
+    const { portal, designer, socials, vendor } = datum;
+    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
+        [portal, designer, socials, vendor].map(getDataFromIPFSLink)
     );
 
-    const personalization: IPersonalization = {};
+    let personalization: IPersonalization = {};
+
+    if (ipfsDesigner) {
+        personalization.nft_appearance = ipfsDesigner;
+    }
+
+    if (ipfsPortal) {
+        personalization.my_page = ipfsPortal;
+    }
+
+    if (ipfsSocials) {
+        personalization.social_links = ipfsSocials;
+    }
+
+    // add vendor settings
+    // if (ipfsVendor) {
+    //     personalization.vendor = ipfsVendor;
+    // }
 
     return personalization;
 };
 
-function isValidDatum(datumObject: PersonalizationOnChainMetadata): boolean {
+function isValidDatum(datumObject: any): boolean {
     // TODO: validate datum
-    return true;
+    if (Array.isArray(datumObject) && datumObject.length === 3) {
+        return true;
+    }
+
+    return false;
 }
 
 const processAssetReferenceToken = async ({
@@ -58,16 +87,18 @@ const processAssetReferenceToken = async ({
     }
 
     const decodedDatum = decodeDatum(datum);
-    const datumObject: PersonalizationOnChainMetadata =
-        typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+    const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     if (!isValidDatum(datumObject)) {
         Logger.log(`invalid datum for reference token ${assetName}`);
         return;
     }
 
+    const metadata = datumObject[0];
+    const personalizationData = datumObject[2] as PersonalizationDatum;
+
     // populate personalization from the reference token
-    const personalization = await buildPersonalization(datumObject);
+    const personalization = await buildPersonalization(personalizationData);
 
     // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
@@ -75,7 +106,9 @@ const processAssetReferenceToken = async ({
         name,
         personalization,
         addresses: {},
-        slotNumber
+        slotNumber,
+        setDefault: personalizationData.default,
+        customImage: personalizationData.custom_image
     });
 };
 
