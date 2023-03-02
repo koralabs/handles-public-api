@@ -1,9 +1,10 @@
-import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, MetadatumAssetLabel, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
+import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -82,7 +83,9 @@ describe('processBlock Tests', () => {
         handleHexName = hexName,
         handleName = name,
         isMint = true,
-        datum = undefined
+        datum = undefined,
+        isBurn = false,
+        slot = 0
     }: {
         address?: string | undefined;
         policy?: string | undefined;
@@ -90,45 +93,70 @@ describe('processBlock Tests', () => {
         handleName?: string | undefined;
         isMint?: boolean | undefined;
         datum?: string;
+        isBurn?: boolean;
+        slot?: number;
     }) => ({
         babbage: {
             body: [
-                {
-                    id: 'some_id',
-                    body: {
-                        outputs: [
-                            {
-                                datum,
-                                address,
-                                value: {
-                                    coins: 1,
-                                    assets: {
-                                        [`${`${policy}.${handleHexName}`}`]: 1
+                !isBurn
+                    ? {
+                          id: 'some_id',
+                          body: {
+                              outputs: [
+                                  {
+                                      datum,
+                                      address,
+                                      value: {
+                                          coins: 1,
+                                          assets: {
+                                              [`${`${policy}.${handleHexName}`}`]: 1
+                                          }
+                                      }
+                                  }
+                              ],
+                              mint: isMint
+                                  ? {
+                                        coins: 1,
+                                        assets: {
+                                            [`${`${policy}.${handleHexName}`}`]: 1
+                                        }
                                     }
-                                }
-                            }
-                        ],
-                        mint: isMint
-                            ? {
-                                  coins: 1,
+                                  : {}
+                          },
+                          metadata: metadata(policy, handleName)
+                      }
+                    : {
+                          id: 'some_id_2',
+                          body: {
+                              outputs: [
+                                  {
+                                      datum,
+                                      address,
+                                      value: {
+                                          coins: 1,
+                                          assets: {}
+                                      }
+                                  }
+                              ],
+                              mint: {
+                                  coins: 0,
                                   assets: {
-                                      [`${`${policy}.${handleHexName}`}`]: 1
+                                      [`${`${policy}.${handleHexName}`}`]: BigInt(-1)
                                   }
                               }
-                            : {}
-                    },
-                    metadata: metadata(policy, handleName)
-                }
+                          },
+                          metadata: null
+                      }
             ],
             headerHash: 'some_hash',
             header: {
-                slot: 0,
+                slot,
                 blockHash: 'some_block_hash'
             }
         }
     });
 
-    const expectedItem: IHandle = {
+    const expectedItem: Handle = {
         characters: 'letters,numbers',
         hex: hexName,
         holder_address: 'some_stake1',
@@ -146,7 +174,8 @@ describe('processBlock Tests', () => {
         background: 'some_hash_test1234',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        hasDatum: false
+        hasDatum: false,
+        amount: 1
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
@@ -323,5 +352,21 @@ describe('processBlock Tests', () => {
             event: 'processBlock.processAssetReferenceToken.noDatum',
             message: 'no datum for reference token 123.000643b06275727269746f73'
         });
+    });
+
+    it('Should burn tokens', async () => {
+        const slot = 1234;
+        const handleName = `burritos`;
+        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+
+        await processBlock({
+            policyId,
+            txBlock: txBlock({ handleHexName, isBurn: true, slot }) as TxBlock,
+            tip
+        });
+
+        expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
     });
 });

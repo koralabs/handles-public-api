@@ -1,8 +1,8 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { MetadatumAssetLabel } from '../../../../interfaces/ogmios.interfaces';
-import { ISlotHistoryIndex, HolderAddressIndex } from '../../interfaces/handleStore.interfaces';
+import { ISlotHistoryIndex, HolderAddressIndex, Handle } from '../../interfaces/handleStore.interfaces';
 
-export const handlesFixture: IHandle[] = [
+export const handlesFixture: Handle[] = [
     {
         hex: 'barbacoa-hex',
         name: 'barbacoa',
@@ -23,7 +23,8 @@ export const handlesFixture: IHandle[] = [
         background: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        hasDatum: false
+        hasDatum: false,
+        amount: 1
     },
     {
         hex: 'burrito-hex',
@@ -45,7 +46,8 @@ export const handlesFixture: IHandle[] = [
         background: '',
         created_slot_number: Date.now() + 10,
         updated_slot_number: Date.now() + 10,
-        hasDatum: false
+        hasDatum: false,
+        amount: 1
     },
     {
         hex: 'taco-hex',
@@ -67,7 +69,8 @@ export const handlesFixture: IHandle[] = [
         background: '',
         created_slot_number: Date.now() + 20,
         updated_slot_number: Date.now() + 20,
-        hasDatum: false
+        hasDatum: false,
+        amount: 1
     }
 ];
 

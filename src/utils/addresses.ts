@@ -1,4 +1,3 @@
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { buildStakeKey, buildPaymentAddressType, AddressType } from './serialization';
 
 export interface AddressDetails {
@@ -7,7 +6,7 @@ export interface AddressDetails {
     knownOwnerName: string;
 }
 
-export const getAddressHolderDetails = async (addr: string): Promise<AddressDetails> => {
+export const getAddressHolderDetails = (addr: string): AddressDetails => {
     const addressType = buildPaymentAddressType(addr);
     let knownOwnerName = checkKnownSmartContracts(addr);
     let stakeKey = null;

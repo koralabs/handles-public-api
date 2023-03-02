@@ -7,7 +7,7 @@ jest.mock('../../../utils/addresses');
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
             type: 'base',
             knownOwnerName: 'unknown'

@@ -34,7 +34,7 @@ describe('HandleStore tests', () => {
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
             type: 'base',
             knownOwnerName: 'unknown'
@@ -64,13 +64,14 @@ describe('HandleStore tests', () => {
         }
     });
 
-    afterEach(() => {
-        for (const key in handlesFixture) {
-            const handle = handlesFixture[key];
-            HandleStore.remove(handle.name);
+    afterEach(async () => {
+        const handles = HandleStore.getHandles().filter(Boolean);
+        for (const handle of handles) {
+            await HandleStore.remove(handle.name);
         }
 
         HandleStore.slotHistoryIndex = new Map();
+        HandleStore.holderAddressIndex = new Map();
 
         jest.clearAllMocks();
     });
@@ -218,7 +219,8 @@ describe('HandleStore tests', () => {
                 rarity: 'basic',
                 resolved_addresses: { ada: '123' },
                 updated_slot_number: expect.any(Number),
-                utxo: 'utxo1#0'
+                utxo: 'utxo1#0',
+                amount: 1
             });
         });
     });
@@ -226,7 +228,7 @@ describe('HandleStore tests', () => {
     describe('saveMintedHandle tests', () => {
         it('Should save a new handle', async () => {
             const stakeKey = 'stake123';
-            jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
                 address: stakeKey,
                 type: 'base',
                 knownOwnerName: 'unknown'
@@ -267,7 +269,8 @@ describe('HandleStore tests', () => {
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
                 hasDatum: true,
-                datum: 'datum123'
+                datum: 'datum123',
+                amount: 1
             });
 
             // expect to get the correct slot history with all new handles
@@ -493,7 +496,8 @@ describe('HandleStore tests', () => {
                     rarity: 'basic',
                     resolved_addresses: { ada: '' },
                     updated_slot_number: 200,
-                    utxo: ''
+                    utxo: '',
+                    amount: 1
                 }
             });
         });
@@ -666,12 +670,12 @@ describe('HandleStore tests', () => {
             const address = 'addr123';
             const newAddress = 'addr123_new';
             jest.spyOn(addresses, 'getAddressHolderDetails')
-                .mockResolvedValueOnce({
+                .mockReturnValueOnce({
                     address: stakeKey,
                     type: 'base',
                     knownOwnerName: 'unknown'
                 })
-                .mockResolvedValueOnce({
+                .mockReturnValueOnce({
                     address: updatedStakeKey,
                     type: 'base',
                     knownOwnerName: 'unknown'
@@ -704,6 +708,7 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get(handleName);
             expect(handle).toEqual({
+                amount: 1,
                 holder_address: updatedStakeKey,
                 default_in_wallet: 'taco',
                 background: '',
@@ -760,11 +765,10 @@ describe('HandleStore tests', () => {
 
         it('Should log an error if handle is not found', async () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
-            jest.spyOn(HandleStore, 'get').mockReturnValue(null);
 
             const newAddress = 'addr123_new';
             await HandleStore.saveHandleUpdate({
-                name: '123',
+                name: 'not-a-handle',
                 adaAddress: newAddress,
                 slotNumber: 1234,
                 utxo: 'utxo'
@@ -772,8 +776,49 @@ describe('HandleStore tests', () => {
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
                 event: 'saveHandleUpdate.noHandleFound',
-                message: 'Handle was updated but there is no existing handle in storage with name: 123'
+                message: 'Handle was updated but there is no existing handle in storage with name: not-a-handle'
             });
+        });
+    });
+
+    describe('burnHandle tests', () => {
+        it('Should burn a handle, update history and update the default handle', async () => {
+            const handleName = 'taco';
+            await HandleStore.burnHandle(handleName, 200);
+
+            // After burn, expect not to find the handle
+            const handle = HandleStore.get(handleName);
+            expect(handle).toEqual(null);
+
+            // Once a handle is burned, expect it to be removed from the holderAddressIndex and a NEW defaultHandle set
+            expect(HandleStore.holderAddressIndex.get('stake123')).toEqual({
+                defaultHandle: 'burrito',
+                handles: new Set(['barbacoa', 'burrito']),
+                knownOwnerName: 'unknown',
+                manuallySet: false,
+                type: 'base'
+            });
+
+            // expect history to include the burn details. new is null, old is the entire handle.
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [
+                    200,
+                    {
+                        [handleName]: {
+                            new: null,
+                            old: {
+                                ...handlesFixture[2],
+                                datum: 'some_datum_2',
+                                hasDatum: true,
+                                holder_address: 'stake123'
+                            }
+                        }
+                    }
+                ]
+            ]);
         });
     });
 });
