@@ -22,7 +22,8 @@ export class LocalService {
                         name,
                         personalization,
                         addresses,
-                        slotNumber: fileContents.slot
+                        slotNumber: fileContents.slot,
+                        setDefault: false // TODO: make this dynamic
                     });
                 });
             }

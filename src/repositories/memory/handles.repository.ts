@@ -178,6 +178,13 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return HandleStore.getMetrics();
     }
 
+    public getTotalHandlesStats(): { total_handles: number; total_holders: number } {
+        return {
+            total_handles: HandleStore.count(),
+            total_holders: HandleStore.holderAddressIndex.size
+        };
+    }
+
     public getIsCaughtUp(): boolean {
         return HandleStore.isCaughtUp();
     }

@@ -7,7 +7,7 @@ jest.mock('../../../utils/addresses');
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
             type: 'base',
             knownOwnerName: 'unknown'
@@ -85,5 +85,19 @@ describe('rewindChangesToSlot', () => {
         expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('456');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
+    });
+
+    it('Should get entire handle during rewind when burn happens', async () => {
+        const slot = 4;
+        const hash = 'hash4';
+        const lastSlot = 10;
+        jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
+
+        await HandleStore.burnHandle('taco', 5);
+
+        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+
+        // should pull back the entire handle
+        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder_address: 'stake123' });
     });
 });

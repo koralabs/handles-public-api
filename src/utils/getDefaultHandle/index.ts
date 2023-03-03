@@ -26,7 +26,7 @@ const sortedByLength = (handles: IHandle[]): IHandle[] => {
     const groupedHandleKeys = Object.keys(groupedHandles);
     groupedHandleKeys.sort((a, b) => parseInt(a) - parseInt(b));
     const [firstKey] = groupedHandleKeys;
-    return groupedHandles[firstKey];
+    return groupedHandles[firstKey] ?? [];
 };
 
 const sortByUpdatedSlotNumber = (handles: IHandle[]): IHandle[] => {
@@ -44,7 +44,7 @@ const sortByUpdatedSlotNumber = (handles: IHandle[]): IHandle[] => {
     const groupedHandleKeys = Object.keys(groupedHandles);
     groupedHandleKeys.sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
     const [firstKey] = groupedHandleKeys;
-    return groupedHandles[firstKey];
+    return groupedHandles[firstKey] ?? [];
 };
 
 const sortAlphabetically = (handles: IHandle[]): IHandle => {

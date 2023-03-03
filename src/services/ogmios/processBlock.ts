@@ -77,7 +77,6 @@ const processAssetReferenceToken = async ({
     if (!datum) {
         // our reference token should always have datum.
         // If we do not have datum, something is wrong.
-        // TODO: what happens during a token burn?
         Logger.log({
             message: `no datum for reference token ${assetName}`,
             category: LogCategory.ERROR,
@@ -94,20 +93,20 @@ const processAssetReferenceToken = async ({
         return;
     }
 
+    // TODO: what do we do with the metadata?
     const metadata = datumObject[0];
     const personalizationData = datumObject[2] as PersonalizationDatum;
 
     // populate personalization from the reference token
     const personalization = await buildPersonalization(personalizationData);
 
-    // TODO: get addresses from personalization data
     await HandleStore.savePersonalizationChange({
         hex,
         name,
         personalization,
-        addresses: {},
+        addresses: {}, // TODO: get addresses from personalization data
         slotNumber,
-        setDefault: personalizationData.default,
+        setDefault: personalizationData.default ?? false,
         customImage: personalizationData.custom_image
     });
 };
@@ -218,6 +217,7 @@ export const processBlock = async ({
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
+        // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
             if (o.value.assets) {
@@ -262,6 +262,16 @@ export const processBlock = async ({
                         }
                     }
                 }
+            }
+        }
+
+        // Look for burn transactions
+        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
+        for (let i = 0; i < mintAssets.length; i++) {
+            const [assetName, value] = mintAssets[i];
+            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
+                const { name } = getHandleNameFromAssetName(assetName);
+                await HandleStore.burnHandle(name, currentSlot);
             }
         }
     }

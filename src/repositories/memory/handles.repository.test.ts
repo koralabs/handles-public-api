@@ -12,7 +12,7 @@ jest.mock('../../utils/addresses');
 
 describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockResolvedValue({
+        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake-key1',
             type: 'ScriptHash',
             knownOwnerName: 'unknown'

@@ -14,6 +14,7 @@ interface IHandlesRepository {
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;
+    getTotalHandlesStats: () => { total_handles: number; total_holders: number };
     getIsCaughtUp: () => boolean;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
 }
