@@ -77,7 +77,6 @@ const processAssetReferenceToken = async ({
     if (!datum) {
         // our reference token should always have datum.
         // If we do not have datum, something is wrong.
-        // TODO: what happens during a token burn?
         Logger.log({
             message: `no datum for reference token ${assetName}`,
             category: LogCategory.ERROR,

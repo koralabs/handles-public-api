@@ -337,6 +337,35 @@ describe('HandleStore tests', () => {
                 ]
             ]);
         });
+
+        it('Should property update the amount property when another mint happens', async () => {
+            const sushiHandle = 'sushi';
+            const sushiHex = 'sushi-hex';
+            await HandleStore.saveMintedHandle({
+                hex: sushiHex,
+                name: sushiHandle,
+                adaAddress: 'addr123',
+                og: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100,
+                datum: 'datum123'
+            });
+
+            await HandleStore.saveMintedHandle({
+                hex: sushiHex,
+                name: sushiHandle,
+                adaAddress: 'addr1234',
+                og: 0,
+                utxo: 'utxo124#0',
+                image: 'ipfs://123',
+                slotNumber: 100,
+                datum: 'datum123'
+            });
+
+            const handle = HandleStore.get(sushiHandle);
+            expect(handle?.amount).toEqual(2);
+        });
     });
 
     describe('savePersonalizationChange tests', () => {
