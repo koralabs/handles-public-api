@@ -23,6 +23,7 @@
     "dev:local": "cross-env NODE_ENV=local ORIGIN=* nodemon",
     "dev:mainnet": "cross-env NODE_ENV=production NETWORK=mainnet nodemon",
     "dev:preprod": "cross-env NODE_ENV=development NETWORK=preprod ENABLE_DATUM_ENDPOINT=true nodemon",
+    "dev:preview": "cross-env NODE_ENV=development NETWORK=preview ENABLE_DATUM_ENDPOINT=true nodemon",
     "dev:preprod:noDatum": "cross-env NODE_ENV=development NETWORK=preprod nodemon",
     "test": "jest --silent --forceExit --detectOpenHandles --coverage",
     "lint": "eslint --ignore-path .gitignore --ext .ts src/",
