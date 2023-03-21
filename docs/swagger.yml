@@ -337,7 +337,14 @@ paths:
         schema:
           $ref: "#/components/schemas/DatumType"
       requestBody:
-        description: The CBOR or JSON to encode/decode
+        description: |
+          The CBOR or JSON to encode/decode.
+          <br />NOTE: To insert constructors where needed, wrap the object in the format:
+          <br />
+          ```json
+          constructor_0: [ <your_arbitrary_json> ]
+          ```
+          Where `"_0"` is a number from 0-3
         required: true
         content:
           application/json:
