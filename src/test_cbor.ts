@@ -153,3 +153,10 @@ console.log('STRINGIFIED', JSON.stringify(decoded));
  // TxMetadataCbor
  // PlutusDataJson ("Schema Json")
  // PlutusDataCbor
+
+ // Constructor vs Not
+ // Sort of similar to:
+ // const instance = new CustomObject(<json>)
+ // vs
+ // const obj = JSON.parse(<json>)
+ 
