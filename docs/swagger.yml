@@ -34,7 +34,7 @@ paths:
         in: query
         required: false
         schema:
-          "$ref": "#/components/schemas/Characters"
+          $ref: "#/components/schemas/Characters"
       - name: length
         in: query
         description: Length of handles to return
@@ -45,12 +45,12 @@ paths:
         in: query
         required: false
         schema:
-          "$ref": "#/components/schemas/Rarity"
+          $ref: "#/components/schemas/Rarity"
       - name: numeric_modifiers
         in: query
         required: false
         schema:
-          "$ref": "#/components/schemas/NumericModifiers"
+          $ref: "#/components/schemas/NumericModifiers"
       - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
@@ -98,7 +98,7 @@ paths:
               schema:
                 type: array
                 items:
-                  "$ref": "#/components/schemas/Handle"
+                  $ref: "#/components/schemas/Handle"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
@@ -114,7 +114,7 @@ paths:
               schema:
                 type: array
                 items:
-                  "$ref": "#/components/schemas/Handle"
+                  $ref: "#/components/schemas/Handle"
         '400':
           description: Invalid filter
       security:
@@ -136,13 +136,13 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Handle"
+                $ref: "#/components/schemas/Handle"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Handle"
+                $ref: "#/components/schemas/Handle"
         '400':
           description: Invalid Handle format
         '404':
@@ -208,13 +208,13 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Personalization"
+                $ref: "#/components/schemas/Personalization"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Personalization"
+                $ref: "#/components/schemas/Personalization"
         '400':
           description: Invalid Handle format
         '404':
@@ -248,13 +248,13 @@ paths:
               schema:
                 type: array
                 items:
-                  "$ref": "#/components/schemas/Holder"
+                  $ref: "#/components/schemas/Holder"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Holder"
+                $ref: "#/components/schemas/Holder"
         '400':
           description: Invalid filter
       security:
@@ -277,13 +277,13 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Holder"
+                $ref: "#/components/schemas/Holder"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Holder"
+                $ref: "#/components/schemas/Holder"
         '400':
           description: Invalid Holder format
         '404':
@@ -300,7 +300,7 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Stats"
+                $ref: "#/components/schemas/Stats"
   "/swagger":
     get:
       tags:
@@ -319,6 +319,65 @@ paths:
           description: Healthy, but scanning is still catching up to the tip of the blockchain
         '503':
           description: HTTP application failure
+  "/datum":
+    post:
+      tags:
+      - utils
+      parameters:
+      - name: from
+        in: path
+        description: The format of the datum being passed in
+        required: true
+        schema:
+          $ref: "#/components/schemas/DatumType"
+      - name: to
+        in: path
+        description: The format of the datum to encode/decode to
+        required: true
+        schema:
+          $ref: "#/components/schemas/DatumType"
+      requestBody:
+        description: |
+          The CBOR or JSON to encode/decode.
+          <br />NOTE: To insert constructors where needed, wrap the object in the format:
+          <br />
+          ```json
+          constructor_0: [ <your_arbitrary_json> ]
+          ```
+          Where `"_0"` is a number from 0-3
+        required: true
+        content:
+          application/json:
+            schema:
+                type: object
+                example: '{ "name": "Clever Girl", "ipfs": "QmPck498Cy5TWYJS5Nifx2R84FjYjJLi6b8oHMNkfhxpS4" }'
+                description: Use when passing in JSON
+          text/plain:
+            schema:
+                type: string 
+                example: |
+                  a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
+                description: Use when passing in CBOR
+      responses:
+        '200':
+          description: datum was able to be encoded/decoded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                example: '{ "name": "Clever Girl", "ipfs": "QmPck498Cy5TWYJS5Nifx2R84FjYjJLi6b8oHMNkfhxpS4" }'
+                description: Used when the `"to:"` parameter is JSON
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
+                description: Used when the `"to:"` parameter is CBOR
+
+        '400':
+          description: datum cbor or json was in the wrong format
+        '503':
+          description: HTTP application failure
 components:
   schemas:
     Handle:
@@ -334,7 +393,7 @@ components:
           description: Current Holder of the Handle (see the Holder endpoints for more information)
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         holder_type:
-          "$ref": "#/components/schemas/AddressType"
+          $ref: "#/components/schemas/AddressType"
         nft_image:
           type: string
           description: IPFS URL of the personalized handle image
@@ -351,11 +410,11 @@ components:
           description: OG status. 0 means not an OG.
           example: 0
         rarity:
-          "$ref": "#/components/schemas/Rarity"
+          $ref: "#/components/schemas/Rarity"
         characters:
-          "$ref": "#/components/schemas/Characters"
+          $ref: "#/components/schemas/Characters"
         numeric_modifiers:
-          "$ref": "#/components/schemas/NumericModifiers"
+          $ref: "#/components/schemas/NumericModifiers"
         default_in_wallet:
           type: string
           description: The name of the default Handle in this wallet
@@ -409,7 +468,7 @@ components:
           example: stake1d4fg5dghrdxxxxxxxxxxxxxxxxxxx
           description: Stake Key, Enterprise Address, Script Address, or Other Address
         type:
-          "$ref": "#/components/schemas/AddressType"
+          $ref: "#/components/schemas/AddressType"
         known_owner_name:
           type: string
           example: jpg.store
@@ -507,12 +566,27 @@ components:
       - script
       - enterprise
       - other
+    DatumType:
+      type: string
+      example: plutus_data_cbor
+      description: |
+        <br />json (cardano-cli can take this with --tx-out-datum-json-value)
+        <br />tx_metadata_json (aka "Detailed Schema")
+        <br />tx_metadata_cbor (the actual TxMetadata CBOR bytes)
+        <br />plutus_data_json (aka "Schema Json" with Plutus constructors/fields)
+        <br />plutus_data_cbor (the actual PlutusData CBOR bytes)
+      enum:
+      - json
+      - tx_metadata_json
+      - tx_metadata_cbor
+      - plutus_data_json
+      - plutus_data_cbor
   requestBodies:
     Handle:
       content:
         application/json:
           schema:
-            "$ref": "#/components/schemas/Handle"
+            $ref: "#/components/schemas/Handle"
   securitySchemes:
     api-key:
       type: apiKey
