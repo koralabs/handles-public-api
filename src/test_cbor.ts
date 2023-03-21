@@ -18,7 +18,8 @@ const json = {
         }, 
         1, 
         {
-            constructor_0: {
+            constructor_0: [
+                {
                 custom_image: "ipfs://cid",
                 bg_image: "ipfs://cid",
                 pfp_image: "ipfs://cid",
@@ -27,7 +28,7 @@ const json = {
                 vendor: "ipfs://cid",
                 default: true,
                 holder: "stake1..."
-            }
+            }]
         }
     ]
 };
