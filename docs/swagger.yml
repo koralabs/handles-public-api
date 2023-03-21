@@ -166,7 +166,7 @@ paths:
               schema:
                 type: string
                 description: Cbor/hex encoded string of datum from the blockchain
-                example: A2446E616D654B436C65766572204769726C4469706673582E516D50636B3439384379355457594A53354E69667832523834466A596A4A4C693662386F484D4E6B666878705334
+                example: a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
             application/json:
               schema:
                 type: string
@@ -179,7 +179,7 @@ paths:
               schema:
                 type: string
                 description: Cbor/hex encoded string of datum from the blockchain
-                example: A2446E616D654B436C65766572204769726C4469706673582E516D50636B3439384379355457594A53354E69667832523834466A596A4A4C693662386F484D4E6B666878705334
+                example: a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
             application/json:
               schema:
                 type: string
