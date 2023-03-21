@@ -114,13 +114,18 @@ const buildJsonFromMap = (map: Map<string, unknown>): Record<string, unknown> =>
     return newObj;
 };
 
-const buildJsonFromArray = (array: unknown[]): unknown[] => {
-    const newArray: unknown[] = [];
+const buildJsonFromArray = (array: any[]): unknown[] => {
+    const newArray: any[] = [];
     for (let i = 0; i < array.length; i++) {
         let element = array[i];
         if (element instanceof Buffer) {
             element = element.toString();
         }
+
+        if (element.hasOwnProperty('value')) {
+            element = element.value;
+        }
+
         if (element instanceof Map) {
             newArray.push(buildJsonFromMap(element));
         } else if (Array.isArray(element)) {
