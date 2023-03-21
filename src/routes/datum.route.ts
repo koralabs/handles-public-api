@@ -13,7 +13,7 @@ class DatumRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.datumController.convert);
+        this.router.post(`${this.path}`, this.datumController.index);
     }
 }
 

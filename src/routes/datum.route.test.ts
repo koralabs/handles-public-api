@@ -61,10 +61,40 @@ describe('Datum Routes Test', () => {
     });
 
     describe('[POST] /datum', () => {
-        it('Should return 200', async () => {
-            const response = await request(app?.getServer()).get('/datum');
+        const bg = {
+            constructor_0: [
+                {
+                    'policy:id': {
+                        constructor_0: [
+                            {
+                                '-': {
+                                    constructor_0: [{ '-': 0 }]
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        };
+
+        it('Should return 200 and hex encoded CBOR', async () => {
+            const response = await request(app?.getServer())
+                .post('/datum?from=json&to=plutus_data_cbor')
+                .set('Content-Type', 'application/json')
+                .send(bg);
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({});
+            expect(response.text).toEqual('d87981a149706f6c6963793a6964d87981a1412dd87981a1412d00');
+        });
+
+        it('Should return 200 and CBOR decoded JSON', async () => {
+            const response = await request(app?.getServer())
+                .post('/datum?from=plutus_data_cbor&to=json')
+                .set('Content-Type', 'text/plain')
+                .send('d87981a149706f6c6963793a6964d87981a1412dd87981a1412d00');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({
+                constructor_0: [{ 'policy:id': { constructor_0: [{ '-': { constructor_0: [{ '-': 0 }] } }] } }]
+            });
         });
     });
 });
