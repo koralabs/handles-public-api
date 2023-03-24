@@ -9,7 +9,7 @@
   "scripts": {
     "setup_env": "chmod +x setup_env.sh && ./setup_env.sh",
     "start": "yarn setup_env && node express.js",
-    "start:forever": "chmod +x setup_env.sh && ./setup_env.sh && mkdir -p forever && forever -p ./forever start express.js",
+    "start:forever": "chmod +x setup_env.sh && ./setup_env.sh && mkdir -p forever && forever -p ./forever --minUptime 1 start express.js",
     "start:containers": "chmod +x ./start_containers.sh && ./start_containers.sh",
     "forever:list": "forever list",
     "forever:stop": "forever stopall",
