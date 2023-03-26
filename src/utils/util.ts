@@ -62,3 +62,5 @@ export const getSlotNumberFromDate = (date: Date): number => {
     // prettier-ignore
     return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
 };
+
+export const randomIntFromInterval = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);

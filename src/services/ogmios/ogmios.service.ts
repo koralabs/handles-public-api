@@ -10,6 +10,7 @@ import { memoryWatcher } from './utils';
 import { createLocalChainSyncClient } from './utils/localChainSync';
 import { OGMIOS_HOST } from '../../config';
 import * as url from 'url';
+import { randomIntFromInterval } from '../../utils/util';
 
 let startOgmiosExec = 0;
 
@@ -83,6 +84,9 @@ class OgmiosService {
         //     }
         // }, 1000);
 
+        const randomInterval = randomIntFromInterval(300000, 600000);
+        Logger.log(`Save files interval: ${randomInterval}ms.`);
+
         const saveFilesInterval = setInterval(async () => {
             const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
 
@@ -100,7 +104,7 @@ class OgmiosService {
             await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
 
             memoryWatcher();
-        }, 120000);
+        }, randomInterval);
 
         const setMemoryInterval = setInterval(() => {
             const memorySize = HandleStore.memorySize();
