@@ -56,6 +56,10 @@ class JsonToDatumObject {
         } else if (Number.isInteger(this.json)) {
             return encoder.pushAny(this.json);
         } else if (typeof this.json === 'string') {
+            // check for hex and if so, decode it
+            if (this.json.startsWith('0x')) {
+                return encoder.pushAny(Buffer.from(this.json.substring(2)), 'hex');
+            }
             return encoder.pushAny(Buffer.from(this.json));
         } else if (typeof this.json === 'boolean') {
             return encoder.pushAny(this.json);
@@ -103,6 +107,9 @@ const decodeObject = (val: any, constr: number | null = null): any => {
         } else {
             return arr;
         }
+    } else if (Buffer.isBuffer(val)) {
+        const bufferString = Buffer.from(val).toString();
+        return bufferString.match(/^[0-9a-fA-F]+$/) ? `0x${bufferString}` : bufferString;
     } else {
         return val;
     }
