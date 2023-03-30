@@ -58,7 +58,7 @@ class JsonToDatumObject {
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
             if (this.json.startsWith('0x')) {
-                return encoder.pushAny(Buffer.from(this.json.substring(2)), 'hex');
+                return encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
             }
             return encoder.pushAny(Buffer.from(this.json));
         } else if (typeof this.json === 'boolean') {
