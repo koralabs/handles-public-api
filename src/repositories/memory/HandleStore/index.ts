@@ -403,18 +403,21 @@ export class HandleStore {
         addresses,
         slotNumber,
         setDefault,
-        customImage
+        customImage,
+        metadata
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
+            const { og, image } = metadata;
+
             const buildHandleInput: SaveMintingTxInput = {
                 name,
                 hex,
                 slotNumber,
                 adaAddress: '', // address will come from the 222 token
-                og: 0, // TODO: get og from personalization
-                image: '', // TODO: get image from personalization
                 utxo: '', // utxo will come from the 222 token,
+                og: og === 'true' ? 1 : 0,
+                image,
                 personalization,
                 default_in_wallet: setDefault ? name : ''
             };

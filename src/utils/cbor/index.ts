@@ -35,7 +35,7 @@ class JsonToDatumObject {
             return encoder.pushAny(this.json);
         } else if (typeof this.json === 'object') {
             if (this.json !== null) {
-                const fieldsMap = new Map();
+                const fieldsMap: any = {};
                 let tag = null;
                 for (let key of Object.keys(this.json)) {
                     let split_key = parseInt(key.split('_').at(1) ?? '');
@@ -47,7 +47,7 @@ class JsonToDatumObject {
                         tag = 121 + split_key;
                         return encoder.pushAny(new Tagged(tag, this.json[key]));
                     }
-                    fieldsMap.set(Buffer.from(key), this.json[key]);
+                    fieldsMap[Buffer.from(key).toString()] = this.json[key];
                 }
                 return encoder.pushAny(fieldsMap);
             } else {
@@ -58,7 +58,7 @@ class JsonToDatumObject {
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
             if (this.json.startsWith('0x')) {
-                return encoder.pushAny(Buffer.from(this.json.substring(2)), 'hex');
+                return encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
             }
             return encoder.pushAny(Buffer.from(this.json));
         } else if (typeof this.json === 'boolean') {
@@ -75,7 +75,8 @@ class JsonToDatumObject {
 }
 
 export const encodeJsonToDatum = (json: any) => {
-    return encode(new JsonToDatumObject(json)).toString('hex').toString('hex');
+    const obj = new JsonToDatumObject(json);
+    return encode(obj).toString('hex').toString('hex');
 };
 
 const decodeObject = (val: any, constr: number | null = null): any => {
