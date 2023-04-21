@@ -109,7 +109,7 @@ const processAssetReferenceToken = async ({
     const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     if (!isValidDatum(datumObject)) {
-        Logger.log(`invalid datum for reference token ${assetName}`);
+        Logger.log(`invalid datum for reference token ${hex}`);
         return;
     }
 
