@@ -7,7 +7,7 @@ import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { dynamicallyLoad, writeConsoleLine } from './utils/util';
+import { delay, dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
 
@@ -25,7 +25,6 @@ class App {
 
         this.initializeMiddleware();
         this.initializeDynamicHandlers();
-        this.initializeStorage();
     }
 
     public listen() {
@@ -35,8 +34,8 @@ class App {
             Logger.log(`🚀 App listening on the port ${this.port}`);
             Logger.log(`=========================================`);
         });
-
         server.keepAliveTimeout = 61 * 1000;
+        this.initializeStorage();
     }
 
     public getServer() {
@@ -82,21 +81,25 @@ class App {
         }
 
         const startOgmios = async () => {
-            try {
-                const ogmiosService = new OgmiosService();
-                await ogmiosService.startSync();
-            } catch (error: any) {
-                Logger.log({
-                    message: `Unable to start Ogmios: ${error.message}`,
-                    category: LogCategory.ERROR,
-                    event: 'startOgmios.failed.errorMessage'
-                });
-                Logger.log({
-                    message: `Error: ${JSON.stringify(error)}`,
-                    category: LogCategory.INFO,
-                    event: 'startOgmios.failed.error'
-                });
-                process.exit(1);
+            let ogmiosStarted = false;
+            while (!ogmiosStarted) {
+                try {
+                    const ogmiosService = new OgmiosService();
+                    await ogmiosService.startSync();
+                    ogmiosStarted = true;
+                } catch (error: any) {
+                    Logger.log({
+                        message: `Unable to start Ogmios: ${error.message}`,
+                        category: LogCategory.ERROR,
+                        event: 'startOgmios.failed.errorMessage'
+                    });
+                    Logger.log({
+                        message: `Error: ${JSON.stringify(error)}`,
+                        category: LogCategory.INFO,
+                        event: 'startOgmios.failed.error'
+                    });
+                    await delay(30*1000)
+                }
             }
         };
 
