@@ -1,3 +1,4 @@
+import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 
 export const decodeCborFromIPFSFile = async (url: string): Promise<unknown> => {

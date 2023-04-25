@@ -94,7 +94,9 @@ export class HandleStore {
         oldHandle?: Handle;
         saveHistory?: boolean;
     }) => {
-        const updatedHandle: Handle = JSON.parse(JSON.stringify(handle));
+        const updatedHandle: Handle = JSON.parse(
+            JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))
+        );
         const {
             name,
             rarity,
