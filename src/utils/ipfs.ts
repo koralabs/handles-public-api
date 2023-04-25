@@ -4,10 +4,10 @@ import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 export const decodeCborFromIPFSFile = async (url: string): Promise<unknown> => {
     try {
         const result = await fetch(url);
-        const str = await result.body?.getReader().read();
-        if (str?.value) {
+        const str = await result.text();
+        if (str) {
             try {
-                const jsonString = Buffer.from(str?.value).toString();
+                const jsonString = Buffer.from(str).toString();
                 return JSON.parse(jsonString);
             } catch (error: any) {
                 Logger.log({
