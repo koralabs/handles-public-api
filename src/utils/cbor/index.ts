@@ -122,7 +122,7 @@ const decodeObject = (val: any, constr: number | null = null): any => {
     }
 };
 
-export const decodeJsonDatumToJson = (cbor: string) => {
+export const decodeCborToJson = (cbor: string) => {
     const d = new Decoder({
         tags: {
             121: (val: any) => {

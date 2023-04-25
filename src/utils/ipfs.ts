@@ -1,14 +1,17 @@
 import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { decodeCborToJson } from './cbor';
 
-export const decodeCborFromIPFSFile = async (url: string): Promise<unknown> => {
+export const decodeCborFromIPFSFile = async (url: string): Promise<any> => {
     try {
         const result = await fetch(url);
-        const str = await result.text();
-        if (str) {
+        const buff = await result.arrayBuffer();
+        if (buff) {
             try {
-                const jsonString = Buffer.from(str).toString();
-                return JSON.parse(jsonString);
+                const cbor = Buffer.from(buff).toString('hex');
+                const json = decodeCborToJson(cbor);
+                const [data] = json.constructor_0;
+                return data;
             } catch (error: any) {
                 Logger.log({
                     message: `Error parsing json from ${url} with error ${error.message}`,
@@ -18,6 +21,7 @@ export const decodeCborFromIPFSFile = async (url: string): Promise<unknown> => {
             }
         }
     } catch (error: any) {
+        console.log('ERROR', error);
         Logger.log({
             message: `Error getting data from ${url} data with error ${error.message}`,
             category: LogCategory.ERROR,
