@@ -9,7 +9,7 @@ export const decodeCborFromIPFSFile = async (url: string): Promise<any> => {
         if (buff) {
             try {
                 const cbor = Buffer.from(buff).toString('hex');
-                const json = decodeCborToJson(cbor);
+                const json = await decodeCborToJson(cbor);
                 const [data] = json.constructor_0;
                 return data;
             } catch (error: any) {
