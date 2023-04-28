@@ -112,7 +112,7 @@ class OgmiosService {
 
     public async getStartingPoint(): Promise<Point> {
         const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
-        const handlesContent = null; // await HandleStore.prepareHandlesStorage();
+        const handlesContent = await HandleStore.prepareHandlesStorage();
 
         if (!handlesContent) {
             Logger.log('Handle storage not found');
