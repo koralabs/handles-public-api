@@ -8,7 +8,7 @@ RUN \
     curl -fsSL https://update-cardano-mainnet.iohk.io/cardano-node-releases/cardano-node-1.35.5-linux.tar.gz | tar -xz && \
     rm -f ./cardano-node-1.35.5-linux.tar.gz && \
     chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p handles && touch handles/handles.json && \
-    git clone https://github.com/input-output-hk/cardano-world.git && \
+    git clone https://github.com/input-output-hk/cardano-world.git && got checkout 067aa2ec9b1da6d5552cf12d2276ea1621ca422c && \
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v5.6.0/ogmios-v5.6.0-x86_64-linux.zip -o ogmios.zip && \
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip && \
     cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install && \
