@@ -142,5 +142,9 @@ export const decodeCborToJson = async (cborString: string) => {
             }
         }
     });
-    return decoded[0];
+
+    const [data] = decoded;
+    if (Array.isArray(data) || data instanceof Map) return decodeObject(data);
+
+    return data;
 };

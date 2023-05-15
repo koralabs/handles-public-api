@@ -122,12 +122,38 @@ describe('CBOR tests', () => {
             });
         });
 
-        it.skip('Should convert from TxMetadataJson to JSON', async () => {
-            // TODO: Finish decoding TxMetadataJson to JSON
+        it('Should decode cbor that is not a 12(1-4) tag', async () => {
             const cbor =
-                'a24866697273744b65794a666972737456616c7565497365636f6e644b6579a24966697273744c69737482413141324a7365636f6e644c69737482a14874686972644b65794a746869726456616c7565a149666f757274684b65794b666f7572746856616c7565';
+                'a258383563613766346531653730386464663139353862326237653635313334373338656262613564386338303362646265353065613066336336a1400058383865643330633038306162613865623433316461626238303265613864646133613133316230663439633732643237363662323562316562a14000';
             const decoded = await decodeCborToJson(cbor);
-            expect(decoded).toEqual(null);
+            expect(decoded).toEqual({
+                '5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6': {
+                    '': 0
+                },
+                '8ed30c080aba8eb431dabb802ea8dda3a131b0f49c72d2766b25b1eb': {
+                    '': 0
+                }
+            });
+        });
+
+        it('Should decode cbor that is an array of objects and not a 12(1-4) tag', async () => {
+            const cbor =
+                '82a158383563613766346531653730386464663139353862326237653635313334373338656262613564386338303362646265353065613066336336a1400081a158383865643330633038306162613865623433316461626238303265613864646133613133316230663439633732643237363662323562316562a14000';
+            const decoded = await decodeCborToJson(cbor);
+            expect(decoded).toEqual([
+                {
+                    '5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6': {
+                        '': 0
+                    }
+                },
+                [
+                    {
+                        '8ed30c080aba8eb431dabb802ea8dda3a131b0f49c72d2766b25b1eb': {
+                            '': 0
+                        }
+                    }
+                ]
+            ]);
         });
 
         it('Should decode pz settings', async () => {
