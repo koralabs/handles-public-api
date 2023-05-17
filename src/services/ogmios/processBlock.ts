@@ -249,7 +249,7 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
-        // get metadata so we can use it later when we need to get OG data.
+        // get metadata so we can use it later
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
