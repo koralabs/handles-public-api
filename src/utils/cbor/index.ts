@@ -47,7 +47,13 @@ class JsonToDatumObject {
                         tag = 121 + split_key;
                         return encoder.pushAny(new Tagged(tag, this.json[key]));
                     }
-                    fieldsMap.set(Buffer.from(key), this.json[key]);
+
+                    let bufferedKey = Buffer.from(key);
+                    if (key.startsWith('0x')) {
+                        bufferedKey = Buffer.from(key.substring(2), 'hex');
+                    }
+
+                    fieldsMap.set(bufferedKey, this.json[key]);
                 }
                 return encoder.pushAny(fieldsMap);
             } else {
@@ -75,7 +81,8 @@ class JsonToDatumObject {
 }
 
 export const encodeJsonToDatum = (json: any) => {
-    return encode(new JsonToDatumObject(json)).toString('hex').toString('hex');
+    const obj = new JsonToDatumObject(json);
+    return encode(obj).toString('hex').toString('hex');
 };
 
 const decodeObject = (val: any, constr: number | null = null): any => {

@@ -1,4 +1,5 @@
 import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { CIP68Metadata } from '../../../interfaces/ogmios.interfaces';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -62,6 +63,7 @@ export interface SavePersonalizationInput {
     };
     setDefault: boolean;
     customImage?: string;
+    metadata: CIP68Metadata;
 }
 
 export interface HolderAddressIndex {

@@ -120,7 +120,8 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new PersonalizedHandleViewModel(handleData));
+            const { personalization } = new PersonalizedHandleViewModel(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
         } catch (error) {
             next(error);
         }

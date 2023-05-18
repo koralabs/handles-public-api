@@ -218,7 +218,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', personalization: { p: 'z' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ p: 'z' });
         });
 
         it('should return legendary message', async () => {
@@ -230,7 +230,7 @@ describe('Testing Handles Routes', () => {
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/j/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'j', personalization: { p: 'z' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ p: 'z' });
         });
 
         it('should return invalid message', async () => {
