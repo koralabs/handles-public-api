@@ -9,13 +9,15 @@ import {
     TxBlock,
     TxBlockBody,
     TxBody,
-    ProcessAssetTokenInput
+    ProcessAssetTokenInput,
+    BuildPersonalizationInput,
+    CIP68Metadata
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
-import { decodeDatum } from '../../utils/serialization';
 import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
+import { decodeCborToJson } from '../../utils/cbor';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -26,13 +28,27 @@ const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
     return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
 };
 
-const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor } = datum;
+const buildPersonalization = async ({
+    personalizationDatum,
+    txId,
+    index,
+    lovelace,
+    datumCbor
+}: BuildPersonalizationInput): Promise<IPersonalization> => {
+    const { portal, designer, socials, vendor } = personalizationDatum;
+
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
         [portal, designer, socials, vendor].map(getDataFromIPFSLink)
     );
 
-    let personalization: IPersonalization = {};
+    let personalization: IPersonalization = {
+        reference_token: {
+            tx_id: txId,
+            index,
+            lovelace,
+            datum: datumCbor
+        }
+    };
 
     if (ipfsDesigner) {
         personalization.nft_appearance = ipfsDesigner;
@@ -56,7 +72,13 @@ const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPerso
 
 function isValidDatum(datumObject: any): boolean {
     // TODO: validate datum
-    if (Array.isArray(datumObject) && datumObject.length === 3) {
+    const { constructor_0 } = datumObject;
+    if (
+        constructor_0 &&
+        Array.isArray(constructor_0) &&
+        constructor_0.length === 3 &&
+        constructor_0[2].hasOwnProperty('constructor_0')
+    ) {
         return true;
     }
 
@@ -66,10 +88,14 @@ function isValidDatum(datumObject: any): boolean {
 const processAssetReferenceToken = async ({
     assetName,
     slotNumber,
+    utxo,
+    lovelace,
     datum
 }: {
     assetName: string;
     slotNumber: number;
+    utxo: string;
+    lovelace: number;
     datum?: string;
 }) => {
     const { hex, name } = getHandleNameFromAssetName(assetName);
@@ -85,20 +111,29 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = decodeDatum(datum);
-    const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+    const decodedDatum = await decodeCborToJson(datum);
+    const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
-    if (!isValidDatum(datumObject)) {
-        Logger.log(`invalid datum for reference token ${assetName}`);
+    if (!isValidDatum(datumObjectConstructor)) {
+        Logger.log(`invalid datum for reference token ${hex}`);
         return;
     }
 
     // TODO: what do we do with the metadata?
-    const metadata = datumObject[0];
-    const personalizationData = datumObject[2] as PersonalizationDatum;
+    const { constructor_0: datumObject } = datumObjectConstructor;
+    const metadata = datumObject[0] as CIP68Metadata;
+    const [personalizationDatum] = datumObject[2].constructor_0 as PersonalizationDatum[];
 
     // populate personalization from the reference token
-    const personalization = await buildPersonalization(personalizationData);
+    const [txId, indexString] = utxo.split('#');
+    const index = parseInt(indexString);
+    const personalization = await buildPersonalization({
+        personalizationDatum,
+        txId,
+        index,
+        lovelace,
+        datumCbor: datum
+    });
 
     await HandleStore.savePersonalizationChange({
         hex,
@@ -106,8 +141,9 @@ const processAssetReferenceToken = async ({
         personalization,
         addresses: {}, // TODO: get addresses from personalization data
         slotNumber,
-        setDefault: personalizationData.default ?? false,
-        customImage: personalizationData.custom_image
+        setDefault: personalizationDatum.default ?? false,
+        customImage: personalizationDatum.custom_image,
+        metadata
     });
 };
 
@@ -116,6 +152,7 @@ const processAssetClassToken = async ({
     slotNumber,
     address,
     utxo,
+    lovelace,
     datum,
     handleMetadata,
     isMintTx
@@ -126,6 +163,7 @@ const processAssetClassToken = async ({
             slotNumber,
             address,
             utxo,
+            lovelace,
             datum,
             handleMetadata,
             isMintTx
@@ -134,7 +172,7 @@ const processAssetClassToken = async ({
     }
 
     if (assetName.includes(MetadatumAssetLabel.REFERENCE_NFT)) {
-        await processAssetReferenceToken({ assetName, slotNumber, datum });
+        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
         return;
     }
 
@@ -211,7 +249,7 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
-        // get metadata so we can use it later when we need to get OG data.
+        // get metadata so we can use it later
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
@@ -243,13 +281,17 @@ export const processBlock = async ({
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
-                        const { address } = o;
+                        const {
+                            address,
+                            value: { coins }
+                        } = o;
 
                         const input: ProcessAssetTokenInput = {
                             assetName,
                             address,
                             slotNumber: currentSlot,
                             utxo: `${txId}#${i}`,
+                            lovelace: coins,
                             datum: datumString,
                             handleMetadata: data,
                             isMintTx

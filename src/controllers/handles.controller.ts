@@ -7,9 +7,9 @@ import IHandlesRepository from '../repositories/handles.repository';
 import ProtectedWords from '@koralabs/protected-words';
 import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfaces';
 import { isDatumEndpointEnabled } from '../config';
-import { decodeDatum } from '../utils/serialization';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
+import { decodeCborToJson } from '../utils/cbor';
 
 class HandlesController {
     public getAll = async (
@@ -120,7 +120,8 @@ class HandlesController {
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(new PersonalizedHandleViewModel(handleData));
+            const { personalization } = new PersonalizedHandleViewModel(handleData);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
         } catch (error) {
             next(error);
         }
@@ -144,7 +145,7 @@ class HandlesController {
 
             if (req.headers?.accept?.startsWith('application/json')) {
                 try {
-                    const decodedDatum = decodeDatum(handleDatum);
+                    const decodedDatum = await decodeCborToJson(handleDatum);
                     res.set('Content-Type', 'application/json');
                     res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(decodedDatum);
                     return;

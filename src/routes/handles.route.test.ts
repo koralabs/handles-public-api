@@ -3,7 +3,7 @@ import App from '../app';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
-import * as serialization from '../utils/serialization';
+import * as cbor from '../utils/cbor';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -65,7 +65,7 @@ jest.mock('../ioc', () => ({
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 if (handleName === 'burrito') {
-                    return 'a24768616e646c65739fa243756d6d447965616842796f43686579ff44736f6d65a14477656c70a1457468696e67457269676874';
+                    return 'd87981a244736f6d65a14477656c70a1457468696e674572696768744768616e646c657381a242796f4368657943756d6d4479656168';
                 }
 
                 return `${handleName}_datum`;
@@ -218,7 +218,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', personalization: { p: 'z' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ p: 'z' });
         });
 
         it('should return legendary message', async () => {
@@ -230,7 +230,7 @@ describe('Testing Handles Routes', () => {
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/j/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'j', personalization: { p: 'z' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ p: 'z' });
         });
 
         it('should return invalid message', async () => {
@@ -287,7 +287,7 @@ describe('Testing Handles Routes', () => {
                 .get('/handles/burrito/datum')
                 .set('Accept', 'application/json');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
+            expect(response.body.constructor_0[0]).toEqual({
                 handles: [{ umm: 'yeah', yo: 'hey' }],
                 some: { welp: { thing: 'right' } }
             });
@@ -302,7 +302,7 @@ describe('Testing Handles Routes', () => {
 
         it('should error trying to decode json and throw 400', async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
-            jest.spyOn(serialization, 'decodeDatum').mockImplementation(() => {
+            jest.spyOn(cbor, 'decodeCborToJson').mockImplementation(() => {
                 throw new Error('test');
             });
             const response = await request(app?.getServer())

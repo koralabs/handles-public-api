@@ -1,15 +1,27 @@
+import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { decodeDatum } from './serialization';
+import { decodeCborToJson } from './cbor';
 
-export const decodeCborFromIPFSFile = async (url: string): Promise<unknown> => {
+export const decodeCborFromIPFSFile = async (url: string): Promise<any> => {
     try {
         const result = await fetch(url);
-        const str = await result.body?.getReader().read();
-        if (str?.value) {
-            const cborHex = Buffer.from(str?.value).toString('hex');
-            return decodeDatum(cborHex);
+        const buff = await result.arrayBuffer();
+        if (buff) {
+            try {
+                const cbor = Buffer.from(buff).toString('hex');
+                const json = await decodeCborToJson(cbor);
+                const [data] = json.constructor_0;
+                return data;
+            } catch (error: any) {
+                Logger.log({
+                    message: `Error parsing json from ${url} with error ${error.message}`,
+                    category: LogCategory.ERROR,
+                    event: 'decodeCborFromIPFSFile.parseJSON.error'
+                });
+            }
         }
     } catch (error: any) {
+        console.log('ERROR', error);
         Logger.log({
             message: `Error getting data from ${url} data with error ${error.message}`,
             category: LogCategory.ERROR,

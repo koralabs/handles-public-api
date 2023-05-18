@@ -40,6 +40,14 @@ export interface PersonalizationDatum {
     // root_handle_settings?: string; // "ipfs://<root_handle_settings_ipfs>"
 }
 
+export interface BuildPersonalizationInput {
+    personalizationDatum: PersonalizationDatum;
+    txId: string;
+    index: number;
+    lovelace: number;
+    datumCbor: string;
+}
+
 export interface HandleOnChainMetadata {
     augmentations: Record<string, unknown>;
     core: {
@@ -53,6 +61,19 @@ export interface HandleOnChainMetadata {
     image: string;
     name: string;
     website: string;
+}
+
+// TODO: Move this to the interfaces package
+export interface CIP68Metadata {
+    name: string;
+    image: string;
+    mediaType: string;
+    og: string;
+    rarity: string;
+    length: string;
+    character_type: string;
+    numeric_modifiers: string;
+    version: number;
 }
 
 export interface BlockTip {
@@ -169,6 +190,7 @@ export interface ProcessAssetTokenInput {
     slotNumber: number;
     address: string;
     utxo: string;
+    lovelace: number;
     datum?: string;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;

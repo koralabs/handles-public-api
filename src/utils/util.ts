@@ -38,7 +38,7 @@ export const writeConsoleLine = (startTime: number, msg = ''): string => {
 
 export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType) => {
     const files = fs.readdirSync(folderPath);
-    const filteredFiles = files.filter((f) => new RegExp(`[\\w]+\\.${type}\\.(ts|js)`, 'gi').test(f));
+    const filteredFiles = files.filter((f) => new RegExp(`[\\w]+\\.${type}\\.(ts|js)$`, 'gi').test(f));
 
     return Promise.all(
         filteredFiles.map(async (f) => {
@@ -54,6 +54,7 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
 };
 
 export const getDateStringFromSlot = (currentSlot: number): Date => {
+    // TODO: Make this work for all networks
     return new Date((1596491091 + (currentSlot - 4924800)) * 1000);
 };
 
