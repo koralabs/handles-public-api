@@ -1,4 +1,4 @@
-import { Tagged, encode, Decoder } from 'borc';
+import * as cbor from 'cbor';
 
 // The five ways to represent metadata/datum:
 // Json (cardano-cli can take this with --tx-out-datum-json-value)
@@ -45,7 +45,7 @@ class JsonToDatumObject {
                         [0, 1, 2, 3].includes(split_key as number)
                     ) {
                         tag = 121 + split_key;
-                        return encoder.pushAny(new Tagged(tag, this.json[key]));
+                        return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
 
                     let bufferedKey = Buffer.from(key);
@@ -64,9 +64,11 @@ class JsonToDatumObject {
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
             if (this.json.startsWith('0x')) {
-                return encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
+                return cbor.Encoder.encodeIndefinite(encoder, Buffer.from(this.json.substring(2), 'hex'), {
+                    chunkSize: 64
+                }); //encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
             }
-            return encoder.pushAny(Buffer.from(this.json));
+            return cbor.Encoder.encodeIndefinite(encoder, Buffer.from(this.json), { chunkSize: 64 }); //encoder.pushAny(Buffer.from(this.json));
         } else if (typeof this.json === 'boolean') {
             return encoder.pushAny(this.json);
         } else {
@@ -80,9 +82,10 @@ class JsonToDatumObject {
     };
 }
 
-export const encodeJsonToDatum = (json: any) => {
+export const encodeJsonToDatum = async (json: any) => {
     const obj = new JsonToDatumObject(json);
-    return encode(obj).toString('hex').toString('hex');
+    const result = await cbor.encodeAsync(obj, { chunkSize: 64 });
+    return result.toString('hex');
 };
 
 const decodeObject = (val: any, constr: number | null = null): any => {
@@ -122,8 +125,8 @@ const decodeObject = (val: any, constr: number | null = null): any => {
     }
 };
 
-export const decodeJsonDatumToJson = (cbor: string) => {
-    const d = new Decoder({
+export const decodeCborToJson = async (cborString: string) => {
+    const decoded = await cbor.decodeAll(Buffer.from(cborString, 'hex'), {
         tags: {
             121: (val: any) => {
                 return decodeObject(val, 0);
@@ -140,5 +143,8 @@ export const decodeJsonDatumToJson = (cbor: string) => {
         }
     });
 
-    return decodeObject(d.decodeAll(Buffer.from(cbor, 'hex'), 'hex')[0]);
+    const [data] = decoded;
+    if (Array.isArray(data) || data instanceof Map) return decodeObject(data);
+
+    return data;
 };

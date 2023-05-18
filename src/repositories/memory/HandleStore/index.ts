@@ -23,7 +23,6 @@ import {
     HandleHistory,
     Handle
 } from '../interfaces/handleStore.interfaces';
-import { MetadatumAssetLabel } from '../../../interfaces/ogmios.interfaces';
 
 export class HandleStore {
     // Indexes
@@ -38,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 9;
+    static storageSchemaVersion = 11;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -94,7 +93,9 @@ export class HandleStore {
         oldHandle?: Handle;
         saveHistory?: boolean;
     }) => {
-        const updatedHandle: Handle = JSON.parse(JSON.stringify(handle));
+        const updatedHandle: Handle = JSON.parse(
+            JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))
+        );
         const {
             name,
             rarity,

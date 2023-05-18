@@ -15,9 +15,9 @@ import {
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
-import { decodeDatum } from '../../utils/serialization';
 import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
+import { decodeCborToJson } from '../../utils/cbor';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -72,7 +72,13 @@ const buildPersonalization = async ({
 
 function isValidDatum(datumObject: any): boolean {
     // TODO: validate datum
-    if (Array.isArray(datumObject) && datumObject.length === 3) {
+    const { constructor_0 } = datumObject;
+    if (
+        constructor_0 &&
+        Array.isArray(constructor_0) &&
+        constructor_0.length === 3 &&
+        constructor_0[2].hasOwnProperty('constructor_0')
+    ) {
         return true;
     }
 
@@ -105,17 +111,18 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = decodeDatum(datum);
-    const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+    const decodedDatum = await decodeCborToJson(datum);
+    const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
-    if (!isValidDatum(datumObject)) {
+    if (!isValidDatum(datumObjectConstructor)) {
         Logger.log(`invalid datum for reference token ${hex}`);
         return;
     }
 
     // TODO: what do we do with the metadata?
+    const { constructor_0: datumObject } = datumObjectConstructor;
     const metadata = datumObject[0] as CIP68Metadata;
-    const [personalizationDatum] = datumObject[2] as PersonalizationDatum[];
+    const [personalizationDatum] = datumObject[2].constructor_0 as PersonalizationDatum[];
 
     // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');
@@ -242,7 +249,7 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
-        // get metadata so we can use it later when we need to get OG data.
+        // get metadata so we can use it later
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
