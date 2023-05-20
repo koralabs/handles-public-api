@@ -48,10 +48,7 @@ class JsonToDatumObject {
                         return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
 
-                    let bufferedKey = Buffer.from(key);
-                    if (key.startsWith('0x')) {
-                        bufferedKey = Buffer.from(key.substring(2), 'hex');
-                    }
+                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : key;
 
                     fieldsMap.set(bufferedKey, this.json[key]);
                 }
@@ -63,12 +60,11 @@ class JsonToDatumObject {
             return encoder.pushAny(this.json);
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
-            if (this.json.startsWith('0x')) {
-                return cbor.Encoder.encodeIndefinite(encoder, Buffer.from(this.json.substring(2), 'hex'), {
-                    chunkSize: 64
-                }); //encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
-            }
-            return cbor.Encoder.encodeIndefinite(encoder, Buffer.from(this.json), { chunkSize: 64 }); //encoder.pushAny(Buffer.from(this.json));
+            const bufferedKey = this.json.startsWith('0x') ? Buffer.from(this.json.substring(2), 'hex') : this.json;
+
+            return bufferedKey.length > 64
+                ? cbor.Encoder.encodeIndefinite(encoder, bufferedKey, { chunkSize: 64 })
+                : encoder.pushAny(bufferedKey);
         } else if (typeof this.json === 'boolean') {
             return encoder.pushAny(this.json);
         } else {
@@ -94,11 +90,18 @@ const decodeObject = (val: any, constr: number | null = null): any => {
         const obj: any = {};
         for (let key of val.keys()) {
             let value = val.get(key);
-            if (Buffer.isBuffer(value)) value = Buffer.from(value).toString();
-
-            if (Buffer.isBuffer(key)) key = Buffer.from(key).toString();
-
-            obj[key] = decodeObject(value);
+            obj[decodeObject(key)] = decodeObject(value);
+        }
+        if (constr != null) {
+            return { [`constructor_${constr}`]: obj };
+        } else {
+            return obj;
+        }
+    } else if (typeof val === 'object' && val.constructor === Object) {
+        const obj: any = {};
+        for (let key of Object.keys(val)) {
+            let value = val[key];
+            obj[decodeObject(key)] = decodeObject(value);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -118,33 +121,40 @@ const decodeObject = (val: any, constr: number | null = null): any => {
             return arr;
         }
     } else if (Buffer.isBuffer(val)) {
-        const bufferString = Buffer.from(val).toString();
-        return bufferString.match(/^[0-9a-fA-F]+$/) ? `0x${bufferString}` : bufferString;
+        const hex = Buffer.from(val).toString('hex');
+        return `0x${hex}`;
     } else {
         return val;
     }
 };
 
 export const decodeCborToJson = async (cborString: string) => {
+    let ranDecode = false;
     const decoded = await cbor.decodeAll(Buffer.from(cborString, 'hex'), {
         tags: {
             121: (val: any) => {
+                ranDecode = true;
                 return decodeObject(val, 0);
             },
             122: (val: any) => {
+                ranDecode = true;
                 return decodeObject(val, 1);
             },
             123: (val: any) => {
+                ranDecode = true;
                 return decodeObject(val, 2);
             },
             124: (val: any) => {
+                ranDecode = true;
                 return decodeObject(val, 3);
             }
         }
     });
 
     const [data] = decoded;
-    if (Array.isArray(data) || data instanceof Map) return decodeObject(data);
+    if (!ranDecode) {
+        return decodeObject(data);
+    }
 
     return data;
 };
