@@ -44,9 +44,9 @@ describe('HandleStore tests', () => {
             const handle = handlesFixture[key];
             const {
                 hex,
-                original_nft_image: image,
+                standard_image: image,
                 name,
-                og,
+                og_number,
                 utxo,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress }
@@ -56,7 +56,7 @@ describe('HandleStore tests', () => {
                 hex,
                 image,
                 name,
-                og,
+                og_number,
                 slotNumber,
                 utxo,
                 datum: `some_datum_${key}`
@@ -94,63 +94,63 @@ describe('HandleStore tests', () => {
                     content: expect.objectContaining({
                         handles: expect.objectContaining({
                             barbacoa: expect.objectContaining({
-                                background: '',
+                                bg_image: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
                                 datum: 'some_datum_0',
                                 default_in_wallet: '',
-                                hasDatum: true,
+                                has_datum: true,
                                 hex: 'barbacoa-hex',
-                                holder_address: 'stake123',
+                                holder: 'stake123',
                                 length: 8,
                                 name: 'barbacoa',
-                                nft_image: '',
+                                image: '',
                                 numeric_modifiers: '',
-                                og: 0,
-                                original_nft_image: '',
-                                profile_pic: '',
+                                og_number: 0,
+                                standard_image: '',
+                                pfp_image: '',
                                 rarity: 'basic',
                                 resolved_addresses: { ada: '123' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo1#0'
                             }),
                             burrito: expect.objectContaining({
-                                background: '',
+                                bg_image: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
                                 datum: 'some_datum_1',
                                 default_in_wallet: '',
-                                hasDatum: true,
+                                has_datum: true,
                                 hex: 'burrito-hex',
-                                holder_address: 'stake123',
+                                holder: 'stake123',
                                 length: 7,
                                 name: 'burrito',
-                                nft_image: '',
+                                image: '',
                                 numeric_modifiers: '',
-                                og: 0,
-                                original_nft_image: '',
-                                profile_pic: '',
+                                og_number: 0,
+                                standard_image: '',
+                                pfp_image: '',
                                 rarity: 'common',
                                 resolved_addresses: { ada: '123' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo2#0'
                             }),
                             taco: expect.objectContaining({
-                                background: '',
+                                bg_image: '',
                                 characters: 'letters',
                                 created_slot_number: expect.any(Number),
                                 datum: 'some_datum_2',
                                 default_in_wallet: '',
-                                hasDatum: true,
+                                has_datum: true,
                                 hex: 'taco-hex',
-                                holder_address: 'stake123',
+                                holder: 'stake123',
                                 length: 4,
                                 name: 'taco',
-                                nft_image: '',
+                                image: '',
                                 numeric_modifiers: '',
-                                og: 0,
-                                original_nft_image: '',
-                                profile_pic: '',
+                                og_number: 0,
+                                standard_image: '',
+                                pfp_image: '',
                                 rarity: 'common',
                                 resolved_addresses: { ada: '123' },
                                 updated_slot_number: expect.any(Number),
@@ -201,21 +201,21 @@ describe('HandleStore tests', () => {
         it('should return a handle', () => {
             const handle = HandleStore.get('barbacoa');
             expect(handle).toEqual({
-                background: '',
+                bg_image: '',
                 characters: 'letters',
                 created_slot_number: expect.any(Number),
                 datum: 'some_datum_0',
                 default_in_wallet: 'taco',
-                hasDatum: true,
+                has_datum: true,
                 hex: 'barbacoa-hex',
-                holder_address: 'stake123',
+                holder: 'stake123',
                 length: 8,
                 name: 'barbacoa',
-                nft_image: '',
+                image: '',
                 numeric_modifiers: '',
-                og: 0,
-                original_nft_image: '',
-                profile_pic: '',
+                og_number: 0,
+                standard_image: '',
+                pfp_image: '',
                 rarity: 'basic',
                 resolved_addresses: { ada: '123' },
                 updated_slot_number: expect.any(Number),
@@ -240,7 +240,7 @@ describe('HandleStore tests', () => {
                 hex: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -251,24 +251,24 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct handle properties
             expect(handle).toEqual({
-                background: '',
+                bg_image: '',
                 characters: 'letters',
                 created_slot_number: 100,
                 default_in_wallet: 'taco',
                 hex: 'nachos-hex',
-                holder_address: 'stake123',
+                holder: 'stake123',
                 length: 6,
                 name: 'nachos',
-                nft_image: 'ipfs://123',
+                image: 'ipfs://123',
                 numeric_modifiers: '',
-                og: 0,
-                original_nft_image: 'ipfs://123',
-                profile_pic: '',
+                og_number: 0,
+                standard_image: 'ipfs://123',
+                pfp_image: '',
                 rarity: 'common',
                 resolved_addresses: { ada: 'addr123' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
-                hasDatum: true,
+                has_datum: true,
                 datum: 'datum123',
                 amount: 1
             });
@@ -284,13 +284,14 @@ describe('HandleStore tests', () => {
 
         it('Should find existing handle and add personalization', async () => {
             const personalizationData: IPersonalization = {
-                nft_appearance: { fontShadowColor: 'todo' },
+                designer: { font_shadow_color: 'todo' },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -304,12 +305,14 @@ describe('HandleStore tests', () => {
                     name: 'chimichanga',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 10,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -317,7 +320,7 @@ describe('HandleStore tests', () => {
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100
@@ -364,7 +367,7 @@ describe('HandleStore tests', () => {
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -375,7 +378,7 @@ describe('HandleStore tests', () => {
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr1234',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo124#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -393,36 +396,31 @@ describe('HandleStore tests', () => {
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: 'todo',
-                    textRibbonColors: ['todo'],
-                    pfpImageUrl: 'todo',
-                    pfpImageUrlEnabled: true,
-                    pfpBorderColor: 'todo',
-                    backgroundImageUrl: 'todo',
-                    backgroundImageUrlEnabled: true,
-                    backgroundColor: 'todo',
-                    backgroundBorderColor: 'todo',
-                    qrEnabled: true,
-                    qrBgColor: 'todo',
-                    socials: [],
-                    socialsEnabled: true,
-                    selectedAttributes: [],
-                    purchasedAttributes: []
+                designer: {
+                    font_shadow_color: 'todo',
+                    text_ribbon_colors: ['todo'],
+                    pfp_image: 'todo',
+                    pfp_border_color: 'todo',
+                    bg_image: 'todo',
+                    bg_color: 'todo',
+                    bg_border_color: 'todo',
+                    qr_bg_color: 'todo',
+                    socials: []
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -437,41 +435,38 @@ describe('HandleStore tests', () => {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
             const handle = HandleStore.get('nacho-cheese');
             expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.personalization).toEqual({
-                nft_appearance: {
-                    backgroundBorderColor: 'todo',
-                    backgroundColor: 'todo',
-                    backgroundImageUrl: 'todo',
-                    backgroundImageUrlEnabled: true,
-                    fontShadowColor: 'todo',
-                    pfpBorderColor: 'todo',
-                    pfpImageUrl: 'todo',
-                    pfpImageUrlEnabled: true,
-                    purchasedAttributes: [],
-                    qrBgColor: 'todo',
-                    qrEnabled: true,
-                    selectedAttributes: [],
+                designer: {
+                    bg_border_color: 'todo',
+                    bg_color: 'todo',
+                    bg_image: 'todo',
+                    font_shadow_color: 'todo',
+                    pfp_border_color: 'todo',
+                    pfp_image: 'todo',
+                    qr_bg_color: 'todo',
                     socials: [],
-                    socialsEnabled: true,
-                    textRibbonColors: ['todo']
+                    text_ribbon_colors: ['todo']
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -484,36 +479,31 @@ describe('HandleStore tests', () => {
                     {
                         'nacho-cheese': {
                             new: {
-                                background: 'todo',
+                                bg_image: 'todo',
                                 default_in_wallet: '',
                                 personalization: {
-                                    nft_appearance: {
-                                        backgroundBorderColor: 'todo',
-                                        backgroundColor: 'todo',
-                                        backgroundImageUrl: 'todo',
-                                        backgroundImageUrlEnabled: true,
-                                        fontShadowColor: 'todo',
-                                        pfpBorderColor: 'todo',
-                                        pfpImageUrl: 'todo',
-                                        pfpImageUrlEnabled: true,
-                                        purchasedAttributes: [],
-                                        qrBgColor: 'todo',
-                                        qrEnabled: true,
-                                        selectedAttributes: [],
+                                    designer: {
+                                        bg_border_color: 'todo',
+                                        bg_color: 'todo',
+                                        bg_image: 'todo',
+                                        font_shadow_color: 'todo',
+                                        pfp_border_color: 'todo',
+                                        pfp_image: 'todo',
+                                        qr_bg_color: 'todo',
                                         socials: [],
-                                        socialsEnabled: true,
-                                        textRibbonColors: ['todo']
+                                        text_ribbon_colors: ['todo']
                                     },
-                                    reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' }
+                                    reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                    validated: true
                                 },
-                                profile_pic: 'todo',
+                                pfp_image: 'todo',
                                 updated_slot_number: 200
                             },
                             old: {
-                                background: '',
+                                bg_image: '',
                                 default_in_wallet: 'taco',
                                 personalization: undefined,
-                                profile_pic: '',
+                                pfp_image: '',
                                 updated_slot_number: 100
                             }
                         }
@@ -525,29 +515,24 @@ describe('HandleStore tests', () => {
         it('Should update personalization data before 222 data', async () => {
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const personalizationUpdates: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: 'todo',
-                    textRibbonColors: ['todo'],
-                    pfpImageUrl: 'todo',
-                    pfpImageUrlEnabled: true,
-                    pfpBorderColor: 'todo',
-                    backgroundImageUrl: 'todo',
-                    backgroundImageUrlEnabled: true,
-                    backgroundColor: 'todo',
-                    backgroundBorderColor: 'todo',
-                    qrEnabled: true,
-                    qrBgColor: 'todo',
-                    socials: [],
-                    socialsEnabled: true,
-                    selectedAttributes: [],
-                    purchasedAttributes: []
+                designer: {
+                    font_shadow_color: 'todo',
+                    text_ribbon_colors: ['todo'],
+                    pfp_image: 'todo',
+                    pfp_border_color: 'todo',
+                    bg_image: 'todo',
+                    bg_color: 'todo',
+                    bg_border_color: 'todo',
+                    qr_bg_color: 'todo',
+                    socials: []
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -561,33 +546,35 @@ describe('HandleStore tests', () => {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
             expect(saveSpy).toHaveBeenCalledWith({
                 handle: {
-                    background: '',
+                    bg_image: '',
                     characters: 'letters,special',
                     created_slot_number: 200,
                     datum: undefined,
                     default_in_wallet: '',
-                    hasDatum: false,
+                    has_datum: false,
                     hex: 'sour-cream-hex',
-                    holder_address: '',
+                    holder: '',
                     length: 10,
                     name: 'sour-cream',
-                    nft_image: 'ipfs://123',
+                    image: 'ipfs://123',
                     numeric_modifiers: '',
-                    og: 0,
-                    original_nft_image: 'ipfs://123',
+                    og_number: 0,
+                    standard_image: 'ipfs://123',
                     personalization: personalizationUpdates,
-                    profile_pic: '',
+                    pfp_image: '',
                     rarity: 'basic',
                     resolved_addresses: { ada: '' },
                     updated_slot_number: 200,
@@ -604,23 +591,24 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: '',
                 slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#000',
-                    textRibbonColors: ['#CCC']
+                designer: {
+                    font_shadow_color: '#000',
+                    text_ribbon_colors: ['#CCC']
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -634,12 +622,14 @@ describe('HandleStore tests', () => {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -673,26 +663,30 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr123',
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo123#0',
                 image: '',
                 slotNumber: 100
             });
 
             const personalizationUpdates: IPersonalization = {
-                social_links: {
-                    twitter: '@twitter_sauce'
-                },
-                nft_appearance: {
-                    fontShadowColor: '#000',
-                    textRibbonColors: ['#CCC']
+                socials: [
+                    {
+                        display: '@twitter_sauce',
+                        url: 'https://twitter.com/twitter_sauce'
+                    }
+                ],
+                designer: {
+                    font_shadow_color: '#000',
+                    text_ribbon_colors: ['#CCC']
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -706,12 +700,14 @@ describe('HandleStore tests', () => {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -720,15 +716,16 @@ describe('HandleStore tests', () => {
             expect(handle?.default_in_wallet).toEqual(handleName);
 
             const newPersonalizationUpdates: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#EEE'
+                designer: {
+                    font_shadow_color: '#EEE'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -742,12 +739,14 @@ describe('HandleStore tests', () => {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -758,15 +757,16 @@ describe('HandleStore tests', () => {
             expect(updatedHandle?.default_in_wallet).toEqual(handleName);
 
             const PersonalizationUpdatesWithDefaultWalletChange: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#111'
+                designer: {
+                    font_shadow_color: '#111'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -780,12 +780,14 @@ describe('HandleStore tests', () => {
                     name: handleName,
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -810,9 +812,10 @@ describe('HandleStore tests', () => {
                         new: {
                             default_in_wallet: 'pork-belly',
                             personalization: {
-                                nft_appearance: { fontShadowColor: '#000', textRibbonColors: ['#CCC'] },
+                                designer: { font_shadow_color: '#000', text_ribbon_colors: ['#CCC'] },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                social_links: { twitter: '@twitter_sauce' }
+                                socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
+                                validated: true
                             },
                             updated_slot_number: 200
                         },
@@ -828,16 +831,18 @@ describe('HandleStore tests', () => {
                     'pork-belly': {
                         new: {
                             personalization: {
-                                nft_appearance: { fontShadowColor: '#EEE', textRibbonColors: undefined },
-                                social_links: undefined
+                                designer: { font_shadow_color: '#EEE', text_ribbon_colors: undefined },
+                                socials: undefined,
+                                validated: false
                             },
                             updated_slot_number: 300
                         },
                         old: {
                             personalization: {
-                                nft_appearance: { fontShadowColor: '#000', textRibbonColors: ['#CCC'] },
+                                designer: { font_shadow_color: '#000', text_ribbon_colors: ['#CCC'] },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                social_links: { twitter: '@twitter_sauce' }
+                                socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
+                                validated: true
                             },
                             updated_slot_number: 200
                         }
@@ -852,14 +857,15 @@ describe('HandleStore tests', () => {
                     'pork-belly': {
                         new: {
                             default_in_wallet: '',
-                            personalization: { nft_appearance: { fontShadowColor: '#111' } },
+                            personalization: { designer: { font_shadow_color: '#111' }, validated: true },
                             updated_slot_number: 400
                         },
                         old: {
                             default_in_wallet: 'pork-belly',
                             personalization: {
-                                nft_appearance: { fontShadowColor: '#EEE' },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' }
+                                designer: { font_shadow_color: '#EEE' },
+                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                validated: false
                             },
                             updated_slot_number: 300
                         }
@@ -870,15 +876,16 @@ describe('HandleStore tests', () => {
 
         it('should save default handle properly', async () => {
             const tacoPzUpdate: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#aaa'
+                designer: {
+                    font_shadow_color: '#aaa'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -892,12 +899,14 @@ describe('HandleStore tests', () => {
                     name: 'taco',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -905,15 +914,16 @@ describe('HandleStore tests', () => {
             expect(tacoHandle?.default_in_wallet).toEqual('taco');
 
             const burritoPzUpdate: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#aaa'
+                designer: {
+                    font_shadow_color: '#aaa'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -927,12 +937,14 @@ describe('HandleStore tests', () => {
                     name: 'burrito',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -940,15 +952,16 @@ describe('HandleStore tests', () => {
             expect(burritoHandle?.default_in_wallet).toEqual('taco');
 
             const barbacoaPzUpdate: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#aaa'
+                designer: {
+                    font_shadow_color: '#aaa'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -962,12 +975,14 @@ describe('HandleStore tests', () => {
                     name: 'barbacoa',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -975,15 +990,16 @@ describe('HandleStore tests', () => {
             expect(barbacoaHandle?.default_in_wallet).toEqual('barbacoa');
 
             const tacoPzUpdate2: IPersonalization = {
-                nft_appearance: {
-                    fontShadowColor: '#aaa'
+                designer: {
+                    font_shadow_color: '#aaa'
                 },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
-                }
+                },
+                validated: true
             };
 
             await HandleStore.savePersonalizationChange({
@@ -997,12 +1013,14 @@ describe('HandleStore tests', () => {
                     name: 'taco',
                     image: 'ipfs://123',
                     mediaType: 'image/jpeg',
-                    og: 'todo',
+                    og_number: 0,
                     rarity: 'todo',
-                    length: 'todo',
-                    character_type: 'todo',
+                    length: 2,
+                    characters: 'todo',
                     numeric_modifiers: 'todo',
-                    version: 0
+                    version: 0,
+                    standard_image: 'todo',
+                    og: false
                 }
             });
 
@@ -1037,7 +1055,7 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 adaAddress: address,
-                og: 0,
+                og_number: 0,
                 utxo: 'utxo_salsa1#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -1046,7 +1064,7 @@ describe('HandleStore tests', () => {
 
             const existingHandle = HandleStore.get(handleName);
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
-            expect(existingHandle?.holder_address).toEqual(stakeKey);
+            expect(existingHandle?.holder).toEqual(stakeKey);
 
             await HandleStore.saveHandleUpdate({
                 name: handleName,
@@ -1059,24 +1077,24 @@ describe('HandleStore tests', () => {
             const handle = HandleStore.get(handleName);
             expect(handle).toEqual({
                 amount: 1,
-                holder_address: updatedStakeKey,
+                holder: updatedStakeKey,
                 default_in_wallet: 'taco',
-                background: '',
+                bg_image: '',
                 characters: 'letters',
                 hex: handleHex,
                 utxo: 'utxo_salsa2#0',
                 length: 5,
                 name: 'salsa',
-                nft_image: 'ipfs://123',
+                image: 'ipfs://123',
                 numeric_modifiers: '',
-                og: 0,
-                original_nft_image: 'ipfs://123',
-                profile_pic: '',
+                og_number: 0,
+                standard_image: 'ipfs://123',
+                pfp_image: '',
                 rarity: 'common',
                 resolved_addresses: { ada: newAddress },
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number),
-                hasDatum: false
+                has_datum: false
             });
 
             // expect to get the correct slot history with all new handles
@@ -1090,22 +1108,22 @@ describe('HandleStore tests', () => {
                     {
                         [handleName]: {
                             new: {
-                                holder_address: 'stake123_new',
+                                holder: 'stake123_new',
                                 resolved_addresses: {
                                     ada: 'addr123_new'
                                 },
-                                hasDatum: false,
+                                has_datum: false,
                                 datum: undefined,
                                 updated_slot_number: 200,
                                 utxo: 'utxo_salsa2#0'
                             },
                             old: {
-                                holder_address: stakeKey,
+                                holder: stakeKey,
                                 resolved_addresses: { ada: address },
                                 datum: 'a2datum_salsa',
                                 updated_slot_number: 100,
                                 utxo: 'utxo_salsa1#0',
-                                hasDatum: true
+                                has_datum: true
                             }
                         }
                     }
@@ -1162,8 +1180,8 @@ describe('HandleStore tests', () => {
                             old: {
                                 ...handlesFixture[2],
                                 datum: 'some_datum_2',
-                                hasDatum: true,
-                                holder_address: 'stake123'
+                                has_datum: true,
+                                holder: 'stake123'
                             }
                         }
                     }

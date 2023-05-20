@@ -1,9 +1,9 @@
 import fetch from 'cross-fetch';
 import { Buffer } from 'buffer';
-import { Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
-import { HealthResponseBody, MetadatumAssetLabel } from '../../../interfaces/ogmios.interfaces';
+import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
 
 const parseCborObject = (value: any) => {
@@ -74,10 +74,7 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
         hex = hex.split('.')[1];
     }
 
-    const nameWithoutLabel: string = Object.values(MetadatumAssetLabel).reduce(
-        (acc, label) => acc.replace(label, ''),
-        hex
-    );
+    const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
 
     return {
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),

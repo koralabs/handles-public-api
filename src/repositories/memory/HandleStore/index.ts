@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 11;
+    static storageSchemaVersion = 12;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -58,7 +58,7 @@ export class HandleStore {
             return null;
         }
 
-        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder_address);
+        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
         if (holderAddressIndex) {
             handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
@@ -99,7 +99,7 @@ export class HandleStore {
         const {
             name,
             rarity,
-            og,
+            og_number,
             characters,
             numeric_modifiers,
             length,
@@ -109,14 +109,16 @@ export class HandleStore {
         } = updatedHandle;
 
         const holderAddressDetails = getAddressHolderDetails(ada);
-        updatedHandle.holder_address = holderAddressDetails.address;
+        updatedHandle.holder = holderAddressDetails.address;
 
         // Set the main index
         this.handles.set(name, updatedHandle);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);
-        this.addIndexSet(this.ogIndex, `${og}`, name);
+
+        const ogFlag = og_number === 0 ? 0 : 1;
+        this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
@@ -158,8 +160,8 @@ export class HandleStore {
 
         const {
             rarity,
-            holder_address,
-            og,
+            holder,
+            og_number,
             characters,
             numeric_modifiers,
             length,
@@ -169,15 +171,17 @@ export class HandleStore {
         // Set the main index
         this.handles.delete(handleName);
 
+        const ogFlag = og_number === 0 ? 0 : 1;
+
         // set all one-to-many indexes
         this.rarityIndex.get(rarity)?.delete(handleName);
-        this.ogIndex.get(`${og}`)?.delete(handleName);
+        this.ogIndex.get(`${ogFlag}`)?.delete(handleName);
         this.charactersIndex.get(characters)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
 
         // remove the stake key index
-        this.holderAddressIndex.get(holder_address)?.handles.delete(handleName);
+        this.holderAddressIndex.get(holder)?.handles.delete(handleName);
         const holderAddressDetails = getAddressHolderDetails(ada);
         this.setHolderAddressIndex(holderAddressDetails);
     };
@@ -252,21 +256,21 @@ export class HandleStore {
         hex,
         name,
         adaAddress,
-        og,
+        og_number,
         image,
         slotNumber,
         utxo,
         datum,
         amount = 1,
-        background = '',
+        bg_image = '',
         default_in_wallet = '',
-        profile_pic = '',
+        pfp_image = '',
         personalization
     }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
             name,
             hex,
-            holder_address: '', // Populate on save
+            holder: '', // Populate on save
             length: name.length,
             utxo,
             rarity: getRarity(name),
@@ -275,15 +279,15 @@ export class HandleStore {
             resolved_addresses: {
                 ada: adaAddress
             },
-            og,
-            original_nft_image: image,
-            nft_image: image,
-            background,
+            og_number,
+            standard_image: image,
+            image: image,
+            bg_image,
             default_in_wallet,
-            profile_pic,
+            pfp_image,
             created_slot_number: slotNumber,
             updated_slot_number: slotNumber,
-            hasDatum: !!datum,
+            has_datum: !!datum,
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
             personalization,
             amount
@@ -358,8 +362,8 @@ export class HandleStore {
             // if there is no utxo, it means we already received a 100 token.
             const inputWithExistingHandle: SaveMintingTxInput = {
                 ...input,
-                image: existingHandle.nft_image,
-                og: existingHandle.og,
+                image: existingHandle.image,
+                og_number: existingHandle.og_number,
                 personalization: existingHandle.personalization
             };
             const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
@@ -387,7 +391,7 @@ export class HandleStore {
             utxo,
             resolved_addresses: { ada: adaAddress },
             updated_slot_number: slotNumber,
-            hasDatum: !!datum,
+            has_datum: !!datum,
             datum: isDatumEndpointEnabled() && datum ? datum : undefined
         };
 
@@ -409,7 +413,7 @@ export class HandleStore {
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
-            const { og, image } = metadata;
+            const { og_number, og, image } = metadata;
 
             const buildHandleInput: SaveMintingTxInput = {
                 name,
@@ -417,7 +421,7 @@ export class HandleStore {
                 slotNumber,
                 adaAddress: '', // address will come from the 222 token
                 utxo: '', // utxo will come from the 222 token,
-                og: og === 'true' ? 1 : 0,
+                og_number,
                 image,
                 personalization,
                 default_in_wallet: setDefault ? name : ''
@@ -435,9 +439,9 @@ export class HandleStore {
 
         const updatedHandle: Handle = {
             ...existingHandle,
-            nft_image: customImage ?? '',
-            background: personalization?.nft_appearance?.backgroundImageUrl ?? '',
-            profile_pic: personalization?.nft_appearance?.pfpImageUrl ?? '',
+            image: customImage ?? '',
+            bg_image: personalization?.designer?.bg_image ?? '',
+            pfp_image: personalization?.designer?.pfp_image ?? '',
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,
@@ -543,15 +547,15 @@ export class HandleStore {
         const slotDate = getDateStringFromSlot(currentSlot);
 
         return {
-            percentageComplete,
-            currentMemoryUsed,
-            ogmiosElapsed,
-            buildingElapsed,
-            slotDate,
-            handleCount,
-            memorySize,
-            currentSlot,
-            currentBlockHash
+            percentage_complete: percentageComplete,
+            current_memory_used: currentMemoryUsed,
+            ogmios_elapsed: ogmiosElapsed,
+            building_elapsed: buildingElapsed,
+            slot_date: slotDate,
+            handle_count: handleCount,
+            memory_size: memorySize,
+            current_slot: currentSlot,
+            current_block_hash: currentBlockHash
         };
     }
 

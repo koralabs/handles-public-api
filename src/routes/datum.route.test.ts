@@ -27,15 +27,15 @@ jest.mock('../ioc', () => ({
             },
             getHandleStats: () => {
                 const stats: IHandleStats = {
-                    percentageComplete: '',
-                    currentMemoryUsed: 0,
-                    memorySize: 0,
-                    ogmiosElapsed: '',
-                    buildingElapsed: '',
-                    slotDate: new Date(),
-                    handleCount: 0,
-                    currentSlot: 0,
-                    currentBlockHash: ''
+                    percentage_complete: '',
+                    current_memory_used: 0,
+                    memory_size: 0,
+                    ogmios_elapsed: '',
+                    building_elapsed: '',
+                    slot_date: new Date(),
+                    handle_count: 0,
+                    current_slot: 0,
+                    current_block_hash: ''
                 };
                 return stats;
             }
@@ -83,14 +83,14 @@ describe('Datum Routes Test', () => {
                 .set('Content-Type', 'application/json')
                 .send(bg);
             expect(response.status).toEqual(200);
-            expect(response.text).toEqual('d87981a149706f6c6963793a6964d87981a1412dd87981a1412d00');
+            expect(response.text).toEqual('d87981a169706f6c6963793a6964d87981a1612dd87981a1612d00');
         });
 
         it('Should return 200 and CBOR decoded JSON', async () => {
             const response = await request(app?.getServer())
                 .post('/datum?from=plutus_data_cbor&to=json')
                 .set('Content-Type', 'text/plain')
-                .send('d87981a149706f6c6963793a6964d87981a1412dd87981a1412d00');
+                .send('d87981a169706f6c6963793a6964d87981a1612dd87981a1612d00');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
                 constructor_0: [{ 'policy:id': { constructor_0: [{ '-': { constructor_0: [{ '-': 0 }] } }] } }]

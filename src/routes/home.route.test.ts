@@ -27,15 +27,15 @@ jest.mock('../ioc', () => ({
             },
             getHandleStats: () => {
                 const stats: IHandleStats = {
-                    percentageComplete: '',
-                    currentMemoryUsed: 0,
-                    memorySize: 0,
-                    ogmiosElapsed: '',
-                    buildingElapsed: '',
-                    slotDate: new Date(),
-                    handleCount: 0,
-                    currentSlot: 0,
-                    currentBlockHash: ''
+                    percentage_complete: '',
+                    current_memory_used: 0,
+                    memory_size: 0,
+                    ogmios_elapsed: '',
+                    building_elapsed: '',
+                    slot_date: new Date(),
+                    handle_count: 0,
+                    current_slot: 0,
+                    current_block_hash: ''
                 };
                 return stats;
             }

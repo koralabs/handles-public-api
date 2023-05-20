@@ -1,17 +1,14 @@
-import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,
     MetadataLabel,
-    MetadatumAssetLabel,
-    PersonalizationDatum,
     TxBlock,
     TxBlockBody,
     TxBody,
     ProcessAssetTokenInput,
-    BuildPersonalizationInput,
-    CIP68Metadata
+    BuildPersonalizationInput
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
@@ -47,19 +44,20 @@ const buildPersonalization = async ({
             index,
             lovelace,
             datum: datumCbor
-        }
+        },
+        validated: true
     };
 
     if (ipfsDesigner) {
-        personalization.nft_appearance = ipfsDesigner;
+        personalization.designer = ipfsDesigner;
     }
 
     if (ipfsPortal) {
-        personalization.my_page = ipfsPortal;
+        personalization.portal = ipfsPortal;
     }
 
     if (ipfsSocials) {
-        personalization.social_links = ipfsSocials;
+        personalization.socials = ipfsSocials;
     }
 
     // add vendor settings
@@ -121,8 +119,8 @@ const processAssetReferenceToken = async ({
 
     // TODO: what do we do with the metadata?
     const { constructor_0: datumObject } = datumObjectConstructor;
-    const metadata = datumObject[0] as CIP68Metadata;
-    const [personalizationDatum] = datumObject[2].constructor_0 as PersonalizationDatum[];
+    const metadata = datumObject[0] as IHandleMetadata;
+    const [personalizationDatum] = datumObject[2].constructor_0 as IPzDatum[];
 
     // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');
@@ -142,7 +140,7 @@ const processAssetReferenceToken = async ({
         addresses: {}, // TODO: get addresses from personalization data
         slotNumber,
         setDefault: personalizationDatum.default ?? false,
-        customImage: personalizationDatum.custom_image,
+        customImage: metadata.image,
         metadata
     });
 };
@@ -157,7 +155,7 @@ const processAssetClassToken = async ({
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_NFT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_222)) {
         await processAssetToken({
             assetName,
             slotNumber,
@@ -171,12 +169,12 @@ const processAssetClassToken = async ({
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.REFERENCE_NFT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_100)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_FT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_100)) {
         Logger.log(`FT token found ${assetName}. Not implemented yet`);
         return;
     }
@@ -211,10 +209,11 @@ const processAssetToken = async ({
     if (isMintTx) {
         const data = handleMetadata && handleMetadata[name];
         const image = data?.image ?? '';
-        const og = data?.core?.og ?? 0;
+        const og_number = data?.core?.og_number ?? 0;
+        const og = !!data?.core?.og;
         await HandleStore.saveMintedHandle({
             ...input,
-            og,
+            og_number,
             image
         });
     } else {
@@ -297,7 +296,7 @@ export const processBlock = async ({
                             isMintTx
                         };
 
-                        if (Object.values(MetadatumAssetLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                        if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
                         } else {
                             await processAssetToken(input);
