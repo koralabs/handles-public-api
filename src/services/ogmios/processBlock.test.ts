@@ -343,8 +343,10 @@ describe('processBlock Tests', () => {
                     tx_id: 'some_id'
                 },
                 socials: { test: 'data' },
-                validated: true
+                validated_by: undefined
             },
+            pfpImage: '',
+            bgImage: '',
             setDefault: false,
             slotNumber: 0
         });

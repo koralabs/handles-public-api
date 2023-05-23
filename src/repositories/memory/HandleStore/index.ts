@@ -409,11 +409,13 @@ export class HandleStore {
         slotNumber,
         setDefault,
         customImage,
+        pfpImage,
+        bgImage,
         metadata
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
-            const { og_number, og, image } = metadata;
+            const { og_number, image } = metadata;
 
             const buildHandleInput: SaveMintingTxInput = {
                 name,
@@ -440,8 +442,8 @@ export class HandleStore {
         const updatedHandle: Handle = {
             ...existingHandle,
             image: customImage ?? '',
-            bg_image: personalization?.designer?.bg_image ?? '',
-            pfp_image: personalization?.designer?.pfp_image ?? '',
+            bg_image: bgImage ?? '',
+            pfp_image: pfpImage ?? '',
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,

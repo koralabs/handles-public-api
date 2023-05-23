@@ -62,6 +62,8 @@ export interface SavePersonalizationInput {
     };
     setDefault: boolean;
     customImage?: string;
+    pfpImage?: string;
+    bgImage?: string;
     metadata: IHandleMetadata;
 }
 

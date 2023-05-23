@@ -284,14 +284,19 @@ describe('HandleStore tests', () => {
 
         it('Should find existing handle and add personalization', async () => {
             const personalizationData: IPersonalization = {
-                designer: { font_shadow_color: 'todo' },
+                designer: {
+                    font_shadow_color: '0xtodo',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
+                },
                 reference_token: {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -311,8 +316,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -404,15 +408,16 @@ describe('HandleStore tests', () => {
 
             const personalizationUpdates: IPersonalization = {
                 designer: {
-                    font_shadow_color: 'todo',
-                    text_ribbon_colors: ['todo'],
-                    pfp_image: 'todo',
-                    pfp_border_color: 'todo',
-                    bg_image: 'todo',
-                    bg_color: 'todo',
-                    bg_border_color: 'todo',
-                    qr_bg_color: 'todo',
-                    socials: []
+                    font_shadow_color: '0xtodo',
+                    text_ribbon_colors: ['0xtodo'],
+                    pfp_border_color: '0xtodo',
+                    bg_color: '0xtodo',
+                    bg_border_color: '0xtodo',
+                    qr_bg_color: '0xtodo',
+                    socials: [],
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -420,7 +425,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -441,24 +446,28 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
-                }
+                    og: 0
+                },
+                pfpImage: 'todo',
+                bgImage: 'todo'
             });
 
             const handle = HandleStore.get('nacho-cheese');
             expect(handle?.default_in_wallet).toEqual('taco');
+            expect(handle?.pfp_image).toEqual('todo');
+            expect(handle?.bg_image).toEqual('todo');
             expect(handle?.personalization).toEqual({
                 designer: {
-                    bg_border_color: 'todo',
-                    bg_color: 'todo',
-                    bg_image: 'todo',
-                    font_shadow_color: 'todo',
-                    pfp_border_color: 'todo',
-                    pfp_image: 'todo',
-                    qr_bg_color: 'todo',
+                    bg_border_color: '0xtodo',
+                    bg_color: '0xtodo',
+                    font_shadow_color: '0xtodo',
+                    pfp_border_color: '0xtodo',
+                    qr_bg_color: '0xtodo',
                     socials: [],
-                    text_ribbon_colors: ['todo']
+                    text_ribbon_colors: ['0xtodo'],
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo',
+                    svg_version: '1.0.0'
                 },
                 reference_token: {
                     tx_id: '',
@@ -466,7 +475,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -483,18 +492,19 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 personalization: {
                                     designer: {
-                                        bg_border_color: 'todo',
-                                        bg_color: 'todo',
-                                        bg_image: 'todo',
-                                        font_shadow_color: 'todo',
-                                        pfp_border_color: 'todo',
-                                        pfp_image: 'todo',
-                                        qr_bg_color: 'todo',
+                                        bg_border_color: '0xtodo',
+                                        bg_color: '0xtodo',
+                                        font_shadow_color: '0xtodo',
+                                        pfp_border_color: '0xtodo',
+                                        qr_bg_color: '0xtodo',
                                         socials: [],
-                                        text_ribbon_colors: ['todo']
+                                        text_ribbon_colors: ['0xtodo'],
+                                        image_hash: '0xtodo',
+                                        standard_image_hash: '0xtodo',
+                                        svg_version: '1.0.0'
                                     },
                                     reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                    validated: true
+                                    validated_by: 'todo'
                                 },
                                 pfp_image: 'todo',
                                 updated_slot_number: 200
@@ -516,15 +526,16 @@ describe('HandleStore tests', () => {
             const saveSpy = jest.spyOn(HandleStore, 'save');
             const personalizationUpdates: IPersonalization = {
                 designer: {
-                    font_shadow_color: 'todo',
-                    text_ribbon_colors: ['todo'],
-                    pfp_image: 'todo',
-                    pfp_border_color: 'todo',
-                    bg_image: 'todo',
-                    bg_color: 'todo',
-                    bg_border_color: 'todo',
-                    qr_bg_color: 'todo',
-                    socials: []
+                    font_shadow_color: '0xtodo',
+                    text_ribbon_colors: ['0xtodo'],
+                    pfp_border_color: '0xtodo',
+                    bg_color: '0xtodo',
+                    bg_border_color: '0xtodo',
+                    qr_bg_color: '0xtodo',
+                    socials: [],
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -532,7 +543,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: false
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -552,9 +563,10 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
-                }
+                    og: 0
+                },
+                pfpImage: 'todo',
+                bgImage: 'todo'
             });
 
             expect(saveSpy).toHaveBeenCalledWith({
@@ -599,8 +611,11 @@ describe('HandleStore tests', () => {
 
             const personalizationUpdates: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#000',
-                    text_ribbon_colors: ['#CCC']
+                    font_shadow_color: '0x000',
+                    text_ribbon_colors: ['0xCCC'],
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -608,7 +623,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -628,8 +643,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -677,8 +691,11 @@ describe('HandleStore tests', () => {
                     }
                 ],
                 designer: {
-                    font_shadow_color: '#000',
-                    text_ribbon_colors: ['#CCC']
+                    font_shadow_color: '0x000',
+                    text_ribbon_colors: ['0xCCC'],
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -686,7 +703,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -706,8 +723,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -717,7 +733,10 @@ describe('HandleStore tests', () => {
 
             const newPersonalizationUpdates: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#EEE'
+                    font_shadow_color: '0xEEE',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -725,7 +744,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: false
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -745,8 +764,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -758,7 +776,10 @@ describe('HandleStore tests', () => {
 
             const PersonalizationUpdatesWithDefaultWalletChange: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#111'
+                    font_shadow_color: '0x111',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -766,7 +787,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'new'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -786,8 +807,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -812,10 +832,16 @@ describe('HandleStore tests', () => {
                         new: {
                             default_in_wallet: 'pork-belly',
                             personalization: {
-                                designer: { font_shadow_color: '#000', text_ribbon_colors: ['#CCC'] },
+                                designer: {
+                                    font_shadow_color: '0x000',
+                                    image_hash: '0xtodo',
+                                    standard_image_hash: '0xtodo',
+                                    svg_version: '1.0.0',
+                                    text_ribbon_colors: ['0xCCC']
+                                },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated: true
+                                validated_by: 'todo'
                             },
                             updated_slot_number: 200
                         },
@@ -831,18 +857,23 @@ describe('HandleStore tests', () => {
                     'pork-belly': {
                         new: {
                             personalization: {
-                                designer: { font_shadow_color: '#EEE', text_ribbon_colors: undefined },
-                                socials: undefined,
-                                validated: false
+                                designer: { font_shadow_color: '0xEEE', text_ribbon_colors: undefined },
+                                socials: undefined
                             },
                             updated_slot_number: 300
                         },
                         old: {
                             personalization: {
-                                designer: { font_shadow_color: '#000', text_ribbon_colors: ['#CCC'] },
+                                designer: {
+                                    font_shadow_color: '0x000',
+                                    image_hash: '0xtodo',
+                                    standard_image_hash: '0xtodo',
+                                    svg_version: '1.0.0',
+                                    text_ribbon_colors: ['0xCCC']
+                                },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated: true
+                                validated_by: 'todo'
                             },
                             updated_slot_number: 200
                         }
@@ -857,15 +888,20 @@ describe('HandleStore tests', () => {
                     'pork-belly': {
                         new: {
                             default_in_wallet: '',
-                            personalization: { designer: { font_shadow_color: '#111' }, validated: true },
+                            personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
                             updated_slot_number: 400
                         },
                         old: {
                             default_in_wallet: 'pork-belly',
                             personalization: {
-                                designer: { font_shadow_color: '#EEE' },
+                                designer: {
+                                    font_shadow_color: '0xEEE',
+                                    image_hash: '0xtodo',
+                                    standard_image_hash: '0xtodo',
+                                    svg_version: '1.0.0'
+                                },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                validated: false
+                                validated_by: 'todo'
                             },
                             updated_slot_number: 300
                         }
@@ -877,7 +913,10 @@ describe('HandleStore tests', () => {
         it('should save default handle properly', async () => {
             const tacoPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#aaa'
+                    font_shadow_color: '0xaaa',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -885,7 +924,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -905,8 +944,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -915,7 +953,10 @@ describe('HandleStore tests', () => {
 
             const burritoPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#aaa'
+                    font_shadow_color: '0xaaa',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -923,7 +964,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -943,8 +984,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -953,7 +993,10 @@ describe('HandleStore tests', () => {
 
             const barbacoaPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#aaa'
+                    font_shadow_color: '0xaaa',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -961,7 +1004,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: false
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -981,8 +1024,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 
@@ -991,7 +1033,10 @@ describe('HandleStore tests', () => {
 
             const tacoPzUpdate2: IPersonalization = {
                 designer: {
-                    font_shadow_color: '#aaa'
+                    font_shadow_color: '0xaaa',
+                    svg_version: '1.0.0',
+                    image_hash: '0xtodo',
+                    standard_image_hash: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -999,7 +1044,7 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated: true
+                validated_by: 'todo'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1019,8 +1064,7 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    standard_image: 'todo',
-                    og: false
+                    og: 0
                 }
             });
 

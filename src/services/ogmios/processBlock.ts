@@ -32,7 +32,7 @@ const buildPersonalization = async ({
     lovelace,
     datumCbor
 }: BuildPersonalizationInput): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor } = personalizationDatum;
+    const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
 
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
         [portal, designer, socials, vendor].map(getDataFromIPFSLink)
@@ -45,7 +45,7 @@ const buildPersonalization = async ({
             lovelace,
             datum: datumCbor
         },
-        validated: true
+        validated_by
     };
 
     if (ipfsDesigner) {
@@ -137,10 +137,12 @@ const processAssetReferenceToken = async ({
         hex,
         name,
         personalization,
-        addresses: {}, // TODO: get addresses from personalization data
+        addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
-        setDefault: personalizationDatum.default ?? false,
+        setDefault: personalizationDatum.default === 1,
         customImage: metadata.image,
+        pfpImage: personalizationDatum.pfp_image,
+        bgImage: personalizationDatum.bg_image,
         metadata
     });
 };
