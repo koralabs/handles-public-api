@@ -15,14 +15,18 @@ import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
 import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { decodeCborToJson } from '../../utils/cbor';
+import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
+import { portalSchema } from '../../utils/cbor/schema/portal';
+import { designerSchema } from '../../utils/cbor/schema/designer';
+import { socialsSchema } from '../../utils/cbor/schema/socials';
 
 const blackListedIpfsCids: string[] = [];
 
-const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
+const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: any }): Promise<any | undefined> => {
     if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
     const cid = link.split('ipfs://')[1];
-    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
+    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`, schema);
 };
 
 const buildPersonalization = async ({
@@ -35,7 +39,12 @@ const buildPersonalization = async ({
     const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
 
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
-        [portal, designer, socials, vendor].map(getDataFromIPFSLink)
+        [
+            { link: portal, schema: portalSchema },
+            { link: designer, schema: designerSchema },
+            { link: socials, schema: socialsSchema },
+            { link: vendor }
+        ].map(getDataFromIPFSLink)
     );
 
     let personalization: IPersonalization = {
@@ -109,7 +118,7 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = await decodeCborToJson(datum);
+    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     if (!isValidDatum(datumObjectConstructor)) {

@@ -1,15 +1,15 @@
 import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { decodeCborToJson } from './cbor';
+import { decodeCborToJson } from '../cbor';
 
-export const decodeCborFromIPFSFile = async (url: string): Promise<any> => {
+export const decodeCborFromIPFSFile = async (url: string, schema?: any): Promise<any> => {
     try {
         const result = await fetch(url);
         const buff = await result.arrayBuffer();
         if (buff) {
             try {
                 const cbor = Buffer.from(buff).toString('hex');
-                const json = await decodeCborToJson(cbor);
+                const json = await decodeCborToJson(cbor, schema);
                 const [data] = json.constructor_0;
                 return data;
             } catch (error: any) {

@@ -83,7 +83,7 @@ describe('Datum Routes Test', () => {
                 .set('Content-Type', 'application/json')
                 .send(bg);
             expect(response.status).toEqual(200);
-            expect(response.text).toEqual('d87981a169706f6c6963793a6964d87981a1612dd87981a1612d00');
+            expect(response.text).toEqual('d87981a149706f6c6963793a6964d87981a1412dd87981a1412d00');
         });
 
         it('Should return 200 and CBOR decoded JSON', async () => {
