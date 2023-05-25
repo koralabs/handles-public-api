@@ -1,4 +1,10 @@
-import { AssetNameLabel, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
+import {
+    AssetNameLabel,
+    IHandleMetadata,
+    IPersonalization,
+    IPersonalizationDesigner,
+    IPzDatum
+} from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
@@ -77,20 +83,48 @@ const buildPersonalization = async ({
     return personalization;
 };
 
-function isValidDatum(datumObject: any): boolean {
-    // TODO: validate datum
+export const isValidDatum = (datumObject: any): boolean => {
     const { constructor_0 } = datumObject;
+
+    const requiredMetadata: IHandleMetadata = {
+        name: '',
+        image: '',
+        mediaType: '',
+        og: 0,
+        og_number: 0,
+        rarity: '',
+        length: 0,
+        characters: '',
+        numeric_modifiers: '',
+        version: 0
+    };
+
+    const requiredProperties: IPzDatum = {
+        standard_image: '',
+        portal: '',
+        designer: '',
+        socials: '',
+        vendor: '',
+        default: 0,
+        last_update_address: '',
+        validated_by: ''
+    };
+
+    const hasAllRequiredKeys = (object: any, requiredObject: any) =>
+        Object.keys(object).length > 0 && Object.keys(object).every((key) => Object.keys(requiredObject).includes(key));
+
     if (
         constructor_0 &&
         Array.isArray(constructor_0) &&
         constructor_0.length === 3 &&
-        constructor_0[2].hasOwnProperty('constructor_0')
+        hasAllRequiredKeys(constructor_0[0], requiredMetadata) &&
+        hasAllRequiredKeys(constructor_0[2], requiredProperties)
     ) {
         return true;
     }
 
     return false;
-}
+};
 
 const processAssetReferenceToken = async ({
     assetName,
@@ -126,10 +160,10 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    // TODO: what do we do with the metadata?
     const { constructor_0: datumObject } = datumObjectConstructor;
     const metadata = datumObject[0] as IHandleMetadata;
-    const [personalizationDatum] = datumObject[2].constructor_0 as IPzDatum[];
+
+    const personalizationDatum: IPzDatum = datumObject[2];
 
     // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');

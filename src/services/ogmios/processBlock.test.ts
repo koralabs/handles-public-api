@@ -2,7 +2,7 @@ import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces'
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { processBlock } from './processBlock';
+import { isValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
@@ -410,5 +410,55 @@ describe('processBlock Tests', () => {
         });
 
         expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
+    });
+
+    describe('isValidDatum tests', () => {
+        it('should return false for invalid datum', () => {
+            const datum = {
+                constructor_0: [{}, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return false for minimal invalid datum', () => {
+            const datum = {
+                constructor_0: [{ a: 'a' }, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return true for valid datum', () => {
+            const datum = {
+                constructor_0: [
+                    {
+                        name: '',
+                        image: '',
+                        mediaType: '',
+                        og: 0,
+                        og_number: 0,
+                        rarity: '',
+                        length: 0,
+                        characters: '',
+                        numeric_modifiers: '',
+                        version: 0
+                    },
+                    1,
+                    {
+                        standard_image: '',
+                        portal: '',
+                        designer: '',
+                        socials: '',
+                        vendor: '',
+                        default: 0,
+                        last_update_address: '',
+                        validated_by: ''
+                    }
+                ]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeTruthy();
+        });
     });
 });
