@@ -17,14 +17,14 @@ describe('rewindChangesToSlot', () => {
             const handle = handlesFixture[key];
             const {
                 hex,
-                original_nft_image: image,
+                standard_image: image,
                 name,
-                og,
+                og_number,
                 updated_slot_number: slotNumber,
                 utxo,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og, slotNumber, utxo });
+            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo });
         }
 
         // set the slotHistoryIndex
@@ -98,6 +98,6 @@ describe('rewindChangesToSlot', () => {
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // should pull back the entire handle
-        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder_address: 'stake123' });
+        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake123' });
     });
 });

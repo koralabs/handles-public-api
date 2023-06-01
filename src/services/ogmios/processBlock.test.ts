@@ -1,8 +1,8 @@
-import { Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
-import { BlockTip, MetadatumAssetLabel, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
+import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { processBlock } from './processBlock';
+import { isValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
@@ -159,22 +159,22 @@ describe('processBlock Tests', () => {
     const expectedItem: Handle = {
         characters: 'letters,numbers',
         hex: hexName,
-        holder_address: 'some_stake1',
+        holder: 'some_stake1',
         length: 8,
         name,
-        nft_image: 'some_hash_test1234',
+        image: 'some_hash_test1234',
         utxo: 'utxo1#0',
         numeric_modifiers: '',
-        og: 1,
-        original_nft_image: 'some_hash_test1234',
+        og_number: 1,
+        standard_image: 'some_hash_test1234',
         rarity: Rarity.basic,
         resolved_addresses: { ada: 'addr123' },
         default_in_wallet: 'some_hdl',
-        profile_pic: 'some_hash_test1234',
-        background: 'some_hash_test1234',
+        pfp_image: 'some_hash_test1234',
+        bg_image: 'some_hash_test1234',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        hasDatum: false,
+        has_datum: false,
         amount: 1
     };
 
@@ -190,7 +190,7 @@ describe('processBlock Tests', () => {
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
-            og: 1,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -217,7 +217,7 @@ describe('processBlock Tests', () => {
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
-            og: 1,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
             datum
@@ -254,7 +254,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.SUB_STANDARD_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -267,10 +267,10 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
+            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
             image: '',
             name: handleName,
-            og: 0,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -278,7 +278,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.SUB_STANDARD_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -291,7 +291,7 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
+            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0'
@@ -300,7 +300,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 100 asset class tokens', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -311,7 +311,7 @@ describe('processBlock Tests', () => {
             txBlock: txBlock({
                 handleHexName,
                 isMint: false,
-                datum: 'd8799fa9426f6700446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674e6368617261637465725f74797065576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001d8799fa946686f6c6465725f5840616464725f74657374317171356e78737770666d6b6b3277307674746b61306171366134783064786567796c703034346a6167367a397a71707476783370686d582c3975647663656e77343537723637343261306533677768706c76376878676764723936636a73767476667836ff46706f7274616c404676656e646f72404764656661756c744566616c736547736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764862675f696d616765404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a314850497066705f696d616765404c637573746f6d5f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141ffff'
+                datum: 'd87983ab626f67f4696f675f6e756d62657200646e616d656c746573745f73635f3030303165696d6167657835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671416e7374616e646172645f696d6167657835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141666c656e6774680c667261726974796562617369636776657273696f6e01696d65646961547970656a696d6167652f6a7065676a63686172616374657273776c6574746572732c6e756d626572732c7370656369616c716e756d657269635f6d6f646966696572736001d87981aa6862675f696d61676560697066705f696d6167656066706f7274616c606864657369676e65727835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148506676656e646f72606764656661756c74f466686f6c6465727f7840616464725f74657374317171356e78737770666d6b6b3277307674746b61306171366134783064786567796c703034346a6167367a397a71707476783370686d782c3975647663656e77343537723637343261306533677768706c76376878676764723936636a73767476667836ff6976616c696461746564f567736f6369616c737835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244766b7376675f76657273696f6e01'
             }) as TxBlock,
             tip
         });
@@ -321,35 +321,40 @@ describe('processBlock Tests', () => {
             customImage: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
             hex: '000643b06275727269746f73',
             metadata: {
-                character_type: 'letters,numbers,special',
+                characters: 'letters,numbers,special',
                 image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
+                standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
                 length: 12,
                 mediaType: 'image/jpeg',
                 name: 'test_sc_0001',
                 numeric_modifiers: '',
-                og: 0,
+                og: false,
+                og_number: 0,
                 rarity: 'basic',
                 version: 1
             },
             name: 'burritos',
             personalization: {
-                nft_appearance: { test: 'data' },
+                designer: { test: 'data' },
                 reference_token: {
-                    datum: 'd8799fa9426f6700446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674e6368617261637465725f74797065576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001d8799fa946686f6c6465725f5840616464725f74657374317171356e78737770666d6b6b3277307674746b61306171366134783064786567796c703034346a6167367a397a71707476783370686d582c3975647663656e77343537723637343261306533677768706c76376878676764723936636a73767476667836ff46706f7274616c404676656e646f72404764656661756c744566616c736547736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764862675f696d616765404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a314850497066705f696d616765404c637573746f6d5f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141ffff',
+                    datum: 'd87983ab626f67f4696f675f6e756d62657200646e616d656c746573745f73635f3030303165696d6167657835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671416e7374616e646172645f696d6167657835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141666c656e6774680c667261726974796562617369636776657273696f6e01696d65646961547970656a696d6167652f6a7065676a63686172616374657273776c6574746572732c6e756d626572732c7370656369616c716e756d657269635f6d6f646966696572736001d87981aa6862675f696d61676560697066705f696d6167656066706f7274616c606864657369676e65727835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148506676656e646f72606764656661756c74f466686f6c6465727f7840616464725f74657374317171356e78737770666d6b6b3277307674746b61306171366134783064786567796c703034346a6167367a397a71707476783370686d782c3975647663656e77343537723637343261306533677768706c76376878676764723936636a73767476667836ff6976616c696461746564f567736f6369616c737835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244766b7376675f76657273696f6e01',
                     index: 0,
                     lovelace: 1,
                     tx_id: 'some_id'
                 },
-                social_links: { test: 'data' }
+                socials: { test: 'data' },
+                validated_by: undefined
             },
-            setDefault: 'false',
+            pfpImage: '',
+            bgImage: '',
+            setDefault: false,
             slotNumber: 0
         });
     });
 
     it('Should validate datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -372,7 +377,7 @@ describe('processBlock Tests', () => {
 
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -394,7 +399,7 @@ describe('processBlock Tests', () => {
     it('Should burn tokens', async () => {
         const slot = 1234;
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
         const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -405,5 +410,55 @@ describe('processBlock Tests', () => {
         });
 
         expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
+    });
+
+    describe('isValidDatum tests', () => {
+        it('should return false for invalid datum', () => {
+            const datum = {
+                constructor_0: [{}, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return false for minimal invalid datum', () => {
+            const datum = {
+                constructor_0: [{ a: 'a' }, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return true for valid datum', () => {
+            const datum = {
+                constructor_0: [
+                    {
+                        name: '',
+                        image: '',
+                        mediaType: '',
+                        og: 0,
+                        og_number: 0,
+                        rarity: '',
+                        length: 0,
+                        characters: '',
+                        numeric_modifiers: '',
+                        version: 0
+                    },
+                    1,
+                    {
+                        standard_image: '',
+                        portal: '',
+                        designer: '',
+                        socials: '',
+                        vendor: '',
+                        default: 0,
+                        last_update_address: '',
+                        validated_by: ''
+                    }
+                ]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeTruthy();
+        });
     });
 });

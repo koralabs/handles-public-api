@@ -1,31 +1,38 @@
-import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import {
+    AssetNameLabel,
+    IHandleMetadata,
+    IPersonalization,
+    IPersonalizationDesigner,
+    IPzDatum
+} from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,
     MetadataLabel,
-    MetadatumAssetLabel,
-    PersonalizationDatum,
     TxBlock,
     TxBlockBody,
     TxBody,
     ProcessAssetTokenInput,
-    BuildPersonalizationInput,
-    CIP68Metadata
+    BuildPersonalizationInput
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
 import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { decodeCborToJson } from '../../utils/cbor';
+import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
+import { portalSchema } from '../../utils/cbor/schema/portal';
+import { designerSchema } from '../../utils/cbor/schema/designer';
+import { socialsSchema } from '../../utils/cbor/schema/socials';
 
 const blackListedIpfsCids: string[] = [];
 
-const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
+const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: any }): Promise<any | undefined> => {
     if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
     const cid = link.split('ipfs://')[1];
-    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
+    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`, schema);
 };
 
 const buildPersonalization = async ({
@@ -35,10 +42,15 @@ const buildPersonalization = async ({
     lovelace,
     datumCbor
 }: BuildPersonalizationInput): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor } = personalizationDatum;
+    const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
 
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
-        [portal, designer, socials, vendor].map(getDataFromIPFSLink)
+        [
+            { link: portal, schema: portalSchema },
+            { link: designer, schema: designerSchema },
+            { link: socials, schema: socialsSchema },
+            { link: vendor }
+        ].map(getDataFromIPFSLink)
     );
 
     let personalization: IPersonalization = {
@@ -47,19 +59,20 @@ const buildPersonalization = async ({
             index,
             lovelace,
             datum: datumCbor
-        }
+        },
+        validated_by
     };
 
     if (ipfsDesigner) {
-        personalization.nft_appearance = ipfsDesigner;
+        personalization.designer = ipfsDesigner;
     }
 
     if (ipfsPortal) {
-        personalization.my_page = ipfsPortal;
+        personalization.portal = ipfsPortal;
     }
 
     if (ipfsSocials) {
-        personalization.social_links = ipfsSocials;
+        personalization.socials = ipfsSocials;
     }
 
     // add vendor settings
@@ -70,20 +83,48 @@ const buildPersonalization = async ({
     return personalization;
 };
 
-function isValidDatum(datumObject: any): boolean {
-    // TODO: validate datum
+export const isValidDatum = (datumObject: any): boolean => {
     const { constructor_0 } = datumObject;
+
+    const requiredMetadata: IHandleMetadata = {
+        name: '',
+        image: '',
+        mediaType: '',
+        og: 0,
+        og_number: 0,
+        rarity: '',
+        length: 0,
+        characters: '',
+        numeric_modifiers: '',
+        version: 0
+    };
+
+    const requiredProperties: IPzDatum = {
+        standard_image: '',
+        portal: '',
+        designer: '',
+        socials: '',
+        vendor: '',
+        default: 0,
+        last_update_address: '',
+        validated_by: ''
+    };
+
+    const hasAllRequiredKeys = (object: any, requiredObject: any) =>
+        Object.keys(object).length > 0 && Object.keys(object).every((key) => Object.keys(requiredObject).includes(key));
+
     if (
         constructor_0 &&
         Array.isArray(constructor_0) &&
         constructor_0.length === 3 &&
-        constructor_0[2].hasOwnProperty('constructor_0')
+        hasAllRequiredKeys(constructor_0[0], requiredMetadata) &&
+        hasAllRequiredKeys(constructor_0[2], requiredProperties)
     ) {
         return true;
     }
 
     return false;
-}
+};
 
 const processAssetReferenceToken = async ({
     assetName,
@@ -111,7 +152,7 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = await decodeCborToJson(datum);
+    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     if (!isValidDatum(datumObjectConstructor)) {
@@ -119,10 +160,10 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    // TODO: what do we do with the metadata?
     const { constructor_0: datumObject } = datumObjectConstructor;
-    const metadata = datumObject[0] as CIP68Metadata;
-    const [personalizationDatum] = datumObject[2].constructor_0 as PersonalizationDatum[];
+    const metadata = datumObject[0] as IHandleMetadata;
+
+    const personalizationDatum: IPzDatum = datumObject[2];
 
     // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');
@@ -139,10 +180,12 @@ const processAssetReferenceToken = async ({
         hex,
         name,
         personalization,
-        addresses: {}, // TODO: get addresses from personalization data
+        addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
-        setDefault: personalizationDatum.default ?? false,
-        customImage: personalizationDatum.custom_image,
+        setDefault: personalizationDatum.default === 1,
+        customImage: metadata.image,
+        pfpImage: personalizationDatum.pfp_image,
+        bgImage: personalizationDatum.bg_image,
         metadata
     });
 };
@@ -157,7 +200,7 @@ const processAssetClassToken = async ({
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_NFT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_222)) {
         await processAssetToken({
             assetName,
             slotNumber,
@@ -171,12 +214,12 @@ const processAssetClassToken = async ({
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.REFERENCE_NFT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_100)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_FT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_100)) {
         Logger.log(`FT token found ${assetName}. Not implemented yet`);
         return;
     }
@@ -211,10 +254,11 @@ const processAssetToken = async ({
     if (isMintTx) {
         const data = handleMetadata && handleMetadata[name];
         const image = data?.image ?? '';
-        const og = data?.core?.og ?? 0;
+        const og_number = data?.core?.og_number ?? 0;
+        const og = !!data?.core?.og;
         await HandleStore.saveMintedHandle({
             ...input,
-            og,
+            og_number,
             image
         });
     } else {
@@ -297,7 +341,7 @@ export const processBlock = async ({
                             isMintTx
                         };
 
-                        if (Object.values(MetadatumAssetLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                        if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
                         } else {
                             await processAssetToken(input);

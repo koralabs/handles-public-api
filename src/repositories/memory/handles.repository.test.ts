@@ -21,9 +21,9 @@ describe('MemoryHandlesRepository Tests', () => {
         const saves = handlesFixture.map(async (handle) => {
             const {
                 hex,
-                original_nft_image: image,
+                standard_image: image,
                 name,
-                og,
+                og_number,
                 utxo,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
@@ -34,7 +34,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 hex,
                 image,
                 name,
-                og,
+                og_number,
                 slotNumber,
                 utxo,
                 datum
@@ -149,7 +149,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 name: 'new-handle',
                 adaAddress: '',
                 utxo: '',
-                og: 0,
+                og_number: 0,
                 image: '',
                 slotNumber: 0,
                 datum: ''
@@ -221,15 +221,15 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
             const result = repo.getHandleStats();
             expect(result).toEqual({
-                buildingElapsed: '0:00',
-                currentBlockHash: '',
-                currentMemoryUsed: expect.any(Number),
-                currentSlot: 0,
-                handleCount: 3,
-                memorySize: 0,
-                ogmiosElapsed: '0:00',
-                percentageComplete: '0.00',
-                slotDate: expect.any(Date)
+                building_elapsed: '0:00',
+                current_block_hash: '',
+                current_memory_used: expect.any(Number),
+                current_slot: 0,
+                handle_count: 3,
+                memory_size: 0,
+                ogmios_elapsed: '0:00',
+                percentage_complete: '0.00',
+                slot_date: expect.any(Date)
             });
         });
     });
@@ -242,7 +242,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 hex: 'salsa-hex',
                 name: 'salsa',
                 adaAddress: 'addr1salsa',
-                og: 0,
+                og_number: 0,
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
@@ -259,7 +259,7 @@ describe('MemoryHandlesRepository Tests', () => {
             ]);
         });
 
-        it('should not get datum if hasDatum is false', async () => {
+        it('should not get datum if has_datum is false', async () => {
             const repo = new MemoryHandlesRepository();
             const result = await repo.getHandleDatumByName('barbacoa');
 

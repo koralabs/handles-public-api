@@ -631,10 +631,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/handles-public-api-interfaces@1.6.3":
-  version "1.6.3"
-  resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-1.6.3.tgz#40023db96e9be061a003e93fa76101f15bb02099"
-  integrity sha512-mo6xoypx6RQYncISLMakv/flLaUXQAOfit0h4hE5nNt6/HnUu/rKcAWb8Jrx/PlIJCQTWaqbxVbZjosPVbcAHg==
+"@koralabs/handles-public-api-interfaces@2.3.1":
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-2.3.1.tgz#bc9297a620d846bdd7a3ff123249d679e26aacef"
+  integrity sha512-1u5Sk+Zgp24GPqSLRipsvg11yM6zzrgR3SDiFF2E2mCFaa4wmlFlpJqp7cyB0Zj7YDCATXB2lkL8oC6hqmiWaQ==
 
 "@koralabs/kora-labs-common@^1.0.5":
   version "1.0.8"
@@ -1373,6 +1373,11 @@ body-parser@1.20.1:
     raw-body "2.5.1"
     type-is "~1.6.18"
     unpipe "1.0.0"
+
+boolean@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/boolean/-/boolean-3.2.0.tgz#9e5294af4e98314494cbb17979fa54ca159f116b"
+  integrity sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==
 
 boolify@^1.0.1:
   version "1.0.1"

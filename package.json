@@ -56,10 +56,11 @@
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
-    "@koralabs/handles-public-api-interfaces": "1.6.3",
+    "@koralabs/handles-public-api-interfaces": "2.3.1",
     "@koralabs/kora-labs-common": "^1.0.5",
     "@koralabs/protected-words": "^1.0.0",
     "bech32": "^2.0.0",
+    "boolean": "^3.2.0",
     "cbor": "^8.1.0",
     "cors": "^2.8.5",
     "cross-fetch": "^3.1.5",
