@@ -111,7 +111,7 @@ export const isValidDatum = (datumObject: any): boolean => {
     };
 
     const hasAllRequiredKeys = (object: any, requiredObject: any) =>
-        Object.keys(object).length > 0 && Object.keys(object).every((key) => Object.keys(requiredObject).includes(key));
+        Object.keys(requiredObject).every((key) => Object.keys(object).includes(key));
 
     if (
         constructor_0 &&
@@ -219,7 +219,7 @@ const processAssetClassToken = async ({
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_100)) {
+    if (assetName.includes(AssetNameLabel.LABEL_333)) {
         Logger.log(`FT token found ${assetName}. Not implemented yet`);
         return;
     }
@@ -299,6 +299,10 @@ export const processBlock = async ({
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
+        const policyMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.POLICY]
+            ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.POLICY])
+            : null;
+
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
@@ -324,6 +328,11 @@ export const processBlock = async ({
                         }
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
+                        if (isMintTx && policyMetadata) {
+                            // Don't save nameless token.
+                            return;
+                        }
+
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
                         const {
                             address,

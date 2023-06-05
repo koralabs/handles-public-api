@@ -2,7 +2,7 @@ import { IPzDatum } from '@koralabs/handles-public-api-interfaces';
 
 export enum MetadataLabel {
     'NFT' = 721,
-    'HANDLE_PERSONALIZATION' = 5508
+    'POLICY' = 777
 }
 
 export interface HandleOnChainData {
@@ -60,6 +60,16 @@ export interface TxMetadata {
                 }[];
             };
             '8413'?: {
+                map: {
+                    k: {
+                        string: string; // policyId
+                    };
+                    v: {
+                        [k: string]: unknown;
+                    };
+                }[];
+            };
+            '777'?: {
                 map: {
                     k: {
                         string: string; // policyId

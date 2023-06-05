@@ -429,6 +429,39 @@ describe('processBlock Tests', () => {
             expect(result).toBeFalsy();
         });
 
+        it('should return false missing one required field', () => {
+            const datum = {
+                constructor_0: [
+                    {
+                        name: '',
+                        image: '',
+                        mediaType: '',
+                        og: 0,
+                        og_number: 0,
+                        rarity: '',
+                        length: 0,
+                        characters: '',
+                        numeric_modifiers: '',
+                        version: 0
+                    },
+                    1,
+                    {
+                        // standard_image: '',
+                        portal: '',
+                        designer: '',
+                        socials: '',
+                        vendor: '',
+                        default: false,
+                        last_update_address: '',
+                        validated_by: ''
+                    }
+                ]
+            };
+
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
         it('should return true for valid datum', () => {
             const datum = {
                 constructor_0: [
@@ -451,9 +484,10 @@ describe('processBlock Tests', () => {
                         designer: '',
                         socials: '',
                         vendor: '',
-                        default: 0,
+                        default: false,
                         last_update_address: '',
-                        validated_by: ''
+                        validated_by: '',
+                        bg_image: ''
                     }
                 ]
             };
