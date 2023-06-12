@@ -252,10 +252,18 @@ const processAssetToken = async ({
     };
 
     if (isMintTx) {
-        const data = handleMetadata && handleMetadata[name];
-        const image = data?.image ?? '';
-        const og_number = data?.core?.og_number ?? 0;
-        const og = !!data?.core?.og;
+        let image = '';
+        let og_number = 0;
+        if (assetName.includes(AssetNameLabel.LABEL_222)) {
+            const data = handleMetadata && handleMetadata[hex] as unknown as IHandleMetadata;
+            og_number = data?.og_number ?? 0;
+            image = data?.image ?? '';
+        } else {
+            const data = handleMetadata && handleMetadata[name]
+            og_number = data?.core?.og_number ?? 0;
+            image = data?.image ?? '';
+        }
+
         await HandleStore.saveMintedHandle({
             ...input,
             og_number,
@@ -293,6 +301,17 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
+        
+        // Look for burn transactions
+        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
+        for (let i = 0; i < mintAssets.length; i++) {
+            const [assetName, value] = mintAssets[i];
+            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
+                const { name } = getHandleNameFromAssetName(assetName);
+                await HandleStore.burnHandle(name, currentSlot);
+            }
+        }
+
         // get metadata so we can use it later
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
@@ -357,16 +376,6 @@ export const processBlock = async ({
                         }
                     }
                 }
-            }
-        }
-
-        // Look for burn transactions
-        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
-        for (let i = 0; i < mintAssets.length; i++) {
-            const [assetName, value] = mintAssets[i];
-            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
-                const { name } = getHandleNameFromAssetName(assetName);
-                await HandleStore.burnHandle(name, currentSlot);
             }
         }
     }
