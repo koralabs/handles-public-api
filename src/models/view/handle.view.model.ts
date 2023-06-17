@@ -48,7 +48,7 @@ export class HandleViewModel {
         this.updated_slot_number = handle.updated_slot_number;
         this.has_datum = handle.has_datum;
         this.svg_version = handle.svg_version;
-        this.image_hash = handle.image_hash.replace('0x', '');
-        this.standard_image_hash = handle.standard_image_hash.replace('0x', '');
+        this.image_hash = handle.image_hash?.replace('0x', '');
+        this.standard_image_hash = handle.standard_image_hash?.replace('0x', '');
     }
 }

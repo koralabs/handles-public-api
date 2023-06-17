@@ -33,7 +33,7 @@ class JsonToDatumObject {
 
     encodeCBOR = (encoder: any) => {
         if (Array.isArray(this.json)) {
-            return encoder.pushAny(this.json);
+            return cbor.Encoder.encodeIndefinite(encoder, this.json)
         } else if (typeof this.json === 'object') {
             if (this.json !== null) {
                 const fieldsMap = new Map();

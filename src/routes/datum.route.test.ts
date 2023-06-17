@@ -73,7 +73,7 @@ describe('Datum Routes Test', () => {
         ];
 
         const cbor =
-            '82a245636f6c6f724300000047646973706c6179447461636fa245636f6c6f7243ffffff47646973706c6179476275727269746f';
+            '9fa245636f6c6f724300000047646973706c6179447461636fa245636f6c6f7243ffffff47646973706c6179476275727269746fff';
 
         it('Should return 200 and hex encoded CBOR', async () => {
             const response = await request(app?.getServer())
