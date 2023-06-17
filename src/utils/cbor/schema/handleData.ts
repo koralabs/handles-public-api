@@ -19,7 +19,8 @@ export const handleDatumSchema = {
             vendor: 'string',
             default: 'bool',
             trial: 'bool',
-            nsfw: 'bool'
+            nsfw: 'bool',
+            svg_version: 'string',
         }
     }
 };

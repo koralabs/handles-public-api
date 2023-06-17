@@ -49,7 +49,10 @@ describe('HandleStore tests', () => {
                 og_number,
                 utxo,
                 updated_slot_number: slotNumber,
-                resolved_addresses: { ada: adaAddress }
+                resolved_addresses: { ada: adaAddress },
+                image_hash,
+                standard_image_hash,
+                svg_version
             } = handle;
             await HandleStore.saveMintedHandle({
                 adaAddress,
@@ -59,7 +62,9 @@ describe('HandleStore tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
-                datum: `some_datum_${key}`
+                datum: `some_datum_${key}`,
+                image_hash: standard_image_hash,
+                svg_version
             });
         }
     });
@@ -212,9 +217,13 @@ describe('HandleStore tests', () => {
                 length: 8,
                 name: 'barbacoa',
                 image: '',
+                image_hash: '',
+                svg_version: '1.0.0',
+                standard_image_hash: '',
                 numeric_modifiers: '',
                 og_number: 0,
                 standard_image: '',
+
                 pfp_image: '',
                 rarity: 'basic',
                 resolved_addresses: { ada: '123' },
@@ -244,7 +253,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                datum: 'datum123'
+                datum: 'datum123',
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const handle = HandleStore.get('nachos');
@@ -260,9 +271,12 @@ describe('HandleStore tests', () => {
                 length: 6,
                 name: 'nachos',
                 image: 'ipfs://123',
+                image_hash: '0x123',
                 numeric_modifiers: '',
                 og_number: 0,
                 standard_image: 'ipfs://123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
                 pfp_image: '',
                 rarity: 'common',
                 resolved_addresses: { ada: 'addr123' },
@@ -285,10 +299,7 @@ describe('HandleStore tests', () => {
         it('Should find existing handle and add personalization', async () => {
             const personalizationData: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xtodo',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xtodo'
                 },
                 reference_token: {
                     tx_id: '',
@@ -317,7 +328,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                svgVersion: '1.0.0',
+                customImageHash: '0xtodo',
+                standardImageHash: '0x123',
+                customImage: 'ipfs://123'
             });
 
             await HandleStore.saveMintedHandle({
@@ -327,7 +342,9 @@ describe('HandleStore tests', () => {
                 og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
-                slotNumber: 100
+                slotNumber: 100,
+                image_hash: '0xtodo',
+                svg_version: '1.0.0'
             });
 
             const handle = HandleStore.get('chimichanga');
@@ -375,7 +392,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                datum: 'datum123'
+                datum: 'datum123',
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             await HandleStore.saveMintedHandle({
@@ -386,7 +405,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo124#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                datum: 'datum123'
+                datum: 'datum123',
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const handle = HandleStore.get(sushiHandle);
@@ -403,7 +424,9 @@ describe('HandleStore tests', () => {
                 og_number: 0,
                 utxo: 'utxo123#0',
                 image: 'ipfs://123',
-                slotNumber: 100
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -414,10 +437,7 @@ describe('HandleStore tests', () => {
                     bg_color: '0xtodo',
                     bg_border_color: '0xtodo',
                     qr_bg_color: '0xtodo',
-                    socials: [],
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    socials: []
                 },
                 reference_token: {
                     tx_id: '',
@@ -449,7 +469,10 @@ describe('HandleStore tests', () => {
                     og: 0
                 },
                 pfpImage: 'todo',
-                bgImage: 'todo'
+                bgImage: 'todo',
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0'
             });
 
             const handle = HandleStore.get('nacho-cheese');
@@ -464,10 +487,7 @@ describe('HandleStore tests', () => {
                     pfp_border_color: '0xtodo',
                     qr_bg_color: '0xtodo',
                     socials: [],
-                    text_ribbon_colors: ['0xtodo'],
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo',
-                    svg_version: '1.0.0'
+                    text_ribbon_colors: ['0xtodo']
                 },
                 reference_token: {
                     tx_id: '',
@@ -498,10 +518,7 @@ describe('HandleStore tests', () => {
                                         pfp_border_color: '0xtodo',
                                         qr_bg_color: '0xtodo',
                                         socials: [],
-                                        text_ribbon_colors: ['0xtodo'],
-                                        image_hash: '0xtodo',
-                                        standard_image_hash: '0xtodo',
-                                        svg_version: '1.0.0'
+                                        text_ribbon_colors: ['0xtodo']
                                     },
                                     reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                     validated_by: 'todo'
@@ -532,10 +549,7 @@ describe('HandleStore tests', () => {
                     bg_color: '0xtodo',
                     bg_border_color: '0xtodo',
                     qr_bg_color: '0xtodo',
-                    socials: [],
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    socials: []
                 },
                 reference_token: {
                     tx_id: '',
@@ -566,7 +580,11 @@ describe('HandleStore tests', () => {
                     og: 0
                 },
                 pfpImage: 'todo',
-                bgImage: 'todo'
+                bgImage: 'todo',
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ifps://123'
             });
 
             expect(saveSpy).toHaveBeenCalledWith({
@@ -582,9 +600,12 @@ describe('HandleStore tests', () => {
                     length: 10,
                     name: 'sour-cream',
                     image: 'ipfs://123',
+                    image_hash: '0x123',
                     numeric_modifiers: '',
                     og_number: 0,
                     standard_image: 'ipfs://123',
+                    svg_version: '1.0.0',
+                    standard_image_hash: '0x123',
                     personalization: personalizationUpdates,
                     pfp_image: '',
                     rarity: 'basic',
@@ -606,16 +627,15 @@ describe('HandleStore tests', () => {
                 og_number: 0,
                 utxo: 'utxo123#0',
                 image: '',
-                slotNumber: 100
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const personalizationUpdates: IPersonalization = {
                 designer: {
                     font_shadow_color: '0x000',
-                    text_ribbon_colors: ['0xCCC'],
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    text_ribbon_colors: ['0xCCC']
                 },
                 reference_token: {
                     tx_id: '',
@@ -644,7 +664,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                svgVersion: '1.0.0',
+                customImageHash: '0xtodo',
+                standardImageHash: '0x123',
+                customImage: 'todo',
             });
 
             const handle = HandleStore.get(handleName);
@@ -680,7 +704,9 @@ describe('HandleStore tests', () => {
                 og_number: 0,
                 utxo: 'utxo123#0',
                 image: '',
-                slotNumber: 100
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -692,10 +718,7 @@ describe('HandleStore tests', () => {
                 ],
                 designer: {
                     font_shadow_color: '0x000',
-                    text_ribbon_colors: ['0xCCC'],
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    text_ribbon_colors: ['0xCCC']
                 },
                 reference_token: {
                     tx_id: '',
@@ -724,7 +747,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const handle = HandleStore.get(handleName);
@@ -733,10 +760,7 @@ describe('HandleStore tests', () => {
 
             const newPersonalizationUpdates: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xEEE',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xEEE'
                 },
                 reference_token: {
                     tx_id: '',
@@ -765,7 +789,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const updatedHandle = HandleStore.get(handleName);
@@ -776,10 +804,7 @@ describe('HandleStore tests', () => {
 
             const PersonalizationUpdatesWithDefaultWalletChange: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0x111',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0x111'
                 },
                 reference_token: {
                     tx_id: '',
@@ -808,7 +833,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const finalHandle = HandleStore.get(handleName);
@@ -831,12 +860,10 @@ describe('HandleStore tests', () => {
                     'pork-belly': {
                         new: {
                             default_in_wallet: 'pork-belly',
+                            image: 'ipfs://123',
                             personalization: {
                                 designer: {
                                     font_shadow_color: '0x000',
-                                    image_hash: '0xtodo',
-                                    standard_image_hash: '0xtodo',
-                                    svg_version: '1.0.0',
                                     text_ribbon_colors: ['0xCCC']
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
@@ -845,7 +872,7 @@ describe('HandleStore tests', () => {
                             },
                             updated_slot_number: 200
                         },
-                        old: { default_in_wallet: 'taco', personalization: undefined, updated_slot_number: 100 }
+                        old: { default_in_wallet: 'taco', image: '', personalization: undefined, updated_slot_number: 100 }
                     }
                 }
             ]);
@@ -866,9 +893,6 @@ describe('HandleStore tests', () => {
                             personalization: {
                                 designer: {
                                     font_shadow_color: '0x000',
-                                    image_hash: '0xtodo',
-                                    standard_image_hash: '0xtodo',
-                                    svg_version: '1.0.0',
                                     text_ribbon_colors: ['0xCCC']
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
@@ -895,10 +919,7 @@ describe('HandleStore tests', () => {
                             default_in_wallet: 'pork-belly',
                             personalization: {
                                 designer: {
-                                    font_shadow_color: '0xEEE',
-                                    image_hash: '0xtodo',
-                                    standard_image_hash: '0xtodo',
-                                    svg_version: '1.0.0'
+                                    font_shadow_color: '0xEEE'
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 validated_by: 'todo'
@@ -913,10 +934,7 @@ describe('HandleStore tests', () => {
         it('should save default handle properly', async () => {
             const tacoPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xaaa',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xaaa'
                 },
                 reference_token: {
                     tx_id: '',
@@ -945,7 +963,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const tacoHandle = HandleStore.get('taco');
@@ -953,10 +975,7 @@ describe('HandleStore tests', () => {
 
             const burritoPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xaaa',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xaaa'
                 },
                 reference_token: {
                     tx_id: '',
@@ -985,7 +1004,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const burritoHandle = HandleStore.get('burrito');
@@ -993,10 +1016,7 @@ describe('HandleStore tests', () => {
 
             const barbacoaPzUpdate: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xaaa',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xaaa'
                 },
                 reference_token: {
                     tx_id: '',
@@ -1025,7 +1045,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const barbacoaHandle = HandleStore.get('barbacoa');
@@ -1033,10 +1057,7 @@ describe('HandleStore tests', () => {
 
             const tacoPzUpdate2: IPersonalization = {
                 designer: {
-                    font_shadow_color: '0xaaa',
-                    svg_version: '1.0.0',
-                    image_hash: '0xtodo',
-                    standard_image_hash: '0xtodo'
+                    font_shadow_color: '0xaaa'
                 },
                 reference_token: {
                     tx_id: '',
@@ -1065,7 +1086,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                }
+                },
+                customImageHash: '0x123',
+                standardImageHash: '0x123',
+                svgVersion: '1.0.0',
+                customImage: 'ipfs://123'
             });
 
             const tacoHandle2 = HandleStore.get('taco');
@@ -1103,7 +1128,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo_salsa1#0',
                 image: 'ipfs://123',
                 slotNumber: 100,
-                datum: 'a2datum_salsa'
+                datum: 'a2datum_salsa',
+                image_hash: '0x123',
+                svg_version: '1.0.0'
             });
 
             const existingHandle = HandleStore.get(handleName);
@@ -1130,6 +1157,9 @@ describe('HandleStore tests', () => {
                 length: 5,
                 name: 'salsa',
                 image: 'ipfs://123',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
                 numeric_modifiers: '',
                 og_number: 0,
                 standard_image: 'ipfs://123',

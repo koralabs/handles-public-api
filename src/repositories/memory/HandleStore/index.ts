@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 16;
+    static storageSchemaVersion = 17;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -263,8 +263,10 @@ export class HandleStore {
         datum,
         amount = 1,
         bg_image = '',
-        default_in_wallet = '',
         pfp_image = '',
+        default_in_wallet = '',
+        svg_version = '',
+        image_hash = '',
         personalization
     }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
@@ -281,7 +283,9 @@ export class HandleStore {
             },
             og_number,
             standard_image: image,
+            standard_image_hash: image_hash,
             image: image,
+            image_hash: image_hash,
             bg_image,
             default_in_wallet,
             pfp_image,
@@ -290,7 +294,8 @@ export class HandleStore {
             has_datum: !!datum,
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
             personalization,
-            amount
+            amount,
+            svg_version
         };
 
         return newHandle;
@@ -409,6 +414,9 @@ export class HandleStore {
         slotNumber,
         setDefault,
         customImage,
+        customImageHash,
+        standardImageHash,
+        svgVersion,
         pfpImage,
         bgImage,
         metadata
@@ -425,8 +433,10 @@ export class HandleStore {
                 utxo: '', // utxo will come from the 222 token,
                 og_number,
                 image,
+                image_hash: customImageHash,
                 personalization,
-                default_in_wallet: setDefault ? name : ''
+                default_in_wallet: setDefault ? name : '',
+                svg_version: svgVersion
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -442,6 +452,8 @@ export class HandleStore {
         const updatedHandle: Handle = {
             ...existingHandle,
             image: customImage ?? '',
+            image_hash: customImageHash,
+            standard_image_hash: standardImageHash,
             bg_image: bgImage ?? '',
             pfp_image: pfpImage ?? '',
             updated_slot_number: slotNumber,
@@ -450,7 +462,8 @@ export class HandleStore {
                 ...addresses
             },
             default_in_wallet: setDefault ? name : '',
-            personalization
+            personalization,
+            svg_version: svgVersion
         };
 
         await HandleStore.save({

@@ -27,7 +27,9 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
-                datum
+                datum,
+                image_hash,
+                svg_version
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -37,7 +39,9 @@ describe('MemoryHandlesRepository Tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
-                datum
+                datum,
+                image_hash,
+                svg_version
             });
         });
         await Promise.all(saves);
@@ -152,7 +156,9 @@ describe('MemoryHandlesRepository Tests', () => {
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
-                datum: ''
+                datum: '',
+                image_hash: '',
+                svg_version: ''
             });
             const handles = [...handlesFixture, newHandle];
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
@@ -246,7 +252,9 @@ describe('MemoryHandlesRepository Tests', () => {
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
-                datum
+                datum,
+                image_hash: '',
+                svg_version: ''
             };
             await Promise.all([
                 HandleStore.saveMintedHandle(saveHandleInput),

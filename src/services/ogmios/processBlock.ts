@@ -107,7 +107,12 @@ export const isValidDatum = (datumObject: any): boolean => {
         vendor: '',
         default: 0,
         last_update_address: '',
-        validated_by: ''
+        validated_by: '',
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '',
+        agreed_terms: '',
+        migrate_sig_required: 0
     };
 
     const hasAllRequiredKeys = (object: any, requiredObject: any) =>
@@ -125,6 +130,22 @@ export const isValidDatum = (datumObject: any): boolean => {
 
     return false;
 };
+
+const buildPersonalizationData = async (datum: string) => {
+    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
+    const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+
+    if (!isValidDatum(datumObjectConstructor)) return;
+
+    const { constructor_0: datumObject } = datumObjectConstructor;
+    const metadata = datumObject[0] as IHandleMetadata;
+    const personalizationDatum: IPzDatum = datumObject[2];
+
+    return {
+        metadata,
+        personalizationDatum
+    }
+}
 
 const processAssetReferenceToken = async ({
     assetName,
@@ -152,18 +173,13 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
-    const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
-
-    if (!isValidDatum(datumObjectConstructor)) {
-        Logger.log(`invalid datum for reference token ${hex}`);
+    const pzData = await buildPersonalizationData(datum);
+    if (!pzData) {
+        Logger.log(`invalid datum for reference token ${hex}`)
         return;
-    }
+    };
 
-    const { constructor_0: datumObject } = datumObjectConstructor;
-    const metadata = datumObject[0] as IHandleMetadata;
-
-    const personalizationDatum: IPzDatum = datumObject[2];
+    const { metadata, personalizationDatum } = pzData;
 
     // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');
@@ -186,7 +202,10 @@ const processAssetReferenceToken = async ({
         customImage: metadata.image,
         pfpImage: personalizationDatum.pfp_image,
         bgImage: personalizationDatum.bg_image,
-        metadata
+        metadata,
+        customImageHash: personalizationDatum.image_hash,
+        standardImageHash: personalizationDatum.standard_image_hash,
+        svgVersion: personalizationDatum.svg_version
     });
 };
 
@@ -254,6 +273,7 @@ const processAssetToken = async ({
     if (isMintTx) {
         let image = '';
         let og_number = 0;
+
         if (assetName.includes(AssetNameLabel.LABEL_222)) {
             const data = handleMetadata && handleMetadata[hex] as unknown as IHandleMetadata;
             og_number = data?.og_number ?? 0;
@@ -350,6 +370,10 @@ export const processBlock = async ({
                         if (isMintTx && policyMetadata) {
                             // Don't save nameless token.
                             return;
+                        }
+
+                        if (assetName.includes('746573742d73632d36313436')) {
+                            console.log('STOP');
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;

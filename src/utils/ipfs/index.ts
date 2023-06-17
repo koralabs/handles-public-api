@@ -10,8 +10,12 @@ export const decodeCborFromIPFSFile = async (url: string, schema?: any): Promise
             try {
                 const cbor = Buffer.from(buff).toString('hex');
                 const json = await decodeCborToJson(cbor, schema);
-                const [data] = json.constructor_0;
-                return data;
+                if (json.hasOwnProperty('constructor_0')) {
+                    const [data] = json.constructor_0;
+                    return data;
+                }
+                
+                return json;
             } catch (error: any) {
                 Logger.log({
                     message: `Error parsing json from ${url} with error ${error.message}`,

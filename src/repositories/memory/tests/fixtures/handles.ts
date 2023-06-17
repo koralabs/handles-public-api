@@ -23,7 +23,10 @@ export const handlesFixture: Handle[] = [
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
         has_datum: false,
-        amount: 1
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     },
     {
         hex: 'burrito-hex',
@@ -46,7 +49,10 @@ export const handlesFixture: Handle[] = [
         created_slot_number: Date.now() + 10,
         updated_slot_number: Date.now() + 10,
         has_datum: false,
-        amount: 1
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     },
     {
         hex: 'taco-hex',
@@ -69,7 +75,10 @@ export const handlesFixture: Handle[] = [
         created_slot_number: Date.now() + 20,
         updated_slot_number: Date.now() + 20,
         has_datum: false,
-        amount: 1
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     }
 ];
 

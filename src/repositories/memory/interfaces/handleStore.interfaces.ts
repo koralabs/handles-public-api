@@ -34,8 +34,10 @@ export interface SaveMintingTxInput {
     adaAddress: string;
     og_number: number;
     image: string;
+    image_hash?: string;
     slotNumber: number;
     utxo: string;
+    svg_version?: string;
     bg_image?: string;
     default_in_wallet?: string;
     pfp_image?: string;
@@ -61,7 +63,10 @@ export interface SavePersonalizationInput {
         [chain: string]: string;
     };
     setDefault: boolean;
-    customImage?: string;
+    customImage: string;
+    customImageHash: string;
+    standardImageHash: string;
+    svgVersion: string;
     pfpImage?: string;
     bgImage?: string;
     metadata: IHandleMetadata;

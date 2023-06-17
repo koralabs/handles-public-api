@@ -21,7 +21,10 @@ export const ogHandles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: 'og2-hex',
@@ -43,7 +46,10 @@ export const ogHandles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: 'og3-hex',
@@ -65,7 +71,10 @@ export const ogHandles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     }
 ];
 
@@ -90,7 +99,10 @@ export const handlesWithDifferentLengths: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '10-hex',
@@ -112,7 +124,10 @@ export const handlesWithDifferentLengths: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '1000-hex',
@@ -134,7 +149,10 @@ export const handlesWithDifferentLengths: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     }
 ];
 
@@ -159,7 +177,10 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '11-hex',
@@ -181,7 +202,10 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now() + 10,
         updated_slot_number: Date.now() + 10,
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '12-hex',
@@ -203,7 +227,10 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now() + 20,
         updated_slot_number: Date.now() + 20,
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     }
 ];
 
@@ -228,7 +255,10 @@ export const handles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '10-hex',
@@ -250,7 +280,10 @@ export const handles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     },
     {
         hex: '12-hex',
@@ -272,6 +305,9 @@ export const handles: IHandle[] = [
         bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        has_datum: false
+        has_datum: false,
+        image_hash: 'image-hash',
+        standard_image_hash: 'standard-image-hash',
+        svg_version: '1.0.0'
     }
 ];

@@ -1,4 +1,6 @@
 export const designerSchema = {
+    bg_image: 'string',
+    pfp_image: 'string',
     svg_version: 'string',
     qr_link: 'string',
     qr_inner_eye: 'string',

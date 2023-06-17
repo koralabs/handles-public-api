@@ -18,13 +18,18 @@ describe('rewindChangesToSlot', () => {
             const {
                 hex,
                 standard_image: image,
+                image_hash,
+                standard_image_hash,
+                svg_version,
                 name,
                 og_number,
                 updated_slot_number: slotNumber,
                 utxo,
                 resolved_addresses: { ada: adaAddress }
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo });
+            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo,
+                image_hash: standard_image_hash,
+                svg_version });
         }
 
         // set the slotHistoryIndex
