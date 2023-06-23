@@ -65,7 +65,7 @@ jest.mock('../ioc', () => ({
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
                 if (handleName === 'burrito') {
-                    return 'd87981a244736f6d65a14477656c70a1457468696e674572696768744768616e646c657381a242796f4368657943756d6d4479656168';
+                    return 'd87981a26768616e646c657381a263756d6d647965616862796f6368657964736f6d65a16477656c70a1657468696e67657269676874';
                 }
 
                 return `${handleName}_datum`;

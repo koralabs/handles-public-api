@@ -10,8 +10,8 @@ export enum AddressType {
 }
 
 export enum StakeAddressType {
-    Script = 'f1',
-    Key = 'e1'
+    Script = 'f',
+    Key = 'e'
 }
 
 export const getPaymentAddressType = (headerByte: number): AddressType => {
@@ -29,7 +29,7 @@ export const getPaymentAddressType = (headerByte: number): AddressType => {
 
 export const decodeAddress = (address: string): string | null => {
     try {
-        const addressWords = bech32.decode(address, 104);
+        const addressWords = bech32.decode(address, address.length);
         const payload = bech32.fromWords(addressWords.words);
         const addressDecoded = `${Buffer.from(payload).toString('hex')}`;
         return addressDecoded;
@@ -75,14 +75,17 @@ export const buildStakeKey = (address: string): string | null => {
         const [c] = decoded;
         const parsedChar = parseInt(c);
 
-        const delegationType = getDelegationAddressType(parsedChar);
+        const isTestnet = address.startsWith('addr_test');
+        const prefix = isTestnet ? 'stake_test' : 'stake';
+
+        const delegationType = `${getDelegationAddressType(parsedChar)}${isTestnet ? '0' : '1'}`;
 
         // stake part of the address is the last 56 bytes
         const stakeAddressDecoded = delegationType + decoded.substr(decoded.length - 56);
         const stakeAddress = bech32.encode(
-            'stake',
+            prefix,
             bech32.toWords(Uint8Array.from(Buffer.from(stakeAddressDecoded, 'hex'))),
-            104
+            54 + prefix.length
         );
 
         return stakeAddress;

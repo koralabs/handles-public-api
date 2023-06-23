@@ -2,10 +2,10 @@ import { IHandle } from '@koralabs/handles-public-api-interfaces';
 
 const sortOGHandle = (handles: IHandle[]): IHandle | null => {
     // filter by OG
-    const ogHandles = handles.filter((handle) => handle.og);
+    const ogHandles = handles.filter((handle) => handle.og_number);
     if (ogHandles.length > 0) {
         // sort by the OG number
-        ogHandles.sort((a, b) => a.og - b.og);
+        ogHandles.sort((a, b) => a.og_number - b.og_number);
         return ogHandles[0];
     }
 

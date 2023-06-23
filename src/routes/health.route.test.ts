@@ -9,15 +9,15 @@ jest.mock('../services/ogmios/ogmios.service');
 
 let percentage: string = '';
 const getStats = (): IHandleStats => ({
-    percentageComplete: percentage,
-    currentMemoryUsed: 0,
-    memorySize: 0,
-    ogmiosElapsed: '',
-    buildingElapsed: '',
-    slotDate: new Date(),
-    handleCount: 0,
-    currentSlot: 0,
-    currentBlockHash: ''
+    percentage_complete: percentage,
+    current_memory_used: 0,
+    memory_size: 0,
+    ogmios_elapsed: '',
+    building_elapsed: '',
+    slot_date: new Date(),
+    handle_count: 0,
+    current_slot: 0,
+    current_block_hash: ''
 });
 
 jest.mock('../ioc', () => ({
@@ -109,15 +109,15 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: null,
                 stats: {
-                    buildingElapsed: expect.any(String),
-                    currentBlockHash: expect.any(String),
-                    currentMemoryUsed: expect.any(Number),
-                    currentSlot: expect.any(Number),
-                    memorySize: expect.any(Number),
-                    handleCount: expect.any(Number),
-                    ogmiosElapsed: expect.any(String),
-                    percentageComplete: expect.any(String),
-                    slotDate: expect.any(String)
+                    building_elapsed: expect.any(String),
+                    current_block_hash: expect.any(String),
+                    current_memory_used: expect.any(Number),
+                    current_slot: expect.any(Number),
+                    memory_size: expect.any(Number),
+                    handle_count: expect.any(Number),
+                    ogmios_elapsed: expect.any(String),
+                    percentage_complete: expect.any(String),
+                    slot_date: expect.any(String)
                 }
             });
         });
@@ -132,15 +132,15 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: ogmiosResult,
                 stats: {
-                    buildingElapsed: expect.any(String),
-                    currentBlockHash: expect.any(String),
-                    currentMemoryUsed: expect.any(Number),
-                    currentSlot: expect.any(Number),
-                    memorySize: expect.any(Number),
-                    handleCount: expect.any(Number),
-                    ogmiosElapsed: expect.any(String),
-                    percentageComplete: expect.any(String),
-                    slotDate: expect.any(String)
+                    building_elapsed: expect.any(String),
+                    current_block_hash: expect.any(String),
+                    current_memory_used: expect.any(Number),
+                    current_slot: expect.any(Number),
+                    memory_size: expect.any(Number),
+                    handle_count: expect.any(Number),
+                    ogmios_elapsed: expect.any(String),
+                    percentage_complete: expect.any(String),
+                    slot_date: expect.any(String)
                 },
                 status: 'ogmios_behind'
             });
@@ -156,15 +156,15 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: ogmiosResult,
                 stats: {
-                    buildingElapsed: expect.any(String),
-                    currentBlockHash: expect.any(String),
-                    currentMemoryUsed: expect.any(Number),
-                    currentSlot: expect.any(Number),
-                    memorySize: expect.any(Number),
-                    handleCount: expect.any(Number),
-                    ogmiosElapsed: expect.any(String),
-                    percentageComplete: expect.any(String),
-                    slotDate: expect.any(String)
+                    building_elapsed: expect.any(String),
+                    current_block_hash: expect.any(String),
+                    current_memory_used: expect.any(Number),
+                    current_slot: expect.any(Number),
+                    memory_size: expect.any(Number),
+                    handle_count: expect.any(Number),
+                    ogmios_elapsed: expect.any(String),
+                    percentage_complete: expect.any(String),
+                    slot_date: expect.any(String)
                 },
                 status: 'storage_behind'
             });
@@ -182,15 +182,15 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: ogmiosResult,
                 stats: {
-                    buildingElapsed: expect.any(String),
-                    currentBlockHash: expect.any(String),
-                    currentMemoryUsed: expect.any(Number),
-                    currentSlot: expect.any(Number),
-                    memorySize: expect.any(Number),
-                    handleCount: expect.any(Number),
-                    ogmiosElapsed: expect.any(String),
-                    percentageComplete: expect.any(String),
-                    slotDate: expect.any(String)
+                    building_elapsed: expect.any(String),
+                    current_block_hash: expect.any(String),
+                    current_memory_used: expect.any(Number),
+                    current_slot: expect.any(Number),
+                    memory_size: expect.any(Number),
+                    handle_count: expect.any(Number),
+                    ogmios_elapsed: expect.any(String),
+                    percentage_complete: expect.any(String),
+                    slot_date: expect.any(String)
                 },
                 status: 'current'
             });

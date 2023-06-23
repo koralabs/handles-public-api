@@ -10,6 +10,7 @@ import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { decodeCborToJson } from '../utils/cbor';
+import { handleDatumSchema } from '../utils/cbor/schema/handleData';
 
 class HandlesController {
     public getAll = async (
@@ -145,7 +146,7 @@ class HandlesController {
 
             if (req.headers?.accept?.startsWith('application/json')) {
                 try {
-                    const decodedDatum = await decodeCborToJson(handleDatum);
+                    const decodedDatum = await decodeCborToJson(handleDatum, handleDatumSchema);
                     res.set('Content-Type', 'application/json');
                     res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(decodedDatum);
                     return;

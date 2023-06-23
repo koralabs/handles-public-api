@@ -30,6 +30,13 @@ describe('Serialization Test', () => {
                 null
             ]);
         });
+
+        it('should build a proper stake key for testnet', () => {
+            const stakeKey = buildStakeKey(
+                'addr_test1qpc34q6xuwjqn4l0f283xgct0e6z2x4l4sxufpmap2an9eptvx3phm9udvcenw457r6742a0e3gwhplv7hxggdr96cjstkwxff'
+            );
+            expect(stakeKey).toEqual('stake_test1uq4krgsmaj7xkvveh260pa024whuc58tslk0tnyyx3javfg36sly7');
+        });
     });
 
     describe('getAddressType', () => {
