@@ -3,6 +3,7 @@ import { createPointFromCurrentTip, ensureSocketIsOpen, InteractionContext, safe
 import { findIntersect, Intersection, requestNext, UnknownResultError } from '@cardano-ogmios/client/dist/ChainSync';
 import { Block, Ogmios, PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { POLICY_IDS } from '../../constants';
+import { HandleStore } from '../../../../repositories/memory/HandleStore';
 
 /**
  * Local Chain Sync client specifically for ADA Handles API.
@@ -53,6 +54,12 @@ export const createLocalChainSyncClient = async (
                     () => requestNext(socket)
                 );
             } else if ('RollForward' in response.result) {
+                const block = response.result.RollForward.block as unknown as {header: {slot: number, blockHash: string}}
+                HandleStore.setMetrics({ 
+                    currentSlot: block.header.slot,
+                    currentBlockHash: block.header.blockHash,
+                    lastSlot: (response.result.RollForward.tip as unknown as {slot: number}).slot
+                 });
                 await messageHandlers.rollForward(
                     {
                         block: response.result.RollForward.block,
