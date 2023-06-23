@@ -125,6 +125,8 @@ class OgmiosService {
 
     public async startSync() {
         HandleStore.setMetrics({
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot, 
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].hash,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
