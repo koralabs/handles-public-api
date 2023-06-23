@@ -115,7 +115,7 @@ class OgmiosService {
         const handlesContent = await HandleStore.prepareHandlesStorage();
 
         if (!handlesContent) {
-            Logger.log('Handle storage not found');
+            Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
             return initialStartingPoint;
         }
 
@@ -125,6 +125,8 @@ class OgmiosService {
 
     public async startSync() {
         HandleStore.setMetrics({
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot, 
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].hash,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
