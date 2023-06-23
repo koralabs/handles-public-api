@@ -44,6 +44,9 @@ const buildPersonalization = async ({
 }: BuildPersonalizationInput): Promise<IPersonalization> => {
     const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
 
+    // start timer for ipfs calls
+    const ipfsTimer = Date.now();
+
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
         [
             { link: portal, schema: portalSchema },
@@ -52,6 +55,14 @@ const buildPersonalization = async ({
             { link: vendor }
         ].map(getDataFromIPFSLink)
     );
+
+    // stop timer for ipfs calls
+    const endIpfsTimer = Date.now() - ipfsTimer;
+    Logger.log({
+        message: `IPFS calls took ${endIpfsTimer}ms`,
+        category: LogCategory.INFO,
+        event: 'buildPersonalization.ipfsTime'
+    });
 
     let personalization: IPersonalization = {
         reference_token: {
@@ -144,8 +155,8 @@ const buildPersonalizationData = async (datum: string) => {
     return {
         metadata,
         personalizationDatum
-    }
-}
+    };
+};
 
 const processAssetReferenceToken = async ({
     assetName,
@@ -175,9 +186,9 @@ const processAssetReferenceToken = async ({
 
     const pzData = await buildPersonalizationData(datum);
     if (!pzData) {
-        Logger.log(`invalid datum for reference token ${hex}`)
+        Logger.log(`invalid datum for reference token ${hex}`);
         return;
-    };
+    }
 
     const { metadata, personalizationDatum } = pzData;
 
@@ -275,11 +286,11 @@ const processAssetToken = async ({
         let og_number = 0;
 
         if (assetName.includes(AssetNameLabel.LABEL_222)) {
-            const data = handleMetadata && handleMetadata[hex] as unknown as IHandleMetadata;
+            const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
             og_number = data?.og_number ?? 0;
             image = data?.image ?? '';
         } else {
-            const data = handleMetadata && handleMetadata[name]
+            const data = handleMetadata && handleMetadata[name];
             og_number = data?.core?.og_number ?? 0;
             image = data?.image ?? '';
         }
@@ -321,7 +332,7 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
-        
+
         // Look for burn transactions
         const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
         for (let i = 0; i < mintAssets.length; i++) {
