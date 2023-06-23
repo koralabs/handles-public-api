@@ -115,7 +115,7 @@ class OgmiosService {
         const handlesContent = await HandleStore.prepareHandlesStorage();
 
         if (!handlesContent) {
-            Logger.log('Handle storage not found');
+            Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
             return initialStartingPoint;
         }
 
