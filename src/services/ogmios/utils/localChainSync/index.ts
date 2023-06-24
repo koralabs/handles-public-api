@@ -54,12 +54,6 @@ export const createLocalChainSyncClient = async (
                     () => requestNext(socket)
                 );
             } else if ('RollForward' in response.result) {
-                const block = response.result.RollForward.block as unknown as {header: {slot: number, blockHash: string}}
-                HandleStore.setMetrics({ 
-                    currentSlot: block.header.slot,
-                    currentBlockHash: block.header.blockHash,
-                    lastSlot: (response.result.RollForward.tip as unknown as {slot: number}).slot
-                 });
                 await messageHandlers.rollForward(
                     {
                         block: response.result.RollForward.block,
@@ -78,12 +72,27 @@ export const createLocalChainSyncClient = async (
 
         const processMessage = async (message: string) => {
             const policyIds = POLICY_IDS[process.env.NETWORK ?? 'testnet'];
+            let processTheBlock = false;
 
             // check if the message contains the Handle policy ID or is a RollBackward
-            if (
-                message.indexOf('"result":{"RollBackward"') >= 0 ||
-                policyIds.some((pId) => message.indexOf(pId) >= 0)
-            ) {
+            if (message.indexOf('"result":{"RollBackward"') >= 0) {
+                processTheBlock = true;
+            }
+            else {
+                processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
+                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ["", "0"])[1];
+                let blockMatch: string | null = (message.match(/"blockHash":\s?"([0-9a-fA-F]*)"/m) || ["", ""])[1];
+                let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ["", "0"])[1];
+                //console.log({slotMatch, blockMatch, tipSlotMatch});
+                HandleStore.setMetrics({ 
+                    currentSlot: parseInt(slotMatch),
+                    currentBlockHash: blockMatch,
+                    lastSlot: parseInt(tipSlotMatch)
+                 });
+                 slotMatch = blockMatch = tipSlotMatch = null;
+            }
+            
+            if (processTheBlock) {
                 const response: Ogmios['RequestNextResponse'] = safeJSON.parse(message);
                 if (response.methodname === 'RequestNext') {
                     try {
