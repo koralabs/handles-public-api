@@ -1,6 +1,7 @@
 import { Logger } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
+import { NETWORK } from '../config';
 
 export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));
@@ -55,10 +56,23 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
 
 export const getDateStringFromSlot = (currentSlot: number): Date => {
     // TODO: Make this work for all networks
+    //console.log(`preview slot date = ${new Date(currentSlot * 1000)}`)
+    if (NETWORK == 'preview'){
+        return new Date((1666656000 + currentSlot) * 1000);
+    }
+    if (NETWORK == 'preprod'){
+        return new Date((1654041600 + currentSlot) * 1000);
+    }
     return new Date((1596491091 + (currentSlot - 4924800)) * 1000);
 };
 
 export const getSlotNumberFromDate = (date: Date): number => {
+    if (NETWORK == 'preview'){
+        return Math.floor(date.getTime() / 1000) - 1666656000;
+    }
+    if (NETWORK == 'preprod'){
+        return Math.floor(date.getTime() / 1000) - 1654041600;
+    }
     // Ignore parens to show intent
     // prettier-ignore
     return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
