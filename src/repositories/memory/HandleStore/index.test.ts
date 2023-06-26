@@ -307,7 +307,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -445,7 +447,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -495,7 +499,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -521,7 +527,9 @@ describe('HandleStore tests', () => {
                                         text_ribbon_colors: ['0xtodo']
                                     },
                                     reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                    validated_by: 'todo'
+                                    validated_by: 'todo',
+                                    trial: false,
+                                    nsfw: false
                                 },
                                 pfp_image: 'todo',
                                 updated_slot_number: 200
@@ -557,7 +565,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -643,7 +653,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -668,7 +680,7 @@ describe('HandleStore tests', () => {
                 svgVersion: '1.0.0',
                 customImageHash: '0xtodo',
                 standardImageHash: '0x123',
-                customImage: 'todo',
+                customImage: 'todo'
             });
 
             const handle = HandleStore.get(handleName);
@@ -726,7 +738,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -768,7 +782,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -812,7 +828,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'new'
+                validated_by: 'new',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -859,6 +877,8 @@ describe('HandleStore tests', () => {
                 {
                     'pork-belly': {
                         new: {
+                            bg_image: undefined,
+                            pfp_image: undefined,
                             default_in_wallet: 'pork-belly',
                             image: 'ipfs://123',
                             personalization: {
@@ -868,11 +888,20 @@ describe('HandleStore tests', () => {
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                trial: false,
+                                nsfw: false
                             },
                             updated_slot_number: 200
                         },
-                        old: { default_in_wallet: 'taco', image: '', personalization: undefined, updated_slot_number: 100 }
+                        old: {
+                            bg_image: '',
+                            pfp_image: '',
+                            default_in_wallet: 'taco',
+                            image: '',
+                            personalization: undefined,
+                            updated_slot_number: 100
+                        }
                     }
                 }
             ]);
@@ -897,7 +926,9 @@ describe('HandleStore tests', () => {
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                trial: false,
+                                nsfw: false
                             },
                             updated_slot_number: 200
                         }
@@ -922,7 +953,9 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0xEEE'
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                nsfw: false,
+                                trial: false
                             },
                             updated_slot_number: 300
                         }
@@ -942,7 +975,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -983,7 +1018,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1024,7 +1061,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1065,7 +1104,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             };
 
             await HandleStore.savePersonalizationChange({

@@ -67,8 +67,10 @@ export interface SavePersonalizationInput {
     customImageHash: string;
     standardImageHash: string;
     svgVersion: string;
-    pfpImage?: string;
     bgImage?: string;
+    bgAsset?: string;
+    pfpImage?: string;
+    pfpAsset?: string;
     metadata: IHandleMetadata;
 }
 

@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 18;
+    static storageSchemaVersion = 19;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -418,7 +418,9 @@ export class HandleStore {
         standardImageHash,
         svgVersion,
         pfpImage,
+        pfpAsset,
         bgImage,
+        bgAsset,
         metadata
     }: SavePersonalizationInput) {
         const existingHandle = HandleStore.get(name);
@@ -454,8 +456,10 @@ export class HandleStore {
             image: customImage ?? '',
             image_hash: customImageHash,
             standard_image_hash: standardImageHash,
-            bg_image: bgImage ?? '',
-            pfp_image: pfpImage ?? '',
+            bg_image: bgImage,
+            bg_asset: bgAsset,
+            pfp_image: pfpImage,
+            pfp_asset: pfpAsset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,

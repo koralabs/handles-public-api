@@ -42,7 +42,7 @@ const buildPersonalization = async ({
     lovelace,
     datumCbor
 }: BuildPersonalizationInput): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
+    const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
 
     // start timer for ipfs calls
     const ipfsTimer = Date.now();
@@ -71,7 +71,9 @@ const buildPersonalization = async ({
             lovelace,
             datum: datumCbor
         },
-        validated_by
+        validated_by,
+        trial: trial === 1,
+        nsfw: nsfw === 1
     };
 
     if (ipfsDesigner) {
@@ -123,7 +125,9 @@ export const isValidDatum = (datumObject: any): boolean => {
         standard_image_hash: '',
         svg_version: '',
         agreed_terms: '',
-        migrate_sig_required: 0
+        migrate_sig_required: 0,
+        trial: 0,
+        nsfw: 0
     };
 
     const hasAllRequiredKeys = (object: any, requiredObject: any) =>
@@ -212,7 +216,9 @@ const processAssetReferenceToken = async ({
         setDefault: personalizationDatum.default === 1,
         customImage: metadata.image,
         pfpImage: personalizationDatum.pfp_image,
+        pfpAsset: personalizationDatum.pfp_asset,
         bgImage: personalizationDatum.bg_image,
+        bgAsset: personalizationDatum.bg_asset,
         metadata,
         customImageHash: personalizationDatum.image_hash,
         standardImageHash: personalizationDatum.standard_image_hash,
@@ -381,6 +387,10 @@ export const processBlock = async ({
                         if (isMintTx && policyMetadata) {
                             // Don't save nameless token.
                             return;
+                        }
+
+                        if (assetName.includes('7473745f6d69675f30303339')) {
+                            console.log('STOP');
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
