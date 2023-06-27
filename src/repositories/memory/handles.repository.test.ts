@@ -147,6 +147,15 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual(['taco']);
         });
 
+        it('should sort handles randomly', async () => {
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
+            const repo = new MemoryHandlesRepository();
+            const search = new HandleSearchModel();
+            const result = await repo.getAllHandleNames(search, 'random');
+            const result2 = await repo.getAllHandleNames(search, 'random');
+            expect(result).not.toEqual(result2);
+        });
+
         it('should remove handles without a UTxO', async () => {
             const newHandle = HandleStore.buildHandle({
                 hex: 'new-handle-hex',
