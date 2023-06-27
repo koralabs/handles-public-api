@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 19;
+    static storageSchemaVersion = 20;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -410,19 +410,14 @@ export class HandleStore {
         name,
         hex,
         personalization,
+        personalizationDatum,
         addresses,
         slotNumber,
-        setDefault,
-        customImage,
-        customImageHash,
-        standardImageHash,
-        svgVersion,
-        pfpImage,
-        pfpAsset,
-        bgImage,
-        bgAsset,
         metadata
     }: SavePersonalizationInput) {
+        const { image: customImage } = metadata;
+        const default_in_wallet = personalizationDatum?.default ? name : '';
+
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             const { og_number, image } = metadata;
@@ -435,10 +430,10 @@ export class HandleStore {
                 utxo: '', // utxo will come from the 222 token,
                 og_number,
                 image,
-                image_hash: customImageHash,
+                image_hash: personalizationDatum?.image_hash,
                 personalization,
-                default_in_wallet: setDefault ? name : '',
-                svg_version: svgVersion
+                default_in_wallet,
+                svg_version: personalizationDatum?.svg_version
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -454,20 +449,20 @@ export class HandleStore {
         const updatedHandle: Handle = {
             ...existingHandle,
             image: customImage ?? '',
-            image_hash: customImageHash,
-            standard_image_hash: standardImageHash,
-            bg_image: bgImage,
-            bg_asset: bgAsset,
-            pfp_image: pfpImage,
-            pfp_asset: pfpAsset,
+            image_hash: personalizationDatum?.image_hash ?? '',
+            standard_image_hash: personalizationDatum?.standard_image_hash ?? '',
+            bg_image: personalizationDatum?.bg_image,
+            bg_asset: personalizationDatum?.bg_asset,
+            pfp_image: personalizationDatum?.pfp_image,
+            pfp_asset: personalizationDatum?.pfp_asset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,
                 ...addresses
             },
-            default_in_wallet: setDefault ? name : '',
+            default_in_wallet,
             personalization,
-            svg_version: svgVersion
+            svg_version: personalizationDatum?.svg_version ?? ''
         };
 
         await HandleStore.save({

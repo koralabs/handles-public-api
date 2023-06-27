@@ -1,4 +1,9 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata } from '@koralabs/handles-public-api-interfaces';
+import {
+    IPersonalization,
+    IPersonalizedHandle,
+    IHandleMetadata,
+    IPzDatum
+} from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -59,19 +64,11 @@ export interface SavePersonalizationInput {
     hex: string;
     name: string;
     personalization: IPersonalization;
+    personalizationDatum: IPzDatum | null;
+    metadata: IHandleMetadata;
     addresses: {
         [chain: string]: string;
     };
-    setDefault: boolean;
-    customImage: string;
-    customImageHash: string;
-    standardImageHash: string;
-    svgVersion: string;
-    bgImage?: string;
-    bgAsset?: string;
-    pfpImage?: string;
-    pfpAsset?: string;
-    metadata: IHandleMetadata;
 }
 
 export interface HolderAddressIndex {

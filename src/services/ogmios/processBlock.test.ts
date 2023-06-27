@@ -2,7 +2,7 @@ import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces'
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { isValidDatum, processBlock } from './processBlock';
+import { buildValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
@@ -324,9 +324,6 @@ describe('processBlock Tests', () => {
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            customImage: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-            customImageHash: '0xabcd',
-            standardImageHash: '0xabcd',
             hex: '000643b06275727269746f73',
             metadata: {
                 characters: 'letters,numbers,special',
@@ -354,10 +351,25 @@ describe('processBlock Tests', () => {
                 trial: false,
                 nsfw: false
             },
-            pfpImage: '',
-            bgImage: '',
-            setDefault: false,
-            svgVersion: '1.0.0',
+            personalizationDatum: {
+                agreed_terms: '0x',
+                bg_image: '',
+                default: false,
+                designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
+                image_hash: '0xabcd',
+                last_update_address: '0xabcd',
+                migrate_sig_required: 0,
+                nsfw: false,
+                pfp_image: '',
+                portal: '',
+                socials: 'ipfs://QmVm58ioUUuJsgSLGL5zmcZbqMeMcUX2Q8PVxwBCnSTBDv',
+                standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
+                standard_image_hash: '0xabcd',
+                svg_version: '1.0.0',
+                trial: false,
+                validated_by: '0x',
+                vendor: ''
+            },
             slotNumber: 0
         });
     });
@@ -382,7 +394,7 @@ describe('processBlock Tests', () => {
         });
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(0);
-        expect(loggerSpy).toHaveBeenCalledWith(`invalid datum for reference token ${handleHexName}`);
+        expect(loggerSpy).toHaveBeenCalledWith(`invalid metadata for ${handleHexName}`);
     });
 
     it('Should log error for 100 asset token when there is no datum', async () => {
@@ -427,16 +439,16 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_0: [{}, 1, {}]
             };
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum(datum);
+            expect(result).toEqual({ metadata: null, personalizationDatum: null });
         });
 
         it('should return false for minimal invalid datum', () => {
             const datum = {
                 constructor_0: [{ a: 'a' }, 1, {}]
             };
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum(datum);
+            expect(result).toEqual({ metadata: null, personalizationDatum: null });
         });
 
         it('should return false missing one required field', () => {
@@ -468,8 +480,22 @@ describe('processBlock Tests', () => {
                 ]
             };
 
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum(datum);
+            expect(result).toEqual({
+                metadata: {
+                    characters: '',
+                    image: '',
+                    length: 0,
+                    mediaType: '',
+                    name: '',
+                    numeric_modifiers: '',
+                    og: 0,
+                    og_number: 0,
+                    rarity: '',
+                    version: 0
+                },
+                personalizationDatum: null
+            });
         });
 
         it('should return true for valid datum', () => {
@@ -508,7 +534,7 @@ describe('processBlock Tests', () => {
                     }
                 ]
             };
-            const result = isValidDatum(datum);
+            const result = buildValidDatum(datum);
             expect(result).toBeTruthy();
         });
     });

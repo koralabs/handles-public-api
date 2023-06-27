@@ -1,4 +1,10 @@
-import { IPzDatum } from '@koralabs/handles-public-api-interfaces';
+import {
+    IPersonalization,
+    IPersonalizationDesigner,
+    IPersonalizationPortal,
+    IPzDatum,
+    SocialItem
+} from '@koralabs/handles-public-api-interfaces';
 
 export enum MetadataLabel {
     'NFT' = 721,
@@ -19,10 +25,7 @@ export interface PersonalizationOnChainData {
 
 export interface BuildPersonalizationInput {
     personalizationDatum: IPzDatum;
-    txId: string;
-    index: number;
-    lovelace: number;
-    datumCbor: string;
+    personalization: IPersonalization;
 }
 
 export interface HandleOnChainMetadata {
