@@ -341,10 +341,6 @@ export const processBlock = async ({
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
-        const policyMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.POLICY]
-            ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.POLICY])
-            : null;
-
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
@@ -370,9 +366,9 @@ export const processBlock = async ({
                         }
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
-                        if (isMintTx && policyMetadata) {
+                        if (assetName === policyId) {
                             // Don't save nameless token.
-                            return;
+                            continue;
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
