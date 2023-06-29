@@ -3,10 +3,10 @@ openapi: 3.0.3
 info:
   title: Handles Public API
   description: ADA Handle Public API
-  termsOfService: https://handle.io/tou
+  termsOfService: https://adahandle.com/tou
   contact:
     email: hello@adahandle.com
-  version: 0.0.1
+  version: "{{version}}"
 servers:
 - url: https://api.handle.me
 tags:

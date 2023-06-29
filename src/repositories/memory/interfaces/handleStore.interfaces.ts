@@ -1,4 +1,4 @@
-import { IPersonalization, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata } from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -32,13 +32,15 @@ export interface SaveMintingTxInput {
     hex: string;
     name: string;
     adaAddress: string;
-    og: number;
+    og_number: number;
     image: string;
+    image_hash?: string;
     slotNumber: number;
     utxo: string;
-    background?: string;
+    svg_version?: string;
+    bg_image?: string;
     default_in_wallet?: string;
-    profile_pic?: string;
+    pfp_image?: string;
     datum?: string;
     personalization?: IPersonalization;
     amount?: number;
@@ -61,7 +63,13 @@ export interface SavePersonalizationInput {
         [chain: string]: string;
     };
     setDefault: boolean;
-    customImage?: string;
+    customImage: string;
+    customImageHash: string;
+    standardImageHash: string;
+    svgVersion: string;
+    pfpImage?: string;
+    bgImage?: string;
+    metadata: IHandleMetadata;
 }
 
 export interface HolderAddressIndex {

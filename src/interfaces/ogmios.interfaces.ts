@@ -1,18 +1,8 @@
+import { IPzDatum } from '@koralabs/handles-public-api-interfaces';
+
 export enum MetadataLabel {
     'NFT' = 721,
-    'HANDLE_PERSONALIZATION' = 5508
-}
-
-/**
- * The asset label is a string that is used to identify the asset type.
- * First, remove the first and last 0.
- * Next, use the first 4 characters as the hex and convert to decimal. https://www.rapidtables.com/convert/number/hex-to-decimal.html
- * Finally, use the decimal number and convert to CRC8. It should match the last 2 characters. https://crccalc.com/
- */
-export enum MetadatumAssetLabel {
-    REFERENCE_NFT = '000643b0', // 100
-    SUB_STANDARD_NFT = '000de140', // 222
-    SUB_STANDARD_FT = '0014df10' // 333
+    'POLICY' = 777
 }
 
 export interface HandleOnChainData {
@@ -23,28 +13,24 @@ export interface HandleOnChainData {
 
 export interface PersonalizationOnChainData {
     [policyId: string]: {
-        [handleName: string]: PersonalizationDatum;
+        [handleName: string]: IPzDatum;
     };
 }
 
-export interface PersonalizationDatum {
-    custom_image: string; // "ipfs://<nftHash>",
-    bg_image: string; // "ipfs://<nftHash>",
-    pfp_image: string; // "ipfs://<nftHash>",
-    portal: string; // "ipfs://<portal_ipfs>",
-    designer: string; // "ipfs://<designer_ipfs>",
-    socials: string; // "ipfs://<socials_ipfs>",
-    vendor: string; // "ipfs://<vendor_ipfs>",
-    default: boolean;
-    holder: string; // "stake1....."
-    // root_handle_settings?: string; // "ipfs://<root_handle_settings_ipfs>"
+export interface BuildPersonalizationInput {
+    personalizationDatum: IPzDatum;
+    txId: string;
+    index: number;
+    lovelace: number;
+    datumCbor: string;
 }
 
 export interface HandleOnChainMetadata {
     augmentations: Record<string, unknown>;
     core: {
         handleEncoding: string;
-        og: number;
+        og: boolean;
+        og_number: number;
         prefix: string;
         termsofuse: string;
         version: number;
@@ -74,6 +60,16 @@ export interface TxMetadata {
                 }[];
             };
             '8413'?: {
+                map: {
+                    k: {
+                        string: string; // policyId
+                    };
+                    v: {
+                        [k: string]: unknown;
+                    };
+                }[];
+            };
+            '777'?: {
                 map: {
                     k: {
                         string: string; // policyId
@@ -169,6 +165,7 @@ export interface ProcessAssetTokenInput {
     slotNumber: number;
     address: string;
     utxo: string;
+    lovelace: number;
     datum?: string;
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;

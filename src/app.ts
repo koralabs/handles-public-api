@@ -29,10 +29,7 @@ class App {
 
     public listen() {
         const server = this.app.listen(this.port, () => {
-            Logger.log(`=========================================`);
-            Logger.log(`============ENV: ${this.env} ============`);
-            Logger.log(`🚀 App listening on the port ${this.port}`);
-            Logger.log(`=========================================`);
+            Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
         });
         server.keepAliveTimeout = 61 * 1000;
         this.initializeStorage();
@@ -93,11 +90,11 @@ class App {
                         category: LogCategory.ERROR,
                         event: 'startOgmios.failed.errorMessage'
                     });
-                    Logger.log({
-                        message: `Error: ${JSON.stringify(error)}`,
-                        category: LogCategory.INFO,
-                        event: 'startOgmios.failed.error'
-                    });
+                    // Logger.log({
+                    //     message: `Error: ${JSON.stringify(error)}`,
+                    //     category: LogCategory.INFO,
+                    //     event: 'startOgmios.failed.error'
+                    // });
                     await delay(30*1000)
                 }
             }

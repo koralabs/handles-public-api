@@ -8,6 +8,14 @@
             "runtimeExecutable": "npm",
             "skipFiles": ["<node_internals>/**"],
             "type": "node"
+        },
+        {
+            "name": "Start Preview",
+            "request": "launch",
+            "runtimeArgs": ["run", "dev:preview"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**"],
+            "type": "node"
         }
     ]
 }

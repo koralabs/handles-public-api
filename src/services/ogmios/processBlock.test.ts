@@ -1,8 +1,8 @@
-import { Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
-import { BlockTip, MetadatumAssetLabel, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
+import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { processBlock } from './processBlock';
+import { isValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
@@ -159,23 +159,26 @@ describe('processBlock Tests', () => {
     const expectedItem: Handle = {
         characters: 'letters,numbers',
         hex: hexName,
-        holder_address: 'some_stake1',
+        holder: 'some_stake1',
         length: 8,
         name,
-        nft_image: 'some_hash_test1234',
+        image: 'some_hash_test1234',
         utxo: 'utxo1#0',
         numeric_modifiers: '',
-        og: 1,
-        original_nft_image: 'some_hash_test1234',
+        og_number: 1,
+        standard_image: 'some_hash_test1234',
         rarity: Rarity.basic,
         resolved_addresses: { ada: 'addr123' },
         default_in_wallet: 'some_hdl',
-        profile_pic: 'some_hash_test1234',
-        background: 'some_hash_test1234',
+        pfp_image: 'some_hash_test1234',
+        bg_image: 'some_hash_test1234',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        hasDatum: false,
-        amount: 1
+        has_datum: false,
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: ''
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
@@ -190,7 +193,7 @@ describe('processBlock Tests', () => {
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
-            og: 1,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -217,7 +220,7 @@ describe('processBlock Tests', () => {
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
-            og: 1,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
             datum
@@ -254,7 +257,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.SUB_STANDARD_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -267,10 +270,10 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
+            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
             image: '',
             name: handleName,
-            og: 0,
+            og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0'
         });
@@ -278,7 +281,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.SUB_STANDARD_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -291,7 +294,7 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f73`,
+            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0'
@@ -300,42 +303,89 @@ describe('processBlock Tests', () => {
 
     it('Should process 100 asset class tokens', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
+
+        const cbor =
+            'd87983aa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001af4e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400';
 
         await processBlock({
             policyId,
             txBlock: txBlock({
                 handleHexName,
                 isMint: false,
-                datum: 'd8799fbf446e616d654a24742d646174756d2d3145696d6167655835697066733a2f2f516d62514561755a5243503233765369487058314d33636a6d694134715075437068594663763436617a4c4b6d41496d656469615479706549696d6167652f706e67426f674566616c736546726172697479456261736963466c656e67746841394e6368617261637465725f74797065576c6574746572732c6e756d626572732c7370656369616c506e756d657269635f6d6f646966696572404776657273696f6e4131ff01bf4c637573746f6d5f696d616765404862675f696d61676540497066705f696d616765404873657474696e67735835697066733a2f2f516d5846324d33676857794431357a5474457145574452466e5163754456635a6a426154564c643366544d33356747736f6369616c735835697066733a2f2f516d524a444a4134663846646d6b635772413552594348726d3736714c7a6a6271377239726d384777364c7662724676656e646f72404764656661756c74447472756546686f6c64657240ffff'
+                datum: cbor
             }) as TxBlock,
             tip
         });
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            customImage: '',
-            hex: handleHexName,
-            name: handleName,
-            personalization: {
-                social_links: {
-                    test: 'data'
-                }
+            customImage: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
+            customImageHash: "0xabcd",
+            standardImageHash: "0xabcd",
+            hex: '000643b06275727269746f73',
+            metadata: {
+                characters: 'letters,numbers,special',
+                image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
+                length: 12,
+                mediaType: 'image/jpeg',
+                name: 'test_sc_0001',
+                numeric_modifiers: '',
+                og: false,
+                og_number: 0,
+                rarity: 'basic',
+                version: 1
             },
-            setDefault: 'true',
+            name: 'burritos',
+            personalization: {
+                designer: { test: 'data' },
+                reference_token: {
+                    datum: cbor,
+                    index: 0,
+                    lovelace: 1,
+                    tx_id: 'some_id'
+                },
+                socials: { test: 'data' },
+                validated_by: '0x'
+            },
+            pfpImage: '',
+            bgImage: '',
+            setDefault: false,
+            svgVersion: "1.0.0",
             slotNumber: 0
         });
     });
 
-    // TODO: add test to validate datum
+    it('Should validate datum', async () => {
+        const handleName = `burritos`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+
+        const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
+        const loggerSpy = jest.spyOn(Logger, 'log').mockImplementation();
+
+        await processBlock({
+            policyId,
+            txBlock: txBlock({
+                handleHexName,
+                isMint: false,
+                datum: 'D87981A1446E616D654A24742D646174756D2D31'
+            }) as TxBlock,
+            tip
+        });
+
+        expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(0);
+        expect(loggerSpy).toHaveBeenCalledWith(`invalid datum for reference token ${handleHexName}`);
+    });
 
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -357,7 +407,7 @@ describe('processBlock Tests', () => {
     it('Should burn tokens', async () => {
         const slot = 1234;
         const handleName = `burritos`;
-        const handleHexName = `${MetadatumAssetLabel.REFERENCE_NFT}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
         const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -368,5 +418,94 @@ describe('processBlock Tests', () => {
         });
 
         expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
+    });
+
+    describe('isValidDatum tests', () => {
+        it('should return false for invalid datum', () => {
+            const datum = {
+                constructor_0: [{}, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return false for minimal invalid datum', () => {
+            const datum = {
+                constructor_0: [{ a: 'a' }, 1, {}]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return false missing one required field', () => {
+            const datum = {
+                constructor_0: [
+                    {
+                        name: '',
+                        image: '',
+                        mediaType: '',
+                        og: 0,
+                        og_number: 0,
+                        rarity: '',
+                        length: 0,
+                        characters: '',
+                        numeric_modifiers: '',
+                        version: 0
+                    },
+                    1,
+                    {
+                        // standard_image: '',
+                        portal: '',
+                        designer: '',
+                        socials: '',
+                        vendor: '',
+                        default: false,
+                        last_update_address: '',
+                        validated_by: ''
+                    }
+                ]
+            };
+
+            const result = isValidDatum(datum);
+            expect(result).toBeFalsy();
+        });
+
+        it('should return true for valid datum', () => {
+            const datum = {
+                constructor_0: [
+                    {
+                        name: '',
+                        image: '',
+                        mediaType: '',
+                        og: 0,
+                        og_number: 0,
+                        rarity: '',
+                        length: 0,
+                        characters: '',
+                        numeric_modifiers: '',
+                        version: 0
+                    },
+                    1,
+                    {
+                        standard_image: '',
+                        portal: '',
+                        designer: '',
+                        socials: '',
+                        vendor: '',
+                        default: false,
+                        last_update_address: '',
+                        validated_by: '',
+                        bg_image: '',
+                        image_hash: '',
+                        standard_image_hash: '',
+                        svg_version: '',
+                        agreed_terms: '',
+                        migrate_sig_required: 0
+                    }
+                ]
+            };
+            const result = isValidDatum(datum);
+            expect(result).toBeTruthy();
+        });
     });
 });

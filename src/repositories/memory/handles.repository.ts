@@ -169,8 +169,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
             throw new HttpException(404, 'Not found');
         }
 
-        const { hasDatum, datum = null } = handle;
-        if (!hasDatum) return null;
+        const { has_datum, datum = null } = handle;
+        if (!has_datum) return null;
         return datum;
     }
 

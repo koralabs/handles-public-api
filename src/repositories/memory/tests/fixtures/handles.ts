@@ -1,16 +1,15 @@
-import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
-import { MetadatumAssetLabel } from '../../../../interfaces/ogmios.interfaces';
+import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { ISlotHistoryIndex, HolderAddressIndex, Handle } from '../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: Handle[] = [
     {
         hex: 'barbacoa-hex',
         name: 'barbacoa',
-        holder_address: 'stake-key1',
-        nft_image: '',
-        original_nft_image: '',
+        holder: 'stake-key1',
+        image: '',
+        standard_image: '',
         length: 8,
-        og: 0,
+        og_number: 0,
         utxo: 'utxo1#0',
         rarity: Rarity.basic,
         characters: 'letters',
@@ -19,21 +18,24 @@ export const handlesFixture: Handle[] = [
             ada: '123'
         },
         default_in_wallet: 'taco',
-        profile_pic: '',
-        background: '',
+        pfp_image: '',
+        bg_image: '',
         created_slot_number: Date.now(),
         updated_slot_number: Date.now(),
-        hasDatum: false,
-        amount: 1
+        has_datum: false,
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     },
     {
         hex: 'burrito-hex',
         name: 'burrito',
-        holder_address: 'stake-key1',
-        nft_image: '',
-        original_nft_image: '',
+        holder: 'stake-key1',
+        image: '',
+        standard_image: '',
         length: 7,
-        og: 0,
+        og_number: 0,
         utxo: 'utxo2#0',
         rarity: Rarity.common,
         characters: 'letters',
@@ -42,21 +44,24 @@ export const handlesFixture: Handle[] = [
             ada: '123'
         },
         default_in_wallet: 'taco',
-        profile_pic: '',
-        background: '',
+        pfp_image: '',
+        bg_image: '',
         created_slot_number: Date.now() + 10,
         updated_slot_number: Date.now() + 10,
-        hasDatum: false,
-        amount: 1
+        has_datum: false,
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     },
     {
         hex: 'taco-hex',
         name: 'taco',
-        holder_address: 'stake-key1',
-        nft_image: '',
-        original_nft_image: '',
+        holder: 'stake-key1',
+        image: '',
+        standard_image: '',
         length: 4,
-        og: 0,
+        og_number: 0,
         utxo: 'utxo3#0',
         rarity: Rarity.common,
         characters: 'letters',
@@ -65,12 +70,15 @@ export const handlesFixture: Handle[] = [
             ada: '123'
         },
         default_in_wallet: 'taco',
-        profile_pic: '',
-        background: '',
+        pfp_image: '',
+        bg_image: '',
         created_slot_number: Date.now() + 20,
         updated_slot_number: Date.now() + 20,
-        hasDatum: false,
-        amount: 1
+        has_datum: false,
+        amount: 1,
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '1.0.0'
     }
 ];
 

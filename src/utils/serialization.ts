@@ -1,6 +1,5 @@
 import { Logger } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
-import cbor from 'borc';
 
 export enum AddressType {
     Wallet = 'wallet',
@@ -11,8 +10,8 @@ export enum AddressType {
 }
 
 export enum StakeAddressType {
-    Script = 'f1',
-    Key = 'e1'
+    Script = 'f',
+    Key = 'e'
 }
 
 export const getPaymentAddressType = (headerByte: number): AddressType => {
@@ -30,7 +29,7 @@ export const getPaymentAddressType = (headerByte: number): AddressType => {
 
 export const decodeAddress = (address: string): string | null => {
     try {
-        const addressWords = bech32.decode(address, 104);
+        const addressWords = bech32.decode(address, address.length);
         const payload = bech32.fromWords(addressWords.words);
         const addressDecoded = `${Buffer.from(payload).toString('hex')}`;
         return addressDecoded;
@@ -76,14 +75,17 @@ export const buildStakeKey = (address: string): string | null => {
         const [c] = decoded;
         const parsedChar = parseInt(c);
 
-        const delegationType = getDelegationAddressType(parsedChar);
+        const isTestnet = address.startsWith('addr_test');
+        const prefix = isTestnet ? 'stake_test' : 'stake';
+
+        const delegationType = `${getDelegationAddressType(parsedChar)}${isTestnet ? '0' : '1'}`;
 
         // stake part of the address is the last 56 bytes
         const stakeAddressDecoded = delegationType + decoded.substr(decoded.length - 56);
         const stakeAddress = bech32.encode(
-            'stake',
+            prefix,
             bech32.toWords(Uint8Array.from(Buffer.from(stakeAddressDecoded, 'hex'))),
-            104
+            54 + prefix.length
         );
 
         return stakeAddress;
@@ -91,60 +93,4 @@ export const buildStakeKey = (address: string): string | null => {
         Logger.log(`Error building stake key ${error.message}`);
         return null;
     }
-};
-
-const buildJsonFromMap = (map: Map<string, unknown>): Record<string, unknown> => {
-    let newObj: Record<string, unknown> = {};
-    for (let [k, v] of map) {
-        if (v instanceof Map) {
-            newObj[k] = buildJsonFromMap(v);
-        } else if (Array.isArray(v)) {
-            newObj[k] = v.map((v: any) => {
-                if (v instanceof Map) {
-                    return buildJsonFromMap(v);
-                }
-                return v;
-            });
-        } else if (v instanceof Buffer) {
-            newObj[k] = v.toString();
-        } else {
-            newObj[k] = v;
-        }
-    }
-    return newObj;
-};
-
-const buildJsonFromArray = (array: any[]): unknown[] => {
-    const newArray: any[] = [];
-    for (let i = 0; i < array.length; i++) {
-        let element = array[i];
-        if (element instanceof Buffer) {
-            element = element.toString();
-        }
-
-        if (element.hasOwnProperty('value')) {
-            element = element.value;
-        }
-
-        if (element instanceof Map) {
-            newArray.push(buildJsonFromMap(element));
-        } else if (Array.isArray(element)) {
-            newArray.push(buildJsonFromArray(element));
-        } else {
-            newArray.push(element);
-        }
-    }
-
-    return newArray;
-};
-
-export const decodeDatum = (datum: string): string | Record<string, unknown> | unknown[] => {
-    const decoded = cbor.decode(datum);
-    if (decoded instanceof Map) {
-        return buildJsonFromMap(decoded);
-    } else if (Array.isArray(decoded.value)) {
-        return buildJsonFromArray(decoded.value);
-    }
-
-    return decoded;
 };

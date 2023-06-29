@@ -48,9 +48,9 @@ class OgmiosService {
         response: { point: PointOrOrigin; tip: TipOrOrigin },
         requestNext: () => void
     ): Promise<void> {
-        const { currentSlot } = HandleStore.getMetrics();
+        const { current_slot } = HandleStore.getMetrics();
         Logger.log({
-            message: `Rollback ocurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.point)}`,
+            message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
             event: 'OgmiosService.rollBackward',
             category: LogCategory.INFO
         });
@@ -84,11 +84,11 @@ class OgmiosService {
         // }, 1000);
 
         const saveFilesInterval = setInterval(async () => {
-            const { currentSlot, currentBlockHash } = HandleStore.getMetrics();
+            const { current_slot, current_block_hash } = HandleStore.getMetrics();
 
             // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
             // Once restarted, we should have a valid file to read from.
-            if (currentSlot === 0) {
+            if (current_slot === 0) {
                 Logger.log({
                     message: 'Slot is zero. Exiting process.',
                     category: LogCategory.NOTIFY,
@@ -97,7 +97,7 @@ class OgmiosService {
                 process.exit(2);
             }
 
-            await HandleStore.saveHandlesFile(currentSlot, currentBlockHash);
+            await HandleStore.saveHandlesFile(current_slot, current_block_hash);
 
             memoryWatcher();
         }, 10 * 60 * 1000);
@@ -115,7 +115,7 @@ class OgmiosService {
         const handlesContent = await HandleStore.prepareHandlesStorage();
 
         if (!handlesContent) {
-            Logger.log('Handle storage not found');
+            Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
             return initialStartingPoint;
         }
 
@@ -125,6 +125,8 @@ class OgmiosService {
 
     public async startSync() {
         HandleStore.setMetrics({
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot, 
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].hash,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });

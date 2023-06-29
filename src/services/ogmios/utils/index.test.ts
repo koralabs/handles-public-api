@@ -8,7 +8,7 @@ import {
     getHandleNameFromAssetName
 } from '.';
 import v8 from 'v8';
-import { MetadatumAssetLabel } from '../../../interfaces/ogmios.interfaces';
+import { AssetNameLabel } from '@koralabs/handles-public-api-interfaces';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 
@@ -180,20 +180,20 @@ describe('Utils Tests', () => {
 
         it('should strip off 222 asset name label and return handle name', () => {
             const handle = getHandleNameFromAssetName(
-                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f`
+                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LABEL_222}6275727269746f`
             );
             expect(handle).toEqual({
-                hex: `${MetadatumAssetLabel.SUB_STANDARD_NFT}6275727269746f`,
+                hex: `${AssetNameLabel.LABEL_222}6275727269746f`,
                 name: 'burrito'
             });
         });
 
         it('should strip off 100 asset name label and return handle name', () => {
             const handle = getHandleNameFromAssetName(
-                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f`
+                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LABEL_100}6275727269746f`
             );
             expect(handle).toEqual({
-                hex: `${MetadatumAssetLabel.REFERENCE_NFT}6275727269746f`,
+                hex: `${AssetNameLabel.LABEL_100}6275727269746f`,
                 name: 'burrito'
             });
         });

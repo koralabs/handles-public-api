@@ -33,7 +33,7 @@ class HealthController {
             const now = new Date().getTime();
 
             let status = HealthStatus.CURRENT;
-            if (stats.percentageComplete !== '100.00') {
+            if (stats.percentage_complete !== '100.00') {
                 status = HealthStatus.STORAGE_BEHIND;
             }
             if (date < now - 60000) {

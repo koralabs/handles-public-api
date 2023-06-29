@@ -1,4 +1,5 @@
-import { Tagged, encode, Decoder } from 'borc';
+import * as cbor from 'cbor';
+import { boolean, isBooleanable } from 'boolean';
 
 // The five ways to represent metadata/datum:
 // Json (cardano-cli can take this with --tx-out-datum-json-value)
@@ -32,7 +33,7 @@ class JsonToDatumObject {
 
     encodeCBOR = (encoder: any) => {
         if (Array.isArray(this.json)) {
-            return encoder.pushAny(this.json);
+            return cbor.Encoder.encodeIndefinite(encoder, this.json)
         } else if (typeof this.json === 'object') {
             if (this.json !== null) {
                 const fieldsMap = new Map();
@@ -45,9 +46,12 @@ class JsonToDatumObject {
                         [0, 1, 2, 3].includes(split_key as number)
                     ) {
                         tag = 121 + split_key;
-                        return encoder.pushAny(new Tagged(tag, this.json[key]));
+                        return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
-                    fieldsMap.set(Buffer.from(key), this.json[key]);
+
+                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : Buffer.from(key);
+
+                    fieldsMap.set(bufferedKey, this.json[key]);
                 }
                 return encoder.pushAny(fieldsMap);
             } else {
@@ -57,12 +61,15 @@ class JsonToDatumObject {
             return encoder.pushAny(this.json);
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
-            if (this.json.startsWith('0x')) {
-                return encoder.pushAny(Buffer.from(this.json.substring(2), 'hex'));
-            }
-            return encoder.pushAny(Buffer.from(this.json));
+            const bufferedKey = this.json.startsWith('0x')
+                ? Buffer.from(this.json.substring(2), 'hex')
+                : Buffer.from(this.json);
+
+            return bufferedKey.length > 64
+                ? cbor.Encoder.encodeIndefinite(encoder, bufferedKey, { chunkSize: 64 })
+                : encoder.pushAny(bufferedKey);
         } else if (typeof this.json === 'boolean') {
-            return encoder.pushAny(this.json);
+            return encoder.pushAny(this.json ? 1 : 0);
         } else {
             // anything else: convert to simple type - String.
             // e.g. undefined, true, false, NaN, Infinity.
@@ -74,21 +81,80 @@ class JsonToDatumObject {
     };
 }
 
-export const encodeJsonToDatum = (json: any) => {
-    return encode(new JsonToDatumObject(json)).toString('hex').toString('hex');
+export const encodeJsonToDatum = async (json: any) => {
+    const obj = new JsonToDatumObject(json);
+    const result = await cbor.encodeAsync(obj, { chunkSize: 64 });
+    return result.toString('hex');
 };
 
-const decodeObject = (val: any, constr: number | null = null): any => {
+const parseSchema = (key: any, schema: any, i: number) => {
+    let schemaValue;
+
+    let mapKey = Buffer.from(key).toString('utf8');
+    const hexKey = `0x${Buffer.from(key).toString('hex')}`;
+
+    // check schema to see if it matches
+
+    // key name match
+    let schemaKey = Object.keys(schema).find((k) => k === mapKey);
+    if (!schemaKey) {
+        schemaKey = Object.keys(schema).find((k) => k.replace('0x', '') === mapKey);
+        if (schemaKey) {
+            mapKey = hexKey;
+        }
+    }
+
+    // index match
+    if (!schemaKey) {
+        schemaKey = Object.keys(schema).find((k) => k === `[${i}]`);
+    }
+
+    // dynamic match
+    if (!schemaKey) {
+        schemaKey = Object.keys(schema).find((k) => k.startsWith('<') && k.endsWith('>'));
+        if (schemaKey === '<hexstring>') {
+            mapKey = hexKey;
+        }
+    }
+
+    if (schemaKey) {
+        schemaValue = schema[schemaKey];
+    }
+
+    return {
+        mapKey,
+        schemaValue
+    };
+};
+
+const decodeObject = (val: any, constr: number | null = null, schema: any = {}): any => {
     const isMap = val instanceof Map;
     if (isMap) {
         const obj: any = {};
-        for (let key of val.keys()) {
+        const keys = [...val.keys()];
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
             let value = val.get(key);
-            if (Buffer.isBuffer(value)) value = Buffer.from(value).toString();
 
-            if (Buffer.isBuffer(key)) key = Buffer.from(key).toString();
+            const { mapKey, schemaValue } = parseSchema(key, schema, i);
 
-            obj[key] = decodeObject(value);
+            obj[mapKey] = decodeObject(value, null, schemaValue);
+        }
+        if (constr != null) {
+            return { [`constructor_${constr}`]: obj };
+        } else {
+            return obj;
+        }
+    } else if (typeof val === 'object' && val.constructor === Object) {
+        const obj: any = {};
+        const keys = Object.keys(val);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            let value = val[key];
+
+            const { mapKey, schemaValue } = parseSchema(key, schema, i);
+
+            obj[mapKey] = decodeObject(value, null, schemaValue);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -97,10 +163,30 @@ const decodeObject = (val: any, constr: number | null = null): any => {
         }
     } else if (Array.isArray(val)) {
         const arr = [];
+        if (constr !== null && Object.keys(schema).some((k) => k === `constructor_${constr}`)) {
+            schema = schema[`constructor_${constr}`];
+        }
+
         for (let i = 0; i < val.length; i++) {
-            arr.push(decodeObject(val[i]));
-            if (val[i] instanceof Map) {
+            const arrayVal = val[i];
+            let schemaValue;
+            let schemaKey;
+
+            // index match
+            if (!schemaKey) {
+                schemaKey = Object.keys(schema).find((k) => k === `[${i}]`);
             }
+
+            // dynamic match
+            if (!schemaKey) {
+                schemaKey = Object.keys(schema).find((k) => k === '[all]');
+            }
+
+            if (schemaKey) {
+                schemaValue = schema[schemaKey];
+            }
+
+            arr.push(decodeObject(arrayVal, null, schemaValue));
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: arr };
@@ -108,30 +194,37 @@ const decodeObject = (val: any, constr: number | null = null): any => {
             return arr;
         }
     } else if (Buffer.isBuffer(val)) {
-        const bufferString = Buffer.from(val).toString();
-        return bufferString.match(/^[0-9a-fA-F]+$/) ? `0x${bufferString}` : bufferString;
+        if (schema === 'string' || schema === 'bool') {
+            const result = Buffer.from(val).toString('utf8');
+            if (schema === 'bool' && isBooleanable(result)) {
+                return boolean(result);
+            }
+
+            return result;
+        }
+
+        return `0x${Buffer.from(val).toString('hex')}`;
     } else {
+        if (schema === 'bool' && isBooleanable(val)) {
+            return boolean(val);
+        }
+
         return val;
     }
 };
 
-export const decodeJsonDatumToJson = (cbor: string) => {
-    const d = new Decoder({
+export const decodeCborToJson = async (cborString: string, schema?: any) => {
+    const decoded = await cbor.decodeAll(Buffer.from(cborString, 'hex'), {
         tags: {
-            121: (val: any) => {
-                return decodeObject(val, 0);
-            },
-            122: (val: any) => {
-                return decodeObject(val, 1);
-            },
-            123: (val: any) => {
-                return decodeObject(val, 2);
-            },
-            124: (val: any) => {
-                return decodeObject(val, 3);
-            }
+            121: (val: any) => ({ [`constructor_0`]: val }),
+            122: (val: any) => ({ [`constructor_1`]: val }),
+            123: (val: any) => ({ [`constructor_2`]: val }),
+            124: (val: any) => ({ [`constructor_3`]: val })
         }
     });
 
-    return decodeObject(d.decodeAll(Buffer.from(cbor, 'hex'), 'hex')[0]);
+    let [data] = decoded;
+    data = decodeObject(data, null, schema);
+
+    return data;
 };

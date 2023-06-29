@@ -1,49 +1,89 @@
-import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import {
+    AssetNameLabel,
+    IHandleMetadata,
+    IPersonalization,
+    IPersonalizationDesigner,
+    IPzDatum
+} from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
     HandleOnChainData,
     MetadataLabel,
-    MetadatumAssetLabel,
-    PersonalizationDatum,
     TxBlock,
     TxBlockBody,
     TxBody,
-    ProcessAssetTokenInput
+    ProcessAssetTokenInput,
+    BuildPersonalizationInput
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
-import { decodeDatum } from '../../utils/serialization';
 import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
+import { decodeCborToJson } from '../../utils/cbor';
+import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
+import { portalSchema } from '../../utils/cbor/schema/portal';
+import { designerSchema } from '../../utils/cbor/schema/designer';
+import { socialsSchema } from '../../utils/cbor/schema/socials';
 
 const blackListedIpfsCids: string[] = [];
 
-const getDataFromIPFSLink = async (link: string): Promise<any | undefined> => {
+const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: any }): Promise<any | undefined> => {
     if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
     const cid = link.split('ipfs://')[1];
-    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`);
+    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`, schema);
 };
 
-const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor } = datum;
+const buildPersonalization = async ({
+    personalizationDatum,
+    txId,
+    index,
+    lovelace,
+    datumCbor
+}: BuildPersonalizationInput): Promise<IPersonalization> => {
+    const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
+
+    // start timer for ipfs calls
+    const ipfsTimer = Date.now();
+
     const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
-        [portal, designer, socials, vendor].map(getDataFromIPFSLink)
+        [
+            { link: portal, schema: portalSchema },
+            { link: designer, schema: designerSchema },
+            { link: socials, schema: socialsSchema },
+            { link: vendor }
+        ].map(getDataFromIPFSLink)
     );
 
-    let personalization: IPersonalization = {};
+    // stop timer for ipfs calls
+    const endIpfsTimer = Date.now() - ipfsTimer;
+    Logger.log({
+        message: `IPFS calls took ${endIpfsTimer}ms`,
+        category: LogCategory.INFO,
+        event: 'buildPersonalization.ipfsTime'
+    });
+
+    let personalization: IPersonalization = {
+        reference_token: {
+            tx_id: txId,
+            index,
+            lovelace,
+            datum: datumCbor
+        },
+        validated_by
+    };
 
     if (ipfsDesigner) {
-        personalization.nft_appearance = ipfsDesigner;
+        personalization.designer = ipfsDesigner;
     }
 
     if (ipfsPortal) {
-        personalization.my_page = ipfsPortal;
+        personalization.portal = ipfsPortal;
     }
 
     if (ipfsSocials) {
-        personalization.social_links = ipfsSocials;
+        personalization.socials = ipfsSocials;
     }
 
     // add vendor settings
@@ -54,22 +94,81 @@ const buildPersonalization = async (datum: PersonalizationDatum): Promise<IPerso
     return personalization;
 };
 
-function isValidDatum(datumObject: any): boolean {
-    // TODO: validate datum
-    if (Array.isArray(datumObject) && datumObject.length === 3) {
+export const isValidDatum = (datumObject: any): boolean => {
+    const { constructor_0 } = datumObject;
+
+    const requiredMetadata: IHandleMetadata = {
+        name: '',
+        image: '',
+        mediaType: '',
+        og: 0,
+        og_number: 0,
+        rarity: '',
+        length: 0,
+        characters: '',
+        numeric_modifiers: '',
+        version: 0
+    };
+
+    const requiredProperties: IPzDatum = {
+        standard_image: '',
+        portal: '',
+        designer: '',
+        socials: '',
+        vendor: '',
+        default: 0,
+        last_update_address: '',
+        validated_by: '',
+        image_hash: '',
+        standard_image_hash: '',
+        svg_version: '',
+        agreed_terms: '',
+        migrate_sig_required: 0
+    };
+
+    const hasAllRequiredKeys = (object: any, requiredObject: any) =>
+        Object.keys(requiredObject).every((key) => Object.keys(object).includes(key));
+
+    if (
+        constructor_0 &&
+        Array.isArray(constructor_0) &&
+        constructor_0.length === 3 &&
+        hasAllRequiredKeys(constructor_0[0], requiredMetadata) &&
+        hasAllRequiredKeys(constructor_0[2], requiredProperties)
+    ) {
         return true;
     }
 
     return false;
-}
+};
+
+const buildPersonalizationData = async (datum: string) => {
+    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
+    const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+
+    if (!isValidDatum(datumObjectConstructor)) return;
+
+    const { constructor_0: datumObject } = datumObjectConstructor;
+    const metadata = datumObject[0] as IHandleMetadata;
+    const personalizationDatum: IPzDatum = datumObject[2];
+
+    return {
+        metadata,
+        personalizationDatum
+    };
+};
 
 const processAssetReferenceToken = async ({
     assetName,
     slotNumber,
+    utxo,
+    lovelace,
     datum
 }: {
     assetName: string;
     slotNumber: number;
+    utxo: string;
+    lovelace: number;
     datum?: string;
 }) => {
     const { hex, name } = getHandleNameFromAssetName(assetName);
@@ -85,29 +184,39 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const decodedDatum = decodeDatum(datum);
-    const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
-
-    if (!isValidDatum(datumObject)) {
-        Logger.log(`invalid datum for reference token ${assetName}`);
+    const pzData = await buildPersonalizationData(datum);
+    if (!pzData) {
+        Logger.log(`invalid datum for reference token ${hex}`);
         return;
     }
 
-    // TODO: what do we do with the metadata?
-    const metadata = datumObject[0];
-    const personalizationData = datumObject[2] as PersonalizationDatum;
+    const { metadata, personalizationDatum } = pzData;
 
     // populate personalization from the reference token
-    const personalization = await buildPersonalization(personalizationData);
+    const [txId, indexString] = utxo.split('#');
+    const index = parseInt(indexString);
+    const personalization = await buildPersonalization({
+        personalizationDatum,
+        txId,
+        index,
+        lovelace,
+        datumCbor: datum
+    });
 
     await HandleStore.savePersonalizationChange({
         hex,
         name,
         personalization,
-        addresses: {}, // TODO: get addresses from personalization data
+        addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
-        setDefault: personalizationData.default ?? false,
-        customImage: personalizationData.custom_image
+        setDefault: personalizationDatum.default === 1,
+        customImage: metadata.image,
+        pfpImage: personalizationDatum.pfp_image,
+        bgImage: personalizationDatum.bg_image,
+        metadata,
+        customImageHash: personalizationDatum.image_hash,
+        standardImageHash: personalizationDatum.standard_image_hash,
+        svgVersion: personalizationDatum.svg_version
     });
 };
 
@@ -116,16 +225,18 @@ const processAssetClassToken = async ({
     slotNumber,
     address,
     utxo,
+    lovelace,
     datum,
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_NFT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_222)) {
         await processAssetToken({
             assetName,
             slotNumber,
             address,
             utxo,
+            lovelace,
             datum,
             handleMetadata,
             isMintTx
@@ -133,12 +244,12 @@ const processAssetClassToken = async ({
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.REFERENCE_NFT)) {
-        await processAssetReferenceToken({ assetName, slotNumber, datum });
+    if (assetName.includes(AssetNameLabel.LABEL_100)) {
+        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
         return;
     }
 
-    if (assetName.includes(MetadatumAssetLabel.SUB_STANDARD_FT)) {
+    if (assetName.includes(AssetNameLabel.LABEL_333)) {
         Logger.log(`FT token found ${assetName}. Not implemented yet`);
         return;
     }
@@ -171,12 +282,22 @@ const processAssetToken = async ({
     };
 
     if (isMintTx) {
-        const data = handleMetadata && handleMetadata[name];
-        const image = data?.image ?? '';
-        const og = data?.core?.og ?? 0;
+        let image = '';
+        let og_number = 0;
+
+        if (assetName.includes(AssetNameLabel.LABEL_222)) {
+            const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
+            og_number = data?.og_number ?? 0;
+            image = data?.image ?? '';
+        } else {
+            const data = handleMetadata && handleMetadata[name];
+            og_number = data?.core?.og_number ?? 0;
+            image = data?.image ?? '';
+        }
+
         await HandleStore.saveMintedHandle({
             ...input,
-            og,
+            og_number,
             image
         });
     } else {
@@ -211,11 +332,26 @@ export const processBlock = async ({
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];
         const txId = txBody?.id;
-        // get metadata so we can use it later when we need to get OG data.
+
+        // Look for burn transactions
+        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
+        for (let i = 0; i < mintAssets.length; i++) {
+            const [assetName, value] = mintAssets[i];
+            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
+                const { name } = getHandleNameFromAssetName(assetName);
+                await HandleStore.burnHandle(name, currentSlot);
+            }
+        }
+
+        // get metadata so we can use it later
         const handleMetadata =
             txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
+
+        const policyMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.POLICY]
+            ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.POLICY])
+            : null;
 
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
@@ -242,36 +378,35 @@ export const processBlock = async ({
                         }
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
+                        if (isMintTx && policyMetadata) {
+                            // Don't save nameless token.
+                            return;
+                        }
+
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
-                        const { address } = o;
+                        const {
+                            address,
+                            value: { coins }
+                        } = o;
 
                         const input: ProcessAssetTokenInput = {
                             assetName,
                             address,
                             slotNumber: currentSlot,
                             utxo: `${txId}#${i}`,
+                            lovelace: coins,
                             datum: datumString,
                             handleMetadata: data,
                             isMintTx
                         };
 
-                        if (Object.values(MetadatumAssetLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                        if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
                         } else {
                             await processAssetToken(input);
                         }
                     }
                 }
-            }
-        }
-
-        // Look for burn transactions
-        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
-        for (let i = 0; i < mintAssets.length; i++) {
-            const [assetName, value] = mintAssets[i];
-            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
-                const { name } = getHandleNameFromAssetName(assetName);
-                await HandleStore.burnHandle(name, currentSlot);
             }
         }
     }

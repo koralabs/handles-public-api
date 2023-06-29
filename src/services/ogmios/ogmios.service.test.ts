@@ -34,15 +34,15 @@ describe('OgmiosService Tests', () => {
             jest.spyOn(HandleStore, 'getFile');
             jest.spyOn(HandleStore, 'getFileOnline');
             jest.spyOn(HandleStore, 'getMetrics').mockReturnValue({
-                percentageComplete: '0',
-                currentMemoryUsed: 0,
-                memorySize: 0,
-                buildingElapsed: '',
-                ogmiosElapsed: '',
-                slotDate: new Date(),
-                handleCount: 0,
-                currentSlot: 0,
-                currentBlockHash: ''
+                percentage_complete: '0',
+                current_memory_used: 0,
+                memory_size: 0,
+                building_elapsed: '',
+                ogmios_elapsed: '',
+                slot_date: new Date(),
+                handle_count: 0,
+                current_slot: 0,
+                current_block_hash: ''
             });
             const ogmiosService = new OgmiosService();
             await ogmiosService.startSync();
