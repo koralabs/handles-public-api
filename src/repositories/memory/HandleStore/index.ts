@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 18;
+    static storageSchemaVersion = 22;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -124,7 +124,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
         // Set default name during personalization
-        this.setHolderAddressIndex(holderAddressDetails, name, default_in_wallet);
+        this.setHolderAddressIndex(holderAddressDetails, name, default_in_wallet, oldHandle?.holder);
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot &&
@@ -186,7 +186,12 @@ export class HandleStore {
         this.setHolderAddressIndex(holderAddressDetails);
     };
 
-    static setHolderAddressIndex(holderAddressDetails: AddressDetails, handleName?: string, defaultName?: string) {
+    static setHolderAddressIndex(
+        holderAddressDetails: AddressDetails,
+        handleName?: string,
+        defaultName?: string,
+        oldHolderAddress?: string
+    ) {
         const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
 
         const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? {
@@ -196,6 +201,13 @@ export class HandleStore {
             type,
             knownOwnerName
         };
+
+        if (oldHolderAddress && handleName) {
+            const oldHolder = this.holderAddressIndex.get(oldHolderAddress);
+            if (oldHolder) {
+                oldHolder.handles.delete(handleName);
+            }
+        }
 
         // add the new name if provided and does not already exist
         if (handleName && !existingHolderAddressDetails.handles.has(handleName)) {
@@ -215,7 +227,7 @@ export class HandleStore {
                 agg.push(handle);
             } else {
                 Logger.log({
-                    message: `Handle ${name} not found in holder address index, removing from handles index`,
+                    message: `Handle ${name} not found in handles index, removing from holder address index`,
                     category: LogCategory.WARN
                 });
                 existingHolderAddressDetails.handles.delete(name);
@@ -410,21 +422,17 @@ export class HandleStore {
         name,
         hex,
         personalization,
+        personalizationDatum,
         addresses,
         slotNumber,
-        setDefault,
-        customImage,
-        customImageHash,
-        standardImageHash,
-        svgVersion,
-        pfpImage,
-        bgImage,
         metadata
     }: SavePersonalizationInput) {
+        const image = metadata?.image ?? '';
+        const og_number = metadata?.og_number ?? 0;
+        const default_in_wallet = personalizationDatum?.default ? name : '';
+
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
-            const { og_number, image } = metadata;
-
             const buildHandleInput: SaveMintingTxInput = {
                 name,
                 hex,
@@ -433,10 +441,10 @@ export class HandleStore {
                 utxo: '', // utxo will come from the 222 token,
                 og_number,
                 image,
-                image_hash: customImageHash,
+                image_hash: personalizationDatum?.image_hash,
                 personalization,
-                default_in_wallet: setDefault ? name : '',
-                svg_version: svgVersion
+                default_in_wallet,
+                svg_version: personalizationDatum?.svg_version
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -451,19 +459,21 @@ export class HandleStore {
 
         const updatedHandle: Handle = {
             ...existingHandle,
-            image: customImage ?? '',
-            image_hash: customImageHash,
-            standard_image_hash: standardImageHash,
-            bg_image: bgImage ?? '',
-            pfp_image: pfpImage ?? '',
+            image,
+            image_hash: personalizationDatum?.image_hash ?? '',
+            standard_image_hash: personalizationDatum?.standard_image_hash ?? '',
+            bg_image: personalizationDatum?.bg_image,
+            bg_asset: personalizationDatum?.bg_asset,
+            pfp_image: personalizationDatum?.pfp_image,
+            pfp_asset: personalizationDatum?.pfp_asset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
                 ada: existingHandle.resolved_addresses.ada,
                 ...addresses
             },
-            default_in_wallet: setDefault ? name : '',
+            default_in_wallet,
             personalization,
-            svg_version: svgVersion
+            svg_version: personalizationDatum?.svg_version ?? ''
         };
 
         await HandleStore.save({

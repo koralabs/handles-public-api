@@ -2,7 +2,7 @@ import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces'
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { isValidDatum, processBlock } from './processBlock';
+import { buildValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
@@ -310,7 +310,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         const cbor =
-            'd87983aa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001af4e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400';
+            'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b14e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff';
 
         await processBlock({
             policyId,
@@ -324,9 +324,6 @@ describe('processBlock Tests', () => {
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             addresses: {},
-            customImage: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-            customImageHash: "0xabcd",
-            standardImageHash: "0xabcd",
             hex: '000643b06275727269746f73',
             metadata: {
                 characters: 'letters,numbers,special',
@@ -350,12 +347,29 @@ describe('processBlock Tests', () => {
                     tx_id: 'some_id'
                 },
                 socials: { test: 'data' },
-                validated_by: '0x'
+                validated_by: '0x',
+                trial: false,
+                nsfw: false
             },
-            pfpImage: '',
-            bgImage: '',
-            setDefault: false,
-            svgVersion: "1.0.0",
+            personalizationDatum: {
+                agreed_terms: '0x',
+                bg_image: '',
+                default: false,
+                designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
+                image_hash: '0xabcd',
+                last_update_address: '0xabcd',
+                migrate_sig_required: 0,
+                nsfw: false,
+                pfp_image: '',
+                portal: '',
+                socials: 'ipfs://QmVm58ioUUuJsgSLGL5zmcZbqMeMcUX2Q8PVxwBCnSTBDv',
+                standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
+                standard_image_hash: '0xabcd',
+                svg_version: '1.0.0',
+                trial: false,
+                validated_by: '0x',
+                vendor: ''
+            },
             slotNumber: 0
         });
     });
@@ -374,13 +388,17 @@ describe('processBlock Tests', () => {
             txBlock: txBlock({
                 handleHexName,
                 isMint: false,
-                datum: 'D87981A1446E616D654A24742D646174756D2D31'
+                datum: 'd87a9fa1446e616d65447461636fff'
             }) as TxBlock,
             tip
         });
 
-        expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(0);
-        expect(loggerSpy).toHaveBeenCalledWith(`invalid datum for reference token ${handleHexName}`);
+        expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(1);
+        expect(loggerSpy).toHaveBeenCalledWith({
+            category: 'ERROR',
+            event: 'buildValidDatum.invalidMetadata',
+            message: 'burritos invalid metadata: {"constructor_1":[{"name":"0x7461636f"}]}'
+        });
     });
 
     it('Should log error for 100 asset token when there is no datum', async () => {
@@ -421,23 +439,31 @@ describe('processBlock Tests', () => {
     });
 
     describe('isValidDatum tests', () => {
-        it('should return false for invalid datum', () => {
+        it('should return null for invalid datum', () => {
+            const datum = {
+                constructor_12: [{}, 1, {}]
+            };
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: null, personalizationDatum: null });
+        });
+
+        it('should return empty datum', () => {
             const datum = {
                 constructor_0: [{}, 1, {}]
             };
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: {}, personalizationDatum: {} });
         });
 
-        it('should return false for minimal invalid datum', () => {
+        it('should return invalid datum', () => {
             const datum = {
-                constructor_0: [{ a: 'a' }, 1, {}]
+                constructor_0: [{ a: 'a' }, 1, { b: 'b' }]
             };
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: { a: 'a' }, personalizationDatum: { b: 'b' } });
         });
 
-        it('should return false missing one required field', () => {
+        it('should return pz datum even with one missing required field', () => {
             const datum = {
                 constructor_0: [
                     {
@@ -466,8 +492,30 @@ describe('processBlock Tests', () => {
                 ]
             };
 
-            const result = isValidDatum(datum);
-            expect(result).toBeFalsy();
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({
+                metadata: {
+                    characters: '',
+                    image: '',
+                    length: 0,
+                    mediaType: '',
+                    name: '',
+                    numeric_modifiers: '',
+                    og: 0,
+                    og_number: 0,
+                    rarity: '',
+                    version: 0
+                },
+                personalizationDatum: {
+                    portal: '',
+                    designer: '',
+                    socials: '',
+                    vendor: '',
+                    default: false,
+                    last_update_address: '',
+                    validated_by: ''
+                }
+            });
         });
 
         it('should return true for valid datum', () => {
@@ -500,11 +548,13 @@ describe('processBlock Tests', () => {
                         standard_image_hash: '',
                         svg_version: '',
                         agreed_terms: '',
-                        migrate_sig_required: 0
+                        migrate_sig_required: 0,
+                        trial: 0,
+                        nsfw: 0
                     }
                 ]
             };
-            const result = isValidDatum(datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toBeTruthy();
         });
     });

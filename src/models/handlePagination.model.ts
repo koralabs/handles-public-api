@@ -2,7 +2,7 @@ import { ModelException } from '../exceptions/ModelException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import { isNumeric } from '../utils/util';
 
-export type Sort = 'asc' | 'desc';
+export type Sort = 'asc' | 'desc' | 'random';
 
 export interface HandlePaginationInput {
     handlesPerPage?: string;
@@ -36,7 +36,7 @@ export class HandlePaginationModel {
         if (page && !isNumeric(page)) {
             throw new ModelException(ERROR_TEXT.HANDLE_PAGE_INVALID);
         }
-        if (sort && !['desc', 'asc'].includes(sort)) {
+        if (sort && !['desc', 'asc', 'random'].includes(sort)) {
             throw new ModelException(ERROR_TEXT.HANDLE_SORT_INVALID);
         }
         if (slotNumber && !isNumeric(slotNumber)) {
