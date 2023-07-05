@@ -1354,6 +1354,9 @@ describe('HandleStore tests', () => {
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder).toEqual(stakeKey);
 
+            const holderAddress = HandleStore.holderAddressIndex.get(stakeKey);
+            expect(holderAddress?.handles?.has(handleName)).toBeTruthy();
+
             await HandleStore.saveHandleUpdate({
                 name: handleName,
                 adaAddress: newAddress,
@@ -1387,6 +1390,13 @@ describe('HandleStore tests', () => {
                 updated_slot_number: expect.any(Number),
                 has_datum: false
             });
+
+            const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
+            expect([...(newHolderAddress?.handles ?? [])]).toEqual([handleName]);
+
+            // expect the handle to be removed from the old holder
+            const updatedHolderAddress = HandleStore.holderAddressIndex.get(stakeKey);
+            expect(updatedHolderAddress?.handles?.has(handleName)).toBeFalsy();
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
