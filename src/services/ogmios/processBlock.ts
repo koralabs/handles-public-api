@@ -1,10 +1,4 @@
-import {
-    AssetNameLabel,
-    IHandleMetadata,
-    IPersonalization,
-    IPersonalizationDesigner,
-    IPzDatum
-} from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
@@ -37,12 +31,9 @@ const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: an
 
 const buildPersonalization = async ({
     personalizationDatum,
-    txId,
-    index,
-    lovelace,
-    datumCbor
+    personalization
 }: BuildPersonalizationInput): Promise<IPersonalization> => {
-    const { portal, designer, socials, vendor, validated_by } = personalizationDatum;
+    const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
 
     // start timer for ipfs calls
     const ipfsTimer = Date.now();
@@ -64,37 +55,42 @@ const buildPersonalization = async ({
         event: 'buildPersonalization.ipfsTime'
     });
 
-    let personalization: IPersonalization = {
-        reference_token: {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum: datumCbor
-        },
-        validated_by
+    const updatedPersonalization: IPersonalization = {
+        ...personalization,
+        validated_by,
+        trial: trial === 1,
+        nsfw: nsfw === 1
     };
 
     if (ipfsDesigner) {
-        personalization.designer = ipfsDesigner;
+        updatedPersonalization.designer = ipfsDesigner;
     }
 
     if (ipfsPortal) {
-        personalization.portal = ipfsPortal;
+        updatedPersonalization.portal = ipfsPortal;
     }
 
     if (ipfsSocials) {
-        personalization.socials = ipfsSocials;
+        updatedPersonalization.socials = ipfsSocials;
     }
 
     // add vendor settings
     // if (ipfsVendor) {
-    //     personalization.vendor = ipfsVendor;
+    //     updatedPersonalization.vendor = ipfsVendor;
     // }
 
-    return personalization;
+    return updatedPersonalization;
 };
 
-export const isValidDatum = (datumObject: any): boolean => {
+export const buildValidDatum = (
+    handle: string,
+    datumObject: any
+): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatum | null } => {
+    const result = {
+        metadata: null,
+        personalizationDatum: null
+    };
+
     const { constructor_0 } = datumObject;
 
     const requiredMetadata: IHandleMetadata = {
@@ -123,39 +119,58 @@ export const isValidDatum = (datumObject: any): boolean => {
         standard_image_hash: '',
         svg_version: '',
         agreed_terms: '',
-        migrate_sig_required: 0
+        migrate_sig_required: 0,
+        trial: 0,
+        nsfw: 0
     };
 
-    const hasAllRequiredKeys = (object: any, requiredObject: any) =>
-        Object.keys(requiredObject).every((key) => Object.keys(object).includes(key));
+    const getMissingKeys = (object: any, requiredObject: any): string[] =>
+        Object.keys(requiredObject).reduce<string[]>((memo, key) => {
+            if (!Object.keys(object).includes(key)) {
+                memo.push(key);
+            }
 
-    if (
-        constructor_0 &&
-        Array.isArray(constructor_0) &&
-        constructor_0.length === 3 &&
-        hasAllRequiredKeys(constructor_0[0], requiredMetadata) &&
-        hasAllRequiredKeys(constructor_0[2], requiredProperties)
-    ) {
-        return true;
+            return memo;
+        }, []);
+
+    if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
+        const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
+        if (missingMetadata.length > 0) {
+            Logger.log({
+                category: LogCategory.ERROR,
+                message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`,
+                event: 'buildValidDatum.missingMetadata'
+            });
+        }
+        const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
+        if (missingDatum.length > 0) {
+            Logger.log({
+                category: LogCategory.ERROR,
+                message: `${handle} missing datum keys: ${missingDatum.join(', ')}`,
+                event: 'buildValidDatum.missingDatum'
+            });
+        }
+
+        return {
+            metadata: constructor_0[0],
+            personalizationDatum: constructor_0[2]
+        };
     }
 
-    return false;
+    Logger.log({
+        category: LogCategory.ERROR,
+        message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`,
+        event: 'buildValidDatum.invalidMetadata'
+    });
+
+    return result;
 };
 
-const buildPersonalizationData = async (datum: string) => {
+const buildPersonalizationData = async (handle: string, datum: string) => {
     const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
-    if (!isValidDatum(datumObjectConstructor)) return;
-
-    const { constructor_0: datumObject } = datumObjectConstructor;
-    const metadata = datumObject[0] as IHandleMetadata;
-    const personalizationDatum: IPzDatum = datumObject[2];
-
-    return {
-        metadata,
-        personalizationDatum
-    };
+    return buildValidDatum(handle, datumObjectConstructor);
 };
 
 const processAssetReferenceToken = async ({
@@ -184,24 +199,30 @@ const processAssetReferenceToken = async ({
         return;
     }
 
-    const pzData = await buildPersonalizationData(datum);
-    if (!pzData) {
-        Logger.log(`invalid datum for reference token ${hex}`);
-        return;
-    }
-
-    const { metadata, personalizationDatum } = pzData;
-
-    // populate personalization from the reference token
     const [txId, indexString] = utxo.split('#');
     const index = parseInt(indexString);
-    const personalization = await buildPersonalization({
-        personalizationDatum,
-        txId,
-        index,
-        lovelace,
-        datumCbor: datum
-    });
+
+    let personalization: IPersonalization = {
+        reference_token: {
+            tx_id: txId,
+            index,
+            lovelace,
+            datum
+        },
+        validated_by: '',
+        trial: true,
+        nsfw: true
+    };
+
+    const { metadata, personalizationDatum } = await buildPersonalizationData(name, datum);
+
+    if (personalizationDatum) {
+        // populate personalization from the reference token
+        personalization = await buildPersonalization({
+            personalizationDatum,
+            personalization
+        });
+    }
 
     await HandleStore.savePersonalizationChange({
         hex,
@@ -209,14 +230,8 @@ const processAssetReferenceToken = async ({
         personalization,
         addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
-        setDefault: personalizationDatum.default === 1,
-        customImage: metadata.image,
-        pfpImage: personalizationDatum.pfp_image,
-        bgImage: personalizationDatum.bg_image,
         metadata,
-        customImageHash: personalizationDatum.image_hash,
-        standardImageHash: personalizationDatum.standard_image_hash,
-        svgVersion: personalizationDatum.svg_version
+        personalizationDatum
     });
 };
 
@@ -349,10 +364,6 @@ export const processBlock = async ({
                 ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
                 : null;
 
-        const policyMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.POLICY]
-            ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.POLICY])
-            : null;
-
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
             const o = txBody.body.outputs[i];
@@ -378,9 +389,9 @@ export const processBlock = async ({
                         }
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
-                        if (isMintTx && policyMetadata) {
+                        if (assetName === policyId) {
                             // Don't save nameless token.
-                            return;
+                            continue;
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;

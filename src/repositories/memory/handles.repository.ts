@@ -66,8 +66,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       return agg;
                   }, [])
                 : HandleStore.getHandles().reduce<IPersonalizedHandle[]>((agg, handle) => {
-                      if (search && !handle.name.includes(search)) return agg;
-                      agg.push(handle);
+                      if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
+                          agg.push(handle);
+                      }
                       return agg;
                   }, []);
 
@@ -83,7 +84,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }): Promise<IPersonalizedHandle[]> {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
-        const items = this.search(search);
+        let items = this.search(search);
 
         if (slotNumber) {
             items.sort((a, b) =>
@@ -98,6 +99,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+
+        if (sort === 'random') {
+            items = items
+                .map((value) => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
+        } else {
+            items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+        }
+
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
@@ -136,7 +147,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public async getAllHandleNames(search: HandleSearchModel, sort: string) {
         const handles = this.search(search);
         const filteredHandles = handles.filter((handle) => !!handle.utxo);
-        filteredHandles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+        if (sort === 'random') {
+            let shuffledHandles = filteredHandles
+                .map((value) => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
+            return shuffledHandles.map((handle) => handle.name);
+        } else {
+            filteredHandles.sort((a, b) =>
+                sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)
+            );
+        }
         return filteredHandles.map((handle) => handle.name);
     }
 

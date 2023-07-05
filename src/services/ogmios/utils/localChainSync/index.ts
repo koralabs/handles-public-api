@@ -77,21 +77,23 @@ export const createLocalChainSyncClient = async (
             // check if the message contains the Handle policy ID or is a RollBackward
             if (message.indexOf('"result":{"RollBackward"') >= 0) {
                 processTheBlock = true;
-            }
-            else {
+            } else {
                 processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
-                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ["", "0"])[1];
-                let blockMatch: string | null = (message.match(/"blockHash":\s?"([0-9a-fA-F]*)"/m) || ["", ""])[1];
-                let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ["", "0"])[1];
+                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || [
+                    '',
+                    '0'
+                ])[1];
+                let blockMatch: string | null = (message.match(/"headerHash":\s?"([0-9a-fA-F]*)"/m) || ['', ''])[1];
+                let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
                 //console.log({slotMatch, blockMatch, tipSlotMatch});
-                HandleStore.setMetrics({ 
+                HandleStore.setMetrics({
                     currentSlot: parseInt(slotMatch),
                     currentBlockHash: blockMatch,
                     lastSlot: parseInt(tipSlotMatch)
-                 });
-                 slotMatch = blockMatch = tipSlotMatch = null;
+                });
+                slotMatch = blockMatch = tipSlotMatch = null;
             }
-            
+
             if (processTheBlock) {
                 const response: Ogmios['RequestNextResponse'] = safeJSON.parse(message);
                 if (response.methodname === 'RequestNext') {

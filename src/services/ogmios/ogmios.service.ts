@@ -83,31 +83,33 @@ class OgmiosService {
         //     }
         // }, 1000);
 
-        const saveFilesInterval = setInterval(async () => {
-            const { current_slot, current_block_hash } = HandleStore.getMetrics();
+        if (this.intervals.length === 0) {
+            const saveFilesInterval = setInterval(async () => {
+                const { current_slot, current_block_hash } = HandleStore.getMetrics();
 
-            // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
-            // Once restarted, we should have a valid file to read from.
-            if (current_slot === 0) {
-                Logger.log({
-                    message: 'Slot is zero. Exiting process.',
-                    category: LogCategory.NOTIFY,
-                    event: 'OgmiosService.saveFilesInterval'
-                });
-                process.exit(2);
-            }
+                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+                // Once restarted, we should have a valid file to read from.
+                if (current_slot === 0) {
+                    Logger.log({
+                        message: 'Slot is zero. Exiting process.',
+                        category: LogCategory.NOTIFY,
+                        event: 'OgmiosService.saveFilesInterval'
+                    });
+                    process.exit(2);
+                }
 
-            await HandleStore.saveHandlesFile(current_slot, current_block_hash);
+                await HandleStore.saveHandlesFile(current_slot, current_block_hash);
 
-            memoryWatcher();
-        }, 10 * 60 * 1000);
+                memoryWatcher();
+            }, 10 * 60 * 1000);
 
-        const setMemoryInterval = setInterval(() => {
-            const memorySize = HandleStore.memorySize();
-            HandleStore.setMetrics({ memorySize });
-        }, 60000);
+            const setMemoryInterval = setInterval(() => {
+                const memorySize = HandleStore.memorySize();
+                HandleStore.setMetrics({ memorySize });
+            }, 60000);
 
-        this.intervals = [saveFilesInterval, setMemoryInterval];
+            this.intervals = [saveFilesInterval, setMemoryInterval];
+        }
     }
 
     public async getStartingPoint(): Promise<Point> {
@@ -125,7 +127,7 @@ class OgmiosService {
 
     public async startSync() {
         HandleStore.setMetrics({
-            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot, 
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].hash,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
             firstMemoryUsage: this.firstMemoryUsage

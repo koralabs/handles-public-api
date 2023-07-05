@@ -14,8 +14,10 @@ export class HandleViewModel {
     characters: string;
     numeric_modifiers: string;
     default_in_wallet: string;
-    pfp_image: string;
-    bg_image: string;
+    pfp_image?: string;
+    pfp_asset?: string;
+    bg_image?: string;
+    bg_asset?: string;
     resolved_addresses: { ada: string; eth?: string | undefined; btc?: string | undefined };
     created_slot_number: number;
     updated_slot_number: number;
@@ -42,7 +44,9 @@ export class HandleViewModel {
         this.numeric_modifiers = handle.numeric_modifiers;
         this.default_in_wallet = handle.default_in_wallet;
         this.pfp_image = handle.pfp_image;
+        this.pfp_asset = handle.pfp_asset?.replace('0x', '');
         this.bg_image = handle.bg_image;
+        this.bg_asset = handle.bg_asset?.replace('0x', '');
         this.resolved_addresses = handle.resolved_addresses;
         this.created_slot_number = handle.created_slot_number;
         this.updated_slot_number = handle.updated_slot_number;

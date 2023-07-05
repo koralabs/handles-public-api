@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { IPersonalization } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -307,7 +307,29 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
@@ -315,8 +337,8 @@ describe('HandleStore tests', () => {
                 name: 'chimichanga',
                 slotNumber: 99,
                 personalization: personalizationData,
+                personalizationDatum,
                 addresses: { ada: 'addr123' },
-                setDefault: false,
                 metadata: {
                     name: 'chimichanga',
                     image: 'ipfs://123',
@@ -328,11 +350,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                svgVersion: '1.0.0',
-                customImageHash: '0xtodo',
-                standardImageHash: '0x123',
-                customImage: 'ipfs://123'
+                }
             });
 
             await HandleStore.saveMintedHandle({
@@ -366,14 +384,18 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 resolved_addresses: { ada: 'addr123' },
                                 updated_slot_number: 100,
-                                utxo: 'utxo123#0'
+                                utxo: 'utxo123#0',
+                                image_hash: '0xtodo',
+                                standard_image_hash: '0xtodo'
                             },
                             old: {
                                 created_slot_number: 99,
                                 default_in_wallet: 'taco',
                                 resolved_addresses: { ada: '' },
                                 updated_slot_number: 99,
-                                utxo: ''
+                                utxo: '',
+                                image_hash: '0x123',
+                                standard_image_hash: '0x123'
                             }
                         }
                     }
@@ -445,7 +467,29 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
@@ -454,8 +498,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 addresses: {},
                 slotNumber: 200,
-                customImage: 'ipfs://123',
-                setDefault: false,
+                personalizationDatum,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -467,12 +510,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                pfpImage: 'todo',
-                bgImage: 'todo',
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0'
+                }
             });
 
             const handle = HandleStore.get('nacho-cheese');
@@ -495,7 +533,9 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -521,7 +561,9 @@ describe('HandleStore tests', () => {
                                         text_ribbon_colors: ['0xtodo']
                                     },
                                     reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                    validated_by: 'todo'
+                                    validated_by: 'todo',
+                                    trial: false,
+                                    nsfw: false
                                 },
                                 pfp_image: 'todo',
                                 updated_slot_number: 200
@@ -557,16 +599,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: 'sour-cream-hex',
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
+                personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
-                setDefault: false,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -578,13 +642,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                pfpImage: 'todo',
-                bgImage: 'todo',
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ifps://123'
+                }
             });
 
             expect(saveSpy).toHaveBeenCalledWith({
@@ -643,16 +701,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 1,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
+                personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
-                setDefault: true,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -664,11 +744,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                svgVersion: '1.0.0',
-                customImageHash: '0xtodo',
-                standardImageHash: '0x123',
-                customImage: 'todo',
+                }
             });
 
             const handle = HandleStore.get(handleName);
@@ -726,16 +802,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 1,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
+                personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
-                setDefault: true,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -747,11 +845,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const handle = HandleStore.get(handleName);
@@ -768,16 +862,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const newPersonalizationDatum: IPzDatum = {
+                default: 1,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: newPersonalizationUpdates,
+                personalizationDatum: newPersonalizationDatum,
                 addresses: {},
                 slotNumber: 300,
-                setDefault: true,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -789,11 +905,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const updatedHandle = HandleStore.get(handleName);
@@ -812,16 +924,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'new'
+                validated_by: 'new',
+                trial: false,
+                nsfw: false
+            };
+
+            const finalPersonalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: PersonalizationUpdatesWithDefaultWalletChange,
+                personalizationDatum: finalPersonalizationDatum,
                 addresses: {},
                 slotNumber: 400,
-                setDefault: false,
                 metadata: {
                     name: handleName,
                     image: 'ipfs://123',
@@ -833,11 +967,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const finalHandle = HandleStore.get(handleName);
@@ -859,6 +989,8 @@ describe('HandleStore tests', () => {
                 {
                     'pork-belly': {
                         new: {
+                            bg_image: 'todo',
+                            pfp_image: 'todo',
                             default_in_wallet: 'pork-belly',
                             image: 'ipfs://123',
                             personalization: {
@@ -868,11 +1000,20 @@ describe('HandleStore tests', () => {
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                trial: false,
+                                nsfw: false
                             },
                             updated_slot_number: 200
                         },
-                        old: { default_in_wallet: 'taco', image: '', personalization: undefined, updated_slot_number: 100 }
+                        old: {
+                            bg_image: '',
+                            pfp_image: '',
+                            default_in_wallet: 'taco',
+                            image: '',
+                            personalization: undefined,
+                            updated_slot_number: 100
+                        }
                     }
                 }
             ]);
@@ -897,7 +1038,9 @@ describe('HandleStore tests', () => {
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                trial: false,
+                                nsfw: false
                             },
                             updated_slot_number: 200
                         }
@@ -922,7 +1065,9 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0xEEE'
                                 },
                                 reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
-                                validated_by: 'todo'
+                                validated_by: 'todo',
+                                nsfw: false,
+                                trial: false
                             },
                             updated_slot_number: 300
                         }
@@ -942,16 +1087,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const tacoPersonalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate,
+                personalizationDatum: tacoPersonalizationDatum,
                 addresses: {},
                 slotNumber: 100,
-                setDefault: false,
                 metadata: {
                     name: 'taco',
                     image: 'ipfs://123',
@@ -963,11 +1130,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const tacoHandle = HandleStore.get('taco');
@@ -983,16 +1146,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const burritoPersonalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: 'burrito-hex',
                 name: 'burrito',
                 personalization: burritoPzUpdate,
+                personalizationDatum: burritoPersonalizationDatum,
                 addresses: {},
                 slotNumber: 200,
-                setDefault: false,
                 metadata: {
                     name: 'burrito',
                     image: 'ipfs://123',
@@ -1004,11 +1189,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const burritoHandle = HandleStore.get('burrito');
@@ -1024,16 +1205,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const barbacoaPersonalizationDatum: IPzDatum = {
+                default: 1,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: 'barbacoa-hex',
                 name: 'barbacoa',
                 personalization: barbacoaPzUpdate,
+                personalizationDatum: barbacoaPersonalizationDatum,
                 addresses: {},
                 slotNumber: 300,
-                setDefault: true,
                 metadata: {
                     name: 'barbacoa',
                     image: 'ipfs://123',
@@ -1045,11 +1248,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const barbacoaHandle = HandleStore.get('barbacoa');
@@ -1065,16 +1264,38 @@ describe('HandleStore tests', () => {
                     lovelace: 0,
                     datum: ''
                 },
-                validated_by: 'todo'
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const tacoPersonalizationDatumUpdate2: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
             };
 
             await HandleStore.savePersonalizationChange({
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate2,
+                personalizationDatum: tacoPersonalizationDatumUpdate2,
                 addresses: {},
                 slotNumber: 400,
-                setDefault: false,
                 metadata: {
                     name: 'taco',
                     image: 'ipfs://123',
@@ -1086,11 +1307,7 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0
-                },
-                customImageHash: '0x123',
-                standardImageHash: '0x123',
-                svgVersion: '1.0.0',
-                customImage: 'ipfs://123'
+                }
             });
 
             const tacoHandle2 = HandleStore.get('taco');
@@ -1137,6 +1354,9 @@ describe('HandleStore tests', () => {
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder).toEqual(stakeKey);
 
+            const holderAddress = HandleStore.holderAddressIndex.get(stakeKey);
+            expect(holderAddress?.handles?.has(handleName)).toBeTruthy();
+
             await HandleStore.saveHandleUpdate({
                 name: handleName,
                 adaAddress: newAddress,
@@ -1170,6 +1390,13 @@ describe('HandleStore tests', () => {
                 updated_slot_number: expect.any(Number),
                 has_datum: false
             });
+
+            const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
+            expect([...(newHolderAddress?.handles ?? [])]).toEqual([handleName]);
+
+            // expect the handle to be removed from the old holder
+            const updatedHolderAddress = HandleStore.holderAddressIndex.get(stakeKey);
+            expect(updatedHolderAddress?.handles?.has(handleName)).toBeFalsy();
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
