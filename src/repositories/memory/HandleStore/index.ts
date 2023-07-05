@@ -649,13 +649,17 @@ export class HandleStore {
                 return data;
             });
             worker.on('error', (msg) => {
-                throw msg;
+                Logger.log({
+                    message: `Error calling lockfile worker: ${msg}`,
+                    event: 'saveFileContents.errorSavingFile',
+                    category: LogCategory.INFO
+                });
             });
         } catch (error: any) {
             Logger.log({
-                message: `Error writing file: ${error.message}`,
+                message: `Error calling lockfile worker: ${error.message}`,
                 event: 'saveFileContents.errorSavingFile',
-                category: error.message === 'Lock file is already being held' ? LogCategory.INFO : LogCategory.ERROR
+                category: LogCategory.INFO
             });
             return false;
         }
