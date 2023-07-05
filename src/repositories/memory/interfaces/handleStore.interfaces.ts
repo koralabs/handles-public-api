@@ -65,7 +65,7 @@ export interface SavePersonalizationInput {
     name: string;
     personalization: IPersonalization;
     personalizationDatum: IPzDatum | null;
-    metadata: IHandleMetadata;
+    metadata: IHandleMetadata | null;
     addresses: {
         [chain: string]: string;
     };

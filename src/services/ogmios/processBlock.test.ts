@@ -388,13 +388,17 @@ describe('processBlock Tests', () => {
             txBlock: txBlock({
                 handleHexName,
                 isMint: false,
-                datum: 'D87981A1446E616D654A24742D646174756D2D31'
+                datum: 'd87a9fa1446e616d65447461636fff'
             }) as TxBlock,
             tip
         });
 
-        expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(0);
-        expect(loggerSpy).toHaveBeenCalledWith(`invalid metadata for ${handleHexName}`);
+        expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(1);
+        expect(loggerSpy).toHaveBeenCalledWith({
+            category: 'ERROR',
+            event: 'buildValidDatum.invalidMetadata',
+            message: 'burritos invalid metadata: {"constructor_1":[{"name":"0x7461636f"}]}'
+        });
     });
 
     it('Should log error for 100 asset token when there is no datum', async () => {
@@ -435,23 +439,31 @@ describe('processBlock Tests', () => {
     });
 
     describe('isValidDatum tests', () => {
-        it('should return false for invalid datum', () => {
+        it('should return null for invalid datum', () => {
+            const datum = {
+                constructor_12: [{}, 1, {}]
+            };
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: null, personalizationDatum: null });
+        });
+
+        it('should return empty datum', () => {
             const datum = {
                 constructor_0: [{}, 1, {}]
             };
-            const result = buildValidDatum(datum);
-            expect(result).toEqual({ metadata: null, personalizationDatum: null });
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: {}, personalizationDatum: {} });
         });
 
-        it('should return false for minimal invalid datum', () => {
+        it('should return invalid datum', () => {
             const datum = {
-                constructor_0: [{ a: 'a' }, 1, {}]
+                constructor_0: [{ a: 'a' }, 1, { b: 'b' }]
             };
-            const result = buildValidDatum(datum);
-            expect(result).toEqual({ metadata: null, personalizationDatum: null });
+            const result = buildValidDatum('taco', datum);
+            expect(result).toEqual({ metadata: { a: 'a' }, personalizationDatum: { b: 'b' } });
         });
 
-        it('should return false missing one required field', () => {
+        it('should return pz datum even with one missing required field', () => {
             const datum = {
                 constructor_0: [
                     {
@@ -480,7 +492,7 @@ describe('processBlock Tests', () => {
                 ]
             };
 
-            const result = buildValidDatum(datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toEqual({
                 metadata: {
                     characters: '',
@@ -494,7 +506,15 @@ describe('processBlock Tests', () => {
                     rarity: '',
                     version: 0
                 },
-                personalizationDatum: null
+                personalizationDatum: {
+                    portal: '',
+                    designer: '',
+                    socials: '',
+                    vendor: '',
+                    default: false,
+                    last_update_address: '',
+                    validated_by: ''
+                }
             });
         });
 
@@ -534,7 +554,7 @@ describe('processBlock Tests', () => {
                     }
                 ]
             };
-            const result = buildValidDatum(datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toBeTruthy();
         });
     });

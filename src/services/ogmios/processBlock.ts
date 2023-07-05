@@ -83,6 +83,7 @@ const buildPersonalization = async ({
 };
 
 export const buildValidDatum = (
+    handle: string,
     datumObject: any
 ): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatum | null } => {
     const result = {
@@ -123,26 +124,53 @@ export const buildValidDatum = (
         nsfw: 0
     };
 
-    const hasAllRequiredKeys = (object: any, requiredObject: any) =>
-        Object.keys(requiredObject).every((key) => Object.keys(object).includes(key));
+    const getMissingKeys = (object: any, requiredObject: any): string[] =>
+        Object.keys(requiredObject).reduce<string[]>((memo, key) => {
+            if (!Object.keys(object).includes(key)) {
+                memo.push(key);
+            }
+
+            return memo;
+        }, []);
 
     if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
-        if (hasAllRequiredKeys(constructor_0[0], requiredMetadata)) {
-            result.metadata = constructor_0[0];
+        const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
+        if (missingMetadata.length > 0) {
+            Logger.log({
+                category: LogCategory.ERROR,
+                message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`,
+                event: 'buildValidDatum.missingMetadata'
+            });
         }
-        if (hasAllRequiredKeys(constructor_0[2], requiredProperties)) {
-            result.personalizationDatum = constructor_0[2];
+        const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
+        if (missingDatum.length > 0) {
+            Logger.log({
+                category: LogCategory.ERROR,
+                message: `${handle} missing datum keys: ${missingDatum.join(', ')}`,
+                event: 'buildValidDatum.missingDatum'
+            });
         }
+
+        return {
+            metadata: constructor_0[0],
+            personalizationDatum: constructor_0[2]
+        };
     }
+
+    Logger.log({
+        category: LogCategory.ERROR,
+        message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`,
+        event: 'buildValidDatum.invalidMetadata'
+    });
 
     return result;
 };
 
-const buildPersonalizationData = async (datum: string) => {
+const buildPersonalizationData = async (handle: string, datum: string) => {
     const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
-    return buildValidDatum(datumObjectConstructor);
+    return buildValidDatum(handle, datumObjectConstructor);
 };
 
 const processAssetReferenceToken = async ({
@@ -186,12 +214,7 @@ const processAssetReferenceToken = async ({
         nsfw: true
     };
 
-    const { metadata, personalizationDatum } = await buildPersonalizationData(datum);
-
-    if (!metadata) {
-        Logger.log(`invalid metadata for ${hex}`);
-        return;
-    }
+    const { metadata, personalizationDatum } = await buildPersonalizationData(name, datum);
 
     if (personalizationDatum) {
         // populate personalization from the reference token
