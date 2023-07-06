@@ -580,7 +580,8 @@ export class HandleStore {
             handle_count: handleCount,
             memory_size: memorySize,
             current_slot: currentSlot,
-            current_block_hash: currentBlockHash
+            current_block_hash: currentBlockHash,
+            schema_version: HandleStore.storageSchemaVersion
         };
     }
 
