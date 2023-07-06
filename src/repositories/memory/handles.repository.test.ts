@@ -244,7 +244,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 memory_size: 0,
                 ogmios_elapsed: '0:00',
                 percentage_complete: '0.00',
-                slot_date: expect.any(Date)
+                slot_date: expect.any(Date),
+                schema_version: HandleStore.storageSchemaVersion
             });
         });
     });
