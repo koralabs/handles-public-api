@@ -17,7 +17,8 @@ const getStats = (): IHandleStats => ({
     slot_date: new Date(),
     handle_count: 0,
     current_slot: 0,
-    current_block_hash: ''
+    current_block_hash: '',
+    schema_version: 1
 });
 
 jest.mock('../ioc', () => ({
@@ -117,7 +118,8 @@ describe('Health Routes Test', () => {
                     handle_count: expect.any(Number),
                     ogmios_elapsed: expect.any(String),
                     percentage_complete: expect.any(String),
-                    slot_date: expect.any(String)
+                    slot_date: expect.any(String),
+                    schema_version: expect.any(Number)
                 }
             });
         });
@@ -140,7 +142,8 @@ describe('Health Routes Test', () => {
                     handle_count: expect.any(Number),
                     ogmios_elapsed: expect.any(String),
                     percentage_complete: expect.any(String),
-                    slot_date: expect.any(String)
+                    slot_date: expect.any(String),
+                    schema_version: expect.any(Number)
                 },
                 status: 'ogmios_behind'
             });
@@ -164,7 +167,8 @@ describe('Health Routes Test', () => {
                     handle_count: expect.any(Number),
                     ogmios_elapsed: expect.any(String),
                     percentage_complete: expect.any(String),
-                    slot_date: expect.any(String)
+                    slot_date: expect.any(String),
+                    schema_version: expect.any(Number)
                 },
                 status: 'storage_behind'
             });
@@ -190,7 +194,8 @@ describe('Health Routes Test', () => {
                     handle_count: expect.any(Number),
                     ogmios_elapsed: expect.any(String),
                     percentage_complete: expect.any(String),
-                    slot_date: expect.any(String)
+                    slot_date: expect.any(String),
+                    schema_version: expect.any(Number)
                 },
                 status: 'current'
             });
