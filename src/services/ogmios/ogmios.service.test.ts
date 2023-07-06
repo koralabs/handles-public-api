@@ -42,7 +42,8 @@ describe('OgmiosService Tests', () => {
                 slot_date: new Date(),
                 handle_count: 0,
                 current_slot: 0,
-                current_block_hash: ''
+                current_block_hash: '',
+                schema_version: 0
             });
             const ogmiosService = new OgmiosService();
             await ogmiosService.startSync();
