@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 22;
+    static storageSchemaVersion = 23;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -596,7 +596,10 @@ export class HandleStore {
         const date = slotDate.getTime();
         const now = new Date().getTime();
 
-        return date < now - 60000 && percentageComplete != `100.00`;
+        // console.log(`${date} < ${now - 60000} && ${percentageComplete} != 100.00)`);
+        // date < now - 60000 &&
+
+        return percentageComplete === `100.00`;
     }
 
     static async saveHandlesFile(
