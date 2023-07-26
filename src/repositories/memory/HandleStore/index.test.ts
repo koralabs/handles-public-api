@@ -305,7 +305,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -465,7 +466,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -531,7 +533,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -560,7 +563,7 @@ describe('HandleStore tests', () => {
                                         socials: [],
                                         text_ribbon_colors: ['0xtodo']
                                     },
-                                    reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                    reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                     validated_by: 'todo',
                                     trial: false,
                                     nsfw: false
@@ -597,7 +600,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -699,7 +703,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -800,7 +805,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -860,7 +866,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -922,7 +929,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'new',
                 trial: false,
@@ -998,7 +1006,7 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0x000',
                                     text_ribbon_colors: ['0xCCC']
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
                                 validated_by: 'todo',
                                 trial: false,
@@ -1036,7 +1044,7 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0x000',
                                     text_ribbon_colors: ['0xCCC']
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
                                 validated_by: 'todo',
                                 trial: false,
@@ -1064,7 +1072,7 @@ describe('HandleStore tests', () => {
                                 designer: {
                                     font_shadow_color: '0xEEE'
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '' },
+                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 validated_by: 'todo',
                                 nsfw: false,
                                 trial: false
@@ -1085,7 +1093,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1144,7 +1153,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1203,7 +1213,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1262,7 +1273,8 @@ describe('HandleStore tests', () => {
                     tx_id: '',
                     index: 0,
                     lovelace: 0,
-                    datum: ''
+                    datum: '',
+                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,

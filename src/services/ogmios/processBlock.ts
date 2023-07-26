@@ -178,12 +178,14 @@ const processAssetReferenceToken = async ({
     slotNumber,
     utxo,
     lovelace,
+    address,
     datum
 }: {
     assetName: string;
     slotNumber: number;
     utxo: string;
     lovelace: number;
+    address: string;
     datum?: string;
 }) => {
     const { hex, name } = getHandleNameFromAssetName(assetName);
@@ -207,7 +209,8 @@ const processAssetReferenceToken = async ({
             tx_id: txId,
             index,
             lovelace,
-            datum
+            datum,
+            address
         },
         validated_by: '',
         trial: true,
@@ -260,7 +263,7 @@ const processAssetClassToken = async ({
     }
 
     if (assetName.includes(AssetNameLabel.LABEL_100)) {
-        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
+        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 
@@ -392,6 +395,10 @@ export const processBlock = async ({
                         if (assetName === policyId) {
                             // Don't save nameless token.
                             continue;
+                        }
+
+                        if (assetName.includes('71756f636b61')) {
+                            console.log('STOP!');
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;

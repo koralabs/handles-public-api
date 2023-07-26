@@ -344,7 +344,8 @@ describe('processBlock Tests', () => {
                     datum: cbor,
                     index: 0,
                     lovelace: 1,
-                    tx_id: 'some_id'
+                    tx_id: 'some_id',
+                    address: 'addr123'
                 },
                 socials: { test: 'data' },
                 validated_by: '0x',
