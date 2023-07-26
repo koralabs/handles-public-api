@@ -397,10 +397,6 @@ export const processBlock = async ({
                             continue;
                         }
 
-                        if (assetName.includes('71756f636b61')) {
-                            console.log('STOP!');
-                        }
-
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
                         const {
                             address,
