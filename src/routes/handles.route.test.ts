@@ -4,6 +4,8 @@ import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '../utils/cbor';
+import * as scripts from '../config/scripts';
+import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -26,8 +28,14 @@ jest.mock('../ioc', () => ({
                 return {
                     name: handleName,
                     utxo: 'utxo#0',
+                    resolved_addresses: {
+                        ada: 'addr1'
+                    },
                     personalization: {
-                        p: 'z'
+                        p: 'z',
+                        reference_token: {
+                            address: 'script_addr1'
+                        }
                     },
                     datum: 'a247'
                 };
@@ -172,13 +180,13 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', utxo: 'utxo#0' });
+            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0' });
         });
 
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: '1', utxo: 'utxo#0' });
+            expect(response.body).toEqual({ name: '1', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0' });
         });
 
         it('should return legendary message when handle does not exist', async () => {
@@ -216,9 +224,26 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return valid handle', async () => {
+            const scriptDetails: ScriptDetails = {
+                handle: 'pz_script_01',
+                hex: 'hex',
+                cbor: 'abc',
+                validatorHash: 'abc'
+            };
+            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ p: 'z' });
+            expect(response.body).toEqual({
+                p: 'z',
+                reference_token: {
+                    address: 'script_addr1',
+                    script: {
+                        handleUtxo: 'utxo#0',
+                        handleAddress: 'addr1',
+                        ...scriptDetails
+                    }
+                }
+            });
         });
 
         it('should return legendary message', async () => {
@@ -230,7 +255,20 @@ describe('Testing Handles Routes', () => {
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/j/personalized');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ p: 'z' });
+            expect(response.body).toEqual({
+                p: 'z',
+                reference_token: {
+                    address: 'script_addr1',
+                    script: {
+                        cbor: 'abc',
+                        handle: 'pz_script_01',
+                        handleAddress: 'addr1',
+                        handleUtxo: 'utxo#0',
+                        hex: 'hex',
+                        validatorHash: 'abc'
+                    }
+                }
+            });
         });
 
         it('should return invalid message', async () => {

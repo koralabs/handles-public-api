@@ -1,10 +1,4 @@
-interface ScriptDetails {
-    handle: string;
-    hex: string;
-    cbor: string;
-    validatorHash: string;
-    latest?: boolean;
-}
+import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
 
 export interface Scripts {
     [network: string]: {
@@ -44,4 +38,9 @@ export const scripts: Scripts = {
             validatorHash: 'e218988685032c78a8b170c6c2bcdba21c9fb21ecc7d4550d8e8dae5'
         }
     }
+};
+
+export const getScript = (address: string): ScriptDetails | undefined => {
+    const network = process.env.NETWORK ?? 'preview';
+    return scripts?.[network]?.[address];
 };

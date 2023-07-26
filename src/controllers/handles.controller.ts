@@ -11,6 +11,7 @@ import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { decodeCborToJson } from '../utils/cbor';
 import { handleDatumSchema } from '../utils/cbor/schema/handleData';
+import { getScript } from '../config/scripts';
 
 class HandlesController {
     public getAll = async (
@@ -122,6 +123,33 @@ class HandlesController {
             }
 
             const { personalization } = new PersonalizedHandleViewModel(handleData);
+
+            if (!personalization) {
+                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json({});
+                return;
+            }
+
+            const script = getScript(personalization.reference_token.address);
+            if (!script) {
+                res.status(404).send({
+                    message: `No script found for ${personalization.reference_token.address}`
+                });
+                return;
+            }
+
+            const scriptHandle = await handleRepo.getHandleByName(script.handle);
+            if (!scriptHandle) {
+                res.status(404).send({ message: `Script handle: ${script.handle} not found` });
+                return;
+            }
+
+            // add to the reference_token the script data
+            personalization.reference_token.script = {
+                handleUtxo: scriptHandle.utxo,
+                handleAddress: scriptHandle.resolved_addresses.ada,
+                ...script
+            };
+
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
         } catch (error) {
             next(error);

@@ -71,7 +71,7 @@ export const createLocalChainSyncClient = async (
         const responseHandler = fastq.promise(messageHandler, 1).push;
 
         const processMessage = async (message: string) => {
-            const policyIds = POLICY_IDS[process.env.NETWORK ?? 'testnet'];
+            const policyIds = POLICY_IDS[process.env.NETWORK ?? 'preview'];
             let processTheBlock = false;
 
             // check if the message contains the Handle policy ID or is a RollBackward
