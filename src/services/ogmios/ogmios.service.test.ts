@@ -21,12 +21,7 @@ describe('OgmiosService Tests', () => {
                 .mockResolvedValue({
                     // @ts-ignore;
                     startSync: (result) => {
-                        expect(result).toEqual([
-                            {
-                                slot: 42971872,
-                                hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6'
-                            }
-                        ]);
+                        expect(result).toEqual(['origin']);
                         return jest.fn();
                     }
                 });
@@ -60,7 +55,7 @@ describe('OgmiosService Tests', () => {
             jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue(null);
             const ogmiosService = new OgmiosService();
             const startingPoint = await ogmiosService.getStartingPoint();
-            expect(startingPoint).toEqual(handleEraBoundaries['testnet']);
+            expect(startingPoint).toEqual(handleEraBoundaries['preview']);
         });
 
         it('Should use starting point from prepareHandlesStorage', async () => {

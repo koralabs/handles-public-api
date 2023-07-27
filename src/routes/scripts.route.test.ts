@@ -1,6 +1,7 @@
 import request from 'supertest';
 import App from '../app';
 import { scripts } from '../config/scripts';
+import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -50,22 +51,21 @@ describe('Scripts Routes Test', () => {
         });
 
         it('Should return latest script', async () => {
+            const network = process.env.NETWORK ?? 'preview';
+            const [key, latestScript] = Object.entries(scripts[network]).find(([_, value]) => value.latest) as [
+                string,
+                ScriptDetails
+            ];
+            delete latestScript.cbor;
+            delete latestScript.refScriptAddress;
+            delete latestScript.refScriptUtxo;
+
             const response = await request(app?.getServer()).get('/scripts?latest=true');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual(
-                expect.objectContaining({
-                    scriptAddress: expect.any(String),
-                    validatorHash: expect.any(String),
-                    cbor: expect.any(String),
-                    handle: expect.any(String),
-                    hex: expect.any(String),
-                    latest: expect.any(Boolean),
-                    output: expect.objectContaining({
-                        utxo: expect.any(String),
-                        address: expect.any(String)
-                    })
-                })
-            );
+            expect(response.body).toEqual({
+                ...latestScript,
+                scriptAddress: key
+            });
         });
     });
 });

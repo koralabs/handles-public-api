@@ -226,8 +226,7 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const scriptDetails: ScriptDetails = {
                 handle: 'pz_script_01',
-                hex: 'hex',
-                cbor: 'abc',
+                handleHex: 'hex',
                 validatorHash: 'abc'
             };
             jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
@@ -237,11 +236,7 @@ describe('Testing Handles Routes', () => {
                 p: 'z',
                 reference_token: {
                     address: 'script_addr1',
-                    script: {
-                        handleUtxo: 'utxo#0',
-                        handleAddress: 'addr1',
-                        ...scriptDetails
-                    }
+                    script: scriptDetails
                 }
             });
         });
@@ -260,11 +255,8 @@ describe('Testing Handles Routes', () => {
                 reference_token: {
                     address: 'script_addr1',
                     script: {
-                        cbor: 'abc',
                         handle: 'pz_script_01',
-                        handleAddress: 'addr1',
-                        handleUtxo: 'utxo#0',
-                        hex: 'hex',
+                        handleHex: 'hex',
                         validatorHash: 'abc'
                     }
                 }

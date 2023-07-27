@@ -2,7 +2,8 @@ import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
-import { IPersonalizationReferenceTokenScript } from '@koralabs/handles-public-api-interfaces';
+import { LatestScriptResult } from '../interfaces/scripts.interface';
+import { validateScriptDetails } from '../utils/util';
 
 class StatsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
@@ -27,17 +28,14 @@ class StatsController {
 
                 const handleData = await handleRepo.getHandleByName(scriptData.handle);
 
-                if (!handleData) {
-                    // send a 404 if no latest script is found
-                    res.status(404).send({ message: `${scriptData.handle} not found` });
-                    return;
-                }
+                const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(handleData, scriptData);
 
-                const result = {
-                    handleUtxo: handleData?.utxo,
-                    handleAddress: handleData?.resolved_addresses?.ada,
+                const result: LatestScriptResult = {
+                    ...scriptData,
                     scriptAddress,
-                    ...scriptData
+                    refScriptUtxo,
+                    refScriptAddress,
+                    cbor
                 };
 
                 res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(result);
