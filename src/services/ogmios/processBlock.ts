@@ -178,12 +178,14 @@ const processAssetReferenceToken = async ({
     slotNumber,
     utxo,
     lovelace,
+    address,
     datum
 }: {
     assetName: string;
     slotNumber: number;
     utxo: string;
     lovelace: number;
+    address: string;
     datum?: string;
 }) => {
     const { hex, name } = getHandleNameFromAssetName(assetName);
@@ -207,7 +209,8 @@ const processAssetReferenceToken = async ({
             tx_id: txId,
             index,
             lovelace,
-            datum
+            datum,
+            address
         },
         validated_by: '',
         trial: true,
@@ -242,6 +245,7 @@ const processAssetClassToken = async ({
     utxo,
     lovelace,
     datum,
+    script,
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
@@ -253,6 +257,7 @@ const processAssetClassToken = async ({
             utxo,
             lovelace,
             datum,
+            script,
             handleMetadata,
             isMintTx
         });
@@ -260,7 +265,7 @@ const processAssetClassToken = async ({
     }
 
     if (assetName.includes(AssetNameLabel.LABEL_100)) {
-        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, datum });
+        await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 
@@ -282,6 +287,7 @@ const processAssetToken = async ({
     address,
     utxo,
     datum,
+    script,
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
@@ -293,7 +299,8 @@ const processAssetToken = async ({
         adaAddress: address,
         slotNumber,
         utxo,
-        datum
+        datum,
+        script
     };
 
     if (isMintTx) {
@@ -372,7 +379,9 @@ export const processBlock = async ({
                 for (let j = 0; j < keys.length; j++) {
                     if (keys[j].toString().startsWith(policyId)) {
                         const assetName = keys[j].toString();
-                        const { datum = null } = o;
+                        const { datum = null, script: outputScript } = o;
+
+                        // We need to get the datum. This can either be a string or json object.
                         let datumString;
                         try {
                             datumString = !datum
@@ -386,6 +395,23 @@ export const processBlock = async ({
                                 category: LogCategory.ERROR,
                                 event: 'processBlock.decodingDatum'
                             });
+                        }
+
+                        let script: { type: string; cbor: string } | undefined;
+                        if (outputScript) {
+                            try {
+                                const [type, cbor] = Object.entries(outputScript)[0];
+                                script = {
+                                    type: type.replace(':', '_'),
+                                    cbor
+                                };
+                            } catch (error) {
+                                Logger.log({
+                                    message: `Error error getting script for ${txId}`,
+                                    category: LogCategory.ERROR,
+                                    event: 'processBlock.decodingScript'
+                                });
+                            }
                         }
 
                         const isMintTx = isMintingTransaction(txBody, assetName);
@@ -407,6 +433,7 @@ export const processBlock = async ({
                             utxo: `${txId}#${i}`,
                             lovelace: coins,
                             datum: datumString,
+                            script,
                             handleMetadata: data,
                             isMintTx
                         };

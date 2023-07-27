@@ -36,7 +36,7 @@ class OgmiosService {
         const { elapsedOgmiosExec } = HandleStore.getTimeMetrics();
         HandleStore.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
-        const policyId = POLICY_IDS[process.env.NETWORK ?? 'testnet'][0];
+        const policyId = POLICY_IDS[process.env.NETWORK ?? 'preview'][0];
         await processBlock({ policyId, txBlock: response.block as TxBlock, tip: response.tip as BlockTip });
 
         // start timer for ogmios rollForward
@@ -113,7 +113,7 @@ class OgmiosService {
     }
 
     public async getStartingPoint(): Promise<Point> {
-        const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'testnet'];
+        const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
         const handlesContent = await HandleStore.prepareHandlesStorage();
 
         if (!handlesContent) {
@@ -127,9 +127,9 @@ class OgmiosService {
 
     public async startSync() {
         HandleStore.setMetrics({
-            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
-            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].hash,
-            firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'testnet'].slot,
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].hash,
+            firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
 

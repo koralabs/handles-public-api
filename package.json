@@ -1,6 +1,6 @@
 {
   "name": "handles-public-api",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A downloadable and containerized decentralized API for Handles",
   "main": "index.js",
   "repository": "https://github.com/koralabs/handles-public-api.git",
@@ -56,7 +56,7 @@
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
-    "@koralabs/handles-public-api-interfaces": "2.6.1",
+    "@koralabs/handles-public-api-interfaces": "2.10.1",
     "@koralabs/kora-labs-common": "^1.0.5",
     "@koralabs/protected-words": "^1.0.0",
     "bech32": "^2.0.0",

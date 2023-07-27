@@ -6,6 +6,7 @@ export const designerSchema = {
     qr_inner_eye: 'string',
     qr_outer_eye: 'string',
     qr_dot: 'string',
+    qr_image: 'string',
     font: 'string',
     socials: {
         '[all]': {

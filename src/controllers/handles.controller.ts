@@ -11,6 +11,8 @@ import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { decodeCborToJson } from '../utils/cbor';
 import { handleDatumSchema } from '../utils/cbor/schema/handleData';
+import { getScript } from '../config/scripts';
+import { validateScriptDetails } from '../utils/util';
 
 class HandlesController {
     public getAll = async (
@@ -122,6 +124,27 @@ class HandlesController {
             }
 
             const { personalization } = new PersonalizedHandleViewModel(handleData);
+
+            if (!personalization) {
+                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json({});
+                return;
+            }
+
+            const scriptData = getScript(personalization.reference_token.address);
+            if (scriptData) {
+                const scriptHandle = await handleRepo.getHandleByName(scriptData.handle);
+
+                const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(scriptHandle, scriptData);
+
+                // add to the reference_token the script data
+                personalization.reference_token.script = {
+                    ...scriptData,
+                    refScriptUtxo,
+                    refScriptAddress,
+                    cbor
+                };
+            }
+
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
         } catch (error) {
             next(error);
@@ -159,6 +182,28 @@ class HandlesController {
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202)
                 .contentType('text/plain; charset=utf-8')
                 .send(handleDatum);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public async getHandleScript(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleName = req.params.handle;
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handle = await handleRepo.getHandleByName(handleName);
+
+            if (!handle) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            if (!handle.script) {
+                res.status(404).send({ message: 'Script not found' });
+                return;
+            }
+
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handle.script);
         } catch (error) {
             next(error);
         }
