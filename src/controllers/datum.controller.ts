@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { encodeJsonToDatum, decodeCborToJson } from '../utils/cbor';
+import { encodeJsonToDatum, decodeCborToJson, KeyType } from '../utils/cbor';
 
 class DatumController {
     public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -12,7 +12,7 @@ class DatumController {
 
             if (req.query.from === 'plutus_data_cbor' && req.query.to === 'json') {
                 if (req.headers?.['content-type']?.startsWith('text/plain')) {
-                    const decoded = await decodeCborToJson(req.body);
+                    const decoded = await decodeCborToJson(req.body, {}, req.query.default_key_type?.toString() as KeyType);
                     res.status(200).json(decoded);
                     return;
                 }
@@ -23,7 +23,7 @@ class DatumController {
                     return;
                 }
 
-                const decoded = await decodeCborToJson(cbor, schema);
+                const decoded = await decodeCborToJson(cbor, schema, req.query.default_key_type?.toString() as KeyType);
                 res.status(200).json(decoded);
                 return;
             }
