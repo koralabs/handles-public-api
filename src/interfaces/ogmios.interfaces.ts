@@ -100,6 +100,9 @@ export interface TxOutput {
           }
         | string
         | null;
+    script?: {
+        [scriptType: string]: string;
+    } | null;
 }
 
 export interface TxBody {
@@ -170,6 +173,7 @@ export interface ProcessAssetTokenInput {
     utxo: string;
     lovelace: number;
     datum?: string;
+    script?: { type: string; cbor: string };
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
 }

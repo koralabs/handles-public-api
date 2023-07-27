@@ -47,6 +47,7 @@ export interface SaveMintingTxInput {
     default_in_wallet?: string;
     pfp_image?: string;
     datum?: string;
+    script?: { type: string; cbor: string };
     personalization?: IPersonalization;
     amount?: number;
 }
@@ -57,6 +58,7 @@ export interface SaveWalletAddressMoveInput {
     adaAddress: string;
     utxo: string;
     datum?: string;
+    script?: { type: string; cbor: string };
 }
 
 export interface SavePersonalizationInput {

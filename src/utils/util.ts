@@ -86,7 +86,7 @@ export const validateScriptDetails = (scriptHandle: IPersonalizedHandle | null, 
         scriptHandle && scriptHandle.resolved_addresses.ada === scriptData.refScriptAddress
             ? scriptData.refScriptAddress
             : undefined;
-    const cbor = scriptHandle && scriptHandle.utxo === scriptData.cbor ? scriptData.cbor : undefined;
+    const cbor = scriptHandle && scriptHandle.script?.cbor === scriptData.cbor ? scriptData.cbor : undefined;
 
     return {
         refScriptUtxo,

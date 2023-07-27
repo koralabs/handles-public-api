@@ -37,7 +37,11 @@ jest.mock('../ioc', () => ({
                             address: 'script_addr1'
                         }
                     },
-                    datum: 'a247'
+                    datum: 'a247',
+                    script: {
+                        type: 'plutus_v2',
+                        cbor: 'a247'
+                    }
                 };
             },
             getAll: () => {
@@ -340,6 +344,23 @@ describe('Testing Handles Routes', () => {
                 .set('Accept', 'application/json');
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual('Unable to decode datum to json');
+        });
+    });
+
+    describe('[GET] /handles/:handle/script', () => {
+        it('should return valid script for handle', async () => {
+            const response = await request(app?.getServer()).get('/handles/skirt_steak_taco/script');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({
+                type: 'plutus_v2',
+                cbor: 'a247'
+            });
+        });
+
+        it('should return script not found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no-utxo/script');
+            expect(response.status).toEqual(404);
+            expect(response.body).toEqual({ message: 'Script not found' });
         });
     });
 });

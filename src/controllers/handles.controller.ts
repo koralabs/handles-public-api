@@ -186,6 +186,28 @@ class HandlesController {
             next(error);
         }
     }
+
+    public async getHandleScript(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleName = req.params.handle;
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handle = await handleRepo.getHandleByName(handleName);
+
+            if (!handle) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            if (!handle.script) {
+                res.status(404).send({ message: 'Script not found' });
+                return;
+            }
+
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(handle.script);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default HandlesController;

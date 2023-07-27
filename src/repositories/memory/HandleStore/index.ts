@@ -273,6 +273,7 @@ export class HandleStore {
         slotNumber,
         utxo,
         datum,
+        script,
         amount = 1,
         bg_image = '',
         pfp_image = '',
@@ -305,6 +306,7 @@ export class HandleStore {
             updated_slot_number: slotNumber,
             has_datum: !!datum,
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
+            script,
             personalization,
             amount,
             svg_version
@@ -392,7 +394,14 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({ name, adaAddress, utxo, slotNumber, datum }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({
+        name,
+        adaAddress,
+        utxo,
+        slotNumber,
+        datum,
+        script
+    }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             Logger.log({
@@ -409,7 +418,8 @@ export class HandleStore {
             resolved_addresses: { ada: adaAddress },
             updated_slot_number: slotNumber,
             has_datum: !!datum,
-            datum: isDatumEndpointEnabled() && datum ? datum : undefined
+            datum: isDatumEndpointEnabled() && datum ? datum : undefined,
+            script
         };
 
         await HandleStore.save({

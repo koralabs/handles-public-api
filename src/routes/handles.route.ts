@@ -23,6 +23,11 @@ class HandlesRoute extends BaseRoute {
             this.injectRegistryMiddleware,
             this.handlesController.getHandleDatum
         );
+        this.router.get(
+            `${this.path}/:handle/script`,
+            this.injectRegistryMiddleware,
+            this.handlesController.getHandleScript
+        );
     }
 }
 
