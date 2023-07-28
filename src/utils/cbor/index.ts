@@ -143,7 +143,7 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}, 
 
             const { mapKey, schemaValue } = parseSchema(key, schema, defaultKeyType, i);
 
-            obj[mapKey] = decodeObject(value, null, schemaValue);
+            obj[mapKey] = decodeObject(value, null, schemaValue, defaultKeyType);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -159,7 +159,7 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}, 
 
             const { mapKey, schemaValue } = parseSchema(key, schema, defaultKeyType, i);
 
-            obj[mapKey] = decodeObject(value, null, schemaValue);
+            obj[mapKey] = decodeObject(value, null, schemaValue, defaultKeyType);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -191,7 +191,7 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}, 
                 schemaValue = schema[schemaKey];
             }
 
-            arr.push(decodeObject(arrayVal, null, schemaValue));
+            arr.push(decodeObject(arrayVal, null, schemaValue, defaultKeyType));
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: arr };

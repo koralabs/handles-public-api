@@ -12,7 +12,7 @@ class DatumController {
 
             if (req.query.from === 'plutus_data_cbor' && req.query.to === 'json') {
                 if (req.headers?.['content-type']?.startsWith('text/plain')) {
-                    const decoded = await decodeCborToJson(req.body, {}, req.query.default_key_type?.toString() as KeyType);
+                    const decoded = await decodeCborToJson(req.body, {}, req.query.default_key_type as KeyType);
                     res.status(200).json(decoded);
                     return;
                 }
@@ -23,7 +23,7 @@ class DatumController {
                     return;
                 }
 
-                const decoded = await decodeCborToJson(cbor, schema, req.query.default_key_type?.toString() as KeyType);
+                const decoded = await decodeCborToJson(cbor, schema, req.query.default_key_type as KeyType);
                 res.status(200).json(decoded);
                 return;
             }
