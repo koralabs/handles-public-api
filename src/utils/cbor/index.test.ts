@@ -1,4 +1,4 @@
-import { decodeCborToJson, encodeJsonToDatum } from './index';
+import { KeyType, decodeCborToJson, encodeJsonToDatum } from './index';
 import { handleDatumSchema } from './schema/handleData';
 import { designerSchema } from './schema/designer';
 import { IPersonalizationDesigner } from '@koralabs/handles-public-api-interfaces';
@@ -370,6 +370,17 @@ describe('CBOR tests', () => {
                 }
             };
             const decoded = await decodeCborToJson(cbor, schema);
+            expect(decoded).toEqual({
+                '0x5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6': { '0x': 0 },
+                '0x8ed30c080aba8eb431dabb802ea8dda3a131b0f49c72d2766b25b1eb': { '0x': 0 }
+            });
+        });
+
+        it('should use default key type', async () => {
+            const cbor =
+                'a2581c5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6a14000581c8ed30c080aba8eb431dabb802ea8dda3a131b0f49c72d2766b25b1eba14000';
+
+            const decoded = await decodeCborToJson(cbor, {}, KeyType.HEX);
             expect(decoded).toEqual({
                 '0x5ca7f4e1e708ddf1958b2b7e65134738ebba5d8c803bdbe50ea0f3c6': { '0x': 0 },
                 '0x8ed30c080aba8eb431dabb802ea8dda3a131b0f49c72d2766b25b1eb': { '0x': 0 }

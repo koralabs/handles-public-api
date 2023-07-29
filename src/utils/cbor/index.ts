@@ -14,6 +14,11 @@ import { boolean, isBooleanable } from 'boolean';
 // vs
 // const obj = JSON.parse(<json>)
 
+export enum KeyType {
+    UTF8 = 'utf8',
+    HEX = 'hex'
+}
+
 class JsonToDatumObject {
     json: any;
     constructor(json: any) {
@@ -81,13 +86,13 @@ class JsonToDatumObject {
     };
 }
 
-export const encodeJsonToDatum = async (json: any) => {
+export const encodeJsonToDatum = async (json: any ) => {
     const obj = new JsonToDatumObject(json);
     const result = await cbor.encodeAsync(obj, { chunkSize: 64 });
     return result.toString('hex');
 };
 
-const parseSchema = (key: any, schema: any, i: number) => {
+const parseSchema = (key: any, schema: any, defaultKeyType: KeyType, i: number) => {
     let schemaValue;
 
     let mapKey = Buffer.from(key).toString('utf8');
@@ -99,7 +104,7 @@ const parseSchema = (key: any, schema: any, i: number) => {
     let schemaKey = Object.keys(schema).find((k) => k === mapKey);
     if (!schemaKey) {
         schemaKey = Object.keys(schema).find((k) => k.replace('0x', '') === mapKey);
-        if (schemaKey) {
+        if (schemaKey || defaultKeyType == KeyType.HEX) {
             mapKey = hexKey;
         }
     }
@@ -112,7 +117,7 @@ const parseSchema = (key: any, schema: any, i: number) => {
     // dynamic match
     if (!schemaKey) {
         schemaKey = Object.keys(schema).find((k) => k.startsWith('<') && k.endsWith('>'));
-        if (schemaKey === '<hexstring>') {
+        if (schemaKey === '<hexstring>' || defaultKeyType == KeyType.HEX) {
             mapKey = hexKey;
         }
     }
@@ -127,7 +132,7 @@ const parseSchema = (key: any, schema: any, i: number) => {
     };
 };
 
-const decodeObject = (val: any, constr: number | null = null, schema: any = {}): any => {
+const decodeObject = (val: any, constr: number | null = null, schema: any = {}, defaultKeyType: KeyType = KeyType.UTF8): any => {
     const isMap = val instanceof Map;
     if (isMap) {
         const obj: any = {};
@@ -136,9 +141,9 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}):
             const key = keys[i];
             let value = val.get(key);
 
-            const { mapKey, schemaValue } = parseSchema(key, schema, i);
+            const { mapKey, schemaValue } = parseSchema(key, schema, defaultKeyType, i);
 
-            obj[mapKey] = decodeObject(value, null, schemaValue);
+            obj[mapKey] = decodeObject(value, null, schemaValue, defaultKeyType);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -152,9 +157,9 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}):
             const key = keys[i];
             let value = val[key];
 
-            const { mapKey, schemaValue } = parseSchema(key, schema, i);
+            const { mapKey, schemaValue } = parseSchema(key, schema, defaultKeyType, i);
 
-            obj[mapKey] = decodeObject(value, null, schemaValue);
+            obj[mapKey] = decodeObject(value, null, schemaValue, defaultKeyType);
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: obj };
@@ -186,7 +191,7 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}):
                 schemaValue = schema[schemaKey];
             }
 
-            arr.push(decodeObject(arrayVal, null, schemaValue));
+            arr.push(decodeObject(arrayVal, null, schemaValue, defaultKeyType));
         }
         if (constr != null) {
             return { [`constructor_${constr}`]: arr };
@@ -213,7 +218,7 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}):
     }
 };
 
-export const decodeCborToJson = async (cborString: string, schema?: any) => {
+export const decodeCborToJson = async (cborString: string, schema?: any, defaultKeyType?: KeyType) => {
     const decoded = await cbor.decodeAll(Buffer.from(cborString, 'hex'), {
         tags: {
             121: (val: any) => ({ [`constructor_0`]: val }),
@@ -224,7 +229,7 @@ export const decodeCborToJson = async (cborString: string, schema?: any) => {
     });
 
     let [data] = decoded;
-    data = decodeObject(data, null, schema);
+    data = decodeObject(data, null, schema, defaultKeyType);
 
     return data;
 };
