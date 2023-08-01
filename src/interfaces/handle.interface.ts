@@ -12,6 +12,7 @@ export interface IGetAllQueryParams {
     slot_number?: string;
     search?: string;
     holder_address?: string;
+    og?: 'true' | 'false';
 }
 
 export interface IGetAllHoldersQueryParams {
