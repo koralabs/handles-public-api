@@ -2,13 +2,14 @@ import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { decodeCborToJson } from '../cbor';
 import { IPFS_GATEWAY, IPFS_GATEWAY_BACKUP } from '../../config';
+import { CID } from 'multiformats/cid';
+import { base32 } from 'multiformats/bases/base32';
 
-export const decodeCborFromIPFSFile = async (url: string, schema?: any): Promise<any> => {
-
+export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise<any> => {
     try {
-        let result = await fetch(`${IPFS_GATEWAY}${url}`);
+        let result = await fetch(`${IPFS_GATEWAY}${cid}`);
         if (!result.ok && IPFS_GATEWAY_BACKUP.length > 12) { // at least 13 characters in a an HTTPS URL
-            result = await fetch(`${IPFS_GATEWAY_BACKUP}${url}`);
+            result = await fetch(`${IPFS_GATEWAY_BACKUP}${CID.parse(cid).toString(base32.encoder)}`);
         }
         const buff = await result.arrayBuffer();
         if (buff) {
@@ -23,7 +24,7 @@ export const decodeCborFromIPFSFile = async (url: string, schema?: any): Promise
                 return json;
             } catch (error: any) {
                 Logger.log({
-                    message: `Error parsing json from ${IPFS_GATEWAY}${url} with error ${error.message}`,
+                    message: `Error parsing json from ${IPFS_GATEWAY}${cid} with error ${error.message}`,
                     category: LogCategory.ERROR,
                     event: 'decodeCborFromIPFSFile.parseJSON.error'
                 });
@@ -33,7 +34,7 @@ export const decodeCborFromIPFSFile = async (url: string, schema?: any): Promise
 
         console.log('ERROR', error);
         Logger.log({
-            message: `Error getting data from ${IPFS_GATEWAY}${url} data with error ${error.message}`,
+            message: `Error getting data from ${IPFS_GATEWAY}${cid} data with error ${error.message}`,
             category: LogCategory.ERROR,
             event: 'decodeCborFromIPFSFile.error'
         });
