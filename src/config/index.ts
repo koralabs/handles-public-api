@@ -13,5 +13,6 @@ export const {
     OGMIOS_HOST = 'http://localhost:1337',
     NETWORK = '',
     DISABLE_HANDLES_SNAPSHOT = '',
-    IPFS_GATEWAY = 'https://ipfs.io/ipfs/'
+    IPFS_GATEWAY = 'https://ipfs.io/ipfs/',
+    IPFS_GATEWAY_BACKUP = ''
 } = process.env;
