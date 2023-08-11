@@ -2,13 +2,13 @@ import fetch from 'cross-fetch';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { decodeCborToJson } from '../cbor';
 import { IPFS_GATEWAY, IPFS_GATEWAY_BACKUP } from '../../config';
-import { CID } from 'multiformats/cid';
-import { base32 } from 'multiformats/bases/base32';
 
 export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise<any> => {
     try {
         let result = await fetch(`${IPFS_GATEWAY}${cid}`);
         if (!result.ok && IPFS_GATEWAY_BACKUP.length > 12) { // at least 13 characters in a an HTTPS URL
+            const { CID } = await import('multiformats/cid');
+            const { base32 } = await import('multiformats/bases/base32');
             result = await fetch(`${IPFS_GATEWAY_BACKUP}${CID.parse(cid).toString(base32.encoder)}`);
         }
         const buff = await result.arrayBuffer();
