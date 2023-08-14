@@ -12,7 +12,9 @@ export const {
     ORIGIN = '',
     OGMIOS_HOST = 'http://localhost:1337',
     NETWORK = '',
-    DISABLE_HANDLES_SNAPSHOT = '',
-    IPFS_GATEWAY = 'https://ipfs.io/ipfs/',
-    IPFS_GATEWAY_BACKUP = ''
+    DISABLE_HANDLES_SNAPSHOT = ''
 } = process.env;
+
+export const getIpfsGateway = (backup = false) => {
+    return backup ? process.env.IPFS_GATEWAY_BACKUP || '' : process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+};
