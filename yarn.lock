@@ -636,10 +636,10 @@
   resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-2.10.1.tgz#9c2fc17dff42966402bca241834079cb7ffaec19"
   integrity sha512-fCIsUNJXylmTTRO/NLKnynZV4CtvJeja8UqLo1fS3I330tDULDtKGhcDvj5JrFYKw6LlW+7ED0yQ9RmEcYZNwQ==
 
-"@koralabs/kora-labs-common@^1.0.5":
-  version "1.0.8"
-  resolved "https://registry.npmjs.org/@koralabs/kora-labs-common/-/kora-labs-common-1.0.8.tgz"
-  integrity sha512-EPhRwtlOI+zKbWAjxzjP6b9XNEChQyrCpi7ua+G5PDsp3S528UdGrCJ1ifH8uJOsyEEHc70EbwtoOfOZ9IKJiw==
+"@koralabs/kora-labs-common@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-1.1.0.tgz#9c05c708cc09f348c82e3ef9cccd36432012f77f"
+  integrity sha512-+c9eWRlnYoQz6DohYnBUZrWmd3ORhsPBUFXipBBw9+dQGrzOEmJAa2KuURorhyQxOfYo2xiXII5J4lvoRJCf9w==
 
 "@koralabs/protected-words@^1.0.0":
   version "1.0.0"
@@ -4318,6 +4318,11 @@ ms@2.1.3, ms@^2.1.1:
   version "2.1.3"
   resolved "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
+
+multiformats@9.9.0:
+  version "9.9.0"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.9.0.tgz#c68354e7d21037a8f1f8833c8ccd68618e8f1d37"
+  integrity sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==
 
 mute-stream@~0.0.4:
   version "0.0.8"

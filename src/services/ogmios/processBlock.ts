@@ -12,7 +12,6 @@ import {
 } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
-import { IPFS_GATEWAY } from '../../config';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { decodeCborToJson } from '../../utils/cbor';
 import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
@@ -26,7 +25,7 @@ const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: an
     if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
     const cid = link.split('ipfs://')[1];
-    return decodeCborFromIPFSFile(`${IPFS_GATEWAY}${cid}`, schema);
+    return decodeCborFromIPFSFile(`${cid}`, schema);
 };
 
 const buildPersonalization = async ({
