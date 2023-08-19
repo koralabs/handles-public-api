@@ -9,6 +9,7 @@ interface HandleSearchInput {
     numeric_modifiers?: string;
     search?: string;
     holder_address?: string;
+    personalized?: boolean;
 }
 
 export class HandleSearchModel {
@@ -18,15 +19,17 @@ export class HandleSearchModel {
     private _numeric_modifiers?: string;
     private _search?: string;
     private _holder_address?: string;
+    private _personalized?: boolean;
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, personalized } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
         this.numeric_modifiers = numeric_modifiers;
         this.search = search;
         this.holder_address = holder_address;
+        this.personalized = personalized;
     }
 
     get characters() {
@@ -100,5 +103,13 @@ export class HandleSearchModel {
 
     set holder_address(value) {
         this._holder_address = value;
+    }
+
+    get personalized() {
+        return this._personalized;
+    }
+
+    set personalized(value) {
+        this._personalized = value;
     }
 }

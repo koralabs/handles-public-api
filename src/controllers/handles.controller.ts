@@ -31,7 +31,8 @@ class HandlesController {
                 numeric_modifiers,
                 slot_number,
                 search: searchQuery,
-                holder_address
+                holder_address,
+                personalized
             } = req.query;
 
             const search = new HandleSearchModel({
@@ -40,7 +41,8 @@ class HandlesController {
                 rarity,
                 numeric_modifiers,
                 search: searchQuery,
-                holder_address
+                holder_address,
+                personalized
             });
 
             const pagination = new HandlePaginationModel({
@@ -60,7 +62,8 @@ class HandlesController {
                 return;
             }
 
-            const handles = await handleRepo.getAll({ pagination, search });
+            let handles = await handleRepo.getAll({ pagination, search });
+
             res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
                 handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle))
             );

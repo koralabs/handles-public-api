@@ -55,7 +55,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         // remove the empty names
         const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== EMPTY);
 
-        const array =
+        let array =
             characters || length || rarity || numeric_modifiers || holder_address
                 ? nonEmptyHandles.reduce<IPersonalizedHandle[]>((agg, name) => {
                       const handle = HandleStore.get(name);
@@ -72,6 +72,11 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       return agg;
                   }, []);
 
+        if (searchModel.personalized) {
+            array = array.filter((handle) => {
+                handle.image_hash != handle.standard_image_hash;
+            })
+        }
         return array;
     }
 
@@ -85,6 +90,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
         let items = this.search(search);
+    
 
         if (slotNumber) {
             items.sort((a, b) =>
