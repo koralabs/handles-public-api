@@ -75,9 +75,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                   }, []);
 
         if (searchModel.personalized) {
-            array = array.filter((handle) => {
-                handle.image_hash != handle.standard_image_hash;
-            })
+            array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
         }
         return array;
     }
