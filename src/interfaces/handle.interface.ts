@@ -13,6 +13,7 @@ export interface IGetAllQueryParams {
     search?: string;
     holder_address?: string;
     personalized?: boolean;
+    og?: 'true' | 'false';
 }
 
 export interface IGetAllHoldersQueryParams {

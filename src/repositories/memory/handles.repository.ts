@@ -10,7 +10,7 @@ import { HandleStore } from './HandleStore';
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = 'empty';
-        const { characters, length, rarity, numeric_modifiers, search, holder_address } = searchModel;
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
         const getHandles = (index: Map<string, Set<string>>, key: string | undefined) => {
@@ -25,6 +25,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const lengthArray = getHandles(HandleStore.lengthIndex, length);
         const rarityArray = getHandles(HandleStore.rarityIndex, rarity);
         const numericModifiersArray = getHandles(HandleStore.numericModifiersIndex, numeric_modifiers);
+        const ogArray = og ? getHandles(HandleStore.ogIndex, '1') : [];
 
         const getHolderAddressHandles = (key: string | undefined) => {
             if (!key) return [];
@@ -41,7 +42,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
             lengthArray,
             rarityArray,
             numericModifiersArray,
-            holderAddressItemsArray
+            holderAddressItemsArray,
+            ogArray
         ].filter((a) => a.length);
 
         // get the intersection of all the arrays
@@ -56,7 +58,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== EMPTY);
 
         let array =
-            characters || length || rarity || numeric_modifiers || holder_address
+            characters || length || rarity || numeric_modifiers || holder_address || og
                 ? nonEmptyHandles.reduce<IPersonalizedHandle[]>((agg, name) => {
                       const handle = HandleStore.get(name);
                       if (handle) {
