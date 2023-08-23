@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 25;
+    static storageSchemaVersion = 26;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -279,6 +279,7 @@ export class HandleStore {
         pfp_image = '',
         default_in_wallet = '',
         svg_version = '',
+        version = '',
         image_hash = '',
         personalization
     }: SaveMintingTxInput): Handle => {
@@ -309,7 +310,8 @@ export class HandleStore {
             script,
             personalization,
             amount,
-            svg_version
+            svg_version,
+            version
         };
 
         return newHandle;
@@ -383,6 +385,7 @@ export class HandleStore {
                 ...input,
                 image: existingHandle.image,
                 og_number: existingHandle.og_number,
+                version: existingHandle.version,
                 personalization: existingHandle.personalization
             };
             const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
@@ -438,6 +441,7 @@ export class HandleStore {
         metadata
     }: SavePersonalizationInput) {
         const image = metadata?.image ?? '';
+        const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
         const default_in_wallet = personalizationDatum?.default ? name : '';
 
@@ -454,7 +458,8 @@ export class HandleStore {
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
                 default_in_wallet,
-                svg_version: personalizationDatum?.svg_version
+                svg_version: personalizationDatum?.svg_version,
+                version
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });

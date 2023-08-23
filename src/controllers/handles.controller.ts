@@ -13,6 +13,7 @@ import { decodeCborToJson } from '../utils/cbor';
 import { handleDatumSchema } from '../utils/cbor/schema/handleData';
 import { getScript } from '../config/scripts';
 import { validateScriptDetails } from '../utils/util';
+import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 
 class HandlesController {
     public getAll = async (
@@ -135,14 +136,49 @@ class HandlesController {
                 return;
             }
 
-            const scriptData = getScript(personalization.reference_token.address);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleName = req.params.handle;
+            const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleData = await handleRepo.getHandleByName(handleName);
+
+            if (!handleData && !protectedWordsResult.available) {
+                res.status(protectedWordsResult.code).send({
+                    message:
+                        protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
+                            ? protectedWordsResult.reason
+                            : protectedWordsResult.message
+                });
+                return;
+            }
+
+            if (!handleData) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            const { reference_token } = new HandleReferenceTokenViewModel(handleData);
+
+            if (!reference_token) {
+                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json({});
+                return;
+            }
+
+            const scriptData = getScript(reference_token.address);
             if (scriptData) {
                 const scriptHandle = await handleRepo.getHandleByName(scriptData.handle);
 
                 const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(scriptHandle, scriptData);
 
                 // add to the reference_token the script data
-                personalization.reference_token.script = {
+                reference_token.script = {
                     ...scriptData,
                     refScriptUtxo,
                     refScriptAddress,
@@ -150,7 +186,7 @@ class HandlesController {
                 };
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(personalization);
+            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(reference_token);
         } catch (error) {
             next(error);
         }

@@ -19,6 +19,11 @@ class HandlesRoute extends BaseRoute {
             this.handlesController.getPersonalizedHandle
         );
         this.router.get(
+            `${this.path}/:handle/reference_token`,
+            this.injectRegistryMiddleware,
+            this.handlesController.getHandleReferenceToken
+        );
+        this.router.get(
             `${this.path}/:handle/datum`,
             this.injectRegistryMiddleware,
             this.handlesController.getHandleDatum

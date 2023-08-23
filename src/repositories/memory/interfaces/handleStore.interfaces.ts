@@ -50,6 +50,7 @@ export interface SaveMintingTxInput {
     script?: { type: string; cbor: string };
     personalization?: IPersonalization;
     amount?: number;
+    version?: number;
 }
 
 export interface SaveWalletAddressMoveInput {
