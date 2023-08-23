@@ -27,7 +27,7 @@ export class HandleViewModel {
     image_hash: string;
     standard_image_hash: string;
     svg_version: string;
-    version: string;
+    version: number;
 
     constructor(handle: IHandle) {
         if (!handle.utxo) {

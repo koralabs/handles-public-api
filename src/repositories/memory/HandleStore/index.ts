@@ -279,7 +279,7 @@ export class HandleStore {
         pfp_image = '',
         default_in_wallet = '',
         svg_version = '',
-        version = '',
+        version = 0,
         image_hash = '',
         personalization
     }: SaveMintingTxInput): Handle => {
@@ -287,6 +287,7 @@ export class HandleStore {
             name,
             hex,
             holder: '', // Populate on save
+            holder_type: '', // Populate on save
             length: name.length,
             utxo,
             rarity: getRarity(name),
