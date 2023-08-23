@@ -110,6 +110,7 @@ export class HandleStore {
 
         const holderAddressDetails = getAddressHolderDetails(ada);
         updatedHandle.holder = holderAddressDetails.address;
+        updatedHandle.holder_type = holderAddressDetails.type;
 
         // Set the main index
         this.handles.set(name, updatedHandle);

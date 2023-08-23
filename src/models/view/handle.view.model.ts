@@ -39,7 +39,7 @@ export class HandleViewModel {
         this.image = handle.image;
         this.standard_image = handle.standard_image;
         this.holder = handle.holder;
-        this.holder_type = buildPaymentAddressType(handle.holder);
+        this.holder_type = handle.holder_type;
         this.length = handle.length;
         this.og_number = handle.og_number;
         this.rarity = handle.rarity;
