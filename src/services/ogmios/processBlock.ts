@@ -325,6 +325,7 @@ const processAssetToken = async ({
             image,
             version
         });
+        // Do a webhook processor call here
     } else {
         await HandleStore.saveHandleUpdate(input);
     }
