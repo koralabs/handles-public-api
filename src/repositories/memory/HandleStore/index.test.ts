@@ -36,7 +36,7 @@ describe('HandleStore tests', () => {
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
-            type: 'base',
+            type: '',
             knownOwnerName: 'unknown'
         });
         // populate storage
@@ -223,13 +223,14 @@ describe('HandleStore tests', () => {
                 numeric_modifiers: '',
                 og_number: 0,
                 standard_image: '',
-
                 pfp_image: '',
                 rarity: 'basic',
                 resolved_addresses: { ada: '123' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
-                amount: 1
+                amount: 1,
+                holder_type: '',
+                version: 0
             });
         });
     });
@@ -239,7 +240,7 @@ describe('HandleStore tests', () => {
             const stakeKey = 'stake123';
             jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
                 address: stakeKey,
-                type: 'base',
+                type: '',
                 knownOwnerName: 'unknown'
             });
 
@@ -284,7 +285,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo123#0',
                 has_datum: true,
                 datum: 'datum123',
-                amount: 1
+                amount: 1,
+                holder_type: '',
+                version: 0
             });
 
             // expect to get the correct slot history with all new handles
@@ -674,7 +677,9 @@ describe('HandleStore tests', () => {
                     resolved_addresses: { ada: '' },
                     updated_slot_number: 200,
                     utxo: '',
-                    amount: 1
+                    amount: 1,
+                    holder_type: '',
+                    version: 0
                 }
             });
         });
@@ -766,7 +771,7 @@ describe('HandleStore tests', () => {
                     defaultHandle: 'tortilla-soup',
                     knownOwnerName: 'unknown',
                     manuallySet: true,
-                    type: 'base'
+                    type: ''
                 })
             );
 
@@ -1338,12 +1343,12 @@ describe('HandleStore tests', () => {
             jest.spyOn(addresses, 'getAddressHolderDetails')
                 .mockReturnValueOnce({
                     address: stakeKey,
-                    type: 'base',
+                    type: '',
                     knownOwnerName: 'unknown'
                 })
                 .mockReturnValueOnce({
                     address: updatedStakeKey,
-                    type: 'base',
+                    type: '',
                     knownOwnerName: 'unknown'
                 });
 
@@ -1400,7 +1405,9 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: newAddress },
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number),
-                has_datum: false
+                has_datum: false,
+                holder_type: '',
+                version: 0
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
@@ -1477,7 +1484,7 @@ describe('HandleStore tests', () => {
                 handles: new Set(['barbacoa', 'burrito']),
                 knownOwnerName: 'unknown',
                 manuallySet: false,
-                type: 'base'
+                type: ''
             });
 
             // expect history to include the burn details. new is null, old is the entire handle.

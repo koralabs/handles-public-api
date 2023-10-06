@@ -24,7 +24,9 @@ export const ogHandles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: 'og2-hex',
@@ -49,7 +51,9 @@ export const ogHandles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: 'og3-hex',
@@ -74,7 +78,9 @@ export const ogHandles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     }
 ];
 
@@ -102,7 +108,9 @@ export const handlesWithDifferentLengths: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '10-hex',
@@ -127,7 +135,9 @@ export const handlesWithDifferentLengths: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '1000-hex',
@@ -152,7 +162,9 @@ export const handlesWithDifferentLengths: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     }
 ];
 
@@ -180,7 +192,9 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '11-hex',
@@ -205,7 +219,9 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '12-hex',
@@ -230,7 +246,9 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     }
 ];
 
@@ -258,7 +276,9 @@ export const handles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '10-hex',
@@ -283,7 +303,9 @@ export const handles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     },
     {
         hex: '12-hex',
@@ -308,6 +330,8 @@ export const handles: IHandle[] = [
         has_datum: false,
         image_hash: 'image-hash',
         standard_image_hash: 'standard-image-hash',
-        svg_version: '1.0.0'
+        svg_version: '1.0.0',
+        holder_type: '',
+        version: 0
     }
 ];

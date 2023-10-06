@@ -959,14 +959,14 @@ export class HandleStore {
     }
 }
 
-#// webhook processor tracks block hash processed, only sends out webhook calls if not already processed
-#// webhook processor tracks rollback hashes, only sends out webhook calls if not already processed
-create: saveMintedHandle
-update: saveHandleUpdate or savePersonalizationChange (latter for pz-only)
-#// (any,pz-only,address-only,utxo-only,holder-only)
-#// use this to get if address/utxo change: diff(oldHandle, newHandle)
-#// Can exclude UTxO changes
-#// Can filter by list of handles/holders (up to 10?)
-delete: burnHandle
+// #// webhook processor tracks block hash processed, only sends out webhook calls if not already processed
+// #// webhook processor tracks rollback hashes, only sends out webhook calls if not already processed
+// create: saveMintedHandle
+// update: saveHandleUpdate or savePersonalizationChange (latter for pz-only)
+// #// (any,pz-only,address-only,utxo-only,holder-only)
+// #// use this to get if address/utxo change: diff(oldHandle, newHandle)
+// #// Can exclude UTxO changes
+// #// Can filter by list of handles/holders (up to 10?)
+// delete: burnHandle
 
-rewind: rewindChangesToSlot
+// rewind: rewindChangesToSlot
