@@ -562,9 +562,13 @@ components:
         length:
           type: integer
           example: 9
+        og:
+          type: boolean
+          description: OG status
+          example: 0
         og_number:
           type: integer
-          description: OG status. 0 means not an OG.
+          description: Limited edition OG number. 0 means not an OG.
           example: 0
         rarity:
           $ref: "#/components/schemas/Rarity"
