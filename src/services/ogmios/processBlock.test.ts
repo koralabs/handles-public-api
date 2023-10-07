@@ -345,17 +345,17 @@ describe('processBlock Tests', () => {
             name: 'burritos',
             personalization: {
                 designer: { test: 'data' },
-                reference_token: {
-                    datum: cbor,
-                    index: 0,
-                    lovelace: 1,
-                    tx_id: 'some_id',
-                    address: 'addr123'
-                },
                 socials: { test: 'data' },
                 validated_by: '0x',
                 trial: false,
                 nsfw: false
+            },
+            reference_token: {
+                datum: cbor,
+                index: 0,
+                lovelace: 1,
+                tx_id: 'some_id',
+                address: 'addr123'
             },
             personalizationDatum: {
                 agreed_terms: '0x',
