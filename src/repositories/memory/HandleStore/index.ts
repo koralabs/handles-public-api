@@ -282,7 +282,8 @@ export class HandleStore {
         svg_version = '',
         version = 0,
         image_hash = '',
-        personalization
+        personalization,
+        reference_token
     }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
             name,
@@ -311,6 +312,7 @@ export class HandleStore {
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
             script,
             personalization,
+            reference_token,
             amount,
             svg_version,
             version
@@ -437,6 +439,7 @@ export class HandleStore {
         name,
         hex,
         personalization,
+        reference_token,
         personalizationDatum,
         addresses,
         slotNumber,
@@ -459,6 +462,7 @@ export class HandleStore {
                 image,
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
+                reference_token,
                 default_in_wallet,
                 svg_version: personalizationDatum?.svg_version,
                 version
@@ -490,6 +494,7 @@ export class HandleStore {
             },
             default_in_wallet,
             personalization,
+            reference_token,
             svg_version: personalizationDatum?.svg_version ?? ''
         };
 

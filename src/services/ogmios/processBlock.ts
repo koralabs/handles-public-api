@@ -202,15 +202,14 @@ const processAssetReferenceToken = async ({
 
     const [txId, indexString] = utxo.split('#');
     const index = parseInt(indexString);
-
+    let reference_token = {
+        tx_id: txId,
+        index,
+        lovelace,
+        datum,
+        address
+    };
     let personalization: IPersonalization = {
-        reference_token: {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum,
-            address
-        },
         validated_by: '',
         trial: true,
         nsfw: true
@@ -230,6 +229,7 @@ const processAssetReferenceToken = async ({
         hex,
         name,
         personalization,
+        reference_token,
         addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
         metadata,

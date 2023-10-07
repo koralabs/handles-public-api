@@ -2,7 +2,8 @@ import {
     IPersonalization,
     IPersonalizedHandle,
     IHandleMetadata,
-    IPzDatum
+    IPzDatum,
+    IReferenceToken
 } from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
@@ -49,6 +50,7 @@ export interface SaveMintingTxInput {
     datum?: string;
     script?: { type: string; cbor: string };
     personalization?: IPersonalization;
+    reference_token?: IReferenceToken;
     amount?: number;
     version?: number;
 }
@@ -67,6 +69,7 @@ export interface SavePersonalizationInput {
     hex: string;
     name: string;
     personalization: IPersonalization;
+    reference_token: IReferenceToken;
     personalizationDatum: IPzDatum | null;
     metadata: IHandleMetadata | null;
     addresses: {
