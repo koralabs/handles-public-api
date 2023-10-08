@@ -1,5 +1,6 @@
 import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { HttpException } from '../../exceptions/HttpException';
+import { buildPaymentAddressType } from '../../utils/serialization';
 
 export class HandleViewModel {
     hex: string;
@@ -7,6 +8,7 @@ export class HandleViewModel {
     image: string;
     standard_image: string;
     holder: string;
+    holder_type: string;
     length: number;
     og_number: number;
     rarity: Rarity;
@@ -25,6 +27,7 @@ export class HandleViewModel {
     image_hash: string;
     standard_image_hash: string;
     svg_version: string;
+    version: number;
 
     constructor(handle: IHandle) {
         if (!handle.utxo) {
@@ -36,6 +39,7 @@ export class HandleViewModel {
         this.image = handle.image;
         this.standard_image = handle.standard_image;
         this.holder = handle.holder;
+        this.holder_type = handle.holder_type;
         this.length = handle.length;
         this.og_number = handle.og_number;
         this.rarity = handle.rarity;
@@ -54,5 +58,6 @@ export class HandleViewModel {
         this.svg_version = handle.svg_version;
         this.image_hash = handle.image_hash?.replace('0x', '');
         this.standard_image_hash = handle.standard_image_hash?.replace('0x', '');
+        this.version = handle.version;
     }
 }

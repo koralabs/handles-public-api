@@ -202,15 +202,14 @@ const processAssetReferenceToken = async ({
 
     const [txId, indexString] = utxo.split('#');
     const index = parseInt(indexString);
-
+    let reference_token = {
+        tx_id: txId,
+        index,
+        lovelace,
+        datum,
+        address
+    };
     let personalization: IPersonalization = {
-        reference_token: {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum,
-            address
-        },
         validated_by: '',
         trial: true,
         nsfw: true
@@ -230,6 +229,7 @@ const processAssetReferenceToken = async ({
         hex,
         name,
         personalization,
+        reference_token,
         addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
         metadata,
@@ -305,22 +305,27 @@ const processAssetToken = async ({
     if (isMintTx) {
         let image = '';
         let og_number = 0;
+        let version = 0;
 
         if (assetName.includes(AssetNameLabel.LABEL_222)) {
             const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
             og_number = data?.og_number ?? 0;
             image = data?.image ?? '';
+            version = data?.version ?? 0;
         } else {
             const data = handleMetadata && handleMetadata[name];
             og_number = data?.core?.og_number ?? 0;
             image = data?.image ?? '';
+            version = data?.core?.version ?? 0;
         }
 
         await HandleStore.saveMintedHandle({
             ...input,
             og_number,
-            image
+            image,
+            version
         });
+        // Do a webhook processor call here
     } else {
         await HandleStore.saveHandleUpdate(input);
     }

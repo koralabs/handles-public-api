@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: Handles Public API
   description: ADA Handle Public API
-  termsOfService: https://adahandle.com/tou
+  termsOfService: https://mint.handle.me/tou
   contact:
     email: hello@adahandle.com
   version: "{{version}}"
@@ -51,6 +51,12 @@ paths:
         required: false
         schema:
           $ref: "#/components/schemas/NumericModifiers"
+      - name: og
+        in: query
+        description: Filter for OG Handles
+        required: false
+        schema:
+          type: boolean
       - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
@@ -158,6 +164,14 @@ paths:
         `Accepts` header is `text/plain`. If the `Accepts` header is `application/json` 
         the API will attempt to convert the Cbor to JSON, but may fail of the object 
         isn't actually JSON.
+      parameters:
+      - name: default_key_type
+        in: query
+        description: Keys in CBOR maps default to 'utf8' encoding when converting to JSON. 
+          If the keys should default to 'hex' encoding, set this to 'hex'
+        required: false
+        schema:
+          type: string
       responses:
         '200':
           description: Successful operation
@@ -189,6 +203,34 @@ paths:
           description: If Cbor to JSON conversion fails or the Handle is an invalid format
         '404':
           description: Datum not found
+      security:
+      - api-key: []
+  "/handles/{handle}/script":
+    get:
+      tags:
+      - handles
+      description: Get the reference script in the same UTxO as the Handle, if present.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                description: Cbor/hex encoded string of script from the blockchain
+                example: a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                description: Cbor/hex encoded string of script from the blockchain
+                example: a2446e616d654b436c65766572204769726c4469706673582e516d50636b3439384379355457594a53354e69667832523834466a596a4a4c693662386f484d4e6b666878705334
+        '400':
+          description: If Handle is an invalid format
+        '404':
+          description: Script not found
       security:
       - api-key: []
   "/handles/{handle}/personalized":
@@ -380,34 +422,153 @@ paths:
           description: HTTP application failure
 components:
   schemas:
+    AddressType:
+      type: string
+      example: wallet
+      description: |
+        <br />If it is a Shelley address and a script, it will say `script`.
+        <br />If it is Shelley, is not a script, and has a stake key, it will be `wallet`.
+        <br />If it is Shelley, is not a script, and doesn't have a stake key, it will be `enterprise`.
+        <br />If the address is not a Shelley address, it will be `other`.
+      enum:
+      - wallet
+      - script
+      - enterprise
+      - other
+    Characters:
+      type: string
+      example: letters,numbers,special
+      description: "Included character types in the handles. Numbers includes negative
+        and decimal numbers. Combining them does an 'AND' search. Ex - `letters,numbers`
+        will find Handles that have both letters and numbers.
+        <br />`letters` - All characters are letters
+        <br />`numbers` - All characters are valid numeric characters (including decimals and negative)
+        <br />`special` - All characters are dash, period, or underscore"
+    DatumType:
+      type: string
+      example: plutus_data_cbor
+      description: |
+        <br />json (cardano-cli can take this with --tx-out-datum-json-value)
+        <br />tx_metadata_json (aka "Detailed Schema")
+        <br />tx_metadata_cbor (the actual TxMetadata CBOR bytes)
+        <br />plutus_data_json (aka "Schema Json" with Plutus constructors/fields)
+        <br />plutus_data_cbor (the actual PlutusData CBOR bytes)
+      enum:
+      - json
+      - tx_metadata_json
+      - tx_metadata_cbor
+      - plutus_data_json
+      - plutus_data_cbor
+    DesignerSettings:
+      type: object
+      properties:
+        creator_defaults_enabled:
+          type: boolean
+          description: True is the user elected to use the creator defaults from the chosen background
+        bg_border_color:
+          $ref: "#/components/schemas/HexString" 
+        pfp_border_color:
+          $ref: "#/components/schemas/HexString" 
+        font_shadow_color:
+          $ref: "#/components/schemas/HexString" 
+        font_shadow_size:
+          type: array
+          description: An array of three numbers representing vertical offset, horizontal offset, and blur radius
+        pfp_image:
+          type: string
+          description: IPFS hash of the selected profile pic
+          example: ipfs://Q2de4Fg56tNHy82300000001
+        bg_image:
+          type: string
+          description: IPFS hash of the selected background
+          example: ipfs://Q2de4Fg56tNHy82300000001
+        pfp_asset:
+          type: string
+          description: Hex string of policy id and asset name of the pfp_image on chain asset
+          example: 94da605878403d07c144fe96cd50fe20c16186dd8d171c78ed6a8768436c6179436861726c6f74746538353338
+        bg_asset:
+          type: string
+          description: Hex string of policy id and asset name of the bg_image on chain asset
+          example: b8842fe3a0eae5011252c16566995d2c8f1bae85d380410cd21ea91f000de140556e646572776f726c645f48616e646c65735f6267
+        text_ribbon_gradient:
+          type: string
+          description: Either 'radial' or 'linear-XX' where XX is an angle for the linear gradient
+        text_ribbon_colors:
+          type: array
+          description: The color used for the ribbon or the colors used for the gradient on the ribbon.
+          items:
+            $ref: "#/components/schemas/HexString" 
+        qr_bg_color:
+          $ref: "#/components/schemas/HexString" 
+        qr_inner_eye:
+          type: string
+          description: Two values separated by a comma. The first is the inner eye style ('dot', 'square', 'rounded').
+            The second is the inner eye color as an hex RGBA value preceded by a hash symbol
+          example: "square,#FFFFFF"
+        qr_outer_eye:
+          type: string
+          description: Two values separated by a comma. The first is the outer eye style ('dot', 'square', 'rounded').
+            The second is the outer eye color as an hex RGBA value preceded by a hash symbol
+          example: "square,#FFFFFF"
+        qr_dot:
+          type: string
+          description: Two values separated by a comma. The first is the dots style ('dot', 'square', 'rounded').
+            The second is the dots color as an hex RGBA value preceded by a hash symbol
+          example: "square,#FFFFFF"
+        font_color:
+          $ref: "#/components/schemas/HexString" 
+        font:
+          type: string
+          example: "ShortStackMod,https://claynation.nyc3.cdn.digitaloceanspaces.com/ada_handles/ShortStackNew.ttf"
+        qr_link:
+          type: string
+        socials: 
+          type: array
+          description: The url and display text of the social entries selected from Personalization
+          items:
+            $ref: "#/components/schemas/SocialEntry"
     Handle:
       required:
       - name
       type: object
       properties:
+        hex: 
+          type: string
         name:
           type: string
           example: my.handle
-        holder_address:
+        holder:
           type: string
           description: Current Holder of the Handle (see the Holder endpoints for more information)
           example: stake1uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         holder_type:
           $ref: "#/components/schemas/AddressType"
-        nft_image:
+        image:
           type: string
           description: IPFS URL of the personalized handle image
           example: ipfs://hash_of_personalized_image
-        original_nft_image:
+        standard_image:
           type: string
-          description: IPFS URL of the original NFT handle
-          example: ipfs://hash_of_base_nft_image
+          description: IPFS URL of the factory default handle image
+          example: ipfs://hash_of_default_image
+        image_hash:
+          type: string
+          description: SHA256 Hash of the personalized handle image
+          example: 05dbb47e32ad6b89074c286a73543bdb957c01f7abf82b2f106584dc99432bb1
+        standard_image_hash:
+          type: string
+          description: SHA256 Hash of the default image data
+          example: 05dbb47e32ad6b89074c286a73543bdb957c01f7abf82b2f106584dc99432bb1
         length:
           type: integer
           example: 9
         og:
+          type: boolean
+          description: OG status
+          example: 0
+        og_number:
           type: integer
-          description: OG status. 0 means not an OG.
+          description: Limited edition OG number. 0 means not an OG.
           example: 0
         rarity:
           $ref: "#/components/schemas/Rarity"
@@ -419,14 +580,22 @@ components:
           type: string
           description: The name of the default Handle in this wallet
           example: my_default_hndl
-        profile_pic:
+        pfp_image:
           type: string
-          description: IPFS hash of the selected profile pic - cropped and zoomed
-          example: Q2de4Fg56tNHy82300000001
-        background:
+          description: IPFS hash of the selected profile pic
+          example: ipfs://Q2de4Fg56tNHy82300000001
+        bg_image:
           type: string
           description: IPFS hash of the selected background
-          example: Q2de4Fg56tNHy82300000001
+          example: ipfs://Q2de4Fg56tNHy82300000001
+        pfp_asset:
+          type: string
+          description: Hex string of policy id and asset name of the pfp_image on chain asset
+          example: 94da605878403d07c144fe96cd50fe20c16186dd8d171c78ed6a8768436c6179436861726c6f74746538353338
+        bg_asset:
+          type: string
+          description: Hex string of policy id and asset name of the bg_image on chain asset
+          example: b8842fe3a0eae5011252c16566995d2c8f1bae85d380410cd21ea91f000de140556e646572776f726c645f48616e646c65735f6267
         resolved_addresses:
           type: object
           properties:
@@ -443,6 +612,10 @@ components:
           type: string
           description: The version of the Handle
           example: 1
+        svg_version:
+          type: string
+          description: The version of the Handle image renderer that rendered the main nft image
+          example: 1
         utxo:
           type: string
           description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
@@ -456,6 +629,9 @@ components:
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    HexString:
+      type: string
+      example: "0x1a3dfb"
     Holder:
       type: object
       properties:
@@ -485,44 +661,45 @@ components:
             <br />If no OG Handle then shortest Handle
             <br />If many have the same length, then the earliest minted slot number
             <br />If multiple minted at the same time, then ascending alpha order
-    Stats:
-      type: object
-      properties:
-        total_handles:
-          type: integer
-          example: 195874
-          description: "Total of all Handles minted"
-        # network_load_percent:
-        #   type: integer
-        #   example: 76
-        #   description: Cardano network load calculated by block size over the last 20 blocks
-        # reservation_queue_size:
-        #   type: integer
-        #   example: 47
-        #   description: Number of Handles or NFT SubHandles currently waiting to be minted
-        # current_handle_prices:
-        #   type: string
-        #   example: 10,50,100,500
-        #   description: Comma-separated Handle price list. (basic,common,rare,ultra_rare)
-        total_holders:
-          type: integer
-          example: 52167
-          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses
+    NumericModifiers:
+      type: string
+      description: |-
+        This property will have one of the following:
+          <br />No modifier (blank) is a positive whole number, or not a number
+          <br />`negative` - Negative whole number
+          <br />`decimal` - Positive decimal
+          <br />`negative,decimal` - Negative decimal
+          <br />Example:
+          <br />`1000` = no modifiers/blank
+          <br />`-100` = "negative"
+          <br />`10.0` = "decimal"
+          <br />`-1.0` = "negative,decimal"
+      example: negative,decimal
     Personalization:
       type: object
       properties:
-        to_be_determined:
+        designer:
+          $ref: "#/components/schemas/DesignerSettings"
+        portal:
+          $ref: "#/components/schemas/PortalSettings"
+        socials:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialEntry"
+        trial:
+          type: boolean
+          description: True if the Handle is using an asset that is still in an "trial" status.
+            This can be useful for DApps to display standard_image as opposed to image just in case
+            the policy hasn't properly declared NSFW imagery
+        nsfw:
+          type: boolean
+          description: True if the Handle is using an asset that has a "nsfw" status.
+            This can be useful for DApps to display standard_image as opposed to image to avoid NSFW imagery
+        validated_by:
           type: string
-          example: TBD
-    Characters:
-      type: string
-      example: letters,numbers,special
-      description: "Included character types in the handles. Numbers includes negative
-        and decimal numbers. Combining them does an 'AND' search. Ex - `letters,numbers`
-        will find Handles that have both letters and numbers.
-        <br />`letters` - All characters are letters
-        <br />`numbers` - All characters are valid numeric characters (including decimals and negative)
-        <br />`special` - All characters are dash, period, or underscore"
+          description: The PubKeyHash of the signer of the personalization transaction that validated the
+            personalization. Trusted vendors should be verifying ownership, authenticity, and Handle Standard
+            compliance.
     Rarity:
       type: string
       example: ultra_rare
@@ -539,48 +716,39 @@ components:
       - rare
       - ultra_rare
       - legendary
-    NumericModifiers:
-      type: string
-      description: |-
-        This property will have one of the following:
-          <br />No modifier (blank) is a positive whole number, or not a number
-          <br />`negative` - Negative whole number
-          <br />`decimal` - Positive decimal
-          <br />`negative,decimal` - Negative decimal
-          <br />Example:
-          <br />`1000` = no modifiers/blank
-          <br />`-100` = "negative"
-          <br />`10.0` = "decimal"
-          <br />`-1.0` = "negative,decimal"
-      example: negative,decimal
-    AddressType:
-      type: string
-      example: wallet
-      description: |
-        <br />If it is a Shelley address and a script, it will say `script`.
-        <br />If it is Shelley, is not a script, and has a stake key, it will be `wallet`.
-        <br />If it is Shelley, is not a script, and doesn't have a stake key, it will be `enterprise`.
-        <br />If the address is not a Shelley address, it will be `other`.
-      enum:
-      - wallet
-      - script
-      - enterprise
-      - other
-    DatumType:
-      type: string
-      example: plutus_data_cbor
-      description: |
-        <br />json (cardano-cli can take this with --tx-out-datum-json-value)
-        <br />tx_metadata_json (aka "Detailed Schema")
-        <br />tx_metadata_cbor (the actual TxMetadata CBOR bytes)
-        <br />plutus_data_json (aka "Schema Json" with Plutus constructors/fields)
-        <br />plutus_data_cbor (the actual PlutusData CBOR bytes)
-      enum:
-      - json
-      - tx_metadata_json
-      - tx_metadata_cbor
-      - plutus_data_json
-      - plutus_data_cbor
+    Stats:
+      type: object
+      properties:
+        total_handles:
+          type: integer
+          example: 195874
+          description: "Total of all Handles minted"
+        total_holders:
+          type: integer
+          example: 52167
+          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses 
+    PortalSettings:
+      type: object
+      properties:
+        type:
+          type: string
+        domain: 
+          type: string
+          example: https://handle.me
+        custom_settings:
+          $ref: "#/components/schemas/HexString"
+        default:
+          type: boolean
+    SocialEntry:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Valid URL. Supported schemas - `http://``, `https://``, `mailto:``, `tel:`, `ipfs://`
+            Social websites with known host names will be authenticated to reduce fraud/phishing
+        display:
+          type: string
+          description: The display text to show either on the Handle if selected or on the Portal if selected.
   requestBodies:
     Handle:
       content:

@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 25;
+    static storageSchemaVersion = 27;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -110,6 +110,7 @@ export class HandleStore {
 
         const holderAddressDetails = getAddressHolderDetails(ada);
         updatedHandle.holder = holderAddressDetails.address;
+        updatedHandle.holder_type = holderAddressDetails.type;
 
         // Set the main index
         this.handles.set(name, updatedHandle);
@@ -279,13 +280,16 @@ export class HandleStore {
         pfp_image = '',
         default_in_wallet = '',
         svg_version = '',
+        version = 0,
         image_hash = '',
-        personalization
+        personalization,
+        reference_token
     }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
             name,
             hex,
             holder: '', // Populate on save
+            holder_type: '', // Populate on save
             length: name.length,
             utxo,
             rarity: getRarity(name),
@@ -308,8 +312,10 @@ export class HandleStore {
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
             script,
             personalization,
+            reference_token,
             amount,
-            svg_version
+            svg_version,
+            version
         };
 
         return newHandle;
@@ -383,6 +389,7 @@ export class HandleStore {
                 ...input,
                 image: existingHandle.image,
                 og_number: existingHandle.og_number,
+                version: existingHandle.version,
                 personalization: existingHandle.personalization
             };
             const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
@@ -432,12 +439,14 @@ export class HandleStore {
         name,
         hex,
         personalization,
+        reference_token,
         personalizationDatum,
         addresses,
         slotNumber,
         metadata
     }: SavePersonalizationInput) {
         const image = metadata?.image ?? '';
+        const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
         const default_in_wallet = personalizationDatum?.default ? name : '';
 
@@ -453,8 +462,10 @@ export class HandleStore {
                 image,
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
+                reference_token,
                 default_in_wallet,
-                svg_version: personalizationDatum?.svg_version
+                svg_version: personalizationDatum?.svg_version,
+                version
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -483,6 +494,7 @@ export class HandleStore {
             },
             default_in_wallet,
             personalization,
+            reference_token,
             svg_version: personalizationDatum?.svg_version ?? ''
         };
 
@@ -882,11 +894,12 @@ export class HandleStore {
         slot: number;
         hash: string;
         lastSlot: number;
-    }): Promise<void> {
+    }): Promise<{name:string, action: string, handle: Partial<Handle> | undefined}[]> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
         let handleDeletes = 0;
+        let rewoundHandles = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {
@@ -914,6 +927,7 @@ export class HandleStore {
                 const existingHandle = this.get(name);
                 if (!existingHandle) {
                     if (handleHistory.old) {
+                        rewoundHandles.push({name, action: "create", handle: handleHistory.old});
                         await this.save({ handle: handleHistory.old as Handle, saveHistory: false });
                         handleUpdates++;
                         continue;
@@ -926,6 +940,7 @@ export class HandleStore {
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
+                    rewoundHandles.push({name, action: "delete", handle: undefined});
                     await this.remove(name);
                     handleDeletes++;
                     continue;
@@ -937,6 +952,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
+                rewoundHandles.push({name, action: "update", handle: updatedHandle});
                 await this.save({ handle: updatedHandle, oldHandle: existingHandle, saveHistory: false });
                 handleUpdates++;
             }
@@ -944,5 +960,18 @@ export class HandleStore {
             // delete the slot key since we are rolling back to it
             this.slotHistoryIndex.delete(slotKey);
         }
+        return rewoundHandles;
     }
 }
+
+// #// webhook processor tracks block hash processed, only sends out webhook calls if not already processed
+// #// webhook processor tracks rollback hashes, only sends out webhook calls if not already processed
+// create: saveMintedHandle
+// update: saveHandleUpdate or savePersonalizationChange (latter for pz-only)
+// #// (any,pz-only,address-only,utxo-only,holder-only)
+// #// use this to get if address/utxo change: diff(oldHandle, newHandle)
+// #// Can exclude UTxO changes
+// #// Can filter by list of handles/holders (up to 10?)
+// delete: burnHandle
+
+// rewind: rewindChangesToSlot

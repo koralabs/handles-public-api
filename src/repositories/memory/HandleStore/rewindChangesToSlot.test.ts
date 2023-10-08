@@ -9,7 +9,7 @@ describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
-            type: 'base',
+            type: '',
             knownOwnerName: 'unknown'
         });
         // populate storage

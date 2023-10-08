@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -30,13 +30,19 @@ jest.mock('../../../utils/addresses');
 
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
-
+    const defaultReferenceToken: IReferenceToken = {
+        tx_id: '',
+        index: 0,
+        lovelace: 0,
+        datum: '',
+        address: ''
+    }
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake123',
-            type: 'base',
+            type: '',
             knownOwnerName: 'unknown'
         });
         // populate storage
@@ -223,13 +229,14 @@ describe('HandleStore tests', () => {
                 numeric_modifiers: '',
                 og_number: 0,
                 standard_image: '',
-
                 pfp_image: '',
                 rarity: 'basic',
                 resolved_addresses: { ada: '123' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
-                amount: 1
+                amount: 1,
+                holder_type: '',
+                version: 0
             });
         });
     });
@@ -239,7 +246,7 @@ describe('HandleStore tests', () => {
             const stakeKey = 'stake123';
             jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
                 address: stakeKey,
-                type: 'base',
+                type: '',
                 knownOwnerName: 'unknown'
             });
 
@@ -284,7 +291,9 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo123#0',
                 has_datum: true,
                 datum: 'datum123',
-                amount: 1
+                amount: 1,
+                holder_type: '',
+                version: 0
             });
 
             // expect to get the correct slot history with all new handles
@@ -300,13 +309,6 @@ describe('HandleStore tests', () => {
             const personalizationData: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xtodo'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -338,6 +340,7 @@ describe('HandleStore tests', () => {
                 name: 'chimichanga',
                 slotNumber: 99,
                 personalization: personalizationData,
+                reference_token: defaultReferenceToken,
                 personalizationDatum,
                 addresses: { ada: 'addr123' },
                 metadata: {
@@ -387,7 +390,8 @@ describe('HandleStore tests', () => {
                                 updated_slot_number: 100,
                                 utxo: 'utxo123#0',
                                 image_hash: '0xtodo',
-                                standard_image_hash: '0xtodo'
+                                standard_image_hash: '0xtodo',
+                                reference_token: undefined
                             },
                             old: {
                                 created_slot_number: 99,
@@ -396,7 +400,8 @@ describe('HandleStore tests', () => {
                                 updated_slot_number: 99,
                                 utxo: '',
                                 image_hash: '0x123',
-                                standard_image_hash: '0x123'
+                                standard_image_hash: '0x123',
+                                reference_token: defaultReferenceToken
                             }
                         }
                     }
@@ -462,13 +467,6 @@ describe('HandleStore tests', () => {
                     qr_bg_color: '0xtodo',
                     socials: []
                 },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
-                },
                 validated_by: 'todo',
                 trial: false,
                 nsfw: false
@@ -498,6 +496,7 @@ describe('HandleStore tests', () => {
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
                 addresses: {},
                 slotNumber: 200,
                 personalizationDatum,
@@ -529,13 +528,6 @@ describe('HandleStore tests', () => {
                     socials: [],
                     text_ribbon_colors: ['0xtodo']
                 },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
-                },
                 validated_by: 'todo',
                 trial: false,
                 nsfw: false
@@ -563,11 +555,11 @@ describe('HandleStore tests', () => {
                                         socials: [],
                                         text_ribbon_colors: ['0xtodo']
                                     },
-                                    reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                     validated_by: 'todo',
                                     trial: false,
                                     nsfw: false
                                 },
+                                reference_token: defaultReferenceToken,
                                 pfp_image: 'todo',
                                 updated_slot_number: 200
                             },
@@ -575,6 +567,7 @@ describe('HandleStore tests', () => {
                                 bg_image: '',
                                 default_in_wallet: 'taco',
                                 personalization: undefined,
+                                reference_token: undefined,
                                 pfp_image: '',
                                 updated_slot_number: 100
                             }
@@ -595,13 +588,6 @@ describe('HandleStore tests', () => {
                     bg_border_color: '0xtodo',
                     qr_bg_color: '0xtodo',
                     socials: []
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -632,6 +618,7 @@ describe('HandleStore tests', () => {
                 hex: 'sour-cream-hex',
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
                 personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
@@ -669,12 +656,16 @@ describe('HandleStore tests', () => {
                     svg_version: '1.0.0',
                     standard_image_hash: '0x123',
                     personalization: personalizationUpdates,
+                    reference_token: defaultReferenceToken,
+                    script: undefined,
                     pfp_image: '',
                     rarity: 'basic',
                     resolved_addresses: { ada: '' },
                     updated_slot_number: 200,
                     utxo: '',
-                    amount: 1
+                    amount: 1,
+                    holder_type: '',
+                    version: 0
                 }
             });
         });
@@ -698,13 +689,6 @@ describe('HandleStore tests', () => {
                 designer: {
                     font_shadow_color: '0x000',
                     text_ribbon_colors: ['0xCCC']
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -735,6 +719,7 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
                 personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
@@ -766,7 +751,7 @@ describe('HandleStore tests', () => {
                     defaultHandle: 'tortilla-soup',
                     knownOwnerName: 'unknown',
                     manuallySet: true,
-                    type: 'base'
+                    type: ''
                 })
             );
 
@@ -801,13 +786,6 @@ describe('HandleStore tests', () => {
                     font_shadow_color: '0x000',
                     text_ribbon_colors: ['0xCCC']
                 },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
-                },
                 validated_by: 'todo',
                 trial: false,
                 nsfw: false
@@ -837,6 +815,7 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
                 personalizationDatum,
                 addresses: {},
                 slotNumber: 200,
@@ -861,13 +840,6 @@ describe('HandleStore tests', () => {
             const newPersonalizationUpdates: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xEEE'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -898,6 +870,7 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 name: handleName,
                 personalization: newPersonalizationUpdates,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: newPersonalizationDatum,
                 addresses: {},
                 slotNumber: 300,
@@ -920,17 +893,16 @@ describe('HandleStore tests', () => {
 
             // Default in wallet should not change because it was not updated or removed.
             expect(updatedHandle?.default_in_wallet).toEqual(handleName);
-
-            const PersonalizationUpdatesWithDefaultWalletChange: IPersonalization = {
+            const referenceUpdatesWithDefaultWalletChange: IReferenceToken = {
+                tx_id: '',
+                index: 0,
+                lovelace: 0,
+                datum: '',
+                address: ''
+            };
+            const personalizationUpdatesWithDefaultWalletChange: IPersonalization = {
                 designer: {
                     font_shadow_color: '0x111'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'new',
                 trial: false,
@@ -960,7 +932,8 @@ describe('HandleStore tests', () => {
             await HandleStore.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
-                personalization: PersonalizationUpdatesWithDefaultWalletChange,
+                personalization: personalizationUpdatesWithDefaultWalletChange,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: finalPersonalizationDatum,
                 addresses: {},
                 slotNumber: 400,
@@ -979,7 +952,7 @@ describe('HandleStore tests', () => {
             });
 
             const finalHandle = HandleStore.get(handleName);
-            expect(finalHandle?.personalization).toEqual(PersonalizationUpdatesWithDefaultWalletChange);
+            expect(finalHandle?.personalization).toEqual(personalizationUpdatesWithDefaultWalletChange);
 
             // Default should be changed because we removed it.
             expect(finalHandle?.default_in_wallet).toEqual('taco');
@@ -1006,12 +979,12 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0x000',
                                     text_ribbon_colors: ['0xCCC']
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
                                 validated_by: 'todo',
                                 trial: false,
                                 nsfw: false
                             },
+                            reference_token: defaultReferenceToken,
                             updated_slot_number: 200
                         },
                         old: {
@@ -1020,6 +993,7 @@ describe('HandleStore tests', () => {
                             default_in_wallet: 'taco',
                             image: '',
                             personalization: undefined,
+                            reference_token: undefined,
                             updated_slot_number: 100
                         }
                     }
@@ -1044,7 +1018,6 @@ describe('HandleStore tests', () => {
                                     font_shadow_color: '0x000',
                                     text_ribbon_colors: ['0xCCC']
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 socials: [{ display: '@twitter_sauce', url: 'https://twitter.com/twitter_sauce' }],
                                 validated_by: 'todo',
                                 trial: false,
@@ -1072,7 +1045,6 @@ describe('HandleStore tests', () => {
                                 designer: {
                                     font_shadow_color: '0xEEE'
                                 },
-                                reference_token: { datum: '', index: 0, lovelace: 0, tx_id: '', address: '' },
                                 validated_by: 'todo',
                                 nsfw: false,
                                 trial: false
@@ -1088,13 +1060,6 @@ describe('HandleStore tests', () => {
             const tacoPzUpdate: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1125,6 +1090,7 @@ describe('HandleStore tests', () => {
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatum,
                 addresses: {},
                 slotNumber: 100,
@@ -1144,17 +1110,9 @@ describe('HandleStore tests', () => {
 
             const tacoHandle = HandleStore.get('taco');
             expect(tacoHandle?.default_in_wallet).toEqual('taco');
-
             const burritoPzUpdate: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1185,6 +1143,7 @@ describe('HandleStore tests', () => {
                 hex: 'burrito-hex',
                 name: 'burrito',
                 personalization: burritoPzUpdate,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: burritoPersonalizationDatum,
                 addresses: {},
                 slotNumber: 200,
@@ -1204,17 +1163,9 @@ describe('HandleStore tests', () => {
 
             const burritoHandle = HandleStore.get('burrito');
             expect(burritoHandle?.default_in_wallet).toEqual('taco');
-
             const barbacoaPzUpdate: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1245,6 +1196,7 @@ describe('HandleStore tests', () => {
                 hex: 'barbacoa-hex',
                 name: 'barbacoa',
                 personalization: barbacoaPzUpdate,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: barbacoaPersonalizationDatum,
                 addresses: {},
                 slotNumber: 300,
@@ -1264,17 +1216,9 @@ describe('HandleStore tests', () => {
 
             const barbacoaHandle = HandleStore.get('barbacoa');
             expect(barbacoaHandle?.default_in_wallet).toEqual('barbacoa');
-
             const tacoPzUpdate2: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
                 },
                 validated_by: 'todo',
                 trial: false,
@@ -1305,6 +1249,7 @@ describe('HandleStore tests', () => {
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate2,
+                reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatumUpdate2,
                 addresses: {},
                 slotNumber: 400,
@@ -1338,12 +1283,12 @@ describe('HandleStore tests', () => {
             jest.spyOn(addresses, 'getAddressHolderDetails')
                 .mockReturnValueOnce({
                     address: stakeKey,
-                    type: 'base',
+                    type: '',
                     knownOwnerName: 'unknown'
                 })
                 .mockReturnValueOnce({
                     address: updatedStakeKey,
-                    type: 'base',
+                    type: '',
                     knownOwnerName: 'unknown'
                 });
 
@@ -1400,7 +1345,9 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: newAddress },
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number),
-                has_datum: false
+                has_datum: false,
+                holder_type: '',
+                version: 0
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
@@ -1477,7 +1424,7 @@ describe('HandleStore tests', () => {
                 handles: new Set(['barbacoa', 'burrito']),
                 knownOwnerName: 'unknown',
                 manuallySet: false,
-                type: 'base'
+                type: ''
             });
 
             // expect history to include the burn details. new is null, old is the entire handle.

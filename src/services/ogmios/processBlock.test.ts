@@ -178,7 +178,9 @@ describe('processBlock Tests', () => {
         amount: 1,
         image_hash: '',
         standard_image_hash: '',
-        svg_version: ''
+        svg_version: '',
+        holder_type: '',
+        version: 0
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
@@ -195,7 +197,8 @@ describe('processBlock Tests', () => {
             name: 'test1234',
             og_number: 0,
             slotNumber: 0,
-            utxo: 'some_id#0'
+            utxo: 'some_id#0',
+            version: 0
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -223,7 +226,8 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            datum
+            datum,
+            version: 0
         });
     });
 
@@ -275,7 +279,8 @@ describe('processBlock Tests', () => {
             name: handleName,
             og_number: 0,
             slotNumber: 0,
-            utxo: 'some_id#0'
+            utxo: 'some_id#0', 
+            version: 0
         });
     });
 
@@ -340,17 +345,17 @@ describe('processBlock Tests', () => {
             name: 'burritos',
             personalization: {
                 designer: { test: 'data' },
-                reference_token: {
-                    datum: cbor,
-                    index: 0,
-                    lovelace: 1,
-                    tx_id: 'some_id',
-                    address: 'addr123'
-                },
                 socials: { test: 'data' },
                 validated_by: '0x',
                 trial: false,
                 nsfw: false
+            },
+            reference_token: {
+                datum: cbor,
+                index: 0,
+                lovelace: 1,
+                tx_id: 'some_id',
+                address: 'addr123'
             },
             personalizationDatum: {
                 agreed_terms: '0x',

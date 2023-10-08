@@ -54,7 +54,7 @@ class JsonToDatumObject {
                         return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
 
-                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : Buffer.from(key);
+                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : Number.isInteger(key) ? key : Buffer.from(key);
 
                     fieldsMap.set(bufferedKey, this.json[key]);
                 }

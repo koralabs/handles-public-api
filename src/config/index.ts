@@ -9,7 +9,7 @@ export const {
     SECRET_KEY = '',
     LOG_FORMAT = '',
     LOG_DIR = '',
-    ORIGIN = '',
+    ORIGIN = process.env.CORS_ORIGIN || '',
     OGMIOS_HOST = 'http://localhost:1337',
     NETWORK = '',
     DISABLE_HANDLES_SNAPSHOT = ''

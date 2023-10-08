@@ -14,7 +14,7 @@ describe('MemoryHandlesRepository Tests', () => {
     beforeAll(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake-key1',
-            type: 'ScriptHash',
+            type: '',
             knownOwnerName: 'unknown'
         });
 
@@ -196,7 +196,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 known_owner_name: 'unknown',
                 manually_set: false,
                 total_handles: 3,
-                type: 'ScriptHash'
+                type: ''
             });
         });
     });

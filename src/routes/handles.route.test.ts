@@ -239,8 +239,7 @@ describe('Testing Handles Routes', () => {
             expect(response.body).toEqual({
                 p: 'z',
                 reference_token: {
-                    address: 'script_addr1',
-                    script: scriptDetails
+                    address: 'script_addr1'
                 }
             });
         });
@@ -257,12 +256,7 @@ describe('Testing Handles Routes', () => {
             expect(response.body).toEqual({
                 p: 'z',
                 reference_token: {
-                    address: 'script_addr1',
-                    script: {
-                        handle: 'pz_script_01',
-                        handleHex: 'hex',
-                        validatorHash: 'abc'
-                    }
+                    address: 'script_addr1'
                 }
             });
         });
