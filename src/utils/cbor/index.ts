@@ -102,7 +102,7 @@ const parseSchema = (key: any, schema: any, defaultKeyType: KeyType, i: number) 
     let schemaValue;
 
     let mapKey = Buffer.from(`${key}`).toString('utf8');
-    const hexKey = `0x${Buffer.from(key).toString('hex')}`;
+    const hexKey = `0x${Buffer.from(`${key}`).toString('hex')}`;
 
     // check schema to see if it matches
 
