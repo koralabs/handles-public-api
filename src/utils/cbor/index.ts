@@ -101,7 +101,7 @@ export const encodeJsonToDatum = async (json: any, numericKeys = false) => {
 const parseSchema = (key: any, schema: any, defaultKeyType: KeyType, i: number) => {
     let schemaValue;
 
-    let mapKey = Buffer.from(key).toString('utf8');
+    let mapKey = Buffer.from(`${key}`).toString('utf8');
     const hexKey = `0x${Buffer.from(key).toString('hex')}`;
 
     // check schema to see if it matches
