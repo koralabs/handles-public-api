@@ -5,7 +5,7 @@ class DatumController {
     public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             if (req.query.from === 'json' && req.query.to === 'plutus_data_cbor') {
-                const encoded = await encodeJsonToDatum(req.body);
+                const encoded = await encodeJsonToDatum(req.body, req.query.numeric_keys == 'true');
                 res.status(200).contentType('text/plain; charset=utf-8').send(encoded);
                 return;
             }

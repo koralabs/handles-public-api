@@ -21,16 +21,18 @@ export enum KeyType {
 
 class JsonToDatumObject {
     json: any;
-    constructor(json: any) {
+    numericKeys: boolean;
+    constructor(json: any, numericKeys = false) {
         this.json = json;
+        this.numericKeys = numericKeys;
         if (Array.isArray(this.json)) {
             for (let i = 0; i < this.json.length; i++) {
-                this.json[i] = new JsonToDatumObject(this.json[i]);
+                this.json[i] = new JsonToDatumObject(this.json[i], numericKeys);
             }
         } else if (typeof this.json === 'object') {
             if (this.json !== null) {
                 Object.keys(this.json).map((key) => {
-                    this.json[key] = new JsonToDatumObject(this.json[key]);
+                    this.json[key] = new JsonToDatumObject(this.json[key], numericKeys);
                 });
             }
         }
@@ -54,7 +56,7 @@ class JsonToDatumObject {
                         return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
 
-                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : Number.isInteger(key) ? key : Buffer.from(key);
+                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : this.keyIsNumeric(key) ? parseInt(key) : Buffer.from(key);
 
                     fieldsMap.set(bufferedKey, this.json[key]);
                 }
@@ -84,10 +86,14 @@ class JsonToDatumObject {
             return encoder.pushAny(Buffer.from('' + this.json));
         }
     };
+
+    keyIsNumeric = (key: string) => {
+        return this.numericKeys && key !== null && key.length > 0 && !Number.isNaN(key)
+    }
 }
 
-export const encodeJsonToDatum = async (json: any ) => {
-    const obj = new JsonToDatumObject(json);
+export const encodeJsonToDatum = async (json: any, numericKeys = false) => {
+    const obj = new JsonToDatumObject(json, numericKeys);
     const result = await cbor.encodeAsync(obj, { chunkSize: 64 });
     return result.toString('hex');
 };
