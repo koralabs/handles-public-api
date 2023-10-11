@@ -1,6 +1,6 @@
 {
   "name": "handles-public-api",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A downloadable and containerized decentralized API for Handles",
   "main": "index.js",
   "repository": "https://github.com/koralabs/handles-public-api.git",
