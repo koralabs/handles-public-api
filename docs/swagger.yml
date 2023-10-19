@@ -91,6 +91,11 @@ paths:
       responses:
         '200':
           description: Successful and up to date
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+                description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:
@@ -107,6 +112,11 @@ paths:
                   $ref: "#/components/schemas/Handle"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+                description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:
@@ -136,6 +146,12 @@ paths:
         required: true
         schema:
           type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful operation
@@ -178,6 +194,12 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful operation
@@ -216,6 +238,19 @@ paths:
       tags:
       - handles
       description: Get the reference script in the same UTxO as the Handle, if present.
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful operation
@@ -250,6 +285,12 @@ paths:
         required: true
         schema:
           type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful operation
@@ -263,6 +304,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Personalization"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/reference_token":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceToken"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceToken"
         '400':
           description: Invalid Handle format
         '404':
@@ -755,6 +832,27 @@ components:
         display:
           type: string
           description: The display text to show either on the Handle if selected or on the Portal if selected.
+    ReferenceToken:
+      type: object
+      properties:
+        tx_id:
+          type: string
+          description: The current UTxO transaction ID that the reference token is in
+        index:
+          type: integer
+          description: The current UTxO index that the reference token is in
+        lovelace:
+          type: integer
+          description: The lovelace in the UTxO that the reference token is in
+        datum:
+          type: string
+          description: The datum CBOR in the UTxO that the reference token is in
+        address:
+          type: string
+          description: The address of the UTxO that the reference token is in
+        script:
+          type: string
+          description: The script/contract that the reference token is locked to
   requestBodies:
     Handle:
       content:
