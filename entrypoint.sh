@@ -54,7 +54,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
             export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
             export SNAPSHOT_DIGEST=latest
             chmod +x ./mithril-client
-            curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x --strip-components=1 -C ${NODE_DB}
+            curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
             #./mithril-client snapshot download $SNAPSHOT_DIGEST
             echo "Mithril snapshot downloaded and validated."
         fi
