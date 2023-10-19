@@ -56,7 +56,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
             chmod +x ./mithril-client
             curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x --strip-components=1 -C ${NODE_DB}
             #./mithril-client snapshot download $SNAPSHOT_DIGEST
-            echo "Mithril snapshot downloaded and validatedd."
+            echo "Mithril snapshot downloaded and validated."
         fi
     fi
     
