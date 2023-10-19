@@ -51,10 +51,11 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
             curl -fsSL https://github.com/input-output-hk/mithril/releases/download/2337.0/mithril-2337.0-linux-x64.tar.gz | tar -xz
             export NETWORK=mainnet
             export AGGREGATOR_ENDPOINT=https://aggregator.release-mainnet.api.mithril.network/aggregator
-            export GENESIS_VERIFICATION_KEY=$(wget -q -O - https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
+            export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
             export SNAPSHOT_DIGEST=latest
             chmod +x ./mithril-client
-            ./mithril-client snapshot download $SNAPSHOT_DIGEST
+            curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x --strip-components=1 -C ${NODE_DB}
+            #./mithril-client snapshot download $SNAPSHOT_DIGEST
             echo "Mithril snapshot downloaded and validatedd."
         fi
     fi
