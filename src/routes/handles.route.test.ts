@@ -57,7 +57,7 @@ jest.mock('../ioc', () => ({
                 ]};
             },
             getAllHandleNames: () => {
-                return {searchTotal:3, handles:['burritos', 'tacos', 'barbacoa']};
+                return ['burritos', 'tacos', 'barbacoa'];
             },
             getHolderAddressDetails: (key: string) => {
                 if (key === 'nope') {
