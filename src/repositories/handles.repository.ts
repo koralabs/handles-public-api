@@ -8,9 +8,10 @@ interface IHandlesRepository {
     getAll: (params: {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
-    }) => Promise<IPersonalizedHandle[]>;
+    }) => Promise<{ searchTotal: number, handles: IPersonalizedHandle[]}>;
     getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
     getHandleByName: (handleName: string) => Promise<IPersonalizedHandle | null>;
+    getHandleByHex: (handleHex: string) => Promise<IPersonalizedHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;
