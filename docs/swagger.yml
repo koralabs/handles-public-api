@@ -57,6 +57,12 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: personalized
+        in: query
+        description: Filter for Personalized Handles
+        required: false
+        schema:
+          type: boolean
       - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
