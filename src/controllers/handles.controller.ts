@@ -69,9 +69,9 @@ class HandlesController {
 
             let result = await handleRepo.getAll({ pagination, search });
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
+            res.set("x-handles-search-total", result.searchTotal.toString()).status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
                 result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle))
-            ).set("x-handles-search-total", result.searchTotal.toString());
+            );
         } catch (error) {
             next(error);
         }
