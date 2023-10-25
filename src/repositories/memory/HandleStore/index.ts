@@ -66,6 +66,26 @@ export class HandleStore {
         return handle;
     }
 
+    static getByHex(hex: string): Handle | null {
+        let handle: Handle | null = null;
+        for (let [key, value] of HandleStore.handles.entries()) {
+          if (value.hex === hex)
+            handle = value;
+            break;
+        }
+
+        if (!handle) {
+            return null;
+        }
+
+        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
+        if (holderAddressIndex) {
+            handle.default_in_wallet = holderAddressIndex.defaultHandle;
+        }
+
+        return handle;
+    }
+
     static count = () => {
         return this.handles.size;
     };

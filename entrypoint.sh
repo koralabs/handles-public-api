@@ -47,9 +47,16 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
         if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
             mkdir -p ${NODE_DB}
-            echo "No cardano-node db detected. Downloading latest snapshot. This could take 1 ore more hours depending on your download speed."
-            curl -o - https://downloads.csnapshots.io/snapshots/mainnet/$(curl -k -s https://downloads.csnapshots.io/snapshots/mainnet/mainnet-db-snapshot.json| jq -r .[].file_name ) | lz4 -c -d - | tar -x --strip-components=1 -C ${NODE_DB}
-            echo "Download complete."
+            echo "No cardano-node db detected. Grabbing latest snapshot with Mithril."
+            curl -fsSL https://github.com/input-output-hk/mithril/releases/download/2337.0/mithril-2337.0-linux-x64.tar.gz | tar -xz
+            export NETWORK=mainnet
+            export AGGREGATOR_ENDPOINT=https://aggregator.release-mainnet.api.mithril.network/aggregator
+            export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
+            export SNAPSHOT_DIGEST=latest
+            chmod +x ./mithril-client
+            curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
+            #./mithril-client snapshot download $SNAPSHOT_DIGEST
+            echo "Mithril snapshot downloaded and validated."
         fi
     fi
     

@@ -86,12 +86,11 @@ class MemoryHandlesRepository implements IHandlesRepository {
     }: {
         pagination: HandlePaginationModel;
         search: HandleSearchModel;
-    }): Promise<IPersonalizedHandle[]> {
+    }): Promise<{searchTotal: number, handles: IPersonalizedHandle[]}> {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
         let items = this.search(search);
     
-
         if (slotNumber) {
             items.sort((a, b) =>
                 sort === 'desc'
@@ -101,7 +100,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-            return handles;
+            return {searchTotal: items.length, handles};
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
@@ -118,7 +117,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        return handles;
+        return {searchTotal: items.length, handles};
     }
 
     public async getAllHolders({
@@ -169,6 +168,13 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public async getHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
         const handle = HandleStore.get(handleName);
+        if (handle) return handle;
+
+        return null;
+    }
+
+    public async getHandleByHex(handleHex: string): Promise<IPersonalizedHandle | null> {
+        const handle = HandleStore.getByHex(handleHex);
         if (handle) return handle;
 
         return null;

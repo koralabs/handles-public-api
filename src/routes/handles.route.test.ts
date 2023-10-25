@@ -45,7 +45,7 @@ jest.mock('../ioc', () => ({
                 };
             },
             getAll: () => {
-                return [
+                return {searchTotal: 1, handles: [
                     {
                         name: 'burritos',
                         utxo: 'utxo#0',
@@ -54,7 +54,7 @@ jest.mock('../ioc', () => ({
                         },
                         datum: 'a247'
                     }
-                ];
+                ]};
             },
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];

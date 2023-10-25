@@ -43,7 +43,13 @@ class HealthController {
                 status = HealthStatus.WAITING_ON_CARDANO_NODE;
             }
 
-            res.status(status === HealthStatus.CURRENT ? 200 : 202).json({
+            let statusCode = 200;
+            if (status == HealthStatus.WAITING_ON_CARDANO_NODE)
+                statusCode = 503;
+            else if (status != HealthStatus.CURRENT)
+                statusCode = 202;
+
+            res.status(statusCode).json({
                 status,
                 ogmios: ogmiosResults,
                 stats

@@ -4,6 +4,7 @@ import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
 import { validateScriptDetails } from '../utils/util';
+import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
 class StatsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
@@ -25,8 +26,14 @@ class StatsController {
                 }
 
                 const [scriptAddress, scriptData] = latestScript;
-
-                const handleData = await handleRepo.getHandleByName(scriptData.handle);
+                
+                let handleData: IPersonalizedHandle | null = null;
+                if (req.query.hex == 'true') {
+                    handleData = await handleRepo.getHandleByHex(scriptData.handle);
+                }
+                else {
+                    handleData = await handleRepo.getHandleByName(scriptData.handle);
+                }
 
                 const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(handleData, scriptData);
 
