@@ -245,7 +245,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return legendary message', async () => {
-            const response = await request(app?.getServer()).get('/handles/l/personalized');
+            const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Legendary handles are not available yet.');
         });
@@ -262,7 +262,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return invalid message', async () => {
-            const response = await request(app?.getServer()).get('/handles/***/personalized');
+            const response = await request(app?.getServer()).get('/handles/***');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual(
                 'Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.'
@@ -270,7 +270,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return not allowed message', async () => {
-            const response = await request(app?.getServer()).get('/handles/japan/personalized');
+            const response = await request(app?.getServer()).get('/handles/japan');
             expect(response.status).toEqual(451);
             expect(response.body.message).toEqual("Protected word match on 'jap,an'");
         });

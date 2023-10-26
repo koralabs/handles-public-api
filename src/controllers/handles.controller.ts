@@ -77,7 +77,7 @@ class HandlesController {
         }
     };
 
-    getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code:number, message:string|null, handle:IPersonalizedHandle | null }> {
+    public static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code:number, message:string|null, handle:IPersonalizedHandle | null }> => {
         const handleRepo = new handleRepoName() as IHandlesRepository
         let handle: IPersonalizedHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
 
@@ -101,9 +101,10 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const handleData = await this.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
-            res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : handleData.message);
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : {message: handleData.message});
         } catch (error) {
+            console.log(error)
             next(error);
         }
     };
@@ -111,7 +112,7 @@ class HandlesController {
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
             
-            const handleData = await this.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
 
             const { personalization } = new PersonalizedHandleViewModel(handleData.handle);
 
@@ -128,7 +129,7 @@ class HandlesController {
 
     public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await this.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
 
             const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
 
@@ -139,7 +140,7 @@ class HandlesController {
 
             const scriptData = getScript(reference_token.address);
             if (scriptData) {
-                const scriptHandleData = await this.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+                const scriptHandleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
                 const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(scriptHandleData.handle, scriptData);
 
                 // add to the reference_token the script data
@@ -164,7 +165,7 @@ class HandlesController {
                 return;
             }
             const handleName = req.params.handle;
-            const handleData = await this.getHandleFromRepo(handleName, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(handleName, req.params.registry.handlesRepo, req.query.hex == 'true');
 
             if (!handleData.handle) {
                 res.status(404).send({ message: 'Handle datum not found' });
@@ -202,7 +203,7 @@ class HandlesController {
 
     public async getHandleScript(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await this.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
