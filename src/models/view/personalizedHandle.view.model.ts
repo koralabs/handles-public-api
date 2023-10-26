@@ -4,8 +4,8 @@ import { HttpException } from '../../exceptions/HttpException';
 export class PersonalizedHandleViewModel {
     personalization?: IPersonalization;
 
-    constructor(handle: IPersonalizedHandle) {
-        if (!handle.utxo) {
+    constructor(handle: IPersonalizedHandle | null) {
+        if (!handle?.utxo) {
             throw new HttpException(404, 'Handle not found');
         }
 
