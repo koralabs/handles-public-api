@@ -37,12 +37,10 @@ describe('decodeCborFromIPFSFile tests', () => {
             });
         jest.spyOn(cbor, 'decodeCborToJson').mockResolvedValue({ test: 'test' });
 
-        const result = await decodeCborFromIPFSFile('zb2rhYHWj4Ls35aM5V1odX38rSJJSFyvq3x4dyfbFPwCBRBTA');
+        const cid = 'zb2rhYHWj4Ls35aM5V1odX38rSJJSFyvq3x4dyfbFPwCBRBTA';
+        const result = await decodeCborFromIPFSFile(cid);
         expect(result).toEqual({ test: 'test' });
         expect(requestIpfsSpy).toBeCalledTimes(2);
-        expect(requestIpfsSpy).nthCalledWith(
-            2,
-            'https://ipfs.io/ipfs/bafkreiaymv5hh4v3uhkszs4oosu7nhvxa3wjryog2zx5pnxqevd454wacu'
-        );
+        expect(requestIpfsSpy).nthCalledWith(2, `https://ipfs.io/ipfs/${cid}`);
     });
 });
