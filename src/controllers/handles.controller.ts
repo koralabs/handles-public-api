@@ -69,31 +69,41 @@ class HandlesController {
 
             let result = await handleRepo.getAll({ pagination, search });
 
-            res.set("x-handles-search-total", result.searchTotal.toString()).status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
-                result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle))
-            );
+            res.set('x-handles-search-total', result.searchTotal.toString())
+                .status(handleRepo.getIsCaughtUp() ? 200 : 202)
+                .json(result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle)));
         } catch (error) {
             next(error);
         }
     };
 
-    public static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code:number, message:string|null, handle:IPersonalizedHandle | null }> => {
-        const handleRepo = new handleRepoName() as IHandlesRepository
-        let handle: IPersonalizedHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
+    public static getHandleFromRepo = async (
+        handleName: string,
+        handleRepoName: any,
+        asHex = false
+    ): Promise<{ code: number; message: string | null; handle: IPersonalizedHandle | null }> => {
+        const handleRepo = new handleRepoName() as IHandlesRepository;
+        let handle: IPersonalizedHandle | null = asHex
+            ? await handleRepo.getHandleByHex(handleName)
+            : await handleRepo.getHandleByName(handleName);
 
         if (!handle) {
             const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
 
             if (!protectedWordsResult.available) {
-                return { code: protectedWordsResult.code, message: (protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
-                    ? protectedWordsResult.reason
-                    : protectedWordsResult.message) ?? null,
-                    handle }
+                return {
+                    code: protectedWordsResult.code,
+                    message:
+                        (protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS
+                            ? protectedWordsResult.reason
+                            : protectedWordsResult.message) ?? null,
+                    handle
+                };
             }
-            return { code: 404, message: "Handle not found", handle }
+            return { code: 404, message: 'Handle not found', handle };
         }
-        return {code: handleRepo.getIsCaughtUp() ? 200 : 202, message: null, handle}
-    }
+        return { code: handleRepo.getIsCaughtUp() ? 200 : 202, message: null, handle };
+    };
 
     public getHandle = async (
         req: Request<IGetHandleRequest, {}, {}>,
@@ -101,18 +111,27 @@ class HandlesController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
-            res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : {message: handleData.message});
+            const handleData = await HandlesController.getHandleFromRepo(
+                req.params.handle,
+                req.params.registry.handlesRepo,
+                req.query.hex == 'true'
+            );
+            res.status(handleData.code).json(
+                handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message }
+            );
         } catch (error) {
-            console.log(error)
+            console.log(error);
             next(error);
         }
     };
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(
+                req.params.handle,
+                req.params.registry.handlesRepo,
+                req.query.hex == 'true'
+            );
 
             const { personalization } = new PersonalizedHandleViewModel(handleData.handle);
 
@@ -129,7 +148,11 @@ class HandlesController {
 
     public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(
+                req.params.handle,
+                req.params.registry.handlesRepo,
+                req.query.hex == 'true'
+            );
 
             const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
 
@@ -140,16 +163,8 @@ class HandlesController {
 
             const scriptData = getScript(reference_token.address);
             if (scriptData) {
-                const scriptHandleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
-                const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(scriptHandleData.handle, scriptData);
-
                 // add to the reference_token the script data
-                reference_token.script = {
-                    ...scriptData,
-                    refScriptUtxo,
-                    refScriptAddress,
-                    cbor
-                };
+                reference_token.script = scriptData;
             }
 
             res.status(handleData.code).json(reference_token);
@@ -165,7 +180,11 @@ class HandlesController {
                 return;
             }
             const handleName = req.params.handle;
-            const handleData = await HandlesController.getHandleFromRepo(handleName, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(
+                handleName,
+                req.params.registry.handlesRepo,
+                req.query.hex == 'true'
+            );
 
             if (!handleData.handle) {
                 res.status(404).send({ message: 'Handle datum not found' });
@@ -203,7 +222,11 @@ class HandlesController {
 
     public async getHandleScript(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(
+                req.params.handle,
+                req.params.registry.handlesRepo,
+                req.query.hex == 'true'
+            );
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
