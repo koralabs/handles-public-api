@@ -244,6 +244,7 @@ const processAssetClassToken = async ({
     utxo,
     lovelace,
     datum,
+    script,
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
@@ -255,6 +256,7 @@ const processAssetClassToken = async ({
             utxo,
             lovelace,
             datum,
+            script,
             handleMetadata,
             isMintTx
         });
@@ -284,6 +286,7 @@ const processAssetToken = async ({
     address,
     utxo,
     datum,
+    script,
     handleMetadata,
     isMintTx
 }: ProcessAssetTokenInput) => {
@@ -295,7 +298,8 @@ const processAssetToken = async ({
         adaAddress: address,
         slotNumber,
         utxo,
-        datum
+        datum,
+        script
     };
 
     if (isMintTx) {
@@ -403,6 +407,23 @@ export const processBlock = async ({
                             continue;
                         }
 
+                        let script: { type: string; cbor: string } | undefined;
+                        if (outputScript) {
+                            try {
+                                const [type, cbor] = Object.entries(outputScript)[0];
+                                script = {
+                                    type: type.replace(':', '_'),
+                                    cbor
+                                };
+                            } catch (error) {
+                                Logger.log({
+                                    message: `Error error getting script for ${txId}`,
+                                    category: LogCategory.ERROR,
+                                    event: 'processBlock.decodingScript'
+                                });
+                            }
+                        }
+
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
                         const {
                             address,
@@ -416,6 +437,7 @@ export const processBlock = async ({
                             utxo: `${txId}#${i}`,
                             lovelace: coins,
                             datum: datumString,
+                            script,
                             handleMetadata: data,
                             isMintTx
                         };

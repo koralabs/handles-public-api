@@ -173,6 +173,7 @@ export interface ProcessAssetTokenInput {
     utxo: string;
     lovelace: number;
     datum?: string;
+    script?: { type: string; cbor: string };
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
 }

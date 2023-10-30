@@ -12,7 +12,6 @@ import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.v
 import { decodeCborToJson } from '../utils/cbor';
 import { handleDatumSchema } from '../utils/cbor/schema/handleData';
 import { getScript } from '../config/scripts';
-import { validateScriptDetails } from '../utils/util';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
