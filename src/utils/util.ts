@@ -78,19 +78,3 @@ export const getSlotNumberFromDate = (date: Date): number => {
     // prettier-ignore
     return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
 };
-
-export const validateScriptDetails = (scriptHandle: IPersonalizedHandle | null, scriptData: ScriptDetails) => {
-    const refScriptUtxo =
-        scriptHandle && scriptHandle.utxo === scriptData.refScriptUtxo ? scriptData.refScriptUtxo : undefined;
-    const refScriptAddress =
-        scriptHandle && scriptHandle.resolved_addresses.ada === scriptData.refScriptAddress
-            ? scriptData.refScriptAddress
-            : undefined;
-    const cbor = scriptHandle && scriptHandle.script?.cbor === scriptData.cbor ? scriptData.cbor : undefined;
-
-    return {
-        refScriptUtxo,
-        refScriptAddress,
-        cbor
-    };
-};

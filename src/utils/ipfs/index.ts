@@ -12,11 +12,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
         if (result.statusCode !== 200) {
             ipfsGateway = getIpfsGateway(true);
             if (ipfsGateway.length > 12) {
-                // at least 13 characters in a an HTTPS URL
-                const { CID } = await import('multiformats/cid');
-                const { base32 } = await import('multiformats/bases/base32');
-                const base32Cid = CID.parse(cid).toString(base32.encoder);
-                result = await requestIpfs(`${ipfsGateway}${base32Cid}`);
+                result = await requestIpfs(`${ipfsGateway}${cid}`);
             } else {
                 throw new Error(
                     `Status from primary gateway resulted in status ${result.statusCode}. Backup gateway "${ipfsGateway}" is invalid`

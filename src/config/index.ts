@@ -16,5 +16,7 @@ export const {
 } = process.env;
 
 export const getIpfsGateway = (backup = false) => {
-    return backup ? process.env.IPFS_GATEWAY_BACKUP || '' : process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+    return backup
+        ? process.env.IPFS_GATEWAY_BACKUP || 'https://ipfs.io/ipfs/'
+        : process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
 };

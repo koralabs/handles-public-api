@@ -402,6 +402,12 @@ export const processBlock = async ({
                             });
                         }
 
+                        const isMintTx = isMintingTransaction(txBody, assetName);
+                        if (assetName === policyId) {
+                            // Don't save nameless token.
+                            continue;
+                        }
+
                         let script: { type: string; cbor: string } | undefined;
                         if (outputScript) {
                             try {
@@ -417,12 +423,6 @@ export const processBlock = async ({
                                     event: 'processBlock.decodingScript'
                                 });
                             }
-                        }
-
-                        const isMintTx = isMintingTransaction(txBody, assetName);
-                        if (assetName === policyId) {
-                            // Don't save nameless token.
-                            continue;
                         }
 
                         const data = handleMetadata ? handleMetadata[policyId] : undefined;
