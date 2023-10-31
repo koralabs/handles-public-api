@@ -202,6 +202,7 @@ describe('processBlock Tests', () => {
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
+            tipBlockHash: "some_hash",
             currentBlockHash: 'some_hash',
             currentSlot: 0,
             lastSlot: 0

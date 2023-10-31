@@ -45,8 +45,8 @@ jest.mock('../ioc', () => ({
                 const stats = getStats();
                 return stats;
             },
-            getIsCaughtUp: () => {
-                return true;
+            currentHttpStatus: () => {
+                return 200;
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({

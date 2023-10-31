@@ -70,8 +70,8 @@ jest.mock('../ioc', () => ({
                     manually_set: false
                 };
             },
-            getIsCaughtUp: () => {
-                return true;
+            currentHttpStatus: () => {
+                return 200;
             },
             getHandleDatumByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;

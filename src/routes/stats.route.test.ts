@@ -12,7 +12,7 @@ jest.mock('../ioc', () => ({
                     total_holders: 5
                 };
             },
-            getIsCaughtUp: () => true
+            currentHttpStatus: () => 200
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
