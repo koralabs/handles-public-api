@@ -31,6 +31,7 @@ export interface IHandleStoreMetrics {
     elapsedBuildingExec?: number;
     firstMemoryUsage?: number;
     currentBlockHash?: string;
+    tipBlockHash?: string;
     memorySize?: number;
 }
 

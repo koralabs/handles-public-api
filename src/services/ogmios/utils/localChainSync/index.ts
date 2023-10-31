@@ -79,16 +79,15 @@ export const createLocalChainSyncClient = async (
                 processTheBlock = true;
             } else {
                 processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
-                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || [
-                    '',
-                    '0'
-                ])[1];
+                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
                 let blockMatch: string | null = (message.match(/"headerHash":\s?"([0-9a-fA-F]*)"/m) || ['', ''])[1];
                 let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
+                let tipHashMatch: string | null = (message.match(/"tip":.*?"hash":\s?([0-9a-fA-F]*)/m) || ['', '0'])[1];
                 //console.log({slotMatch, blockMatch, tipSlotMatch});
                 HandleStore.setMetrics({
                     currentSlot: parseInt(slotMatch),
                     currentBlockHash: blockMatch,
+                    tipBlockHash: tipHashMatch,
                     lastSlot: parseInt(tipSlotMatch)
                 });
                 slotMatch = blockMatch = tipSlotMatch = null;

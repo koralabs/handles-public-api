@@ -628,21 +628,8 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const { firstSlot = 0, lastSlot = 0, currentSlot = 0 } = this.metrics;
-        const handleSlotRange = lastSlot - firstSlot;
-        const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete =
-            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
-
-        const slotDate = getDateStringFromSlot(currentSlot);
-
-        const date = slotDate.getTime();
-        const now = new Date().getTime();
-
-        // console.log(`${date} < ${now - 60000} && ${percentageComplete} != 100.00)`);
-        // date < now - 60000 &&
-
-        return percentageComplete === `100.00`;
+        const { lastSlot = 0, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.metrics;
+        return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
     static async saveHandlesFile(

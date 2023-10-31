@@ -63,13 +63,13 @@ class HandlesController {
                 const handles = await handleRepo.getAllHandleNames(search, sortParam);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handles.length.toString());
-                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).send(handles.join('\n'));
+                res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
                 return;
             }
 
             let result = await handleRepo.getAll({ pagination, search });
 
-            res.set("x-handles-search-total", result.searchTotal.toString()).status(handleRepo.getIsCaughtUp() ? 200 : 202).json(
+            res.set("x-handles-search-total", result.searchTotal.toString()).status(handleRepo.currentHttpStatus()).json(
                 result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle))
             );
         } catch (error) {
@@ -92,7 +92,7 @@ class HandlesController {
             }
             return { code: 404, message: "Handle not found", handle }
         }
-        return {code: handleRepo.getIsCaughtUp() ? 200 : 202, message: null, handle}
+        return {code: handleRepo.currentHttpStatus(), message: null, handle}
     }
 
     public getHandle = async (
@@ -185,7 +185,7 @@ class HandlesController {
                 try {
                     const decodedDatum = await decodeCborToJson(handleDatum, handleDatumSchema);
                     res.set('Content-Type', 'application/json');
-                    res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(decodedDatum);
+                    res.status(handleRepo.currentHttpStatus()).json(decodedDatum);
                     return;
                 } catch (error) {
                     res.status(400).send({ message: 'Unable to decode datum to json' });
@@ -193,7 +193,7 @@ class HandlesController {
                 }
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202)
+            res.status(handleRepo.currentHttpStatus())
                 .contentType('text/plain; charset=utf-8')
                 .send(handleDatum);
         } catch (error) {

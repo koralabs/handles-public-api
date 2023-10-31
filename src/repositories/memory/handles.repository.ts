@@ -218,8 +218,8 @@ class MemoryHandlesRepository implements IHandlesRepository {
         };
     }
 
-    public getIsCaughtUp(): boolean {
-        return HandleStore.isCaughtUp();
+    public currentHttpStatus(): number {
+        return HandleStore.isCaughtUp() ? 200 : 202;
     }
 }
 
