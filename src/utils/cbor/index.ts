@@ -87,8 +87,8 @@ class JsonToDatumObject {
         }
     };
 
-    keyIsNumeric = (key: string) => {
-        return this.numericKeys && key !== null && key.length > 0 && !Number.isNaN(key)
+    keyIsNumeric = (key: any) => {
+        return this.numericKeys && key !== null && key.length > 0 && !isNaN(key)
     }
 }
 
