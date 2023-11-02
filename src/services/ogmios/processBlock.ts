@@ -1,4 +1,10 @@
-import { AssetNameLabel, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
+import {
+    AssetNameLabel,
+    HandleType,
+    IHandleMetadata,
+    IPersonalization,
+    IPzDatum
+} from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import {
     BlockTip,
@@ -83,6 +89,7 @@ const buildPersonalization = async ({
 
 export const buildValidDatum = (
     handle: string,
+    hex: string,
     datumObject: any
 ): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatum | null } => {
     const result = {
@@ -91,6 +98,18 @@ export const buildValidDatum = (
     };
 
     const { constructor_0 } = datumObject;
+
+    const getHandleType = (hex: string): HandleType => {
+        if (hex.startsWith(AssetNameLabel.LABEL_000)) {
+            return HandleType.VIRTUAL_SUBHANDLE;
+        }
+
+        if (hex.startsWith(AssetNameLabel.LABEL_222) && handle.includes('@')) {
+            return HandleType.NFT_SUBHANDLE;
+        }
+
+        return HandleType.HANDLE;
+    };
 
     const requiredMetadata: IHandleMetadata = {
         name: '',
@@ -102,7 +121,8 @@ export const buildValidDatum = (
         length: 0,
         characters: '',
         numeric_modifiers: '',
-        version: 0
+        version: 0,
+        handle_type: getHandleType(hex)
     };
 
     const requiredProperties: IPzDatum = {
@@ -165,11 +185,11 @@ export const buildValidDatum = (
     return result;
 };
 
-const buildPersonalizationData = async (handle: string, datum: string) => {
+const buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
     const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
-    return buildValidDatum(handle, datumObjectConstructor);
+    return buildValidDatum(handle, hex, datumObjectConstructor);
 };
 
 const processAssetReferenceToken = async ({
@@ -215,7 +235,7 @@ const processAssetReferenceToken = async ({
         nsfw: true
     };
 
-    const { metadata, personalizationDatum } = await buildPersonalizationData(name, datum);
+    const { metadata, personalizationDatum } = await buildPersonalizationData(name, hex, datum);
 
     if (personalizationDatum) {
         // populate personalization from the reference token
@@ -263,7 +283,7 @@ const processAssetClassToken = async ({
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_100)) {
+    if (assetName.includes(AssetNameLabel.LABEL_100) || assetName.includes(AssetNameLabel.LABEL_000)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }

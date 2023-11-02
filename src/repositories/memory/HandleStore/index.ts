@@ -1,4 +1,4 @@
-import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, IHandleStats } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
@@ -23,6 +23,7 @@ import {
     HandleHistory,
     Handle
 } from '../interfaces/handleStore.interfaces';
+import { bech32FromHex } from '../../../utils/serialization';
 
 export class HandleStore {
     // Indexes
@@ -69,8 +70,7 @@ export class HandleStore {
     static getByHex(hex: string): Handle | null {
         let handle: Handle | null = null;
         for (let [key, value] of HandleStore.handles.entries()) {
-          if (value.hex === hex)
-            handle = value;
+            if (value.hex === hex) handle = value;
             break;
         }
 
@@ -335,7 +335,8 @@ export class HandleStore {
             reference_token,
             amount,
             svg_version,
-            version
+            version,
+            handle_type: 
         };
 
         return newHandle;
@@ -476,8 +477,13 @@ export class HandleStore {
                 name,
                 hex,
                 slotNumber,
-                adaAddress: '', // address will come from the 222 token
-                utxo: '', // utxo will come from the 222 token,
+                adaAddress:
+                    hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada
+                        ? bech32FromHex(personalizationDatum.resolved_addresses.ada)
+                        : '', // address will come from the 222 token
+                utxo: hex.startsWith(AssetNameLabel.LABEL_000)
+                    ? `${reference_token.tx_id}#${reference_token.index}`
+                    : '', // utxo will come from the 222 token,
                 og_number,
                 image,
                 image_hash: personalizationDatum?.image_hash,
@@ -498,6 +504,12 @@ export class HandleStore {
             delete addresses.ada;
         }
 
+        // If asset is a 000 token, we need to use the address from the persinalization datum. Otherwise use existing address
+        const adaAddress =
+            hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada
+                ? bech32FromHex(personalizationDatum.resolved_addresses.ada)
+                : existingHandle.resolved_addresses.ada;
+
         const updatedHandle: Handle = {
             ...existingHandle,
             image,
@@ -509,7 +521,7 @@ export class HandleStore {
             pfp_asset: personalizationDatum?.pfp_asset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
-                ada: existingHandle.resolved_addresses.ada,
+                ada: adaAddress,
                 ...addresses
             },
             default_in_wallet,
@@ -914,7 +926,7 @@ export class HandleStore {
         slot: number;
         hash: string;
         lastSlot: number;
-    }): Promise<{name:string, action: string, handle: Partial<Handle> | undefined}[]> {
+    }): Promise<{ name: string; action: string; handle: Partial<Handle> | undefined }[]> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
@@ -947,7 +959,7 @@ export class HandleStore {
                 const existingHandle = this.get(name);
                 if (!existingHandle) {
                     if (handleHistory.old) {
-                        rewoundHandles.push({name, action: "create", handle: handleHistory.old});
+                        rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
                         await this.save({ handle: handleHistory.old as Handle, saveHistory: false });
                         handleUpdates++;
                         continue;
@@ -960,7 +972,7 @@ export class HandleStore {
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
-                    rewoundHandles.push({name, action: "delete", handle: undefined});
+                    rewoundHandles.push({ name, action: 'delete', handle: undefined });
                     await this.remove(name);
                     handleDeletes++;
                     continue;
@@ -972,7 +984,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
-                rewoundHandles.push({name, action: "update", handle: updatedHandle});
+                rewoundHandles.push({ name, action: 'update', handle: updatedHandle });
                 await this.save({ handle: updatedHandle, oldHandle: existingHandle, saveHistory: false });
                 handleUpdates++;
             }
