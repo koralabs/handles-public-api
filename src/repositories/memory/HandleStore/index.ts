@@ -54,16 +54,8 @@ export class HandleStore {
 
     static get(key: string): Handle | null {
         const handle = HandleStore.handles.get(key);
-        if (!handle) {
-            return null;
-        }
 
-        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
-        if (holderAddressIndex) {
-            handle.default_in_wallet = holderAddressIndex.defaultHandle;
-        }
-
-        return handle;
+        return this.returnHandleWithDefault(handle);
     }
 
     static getByHex(hex: string): Handle | null {
@@ -73,7 +65,10 @@ export class HandleStore {
             handle = value;
             break;
         }
+        return this.returnHandleWithDefault(handle);
+    }
 
+    static returnHandleWithDefault(handle?: Handle | null) {
         if (!handle) {
             return null;
         }
@@ -82,7 +77,7 @@ export class HandleStore {
         if (holderAddressIndex) {
             handle.default_in_wallet = holderAddressIndex.defaultHandle;
         }
-
+        
         return handle;
     }
 
