@@ -403,6 +403,15 @@ describe('CBOR tests', () => {
         ];
 
         const schema = {
+            '[2]': {
+                '[all]': {
+                    '[4]': {
+                        '<hexstring>': {
+                            '<string>': 'number'
+                        }
+                    }
+                }
+            },
             '[3]': {
                 collectionName: 'string',
                 collectionImage: 'string',
@@ -415,7 +424,7 @@ describe('CBOR tests', () => {
 
         it('Should convert from JSON to TxMetadataJson with numberic keys', async () => {
             const encoded = await encodeJsonToDatum(getJson(), true);
-            expect(encoded).toEqual(null);
+            expect(encoded).toEqual(cbor);
         });
 
         it('Should convert cbor to portal datum', async () => {
