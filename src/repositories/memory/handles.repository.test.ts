@@ -151,9 +151,12 @@ describe('MemoryHandlesRepository Tests', () => {
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel();
-            const result = await repo.getAllHandleNames(search, 'random');
+            const result1 = await repo.getAllHandleNames(search, 'random');
             const result2 = await repo.getAllHandleNames(search, 'random');
-            expect(result).not.toEqual(result2);
+            const result3 = await repo.getAllHandleNames(search, 'random');
+            const result4 = await repo.getAllHandleNames(search, 'random');
+            const noWayTheyreEqual = [result2, result3, result4].every(r => r == result1)
+            expect(noWayTheyreEqual).toEqual(false);
         });
 
         it('should remove handles without a UTxO', async () => {

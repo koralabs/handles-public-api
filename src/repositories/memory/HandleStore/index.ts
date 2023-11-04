@@ -37,7 +37,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 27;
+    static storageSchemaVersion = 28;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -73,9 +73,10 @@ export class HandleStore {
             return null;
         }
 
-        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
-        if (holderAddressIndex) {
-            handle.default_in_wallet = holderAddressIndex.defaultHandle;
+        const holder = HandleStore.holderAddressIndex.get(handle.holder);
+        if (holder) {
+            handle.default_in_wallet = holder.defaultHandle;
+            handle.default = handle.default_in_wallet == handle.name
         }
         
         return handle;
@@ -119,16 +120,18 @@ export class HandleStore {
             numeric_modifiers,
             length,
             resolved_addresses: { ada },
-            updated_slot_number,
-            default_in_wallet
+            updated_slot_number
         } = updatedHandle;
 
-        const holderAddressDetails = getAddressHolderDetails(ada);
-        updatedHandle.holder = holderAddressDetails.address;
-        updatedHandle.holder_type = holderAddressDetails.type;
+        const holder = getAddressHolderDetails(ada);
+        updatedHandle.holder = holder.address;
+        updatedHandle.holder_type = holder.type;
 
         // Set the main index
         this.handles.set(name, updatedHandle);
+
+        // Set default name during personalization
+        this.setHolderAddressIndex(holder, name, handle.default, oldHandle?.holder);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);
@@ -138,9 +141,6 @@ export class HandleStore {
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
-
-        // Set default name during personalization
-        this.setHolderAddressIndex(holderAddressDetails, name, default_in_wallet, oldHandle?.holder);
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot &&
@@ -205,12 +205,12 @@ export class HandleStore {
     static setHolderAddressIndex(
         holderAddressDetails: AddressDetails,
         handleName?: string,
-        defaultName?: string,
+        isDefault?: boolean,
         oldHolderAddress?: string
     ) {
         const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
 
-        const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? {
+        const holder = this.holderAddressIndex.get(holderAddress) ?? {
             handles: new Set(),
             defaultHandle: '',
             manuallySet: false,
@@ -221,63 +221,36 @@ export class HandleStore {
         if (oldHolderAddress && handleName) {
             const oldHolder = this.holderAddressIndex.get(oldHolderAddress);
             if (oldHolder) {
+                // What if we just deleted the oldHolder's default?
+                // Don't we need to getDefaultHandle for oldHolder too?
                 oldHolder.handles.delete(handleName);
             }
         }
 
         // add the new name if provided and does not already exist
-        if (handleName && !existingHolderAddressDetails.handles.has(handleName)) {
-            existingHolderAddressDetails.handles.add(handleName);
+        if (handleName && !holder.handles.has(handleName)) {
+            holder.handles.add(handleName);
         }
 
-        // if by this point, if we have no handles, we need to remove the holder address from the index
-        if (existingHolderAddressDetails.handles.size === 0) {
+        // if by this point, we have no handles, we need to remove the holder address from the index
+        if (holder.handles.size === 0) {
             this.holderAddressIndex.delete(holderAddress);
             return;
         }
-
-        // build the handles using the holderAddressIndex handles property
-        const handles = [...existingHolderAddressDetails.handles].reduce<Handle[]>((agg, name) => {
-            const handle = this.handles.get(name);
-            if (handle) {
-                agg.push(handle);
-            } else {
-                Logger.log({
-                    message: `Handle ${name} not found in handles index, removing from holder address index`,
-                    category: LogCategory.WARN
-                });
-                existingHolderAddressDetails.handles.delete(name);
-            }
-            return agg;
-        }, []);
-
-        const updatedHolderAddressDetails = {
-            ...existingHolderAddressDetails
-        };
-
-        if (existingHolderAddressDetails.manuallySet) {
-            if (existingHolderAddressDetails.defaultHandle === handleName && !!!defaultName) {
-                updatedHolderAddressDetails.manuallySet = false;
-            }
-        } else {
-            updatedHolderAddressDetails.manuallySet = !!defaultName;
-        }
+        const handles: Handle[] = [];
+        holder.handles.forEach(h => {
+            const handle = this.handles.get(h); 
+            if (handle) 
+                handles.push(handle)
+            else
+                holder.handles.delete(h)
+        });
+        holder.manuallySet = !!isDefault || holder.manuallySet && (handleName != holder.defaultHandle);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
-        const { manuallySet, defaultHandle, handles: existingHandles } = updatedHolderAddressDetails;
-
-        const isSavingNewDefault = !!defaultName;
-        const isManuallySetAndIncludedInHandles = manuallySet && existingHandles.has(defaultHandle);
-
-        if (isSavingNewDefault) {
-            updatedHolderAddressDetails.defaultHandle = defaultName;
-        } else if (isManuallySetAndIncludedInHandles) {
-            updatedHolderAddressDetails.defaultHandle = defaultHandle;
-        } else {
-            updatedHolderAddressDetails.defaultHandle = getDefaultHandle(handles)?.name ?? '';
-        }
-
-        this.holderAddressIndex.set(holderAddress, updatedHolderAddressDetails);
+        holder.defaultHandle = (!!isDefault && !!handleName) ? handleName : 
+            holder.manuallySet ? holder.defaultHandle : getDefaultHandle(handles)?.name ?? '';
+        this.holderAddressIndex.set(holderAddress, holder);
     }
 
     static buildHandle = ({
@@ -293,7 +266,6 @@ export class HandleStore {
         amount = 1,
         bg_image = '',
         pfp_image = '',
-        default_in_wallet = '',
         svg_version = '',
         version = 0,
         image_hash = '',
@@ -319,7 +291,7 @@ export class HandleStore {
             image: image,
             image_hash: image_hash,
             bg_image,
-            default_in_wallet,
+            default_in_wallet: '',
             pfp_image,
             created_slot_number: slotNumber,
             updated_slot_number: slotNumber,
@@ -330,7 +302,8 @@ export class HandleStore {
             reference_token,
             amount,
             svg_version,
-            version
+            version,
+            default: false
         };
 
         return newHandle;
@@ -463,7 +436,6 @@ export class HandleStore {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
-        const default_in_wallet = personalizationDatum?.default ? name : '';
 
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
@@ -478,7 +450,6 @@ export class HandleStore {
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
                 reference_token,
-                default_in_wallet,
                 svg_version: personalizationDatum?.svg_version,
                 version
             };
@@ -507,10 +478,10 @@ export class HandleStore {
                 ada: existingHandle.resolved_addresses.ada,
                 ...addresses
             },
-            default_in_wallet,
             personalization,
             reference_token,
-            svg_version: personalizationDatum?.svg_version ?? ''
+            svg_version: personalizationDatum?.svg_version ?? '',
+            default: (personalizationDatum?.default == 1) ?? false
         };
 
         await HandleStore.save({
