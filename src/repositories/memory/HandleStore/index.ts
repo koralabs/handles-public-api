@@ -245,11 +245,16 @@ export class HandleStore {
             else
                 holder.handles.delete(h)
         });
-        holder.manuallySet = !!isDefault || holder.manuallySet && (handleName != holder.defaultHandle);
+        // Set manuallySet to the incoming Handle if isDefault. If the incoming handleName is the same as the 
+        // current holder default, then we might be turning it off (unsetting it as default)
+        holder.manuallySet = !!isDefault || holder.manuallySet && (holder.defaultHandle != handleName);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
+        // Set defaultHandle to incoming if isDefault, otherwise if manuallySet, then keep the current
+        // default. If neither, then run getDefaultHandle algo
         holder.defaultHandle = (!!isDefault && !!handleName) ? handleName : 
             holder.manuallySet ? holder.defaultHandle : getDefaultHandle(handles)?.name ?? '';
+
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
