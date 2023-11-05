@@ -76,7 +76,6 @@ export class HandleStore {
         const holder = HandleStore.holderAddressIndex.get(handle.holder);
         if (holder) {
             handle.default_in_wallet = holder.defaultHandle;
-            handle.default = handle.default_in_wallet == handle.name
         }
         
         return handle;
@@ -127,6 +126,9 @@ export class HandleStore {
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
 
+        const handleDefault = handle.default;
+        delete handle.default // This is a temp property not meant to save to the handle
+
         // Set the main index
         this.handles.set(name, updatedHandle);
 
@@ -158,19 +160,8 @@ export class HandleStore {
     };
 
     static remove = async (handleName: string) => {
-        Logger.log({
-            category: LogCategory.INFO,
-            message: `Removing handle ${handleName}`,
-            event: 'HandleStore.remove'
-        });
-
         const handle = this.handles.get(handleName);
         if (!handle) {
-            Logger.log({
-                message: `Handle ${handleName} not found`,
-                event: 'HandleStore.remove',
-                category: LogCategory.WARN
-            });
             return;
         }
 
@@ -198,8 +189,7 @@ export class HandleStore {
 
         // remove the stake key index
         this.holderAddressIndex.get(holder)?.handles.delete(handleName);
-        const holderAddressDetails = getAddressHolderDetails(ada);
-        this.setHolderAddressIndex(holderAddressDetails);
+        this.setHolderAddressIndex(getAddressHolderDetails(ada));
     };
 
     static setHolderAddressIndex(
@@ -218,12 +208,25 @@ export class HandleStore {
             knownOwnerName
         };
 
+        const getHandlesFromNames = (holder: HolderAddressIndex) => {
+            const handles: Handle[] = [];
+            holder.handles.forEach(h => {
+                const handle = this.handles.get(h); 
+                if (handle) 
+                    handles.push(handle)
+                else
+                    holder.handles.delete(h)
+            });
+            return handles;
+        }
+
         if (oldHolderAddress && handleName) {
             const oldHolder = this.holderAddressIndex.get(oldHolderAddress);
             if (oldHolder) {
-                // What if we just deleted the oldHolder's default?
-                // Don't we need to getDefaultHandle for oldHolder too?
                 oldHolder.handles.delete(handleName);
+                oldHolder.manuallySet = holder.manuallySet && (oldHolder.defaultHandle != handleName);
+                oldHolder.defaultHandle =  oldHolder.manuallySet ? 
+                    oldHolder.defaultHandle : getDefaultHandle(getHandlesFromNames(oldHolder))?.name ?? '';
             }
         }
 
@@ -237,14 +240,6 @@ export class HandleStore {
             this.holderAddressIndex.delete(holderAddress);
             return;
         }
-        const handles: Handle[] = [];
-        holder.handles.forEach(h => {
-            const handle = this.handles.get(h); 
-            if (handle) 
-                handles.push(handle)
-            else
-                holder.handles.delete(h)
-        });
         // Set manuallySet to the incoming Handle if isDefault. If the incoming handleName is the same as the 
         // current holder default, then we might be turning it off (unsetting it as default)
         holder.manuallySet = !!isDefault || holder.manuallySet && (holder.defaultHandle != handleName);
@@ -253,7 +248,7 @@ export class HandleStore {
         // Set defaultHandle to incoming if isDefault, otherwise if manuallySet, then keep the current
         // default. If neither, then run getDefaultHandle algo
         holder.defaultHandle = (!!isDefault && !!handleName) ? handleName : 
-            holder.manuallySet ? holder.defaultHandle : getDefaultHandle(handles)?.name ?? '';
+            holder.manuallySet ? holder.defaultHandle : getDefaultHandle(getHandlesFromNames(holder))?.name ?? '';
 
         this.holderAddressIndex.set(holderAddress, holder);
     }
@@ -507,8 +502,7 @@ export class HandleStore {
             return;
         }
 
-        const { amount } = existingHandle;
-        const burnAmount = amount - 1;
+        const burnAmount = existingHandle.amount - 1;
 
         if (burnAmount === 0) {
             await HandleStore.remove(handleName);

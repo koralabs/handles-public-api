@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { HandleStore } from '../repositories/memory/HandleStore';
 
 class StatsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {

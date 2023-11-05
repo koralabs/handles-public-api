@@ -87,5 +87,5 @@ export interface HolderAddressIndex {
 
 export interface Handle extends IPersonalizedHandle {
     amount: number;
-    default: boolean;
+    default?: boolean;
 }
