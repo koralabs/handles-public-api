@@ -12,7 +12,7 @@ RUN \
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v5.6.0/ogmios-v5.6.0-x86_64-linux.zip -o ogmios.zip && \
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip && \
     cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt install -y nodejs && \
+    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && apt install -y nodejs && \
     chown -R root:root /app
 EXPOSE 3141
 STOPSIGNAL SIGINT

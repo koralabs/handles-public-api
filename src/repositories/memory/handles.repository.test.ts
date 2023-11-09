@@ -2,15 +2,14 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
+import { handlesFixture, holdersFixture, createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 
-jest.mock('../../utils/addresses');
-
 describe('MemoryHandlesRepository Tests', () => {
+    jest.mock('../../utils/addresses');
     beforeAll(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake-key1',
@@ -151,9 +150,12 @@ describe('MemoryHandlesRepository Tests', () => {
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel();
-            const result = await repo.getAllHandleNames(search, 'random');
+            const result1 = await repo.getAllHandleNames(search, 'random');
             const result2 = await repo.getAllHandleNames(search, 'random');
-            expect(result).not.toEqual(result2);
+            const result3 = await repo.getAllHandleNames(search, 'random');
+            const result4 = await repo.getAllHandleNames(search, 'random');
+            const noWayTheyreEqual = [result2, result3, result4].every(r => r == result1)
+            expect(noWayTheyreEqual).toEqual(false);
         });
 
         it('should remove handles without a UTxO', async () => {
@@ -299,5 +301,35 @@ describe('MemoryHandlesRepository Tests', () => {
                 expect(error.message).toEqual('Not found');
             }
         });
+    });
+    
+});
+
+describe('holder index integrity', () => {
+    it('holder index should be accurate', async () => {
+        await createRandomHandles(1000, true);
+        await performRandomHandleUpdates(1000, 1001);
+        const testHolderIndex = new Map<string, HolderAddressIndex>();
+        const handles = HandleStore.getHandles().sort((a,b) => a.updated_slot_number - b.updated_slot_number)
+        for (let i = 0; i<handles.length;i++) {
+            const handle = handles[i];
+            const holder = testHolderIndex.get(handle.holder);
+            if (!holder) {
+                const set = new Set<string>();
+                set.add(handle.name);
+                testHolderIndex.set(handle.holder, {
+                    defaultHandle: handle.default_in_wallet,
+                    handles: set,
+                    knownOwnerName: '',
+                    manuallySet: false,
+                    type: 'wallet'
+                });
+            } 
+            else {
+                holder.defaultHandle = handle.default_in_wallet;
+                holder.handles.add(handle.name);
+            } 
+        }
+        expect(HandleStore.holderAddressIndex).toEqual(testHolderIndex);
     });
 });

@@ -467,6 +467,12 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/DatumType"
+      - name: numeric_keys
+        in: query
+        description: If JSON keys can be converted to CBOR integers, then do so
+        required: false
+        schema:
+          type: boolean
       requestBody:
         description: |
           The CBOR or JSON to encode/decode.

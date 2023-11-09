@@ -30,11 +30,11 @@ class ScriptsController {
                     scriptAddress
                 };
 
-                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(result);
+                res.status(handleRepo.currentHttpStatus()).json(result);
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(allScripts);
+            res.status(handleRepo.currentHttpStatus()).json(allScripts);
         } catch (error) {
             next(error);
         }

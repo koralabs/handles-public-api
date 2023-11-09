@@ -31,6 +31,7 @@ export interface IHandleStoreMetrics {
     elapsedBuildingExec?: number;
     firstMemoryUsage?: number;
     currentBlockHash?: string;
+    tipBlockHash?: string;
     memorySize?: number;
 }
 
@@ -45,7 +46,6 @@ export interface SaveMintingTxInput {
     utxo: string;
     svg_version?: string;
     bg_image?: string;
-    default_in_wallet?: string;
     pfp_image?: string;
     datum?: string;
     script?: { type: string; cbor: string };
@@ -87,4 +87,5 @@ export interface HolderAddressIndex {
 
 export interface Handle extends IPersonalizedHandle {
     amount: number;
+    default?: boolean;
 }

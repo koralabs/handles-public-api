@@ -371,9 +371,10 @@ export const processBlock = async ({
 
     const lastSlot = tip.slot;
     const currentSlot = txBlockType?.header?.slot ?? 0;
-    const currentBlockHash = txBlockType?.headerHash ?? '';
+    const currentBlockHash = txBlockType?.headerHash ?? '0';
+    const tipBlockHash = tip?.hash ?? '1';
 
-    HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash });
+    HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
 
     for (let b = 0; b < txBlockType?.body.length; b++) {
         const txBody = txBlockType?.body[b];

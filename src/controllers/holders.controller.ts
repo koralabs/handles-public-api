@@ -25,7 +25,7 @@ class HoldersController {
 
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const holders = await handleRepo.getAllHolders({ pagination });
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(holders);
+            res.status(handleRepo.currentHttpStatus()).json(holders);
         } catch (error) {
             next(error);
         }
@@ -41,7 +41,7 @@ class HoldersController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const details = await handleRepo.getHolderAddressDetails(holderAddress);
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(details);
+            res.status(handleRepo.currentHttpStatus()).json(details);
         } catch (error) {
             next(error);
         }

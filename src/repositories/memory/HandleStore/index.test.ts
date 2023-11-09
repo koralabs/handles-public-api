@@ -236,7 +236,8 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo1#0',
                 amount: 1,
                 holder_type: '',
-                version: 0
+                version: 0,
+                default: false
             });
         });
     });
@@ -293,7 +294,8 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 amount: 1,
                 holder_type: '',
-                version: 0
+                version: 0,
+                default: false
             });
 
             // expect to get the correct slot history with all new handles
@@ -544,7 +546,6 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 bg_image: 'todo',
-                                default_in_wallet: '',
                                 personalization: {
                                     designer: {
                                         bg_border_color: '0xtodo',
@@ -565,7 +566,6 @@ describe('HandleStore tests', () => {
                             },
                             old: {
                                 bg_image: '',
-                                default_in_wallet: 'taco',
                                 personalization: undefined,
                                 reference_token: undefined,
                                 pfp_image: '',
@@ -665,7 +665,8 @@ describe('HandleStore tests', () => {
                     utxo: '',
                     amount: 1,
                     holder_type: '',
-                    version: 0
+                    version: 0,
+                    default: false
                 }
             });
         });
@@ -972,7 +973,7 @@ describe('HandleStore tests', () => {
                         new: {
                             bg_image: 'todo',
                             pfp_image: 'todo',
-                            default_in_wallet: 'pork-belly',
+                            default: true,
                             image: 'ipfs://123',
                             personalization: {
                                 designer: {
@@ -990,7 +991,7 @@ describe('HandleStore tests', () => {
                         old: {
                             bg_image: '',
                             pfp_image: '',
-                            default_in_wallet: 'taco',
+                            default: false,
                             image: '',
                             personalization: undefined,
                             reference_token: undefined,
@@ -1035,12 +1036,12 @@ describe('HandleStore tests', () => {
                 {
                     'pork-belly': {
                         new: {
-                            default_in_wallet: '',
+                            default: false,
                             personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
                             updated_slot_number: 400
                         },
                         old: {
-                            default_in_wallet: 'pork-belly',
+                            default: true,
                             personalization: {
                                 designer: {
                                     font_shadow_color: '0xEEE'
@@ -1326,7 +1327,6 @@ describe('HandleStore tests', () => {
             expect(handle).toEqual({
                 amount: 1,
                 holder: updatedStakeKey,
-                default_in_wallet: 'taco',
                 bg_image: '',
                 characters: 'letters',
                 hex: handleHex,
@@ -1347,7 +1347,9 @@ describe('HandleStore tests', () => {
                 updated_slot_number: expect.any(Number),
                 has_datum: false,
                 holder_type: '',
-                version: 0
+                version: 0,
+                default:true,
+                default_in_wallet: "salsa"
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
