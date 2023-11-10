@@ -7,7 +7,6 @@ import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
-import { HandleType } from '@koralabs/handles-public-api-interfaces';
 
 describe('MemoryHandlesRepository Tests', () => {
     jest.mock('../../utils/addresses');
@@ -29,8 +28,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 resolved_addresses: { ada: adaAddress },
                 datum,
                 image_hash,
-                svg_version,
-                type
+                svg_version
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -42,8 +40,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo,
                 datum,
                 image_hash,
-                svg_version,
-                type
+                svg_version
             });
         });
         await Promise.all(saves);
@@ -59,7 +56,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ page: '1', handlesPerPage: '1', sort: 'asc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
+            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0]]});
         });
 
         it('should find handles by rarity', async () => {
@@ -67,7 +64,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[1], handlesFixture[2]] });
+            expect(result).toEqual({searchTotal: 2, handles: [handlesFixture[1], handlesFixture[2]]});
         });
 
         it('should no handles with compounded searches', async () => {
@@ -75,7 +72,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'rare', length: '7', holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 0, handles: [] });
+            expect(result).toEqual({searchTotal: 0, handles: []});
         });
 
         it('should find handle using search parameter', async () => {
@@ -83,7 +80,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ search: 'bur' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[1]] });
+            expect(result).toEqual({searchTotal:1, handles: [handlesFixture[1]]});
         });
 
         it('should find handles using holder_address parameter', async () => {
@@ -91,7 +88,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: handlesFixture.length, handles: handlesFixture });
+            expect(result).toEqual({searchTotal: handlesFixture.length, handles: handlesFixture});
         });
 
         it('should find no handles using invalid holder_address parameter', async () => {
@@ -99,7 +96,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ holder_address: 'nope' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 0, handles: [] });
+            expect(result).toEqual({searchTotal:0,handles:[]});
         });
 
         it('should paginate handles by slot number', async () => {
@@ -108,7 +105,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, handlesPerPage: '1' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
+            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0]]});
         });
 
         it('should paginate handles by slot number and sort ascending by default', async () => {
@@ -117,7 +114,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}` });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0], handlesFixture[1], handlesFixture[2]] });
+            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0], handlesFixture[1], handlesFixture[2]]});
         });
 
         it('should paginate handles by slot number and sort desc', async () => {
@@ -126,7 +123,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, sort: 'desc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[1], handlesFixture[0]] });
+            expect(result).toEqual({searchTotal : 3, handles: [handlesFixture[1], handlesFixture[0]]});
         });
     });
 
@@ -157,7 +154,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const result2 = await repo.getAllHandleNames(search, 'random');
             const result3 = await repo.getAllHandleNames(search, 'random');
             const result4 = await repo.getAllHandleNames(search, 'random');
-            const noWayTheyreEqual = [result2, result3, result4].every((r) => r == result1);
+            const noWayTheyreEqual = [result2, result3, result4].every(r => r == result1)
             expect(noWayTheyreEqual).toEqual(false);
         });
 
@@ -172,8 +169,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 slotNumber: 0,
                 datum: '',
                 image_hash: '',
-                svg_version: '',
-                type: HandleType.HANDLE
+                svg_version: ''
             });
             const handles = [...handlesFixture, newHandle];
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
@@ -270,8 +266,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo: 'test_tx#0',
                 datum,
                 image_hash: '',
-                svg_version: '',
-                type: HandleType.HANDLE
+                svg_version: ''
             };
             await Promise.all([
                 HandleStore.saveMintedHandle(saveHandleInput),
@@ -307,21 +302,16 @@ describe('MemoryHandlesRepository Tests', () => {
             }
         });
     });
+    
 });
 
 describe('holder index integrity', () => {
-    beforeAll(async () => {
-        HandleStore.eraseStorage();
-    });
-
     it('holder index should be accurate', async () => {
-        console.log('ZZZZZZZZ STORE', HandleStore.getHandles().length);
-
         await createRandomHandles(1000, true);
         await performRandomHandleUpdates(1000, 1001);
         const testHolderIndex = new Map<string, HolderAddressIndex>();
-        const handles = HandleStore.getHandles().sort((a, b) => a.updated_slot_number - b.updated_slot_number);
-        for (let i = 0; i < handles.length; i++) {
+        const handles = HandleStore.getHandles().sort((a,b) => a.updated_slot_number - b.updated_slot_number)
+        for (let i = 0; i<handles.length;i++) {
             const handle = handles[i];
             const holder = testHolderIndex.get(handle.holder);
             if (!holder) {
@@ -334,10 +324,11 @@ describe('holder index integrity', () => {
                     manuallySet: false,
                     type: 'wallet'
                 });
-            } else {
+            } 
+            else {
                 holder.defaultHandle = handle.default_in_wallet;
                 holder.handles.add(handle.name);
-            }
+            } 
         }
         expect(HandleStore.holderAddressIndex).toEqual(testHolderIndex);
     });

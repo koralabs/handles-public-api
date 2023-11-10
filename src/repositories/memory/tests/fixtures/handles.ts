@@ -1,4 +1,4 @@
-import { HandleType, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { Rarity } from '@koralabs/handles-public-api-interfaces';
 import { ISlotHistoryIndex, HolderAddressIndex, Handle } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';
@@ -31,7 +31,6 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
         default: false
     },
     {
@@ -61,7 +60,6 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
         default: false
     },
     {
@@ -91,8 +89,7 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
-        default: false
+        default: true
     }
 ];
 
@@ -151,7 +148,7 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
 
 export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<Handle[]> => {
     let handles: Handle[] = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0;i<count;i++) {
         const handleName = createRandomHandleName();
         if (!HandleStore.get(handleName)) {
             const handle = HandleStore.buildHandle({
@@ -161,17 +158,16 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                 og_number: Math.floor(Math.random() * 2438),
                 slotNumber: i,
-                type: HandleType.HANDLE,
                 utxo: createRandomUtxo()
-            });
-            if (saveToHandleStore) {
-                await HandleStore.save({ handle });
+            })
+            if (saveToHandleStore){
+                await HandleStore.save({handle});
             }
             handles.push(handle);
         }
     }
     return handles;
-};
+}
 
 export const createRandomUtxo = (): string => {
     let result = '';
@@ -182,25 +178,25 @@ export const createRandomUtxo = (): string => {
         counter += 1;
     }
     return `${result}#${Math.floor(Math.random() * 10)}`;
-};
+}
 
 export const createRandomAddress = (): string => {
-    return bech32.encode('addr_test', [0, 4, Math.floor(Math.random() * 32), 12, 18, 20, 22, 11, 25, 9, 29, 24, 30, 27, 11, 16, 13, 3, 8, 30, 9, 31, 25, 9, 30, 4, 0, 23, 31, 3, 14, 7, 13, 26, 15, 25, 7, 26, 24, 30, 7, 9, 24, 11, 12, 30, 14, 2, 10, 7, 13, 0, 10, 1, 30, 10, 25, 31, 20, 1, 8, 27, 14, 11, 15, 25, 9, 8, 24, 26, 10, 26, 6, 22, 1, 4, 23, 16, 14, 16, 0, 22, 4, 0, 22, 8, 26, 10, 10, 1, Math.floor(Math.random() * 32), 16], 108);
-};
+    return bech32.encode('addr', [0,4,Math.floor(Math.random() * 32),12,18,20,22,11,25,9,29,24,30,27,11,16,13,3,8,30,9,31,25,9,30,4,0,23,31,3,14,7,13,26,15,25,7,26,24,30,7,9,24,11,12,30,14,2,10,7,13,0,10,1,30,10,25,31,20,1,8,27,14,11,15,25,9,8,24,26,10,26,6,22,1,4,23,16,14,16,0,22,4,0,22,8,26,10,10,1,Math.floor(Math.random() * 32),16], 103);
+}
 
 export const createRandomHandleName = (): string => {
     let result = '';
     const characters = 'abcdefghijklmnopqrstuvwxyz0123456789_.-';
     let counter = 0;
     while (counter < Math.ceil(Math.random() * 15)) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-        counter += 1;
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+      counter += 1;
     }
     return result;
-};
+}
 
 export const performRandomHandleUpdates = async (count: number, beginningSlot = 0) => {
-    for (let i = 0; i < count; i++) {
+    for  (let i = 0; i<count; i++) {
         switch (i % 3) {
             case 0: // add
                 const handleName = createRandomHandleName();
@@ -212,25 +208,24 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                         og_number: Math.floor(Math.random() * 2438),
                         slotNumber: beginningSlot + i,
-                        type: HandleType.HANDLE,
                         utxo: createRandomUtxo()
                     });
-                    await HandleStore.save({ handle: newHandle });
+                    await HandleStore.save({handle:newHandle});
                 }
                 break;
             case 1: // update
-                let oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)];
+                let oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)]
                 const handle = {
                     ...oldHandle,
                     utxo: createRandomUtxo(),
                     resolved_addresses: { ada: createRandomAddress() },
-                    updated_slot_number: beginningSlot + i
+                    updated_slot_number: beginningSlot + i,
                 };
-                await HandleStore.save({ handle, oldHandle });
+                await HandleStore.save({handle, oldHandle});
                 break;
             case 2: // remove
-                await HandleStore.burnHandle(HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)].name, beginningSlot + i);
+                await HandleStore.burnHandle(HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)].name, beginningSlot + i)
                 break;
         }
     }
-};
+}

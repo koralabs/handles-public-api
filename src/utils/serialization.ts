@@ -94,10 +94,3 @@ export const buildStakeKey = (address: string): string | null => {
         return null;
     }
 };
-
-export const bech32FromHex = (hex: string, isTestnet = false): string => {
-    const prefix = isTestnet ? 'addr_test' : 'addr';
-    const bytes = Uint8Array.from(Buffer.from(hex, 'hex'));
-    const words = bech32.toWords(bytes);
-    return bech32.encode(prefix, words, bytes.length * 2 + prefix.length);
-};

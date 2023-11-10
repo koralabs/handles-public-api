@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
@@ -77,7 +77,25 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; isBurn?: boolean; slot?: number }) => ({
+    const txBlock = ({
+        address = 'addr123',
+        policy = policyId,
+        handleHexName = hexName,
+        handleName = name,
+        isMint = true,
+        datum = undefined,
+        isBurn = false,
+        slot = 0
+    }: {
+        address?: string | undefined;
+        policy?: string | undefined;
+        handleHexName?: string | undefined;
+        handleName?: string | undefined;
+        isMint?: boolean | undefined;
+        datum?: string;
+        isBurn?: boolean;
+        slot?: number;
+    }) => ({
         babbage: {
             body: [
                 !isBurn
@@ -163,7 +181,6 @@ describe('processBlock Tests', () => {
         svg_version: '',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
         default: false
     };
 
@@ -182,12 +199,11 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            version: 0,
-            type: HandleType.HANDLE
+            version: 0
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
-            tipBlockHash: 'some_hash',
+            tipBlockHash: "some_hash",
             currentBlockHash: 'some_hash',
             currentSlot: 0,
             lastSlot: 0
@@ -213,8 +229,7 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             datum,
-            version: 0,
-            type: HandleType.HANDLE
+            version: 0
         });
     });
 
@@ -232,8 +247,7 @@ describe('processBlock Tests', () => {
             hex: hexName,
             name,
             slotNumber: 0,
-            utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            utxo: 'some_id#0'
         });
     });
 
@@ -267,9 +281,8 @@ describe('processBlock Tests', () => {
             name: handleName,
             og_number: 0,
             slotNumber: 0,
-            utxo: 'some_id#0',
-            version: 0,
-            type: HandleType.HANDLE
+            utxo: 'some_id#0', 
+            version: 0
         });
     });
 
@@ -291,8 +304,7 @@ describe('processBlock Tests', () => {
             hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
-            utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            utxo: 'some_id#0'
         });
     });
 
@@ -439,7 +451,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_12: [{}, 1, {}]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toEqual({ metadata: null, personalizationDatum: null });
         });
 
@@ -447,7 +459,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_0: [{}, 1, {}]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toEqual({ metadata: {}, personalizationDatum: {} });
         });
 
@@ -455,7 +467,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_0: [{ a: 'a' }, 1, { b: 'b' }]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toEqual({ metadata: { a: 'a' }, personalizationDatum: { b: 'b' } });
         });
 
@@ -488,7 +500,7 @@ describe('processBlock Tests', () => {
                 ]
             };
 
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toEqual({
                 metadata: {
                     characters: '',
@@ -550,7 +562,7 @@ describe('processBlock Tests', () => {
                     }
                 ]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = buildValidDatum('taco', datum);
             expect(result).toBeTruthy();
         });
     });

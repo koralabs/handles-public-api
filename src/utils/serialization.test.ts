@@ -1,4 +1,4 @@
-import { AddressType, buildStakeKey, buildPaymentAddressType, bech32FromHex } from './serialization';
+import { AddressType, buildStakeKey, buildPaymentAddressType } from './serialization';
 
 const addresses = [
     'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x',
@@ -61,26 +61,6 @@ describe('Serialization Test', () => {
                 '37btjrVyb4KDXBNC4haBVPCrro8AQPHwvCMp3RFhhSVWwfFmZ6wwzSK6JK1hY6wHNmtrpTf1kdbva8TCneM2YsiXT7mrzT21EacHnPpz5YyUdj64na'
             );
             expect(type).toEqual(AddressType.Other);
-        });
-    });
-
-    describe('bech32FromHex', () => {
-        it('should convert hex to bech32 address and stake key', async () => {
-            const hex =
-                '007ad324c4fb08709dd997f6b2ba7980d5007103a2aa3f7a7eb8b44bc6f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca';
-            const result = bech32FromHex(hex, true);
-            expect(result).toEqual(
-                'addr_test1qpadxfxylvy8p8wejlmt9wnesr2squgr524r77n7hz6yh3h34r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qqh563f'
-            );
-        });
-
-        it('should convert hex to bech32', async () => {
-            const hex =
-                '007ad324c4fb08709dd997f6b2ba7980d5007103a2aa3f7a7eb8b44bc6f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca';
-            const result = bech32FromHex(hex, true);
-            expect(result).toEqual(
-                'addr_test1qpadxfxylvy8p8wejlmt9wnesr2squgr524r77n7hz6yh3h34r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qqh563f'
-            );
         });
     });
 });
