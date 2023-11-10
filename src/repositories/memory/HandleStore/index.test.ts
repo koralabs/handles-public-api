@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/handles-public-api-interfaces';
+import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/handles-public-api-interfaces';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -36,7 +36,7 @@ describe('HandleStore tests', () => {
         lovelace: 0,
         datum: '',
         address: ''
-    }
+    };
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
@@ -58,7 +58,8 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: adaAddress },
                 image_hash,
                 standard_image_hash,
-                svg_version
+                svg_version,
+                type
             } = handle;
             await HandleStore.saveMintedHandle({
                 adaAddress,
@@ -70,7 +71,8 @@ describe('HandleStore tests', () => {
                 utxo,
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
-                svg_version
+                svg_version,
+                type
             });
         }
     });
@@ -237,7 +239,8 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                default: false
+                default: false,
+                type: HandleType.HANDLE
             });
         });
     });
@@ -263,7 +266,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 datum: 'datum123',
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get('nachos');
@@ -295,7 +299,8 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                default: false
+                default: false,
+                type: HandleType.HANDLE
             });
 
             // expect to get the correct slot history with all new handles
@@ -355,7 +360,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -368,7 +374,8 @@ describe('HandleStore tests', () => {
                 image: 'ipfs://123',
                 slotNumber: 100,
                 image_hash: '0xtodo',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get('chimichanga');
@@ -424,7 +431,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 datum: 'datum123',
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             await HandleStore.saveMintedHandle({
@@ -437,7 +445,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 datum: 'datum123',
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get(sushiHandle);
@@ -456,7 +465,8 @@ describe('HandleStore tests', () => {
                 image: 'ipfs://123',
                 slotNumber: 100,
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -512,7 +522,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -632,7 +643,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -666,7 +678,7 @@ describe('HandleStore tests', () => {
                     amount: 1,
                     holder_type: '',
                     version: 0,
-                    default: false
+                    type: HandleType.HANDLE
                 }
             });
         });
@@ -683,7 +695,8 @@ describe('HandleStore tests', () => {
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -734,7 +747,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -756,9 +770,7 @@ describe('HandleStore tests', () => {
                 })
             );
 
-            expect([...(holderAddress?.handles ?? [])]).toEqual(
-                expect.arrayContaining(['barbacoa', 'burrito', 'taco', 'tortilla-soup'])
-            );
+            expect([...(holderAddress?.handles ?? [])]).toEqual(expect.arrayContaining(['barbacoa', 'burrito', 'taco', 'tortilla-soup']));
         });
 
         it('Should save default handle and history correctly when saving multiple times', async () => {
@@ -773,7 +785,8 @@ describe('HandleStore tests', () => {
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -830,7 +843,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -885,7 +899,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -948,7 +963,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -959,10 +975,7 @@ describe('HandleStore tests', () => {
             expect(finalHandle?.default_in_wallet).toEqual('taco');
 
             // expect the first to be old null, meaning it was minted
-            expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([
-                100,
-                { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }
-            ]);
+            expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([100, { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }]);
 
             // expect the second to have the first pz updates.
             // personalization should be undefined because it was not set before
@@ -1105,7 +1118,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -1158,7 +1172,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -1211,7 +1226,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -1264,7 +1280,8 @@ describe('HandleStore tests', () => {
                     characters: 'todo',
                     numeric_modifiers: 'todo',
                     version: 0,
-                    og: 0
+                    og: 0,
+                    handle_type: HandleType.HANDLE
                 }
             });
 
@@ -1305,7 +1322,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 datum: 'a2datum_salsa',
                 image_hash: '0x123',
-                svg_version: '1.0.0'
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
             });
 
             const existingHandle = HandleStore.get(handleName);
@@ -1348,8 +1366,9 @@ describe('HandleStore tests', () => {
                 has_datum: false,
                 holder_type: '',
                 version: 0,
-                default:true,
-                default_in_wallet: "salsa"
+                default: false,
+                type: HandleType.HANDLE,
+                default_in_wallet: 'salsa'
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);

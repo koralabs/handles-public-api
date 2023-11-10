@@ -113,7 +113,7 @@ export class HandleStore {
         this.handles.set(name, updatedHandle);
 
         // Set default name during personalization
-        this.setHolderAddressIndex(holder, name, handle.default, oldHandle?.holder);
+        this.setHolderAddressIndex(holder, name, handleDefault, oldHandle?.holder);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);
@@ -736,13 +736,7 @@ export class HandleStore {
         return { slot, hash };
     }
 
-    static async rollBackToGenesis() {
-        Logger.log({
-            message: 'Rolling back to genesis',
-            category: LogCategory.INFO,
-            event: 'HandleStore.rollBackToGenesis'
-        });
-
+    static eraseStorage() {
         // erase all indexes
         this.handles = new Map<string, Handle>();
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
@@ -751,6 +745,17 @@ export class HandleStore {
         this.charactersIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();
+    }
+
+    static async rollBackToGenesis() {
+        Logger.log({
+            message: 'Rolling back to genesis',
+            category: LogCategory.INFO,
+            event: 'HandleStore.rollBackToGenesis'
+        });
+
+        // erase all indexes
+        this.eraseStorage();
 
         // clear storage files
         await HandleStore.saveFileContents({ storagePath: HandleStore.storageFilePath });
