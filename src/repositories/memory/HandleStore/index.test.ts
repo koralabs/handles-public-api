@@ -6,6 +6,7 @@ import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@korala
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
+import * as serialization from '../../../utils/serialization';
 
 jest.mock('fs', () => ({
     promises: {
@@ -31,7 +32,7 @@ jest.mock('../../../utils/addresses');
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
     const defaultReferenceToken: IReferenceToken = {
-        tx_id: '',
+        tx_id: 'default_ref_tx',
         index: 0,
         lovelace: 0,
         datum: '',
@@ -245,6 +246,13 @@ describe('HandleStore tests', () => {
         });
     });
 
+    describe('getByHex', () => {
+        it('should return a handle', () => {
+            const handle = HandleStore.getByHex('barbacoa-hex');
+            expect(handle?.name).toEqual('barbacoa');
+        });
+    });
+
     describe('saveMintedHandle tests', () => {
         it('Should save a new handle', async () => {
             const stakeKey = 'stake123';
@@ -451,6 +459,65 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get(sushiHandle);
             expect(handle?.amount).toEqual(2);
+        });
+
+        it('Should save an NFT Sub Handle', async () => {
+            const stakeKey = 'stake123';
+            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
+                address: stakeKey,
+                type: '',
+                knownOwnerName: 'unknown'
+            });
+
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+
+            await HandleStore.saveMintedHandle({
+                hex: '000de14073756240686e646c',
+                name: 'sub@hndl',
+                adaAddress: 'addr123',
+                og_number: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100,
+                datum: 'datum123',
+                image_hash: '0x123',
+                svg_version: '1.0.0',
+                type: HandleType.NFT_SUBHANDLE
+            });
+
+            const handle = HandleStore.get('sub@hndl');
+            expect(handle?.name).toEqual('sub@hndl');
+            expect(handle?.type).toEqual(HandleType.NFT_SUBHANDLE);
+        });
+
+        it('Should save an Virtual Sub Handle', async () => {
+            const stakeKey = 'stake123';
+            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
+                address: stakeKey,
+                type: '',
+                knownOwnerName: 'unknown'
+            });
+
+            jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
+
+            const handleName = 'virtual@hndl';
+
+            await HandleStore.saveMintedHandle({
+                hex: '000000007669727475616c40686e646c',
+                name: handleName,
+                adaAddress: 'addr123',
+                og_number: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100,
+                datum: 'datum123',
+                image_hash: '0x123',
+                svg_version: '1.0.0',
+                type: HandleType.VIRTUAL_SUBHANDLE
+            });
+
+            const handle = HandleStore.get(handleName);
+            expect(handle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
         });
     });
 
@@ -1287,6 +1354,152 @@ describe('HandleStore tests', () => {
 
             const tacoHandle2 = HandleStore.get('taco');
             expect(tacoHandle2?.default_in_wallet).toEqual('barbacoa');
+        });
+
+        it('should save details for nft handle', async () => {
+            const handleName = 'nft@hndl';
+            const handleHex = `${handleName}-hex`;
+            await HandleStore.saveMintedHandle({
+                hex: handleHex,
+                name: handleName,
+                adaAddress: 'addr123',
+                og_number: 0,
+                utxo: 'utxo123#0',
+                image: '',
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0',
+                type: HandleType.NFT_SUBHANDLE
+            });
+
+            const personalizationUpdates: IPersonalization = {
+                designer: {
+                    font_shadow_color: '0x000000'
+                },
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
+                personalizationDatum,
+                addresses: {},
+                slotNumber: 300,
+                metadata: {
+                    name: handleHex,
+                    image: 'ipfs://123',
+                    mediaType: 'image/jpeg',
+                    og_number: 0,
+                    rarity: 'todo',
+                    length: 2,
+                    characters: 'todo',
+                    numeric_modifiers: 'todo',
+                    version: 0,
+                    og: 0,
+                    handle_type: HandleType.NFT_SUBHANDLE
+                }
+            });
+
+            const nftSubHandle = HandleStore.get(handleName);
+            expect(nftSubHandle?.personalization).toEqual(personalizationUpdates);
+            expect(nftSubHandle?.type).toEqual(HandleType.NFT_SUBHANDLE);
+        });
+
+        it('should save details for virtual handle', async () => {
+            const bech32FromHexSpy = jest.spyOn(serialization, 'bech32FromHex');
+
+            const handleName = 'virtual@hndl';
+            const handleHex = '000000007669727475616c40686e646c';
+
+            const personalizationUpdates: IPersonalization = {
+                designer: {
+                    font_shadow_color: '0x000000'
+                },
+                validated_by: 'todo',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatum = {
+                default: 0,
+                pfp_image: 'todo',
+                bg_image: 'todo',
+                image_hash: '0x123',
+                standard_image_hash: '0x123',
+                resolved_addresses: {
+                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
+                },
+                svg_version: '1.0.0',
+                standard_image: '',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                last_update_address: '',
+                validated_by: '',
+                trial: 0,
+                nsfw: 0,
+                agreed_terms: '',
+                migrate_sig_required: 0
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
+                personalizationDatum,
+                addresses: {},
+                slotNumber: 300,
+                metadata: {
+                    name: handleHex,
+                    image: 'ipfs://123',
+                    mediaType: 'image/jpeg',
+                    og_number: 0,
+                    rarity: 'todo',
+                    length: 2,
+                    characters: 'todo',
+                    numeric_modifiers: 'todo',
+                    version: 0,
+                    og: 0,
+                    handle_type: HandleType.VIRTUAL_SUBHANDLE
+                }
+            });
+
+            const virtualSubHandle = HandleStore.get(handleName);
+            expect(virtualSubHandle?.personalization).toEqual(personalizationUpdates);
+
+            // expect virtual sub handle utxo to be the utxo of the reference token
+            expect(virtualSubHandle?.utxo).toEqual(`${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`);
+
+            // expect the ada address to be the bech32 encoded version of the reference token address
+            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada.replace('0x', ''), true);
+
+            expect(virtualSubHandle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
         });
     });
 
