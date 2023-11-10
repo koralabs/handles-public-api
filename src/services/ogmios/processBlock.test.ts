@@ -77,7 +77,7 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; isBurn?: boolean; slot?: number }) => ({
+    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Record<string, string>; isBurn?: boolean; slot?: number }) => ({
         babbage: {
             body: [
                 !isBurn
@@ -87,6 +87,7 @@ describe('processBlock Tests', () => {
                               outputs: [
                                   {
                                       datum,
+                                      script,
                                       address,
                                       value: {
                                           coins: 1,
@@ -213,6 +214,31 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             datum,
+            version: 0,
+            type: HandleType.HANDLE
+        });
+    });
+
+    it('Should save script', async () => {
+        const script = { 'plutus:v2': 'a2some_cbor' };
+        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
+
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+
+        await processBlock({ policyId, txBlock: txBlock({ script }) as TxBlock, tip });
+
+        expect(saveSpy).toHaveBeenCalledWith({
+            adaAddress: 'addr123',
+            hex: '7465737431323334',
+            image: 'ifps://some_hash_test1234',
+            name: 'test1234',
+            og_number: 0,
+            slotNumber: 0,
+            utxo: 'some_id#0',
+            script: {
+                type: 'plutus_v2',
+                cbor: 'a2some_cbor'
+            },
             version: 0,
             type: HandleType.HANDLE
         });
