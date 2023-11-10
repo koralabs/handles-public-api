@@ -362,6 +362,7 @@ export class HandleStore {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
+        const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
         const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
@@ -371,7 +372,7 @@ export class HandleStore {
                 name,
                 hex,
                 slotNumber,
-                adaAddress: isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada) : '', // address will come from the 222 token
+                adaAddress: isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : '', // address will come from the 222 token
                 utxo: isVirtualSubHandle ? `${reference_token.tx_id}#${reference_token.index}` : '', // utxo will come from the 222 token,
                 og_number,
                 image,
@@ -393,8 +394,8 @@ export class HandleStore {
             delete addresses.ada;
         }
 
-        // If asset is a 000 token, we need to use the address from the persinalization datum. Otherwise use existing address
-        const adaAddress = hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada) : existingHandle.resolved_addresses.ada;
+        // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
+        const adaAddress = hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
 
         const updatedHandle: Handle = {
             ...existingHandle,
