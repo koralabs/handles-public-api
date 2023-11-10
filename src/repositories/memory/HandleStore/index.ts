@@ -1,4 +1,4 @@
-import { AssetNameLabel, IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/handles-public-api-interfaces';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
@@ -28,7 +28,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 28;
+    static storageSchemaVersion = 29;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -254,6 +254,7 @@ export class HandleStore {
             amount,
             svg_version,
             version,
+            type: HandleType.HANDLE,
             default: false
         };
 
@@ -361,6 +362,8 @@ export class HandleStore {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
+        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
+        const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
@@ -368,15 +371,16 @@ export class HandleStore {
                 name,
                 hex,
                 slotNumber,
-                adaAddress: hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada) : '', // address will come from the 222 token
-                utxo: hex.startsWith(AssetNameLabel.LABEL_000) ? `${reference_token.tx_id}#${reference_token.index}` : '', // utxo will come from the 222 token,
+                adaAddress: isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada) : '', // address will come from the 222 token
+                utxo: isVirtualSubHandle ? `${reference_token.tx_id}#${reference_token.index}` : '', // utxo will come from the 222 token,
                 og_number,
                 image,
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
                 reference_token,
                 svg_version: personalizationDatum?.svg_version,
-                version
+                version,
+                type: handleType
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });

@@ -1,10 +1,4 @@
-import {
-    IPersonalization,
-    IPersonalizedHandle,
-    IHandleMetadata,
-    IPzDatum,
-    IReferenceToken
-} from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -53,6 +47,7 @@ export interface SaveMintingTxInput {
     reference_token?: IReferenceToken;
     amount?: number;
     version?: number;
+    type: HandleType;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -87,5 +82,6 @@ export interface HolderAddressIndex {
 
 export interface Handle extends IPersonalizedHandle {
     amount: number;
+    type: HandleType;
     default?: boolean;
 }
