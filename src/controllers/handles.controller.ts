@@ -9,8 +9,7 @@ import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfac
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
-import { decodeCborToJson } from '../utils/cbor';
-import { handleDatumSchema } from '../utils/cbor/schema/handleData';
+import { decodeCborToJson, KeyType } from '../utils/cbor';
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
@@ -201,7 +200,7 @@ class HandlesController {
 
             if (req.headers?.accept?.startsWith('application/json')) {
                 try {
-                    const decodedDatum = await decodeCborToJson(handleDatum, handleDatumSchema);
+                    const decodedDatum = await decodeCborToJson(handleDatum, {}, req.query.default_key_type as KeyType);
                     res.set('Content-Type', 'application/json');
                     res.status(handleRepo.currentHttpStatus()).json(decodedDatum);
                     return;

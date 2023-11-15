@@ -30,8 +30,7 @@ export const handlesFixture: Handle[] = [
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
-        version: 0,
-        default: false
+        version: 0
     },
     {
         hex: 'burrito-hex',
@@ -59,8 +58,7 @@ export const handlesFixture: Handle[] = [
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
-        version: 0,
-        default: false
+        version: 0
     },
     {
         hex: 'taco-hex',
@@ -88,8 +86,7 @@ export const handlesFixture: Handle[] = [
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
-        version: 0,
-        default: true
+        version: 0
     }
 ];
 

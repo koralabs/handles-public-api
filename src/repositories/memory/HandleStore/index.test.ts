@@ -236,8 +236,7 @@ describe('HandleStore tests', () => {
                 utxo: 'utxo1#0',
                 amount: 1,
                 holder_type: '',
-                version: 0,
-                default: false
+                version: 0
             });
         });
     });
@@ -294,8 +293,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 amount: 1,
                 holder_type: '',
-                version: 0,
-                default: false
+                version: 0
             });
 
             // expect to get the correct slot history with all new handles
@@ -546,6 +544,7 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 bg_image: 'todo',
+                                default: false,
                                 personalization: {
                                     designer: {
                                         bg_border_color: '0xtodo',
@@ -566,6 +565,7 @@ describe('HandleStore tests', () => {
                             },
                             old: {
                                 bg_image: '',
+                                default: undefined,
                                 personalization: undefined,
                                 reference_token: undefined,
                                 pfp_image: '',
@@ -665,8 +665,7 @@ describe('HandleStore tests', () => {
                     utxo: '',
                     amount: 1,
                     holder_type: '',
-                    version: 0,
-                    default: false
+                    version: 0
                 }
             });
         });
@@ -973,8 +972,8 @@ describe('HandleStore tests', () => {
                         new: {
                             bg_image: 'todo',
                             pfp_image: 'todo',
-                            default: true,
                             image: 'ipfs://123',
+                            default: true,
                             personalization: {
                                 designer: {
                                     font_shadow_color: '0x000',
@@ -991,8 +990,8 @@ describe('HandleStore tests', () => {
                         old: {
                             bg_image: '',
                             pfp_image: '',
-                            default: false,
                             image: '',
+                            default: undefined,
                             personalization: undefined,
                             reference_token: undefined,
                             updated_slot_number: 100
@@ -1036,12 +1035,11 @@ describe('HandleStore tests', () => {
                 {
                     'pork-belly': {
                         new: {
-                            default: false,
                             personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
-                            updated_slot_number: 400
+                            updated_slot_number: 400,
+                            default: false
                         },
                         old: {
-                            default: true,
                             personalization: {
                                 designer: {
                                     font_shadow_color: '0xEEE'
@@ -1050,7 +1048,8 @@ describe('HandleStore tests', () => {
                                 nsfw: false,
                                 trial: false
                             },
-                            updated_slot_number: 300
+                            updated_slot_number: 300,
+                            default: true
                         }
                     }
                 }
@@ -1348,7 +1347,6 @@ describe('HandleStore tests', () => {
                 has_datum: false,
                 holder_type: '',
                 version: 0,
-                default:true,
                 default_in_wallet: "salsa"
             });
 

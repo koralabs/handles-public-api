@@ -133,7 +133,7 @@ export class HandleStore {
         this.handles.set(name, updatedHandle);
 
         // Set default name during personalization
-        this.setHolderAddressIndex(holder, name, handle.default, oldHandle?.holder);
+        this.setHolderAddressIndex(holder, name, handleDefault, oldHandle?.holder);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);
@@ -302,8 +302,7 @@ export class HandleStore {
             reference_token,
             amount,
             svg_version,
-            version,
-            default: false
+            version
         };
 
         return newHandle;

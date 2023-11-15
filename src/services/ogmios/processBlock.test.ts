@@ -180,8 +180,7 @@ describe('processBlock Tests', () => {
         standard_image_hash: '',
         svg_version: '',
         holder_type: '',
-        version: 0,
-        default: false
+        version: 0
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {

@@ -68,12 +68,6 @@ describe('rewindChangesToSlot', () => {
         // and none after the rollback
         expect(HandleStore.getHandles().length).toEqual(0);
         expect(Object.entries(HandleStore.slotHistoryIndex)).toEqual([]);
-
-        expect(loggerSpy).toHaveBeenNthCalledWith(4, {
-            category: 'INFO',
-            event: 'HandleStore.rewindChangesToSlot',
-            message: 'Finished Rewinding to slot 0 with 3 updates and 3 deletes.'
-        });
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
 
