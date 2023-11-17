@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { fetchHealth } from '../services/ogmios/utils';
+import { HandleStore } from '../repositories/memory/HandleStore';
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -14,7 +15,6 @@ class HealthController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const ogmiosResults = await fetchHealth();
-
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const stats = handleRepo.getHandleStats();
 
@@ -26,17 +26,11 @@ class HealthController {
                 return;
             }
 
-            // check if ogmios is still trying to catch up.
-            const { lastTipUpdate } = ogmiosResults;
-
-            const date = new Date(lastTipUpdate).getTime();
-            const now = new Date().getTime();
-
             let status = HealthStatus.CURRENT;
             if (stats.percentage_complete !== '100.00') {
                 status = HealthStatus.STORAGE_BEHIND;
             }
-            if (date < now - 60000) {
+            if (!HandleStore.isCaughtUp()) {
                 status = HealthStatus.OGMIOS_BEHIND;
             }
             if (ogmiosResults.connectionStatus !== 'connected') {

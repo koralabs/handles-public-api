@@ -136,7 +136,7 @@ export const buildValidDatum = (
         const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
         if (missingMetadata.length > 0) {
             Logger.log({
-                category: LogCategory.ERROR,
+                category: LogCategory.INFO,
                 message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`,
                 event: 'buildValidDatum.missingMetadata'
             });
@@ -144,7 +144,7 @@ export const buildValidDatum = (
         const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
         if (missingDatum.length > 0) {
             Logger.log({
-                category: LogCategory.ERROR,
+                category: LogCategory.INFO,
                 message: `${handle} missing datum keys: ${missingDatum.join(', ')}`,
                 event: 'buildValidDatum.missingDatum'
             });

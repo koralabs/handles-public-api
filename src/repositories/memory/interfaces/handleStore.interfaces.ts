@@ -33,6 +33,7 @@ export interface IHandleStoreMetrics {
     currentBlockHash?: string;
     tipBlockHash?: string;
     memorySize?: number;
+    networkSync?: number;
 }
 
 export interface SaveMintingTxInput {
