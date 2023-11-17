@@ -254,8 +254,7 @@ export class HandleStore {
             amount,
             svg_version,
             version,
-            type,
-            default: false
+            type
         };
 
         return newHandle;
@@ -516,8 +515,9 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const { lastSlot = 0, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.metrics;
-        return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
+        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1', networkSync = 0 } = this.metrics;
+        //console.log('lastSlot', lastSlot, 'currentSlot', currentSlot, 'currentBlockHash', currentBlockHash, 'tipBlockHash', tipBlockHash);
+        return networkSync == 1 && lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
     static async saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): Promise<boolean> {
@@ -645,7 +645,10 @@ export class HandleStore {
         hash: string;
     } | null> {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline<IHandleFileContent>(fileName), HandleStore.getFile<IHandleFileContent>(this.storageFilePath)]);
+        const [externalHandles, localHandles] = await Promise.all([
+            HandleStore.getFileOnline<IHandleFileContent>(fileName),
+            HandleStore.getFile<IHandleFileContent>(this.storageFilePath)
+        ]);
 
         const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
 

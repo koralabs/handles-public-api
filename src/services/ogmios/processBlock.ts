@@ -25,7 +25,13 @@ const buildPersonalization = async ({ personalizationDatum, personalization }: B
     // start timer for ipfs calls
     const ipfsTimer = Date.now();
 
-    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(getDataFromIPFSLink));
+    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
+        [   { link: portal, schema: portalSchema },
+            { link: designer, schema: designerSchema },
+            { link: socials, schema: socialsSchema },
+            { link: vendor }
+        ].map(getDataFromIPFSLink)
+    );
 
     // stop timer for ipfs calls
     const endIpfsTimer = Date.now() - ipfsTimer;
@@ -127,7 +133,7 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
         const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
         if (missingMetadata.length > 0) {
             Logger.log({
-                category: LogCategory.ERROR,
+                category: LogCategory.INFO,
                 message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`,
                 event: 'buildValidDatum.missingMetadata'
             });
@@ -135,7 +141,7 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
         const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
         if (missingDatum.length > 0) {
             Logger.log({
-                category: LogCategory.ERROR,
+                category: LogCategory.INFO,
                 message: `${handle} missing datum keys: ${missingDatum.join(', ')}`,
                 event: 'buildValidDatum.missingDatum'
             });
@@ -322,7 +328,9 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
         }
 
         // get metadata so we can use it later
-        const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT]) : null;
+        const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
+                ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
+                : null;
 
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
@@ -387,9 +395,9 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                             isMintTx
                         };
 
-                        if (assetName.includes(AssetNameLabel.LABEL_000)) {
-                            console.log('assetName', assetName);
-                        }
+                        // if (assetName.includes(AssetNameLabel.LABEL_000)) {
+                        //     console.log('assetName', assetName);
+                        // }
 
                         if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);

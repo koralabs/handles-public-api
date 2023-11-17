@@ -31,8 +31,7 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
-        default: false
+        type: HandleType.HANDLE
     },
     {
         hex: 'burrito-hex',
@@ -61,8 +60,7 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
-        default: false
+        type: HandleType.HANDLE
     },
     {
         hex: 'taco-hex',
@@ -91,8 +89,7 @@ export const handlesFixture: Handle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
-        default: false
+        type: HandleType.HANDLE
     }
 ];
 
@@ -233,4 +230,4 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                 break;
         }
     }
-};
+}

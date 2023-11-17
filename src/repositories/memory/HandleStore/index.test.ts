@@ -240,7 +240,6 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                default: false,
                 type: HandleType.HANDLE
             });
         });
@@ -307,7 +306,6 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                default: false,
                 type: HandleType.HANDLE
             });
 
@@ -624,6 +622,7 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 bg_image: 'todo',
+                                default: false,
                                 personalization: {
                                     designer: {
                                         bg_border_color: '0xtodo',
@@ -1071,7 +1070,6 @@ describe('HandleStore tests', () => {
                         old: {
                             bg_image: '',
                             pfp_image: '',
-                            default: false,
                             image: '',
                             personalization: undefined,
                             reference_token: undefined,
@@ -1579,7 +1577,6 @@ describe('HandleStore tests', () => {
                 has_datum: false,
                 holder_type: '',
                 version: 0,
-                default: false,
                 type: HandleType.HANDLE,
                 default_in_wallet: 'salsa'
             });

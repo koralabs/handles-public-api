@@ -4,6 +4,7 @@ import * as ogmiosUtils from '../services/ogmios/utils';
 import { HttpException } from '../exceptions/HttpException';
 import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
+import { HandleStore } from '../repositories/memory/HandleStore';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -70,15 +71,15 @@ describe('Health Routes Test', () => {
         jest.clearAllMocks();
     });
 
-    const getMockResponse = ({ lastTipUpdate = '' }: { lastTipUpdate?: string }): HealthResponseBody => ({
+    const getMockResponse = ({ networkSynchronization = 0 }: { networkSynchronization?: number }): HealthResponseBody => ({
         startTime: '',
         lastKnownTip: {
             slot: 0,
             hash: '',
             blockNo: 0
         },
-        lastTipUpdate,
-        networkSynchronization: 0,
+        lastTipUpdate: '',
+        networkSynchronization,
         currentEra: '',
         metrics: {
             activeConnections: 0,
@@ -124,40 +125,16 @@ describe('Health Routes Test', () => {
             });
         });
 
-        it('Should return 202 when ogmios is not caught up', async () => {
-            const ogmiosResult = getMockResponse({
-                lastTipUpdate: `${new Date(Date.now() - 60000).toISOString()}`
-            });
-            jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
-            const response = await request(app?.getServer()).get('/health');
-            expect(response.status).toEqual(202);
-            expect(response.body).toEqual({
-                ogmios: ogmiosResult,
-                stats: {
-                    building_elapsed: expect.any(String),
-                    current_block_hash: expect.any(String),
-                    current_memory_used: expect.any(Number),
-                    current_slot: expect.any(Number),
-                    memory_size: expect.any(Number),
-                    handle_count: expect.any(Number),
-                    ogmios_elapsed: expect.any(String),
-                    percentage_complete: expect.any(String),
-                    slot_date: expect.any(String),
-                    schema_version: expect.any(Number)
-                },
-                status: 'ogmios_behind'
-            });
-        });
-
         it('Should return 202 when current slot is not caught up', async () => {
             const ogmiosResult = getMockResponse({
-                lastTipUpdate: `${Date.now() + 60000}`
+                networkSynchronization: 1
             });
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
+            jest.spyOn(HandleStore, 'isCaughtUp').mockReturnValue(false);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(202);
             expect(response.body).toEqual({
-                ogmios: ogmiosResult,
+                ogmios: expect.any(Object),
                 stats: {
                     building_elapsed: expect.any(String),
                     current_block_hash: expect.any(String),
@@ -176,11 +153,12 @@ describe('Health Routes Test', () => {
 
         it('Should return 200 everything is caught up', async () => {
             const ogmiosResult = getMockResponse({
-                lastTipUpdate: `${Date.now() + 60000}`
+                networkSynchronization: 1
             });
 
             percentage = '100.00';
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
+            jest.spyOn(HandleStore, 'isCaughtUp').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({

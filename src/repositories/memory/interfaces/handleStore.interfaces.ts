@@ -1,4 +1,11 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/handles-public-api-interfaces';
+import {
+    IPersonalization,
+    IPersonalizedHandle,
+    IHandleMetadata,
+    IPzDatum,
+    IReferenceToken,
+    HandleType
+} from '@koralabs/handles-public-api-interfaces';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -27,6 +34,7 @@ export interface IHandleStoreMetrics {
     currentBlockHash?: string;
     tipBlockHash?: string;
     memorySize?: number;
+    networkSync?: number;
 }
 
 export interface SaveMintingTxInput {

@@ -15,7 +15,6 @@
     "forever:stop": "forever stopall",
     "build": "tsc && yarn copy-files",
     "tsc": "tsc -p .",
-    "tsc:noEmit": "tsc -noEmit -p .",
     "copy-files": "yarn copy-swagger && yarn copy-workers",
     "copy-swagger": "cp docs/swagger.yml src/swagger.yml && cp docs/swagger.yml dist/swagger.yml",
     "copy-workers": "cp -r src/workers dist/workers",
