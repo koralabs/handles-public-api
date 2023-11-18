@@ -5,7 +5,7 @@ import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '../utils/cbor';
 import * as scripts from '../config/scripts';
-import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -34,6 +34,8 @@ jest.mock('../ioc', () => ({
                         utxo: 'utxo#0'
                     };
                 }
+
+                if (handleName === 'sub@handle') { return null }
 
                 return {
                     name: handleName,
@@ -214,13 +216,19 @@ describe('Testing Handles Routes', () => {
         it('should return legendary message when handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual('Legendary handles are not available yet.');
+            expect(response.body.message).toEqual('Legendary handles are not available to mint.');
         });
 
         it('should return invalid message', async () => {
             const response = await request(app?.getServer()).get('/handles/***');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.');
+        });
+
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
         });
 
         it('should return not allowed message', async () => {
@@ -263,7 +271,7 @@ describe('Testing Handles Routes', () => {
         it('should return legendary message', async () => {
             const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual('Legendary handles are not available yet.');
+            expect(response.body.message).toEqual('Legendary handles are not available to mint.');
         });
 
         it('should return legendary handle if available', async () => {

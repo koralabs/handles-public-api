@@ -3,7 +3,6 @@ import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
-import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
 class ScriptsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {

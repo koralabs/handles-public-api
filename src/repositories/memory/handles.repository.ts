@@ -1,4 +1,4 @@
-import { IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IHandleStats, IPersonalizedHandle } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';

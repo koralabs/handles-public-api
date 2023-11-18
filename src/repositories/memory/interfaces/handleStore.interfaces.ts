@@ -5,7 +5,7 @@ import {
     IPzDatum,
     IReferenceToken,
     HandleType
-} from '@koralabs/handles-public-api-interfaces';
+} from '@koralabs/kora-labs-common';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;

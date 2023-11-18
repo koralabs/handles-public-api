@@ -1,7 +1,7 @@
 import { KeyType, decodeCborToJson, encodeJsonToDatum } from './index';
 import { handleDatumSchema } from './schema/handleData';
 import { designerSchema } from './schema/designer';
-import { IPersonalizationDesigner } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalizationDesigner } from '@koralabs/kora-labs-common';
 import { portalSchema } from './schema/portal';
 
 describe('CBOR tests', () => {

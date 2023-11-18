@@ -2,7 +2,7 @@ import request from 'supertest';
 import App from '../app';
 import * as ogmiosUtils from '../services/ogmios/utils';
 import { HttpException } from '../exceptions/HttpException';
-import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import { HandleStore } from '../repositories/memory/HandleStore';
 

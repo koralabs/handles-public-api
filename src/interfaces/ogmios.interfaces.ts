@@ -1,10 +1,4 @@
-import {
-    IPersonalization,
-    IPersonalizationDesigner,
-    IPersonalizationPortal,
-    IPzDatum,
-    SocialItem
-} from '@koralabs/handles-public-api-interfaces';
+import { IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
 
 export enum MetadataLabel {
     'NFT' = 721,

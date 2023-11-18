@@ -1,4 +1,4 @@
-import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 export interface Scripts {
     [network: string]: {

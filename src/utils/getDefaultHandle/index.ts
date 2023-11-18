@@ -1,4 +1,4 @@
-import { IHandle } from '@koralabs/handles-public-api-interfaces';
+import { IHandle } from '@koralabs/kora-labs-common';
 
 const sortOGHandle = (handles: IHandle[]): IHandle | null => {
     // filter by OG

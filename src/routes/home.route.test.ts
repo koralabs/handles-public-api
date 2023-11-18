@@ -1,4 +1,4 @@
-import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
 import { HttpException } from '../exceptions/HttpException';

@@ -2,7 +2,6 @@ import { Logger } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 import { NETWORK } from '../config';
-import { IPersonalizedHandle, ScriptDetails } from '@koralabs/handles-public-api-interfaces';
 
 export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));

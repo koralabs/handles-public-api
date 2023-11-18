@@ -1,5 +1,4 @@
-import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
-import { HttpException } from '../../exceptions/HttpException';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 
 export const setupRegistryMocks = () => {
     jest.mock('../../ioc', () => ({

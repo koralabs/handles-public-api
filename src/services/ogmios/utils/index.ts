@@ -1,6 +1,6 @@
 import fetch from 'cross-fetch';
 import { Buffer } from 'buffer';
-import { AssetNameLabel, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, Rarity } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
 import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';

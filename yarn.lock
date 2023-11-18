@@ -631,20 +631,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/handles-public-api-interfaces@2.13.0":
-  version "2.13.0"
-  resolved "https://registry.yarnpkg.com/@koralabs/handles-public-api-interfaces/-/handles-public-api-interfaces-2.13.0.tgz#76b7222bd2774f0f61e0611aab7cf427699d9ef2"
-  integrity sha512-QryoOeu8G+gZ9smP9Xs4CNh4Koxn9Dt0ed9fUX3p7vxxiiC4cJ0/2K871arDYlc0EWR0dXwC9V9ZJXzb6LY5sA==
-
-"@koralabs/kora-labs-common@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-1.1.1.tgz#6681f054a0a9f442886ec190237b989a5a441628"
-  integrity sha512-oZrDPYJ/ofZ9ROk/hX92DMvV/BDGxGh2Ln6wPzk68LUdoWc5N+Ss3c+tIY0Eb/N7EUY0sarX91B7Z6yvO7OUJg==
-
-"@koralabs/protected-words@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@koralabs/protected-words/-/protected-words-1.0.0.tgz"
-  integrity sha512-obfuSk+b9O3jfE4H93s1+nmtR1myzDBJsKURFh8o02DfPU/CZzAbY0ixOKBPOZtJpbVi1cNJK2KjZV6grSzNqQ==
+"@koralabs/kora-labs-common@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-2.0.7.tgz#e2718090353964eab297a5129be01126e029e38b"
+  integrity sha512-0mY1UaJM/fUeZUx6xSfbHFLpE6AYtzQgxvvZWMn4d2SdUmUHua8H/auKSa15ubK+vV9gXtDCNi97SbQruQRPag==
   dependencies:
     pluralize "^8.0.0"
 

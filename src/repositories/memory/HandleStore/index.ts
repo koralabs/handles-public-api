@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';

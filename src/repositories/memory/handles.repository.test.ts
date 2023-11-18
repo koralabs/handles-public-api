@@ -7,7 +7,7 @@ import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
-import { HandleType } from '@koralabs/handles-public-api-interfaces';
+import { HandleType } from '@koralabs/kora-labs-common';
 
 describe('MemoryHandlesRepository Tests', () => {
     jest.mock('../../utils/addresses');

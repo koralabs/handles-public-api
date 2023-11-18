@@ -1,4 +1,4 @@
-import { HandleType, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { ISlotHistoryIndex, HolderAddressIndex, Handle } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';

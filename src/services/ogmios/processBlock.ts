@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';

@@ -1,6 +1,5 @@
-import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { IHandle, Rarity } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
-import { buildPaymentAddressType } from '../../utils/serialization';
 
 export class HandleViewModel {
     hex: string;

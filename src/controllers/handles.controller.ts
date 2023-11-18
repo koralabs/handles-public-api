@@ -4,15 +4,14 @@ import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.inte
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import ProtectedWords from '@koralabs/protected-words';
-import { AvailabilityResponseCode } from '@koralabs/protected-words/lib/interfaces';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern } from '@koralabs/kora-labs-common';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { decodeCborToJson, KeyType } from '../utils/cbor';
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
-import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IPersonalizedHandle } from '@koralabs/kora-labs-common';
 
 class HandlesController {
     public getAll = async (
@@ -86,6 +85,14 @@ class HandlesController {
             : await handleRepo.getHandleByName(handleName);
 
         if (!handle) {
+            const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);
+            if (!validHandle.valid) {
+                return {
+                    code: AvailabilityResponseCode.NOT_ACCEPTABLE,
+                    message: validHandle.message,
+                    handle
+                }
+            }
             const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
 
             if (!protectedWordsResult.available) {

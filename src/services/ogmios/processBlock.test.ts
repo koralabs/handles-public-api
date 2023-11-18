@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
