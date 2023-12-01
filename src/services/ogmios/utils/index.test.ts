@@ -8,7 +8,7 @@ import {
     getHandleNameFromAssetName
 } from '.';
 import v8 from 'v8';
-import { AssetNameLabel } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel } from '@koralabs/kora-labs-common';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 

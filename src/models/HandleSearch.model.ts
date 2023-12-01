@@ -1,4 +1,4 @@
-import { Rarity } from '@koralabs/handles-public-api-interfaces';
+import { Rarity } from '@koralabs/kora-labs-common';
 import { ModelException } from '../exceptions/ModelException';
 import { isNumeric } from '../utils/util';
 

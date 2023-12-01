@@ -4,6 +4,7 @@ import { findIntersect, Intersection, requestNext, UnknownResultError } from '@c
 import { Block, Ogmios, PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { POLICY_IDS } from '../../constants';
 import { HandleStore } from '../../../../repositories/memory/HandleStore';
+import { fetchHealth } from '..';
 
 /**
  * Local Chain Sync client specifically for ADA Handles API.
@@ -78,18 +79,20 @@ export const createLocalChainSyncClient = async (
             if (message.indexOf('"result":{"RollBackward"') >= 0) {
                 processTheBlock = true;
             } else {
+                //console.log('MESSAGE', message);
                 processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
-                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || [
-                    '',
-                    '0'
-                ])[1];
+                const ogmiosStatus = await fetchHealth();
+                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
                 let blockMatch: string | null = (message.match(/"headerHash":\s?"([0-9a-fA-F]*)"/m) || ['', ''])[1];
                 let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
+                let tipHashMatch: string | null = (message.match(/"tip":.*?"hash":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                 //console.log({slotMatch, blockMatch, tipSlotMatch});
                 HandleStore.setMetrics({
                     currentSlot: parseInt(slotMatch),
                     currentBlockHash: blockMatch,
-                    lastSlot: parseInt(tipSlotMatch)
+                    tipBlockHash: tipHashMatch,
+                    lastSlot: parseInt(tipSlotMatch),
+                    networkSync: ogmiosStatus?.networkSynchronization
                 });
                 slotMatch = blockMatch = tipSlotMatch = null;
             }

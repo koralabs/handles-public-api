@@ -1,4 +1,4 @@
-import { IHandle, IHandleStats, IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
+import { IHandleStats, IPersonalizedHandle } from '@koralabs/kora-labs-common';
 import { HolderAddressDetailsResponse } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
@@ -16,7 +16,7 @@ interface IHandlesRepository {
     getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;
     getTotalHandlesStats: () => { total_handles: number; total_holders: number };
-    getIsCaughtUp: () => boolean;
+    currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
 }
 

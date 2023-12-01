@@ -25,11 +25,10 @@ describe('rewindChangesToSlot', () => {
                 og_number,
                 updated_slot_number: slotNumber,
                 utxo,
-                resolved_addresses: { ada: adaAddress }
+                resolved_addresses: { ada: adaAddress },
+                type
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo,
-                image_hash: standard_image_hash,
-                svg_version });
+            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, image_hash: standard_image_hash, svg_version, type });
         }
 
         // set the slotHistoryIndex
@@ -68,12 +67,6 @@ describe('rewindChangesToSlot', () => {
         // and none after the rollback
         expect(HandleStore.getHandles().length).toEqual(0);
         expect(Object.entries(HandleStore.slotHistoryIndex)).toEqual([]);
-
-        expect(loggerSpy).toHaveBeenNthCalledWith(4, {
-            category: 'INFO',
-            event: 'HandleStore.rewindChangesToSlot',
-            message: 'Finished Rewinding to slot 0 with 3 updates and 3 deletes.'
-        });
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
 

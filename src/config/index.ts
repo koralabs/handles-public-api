@@ -1,6 +1,3 @@
-import { config } from 'dotenv';
-config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` });
-
 export const CREDENTIALS = process.env.CREDENTIALS === 'true';
 export const isDatumEndpointEnabled = () => process.env.ENABLE_DATUM_ENDPOINT === 'true';
 export const {
@@ -16,5 +13,7 @@ export const {
 } = process.env;
 
 export const getIpfsGateway = (backup = false) => {
-    return backup ? process.env.IPFS_GATEWAY_BACKUP || '' : process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+    return backup
+        ? process.env.IPFS_GATEWAY_BACKUP || 'https://ipfs.io/ipfs/'
+        : process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
 };

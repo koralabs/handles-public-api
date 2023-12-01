@@ -1,4 +1,3 @@
-import { IHandle } from '@koralabs/handles-public-api-interfaces';
 import { IRegistry } from '../ioc';
 
 export interface IGetAllQueryParams {

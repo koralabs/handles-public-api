@@ -2,15 +2,15 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
+import { handlesFixture, holdersFixture, createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
-
-jest.mock('../../utils/addresses');
+import { HandleType } from '@koralabs/kora-labs-common';
 
 describe('MemoryHandlesRepository Tests', () => {
+    jest.mock('../../utils/addresses');
     beforeAll(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
             address: 'stake-key1',
@@ -29,7 +29,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 resolved_addresses: { ada: adaAddress },
                 datum,
                 image_hash,
-                svg_version
+                svg_version,
+                type
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -41,7 +42,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo,
                 datum,
                 image_hash,
-                svg_version
+                svg_version,
+                type
             });
         });
         await Promise.all(saves);
@@ -57,7 +59,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ page: '1', handlesPerPage: '1', sort: 'asc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0]]});
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
         });
 
         it('should find handles by rarity', async () => {
@@ -65,7 +67,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: 2, handles: [handlesFixture[1], handlesFixture[2]]});
+            expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[1], handlesFixture[2]] });
         });
 
         it('should no handles with compounded searches', async () => {
@@ -73,7 +75,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'rare', length: '7', holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: 0, handles: []});
+            expect(result).toEqual({ searchTotal: 0, handles: [] });
         });
 
         it('should find handle using search parameter', async () => {
@@ -81,7 +83,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ search: 'bur' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal:1, handles: [handlesFixture[1]]});
+            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[1]] });
         });
 
         it('should find handles using holder_address parameter', async () => {
@@ -89,7 +91,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: handlesFixture.length, handles: handlesFixture});
+            expect(result).toEqual({ searchTotal: handlesFixture.length, handles: handlesFixture });
         });
 
         it('should find no handles using invalid holder_address parameter', async () => {
@@ -97,7 +99,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ holder_address: 'nope' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal:0,handles:[]});
+            expect(result).toEqual({ searchTotal: 0, handles: [] });
         });
 
         it('should paginate handles by slot number', async () => {
@@ -106,7 +108,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, handlesPerPage: '1' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0]]});
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
         });
 
         it('should paginate handles by slot number and sort ascending by default', async () => {
@@ -115,7 +117,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}` });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal: 3, handles: [handlesFixture[0], handlesFixture[1], handlesFixture[2]]});
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0], handlesFixture[1], handlesFixture[2]] });
         });
 
         it('should paginate handles by slot number and sort desc', async () => {
@@ -124,7 +126,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, sort: 'desc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({searchTotal : 3, handles: [handlesFixture[1], handlesFixture[0]]});
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[1], handlesFixture[0]] });
         });
     });
 
@@ -151,9 +153,12 @@ describe('MemoryHandlesRepository Tests', () => {
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();
             const search = new HandleSearchModel();
-            const result = await repo.getAllHandleNames(search, 'random');
+            const result1 = await repo.getAllHandleNames(search, 'random');
             const result2 = await repo.getAllHandleNames(search, 'random');
-            expect(result).not.toEqual(result2);
+            const result3 = await repo.getAllHandleNames(search, 'random');
+            const result4 = await repo.getAllHandleNames(search, 'random');
+            const noWayTheyreEqual = [result2, result3, result4].every((r) => r == result1);
+            expect(noWayTheyreEqual).toEqual(false);
         });
 
         it('should remove handles without a UTxO', async () => {
@@ -167,7 +172,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 slotNumber: 0,
                 datum: '',
                 image_hash: '',
-                svg_version: ''
+                svg_version: '',
+                type: HandleType.HANDLE
             });
             const handles = [...handlesFixture, newHandle];
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
@@ -264,7 +270,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 utxo: 'test_tx#0',
                 datum,
                 image_hash: '',
-                svg_version: ''
+                svg_version: '',
+                type: HandleType.HANDLE
             };
             await Promise.all([
                 HandleStore.saveMintedHandle(saveHandleInput),

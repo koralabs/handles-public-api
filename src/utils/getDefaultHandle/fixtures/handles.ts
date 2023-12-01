@@ -1,4 +1,4 @@
-import { IHandle, Rarity } from '@koralabs/handles-public-api-interfaces';
+import { IHandle, Rarity } from '@koralabs/kora-labs-common';
 
 export const ogHandles: IHandle[] = [
     {

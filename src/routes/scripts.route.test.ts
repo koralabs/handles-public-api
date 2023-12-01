@@ -1,7 +1,7 @@
 import request from 'supertest';
 import App from '../app';
 import { scripts } from '../config/scripts';
-import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -21,7 +21,7 @@ jest.mock('../ioc', () => ({
                     datum: 'a247'
                 };
             },
-            getIsCaughtUp: () => true
+            currentHttpStatus: () => 200
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'

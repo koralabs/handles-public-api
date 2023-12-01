@@ -3,10 +3,8 @@ import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
-import { validateScriptDetails } from '../utils/util';
-import { IPersonalizedHandle } from '@koralabs/handles-public-api-interfaces';
 
-class StatsController {
+class ScriptsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { latest = false } = req.query;
@@ -26,34 +24,20 @@ class StatsController {
                 }
 
                 const [scriptAddress, scriptData] = latestScript;
-                
-                let handleData: IPersonalizedHandle | null = null;
-                if (req.query.hex == 'true') {
-                    handleData = await handleRepo.getHandleByHex(scriptData.handle);
-                }
-                else {
-                    handleData = await handleRepo.getHandleByName(scriptData.handle);
-                }
-
-                const { refScriptUtxo, refScriptAddress, cbor } = validateScriptDetails(handleData, scriptData);
-
                 const result: LatestScriptResult = {
                     ...scriptData,
-                    scriptAddress,
-                    refScriptUtxo,
-                    refScriptAddress,
-                    cbor
+                    scriptAddress
                 };
 
-                res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(result);
+                res.status(handleRepo.currentHttpStatus()).json(result);
                 return;
             }
 
-            res.status(handleRepo.getIsCaughtUp() ? 200 : 202).json(allScripts);
+            res.status(handleRepo.currentHttpStatus()).json(allScripts);
         } catch (error) {
             next(error);
         }
     };
 }
 
-export default StatsController;
+export default ScriptsController;

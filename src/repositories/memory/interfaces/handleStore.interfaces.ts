@@ -3,8 +3,9 @@ import {
     IPersonalizedHandle,
     IHandleMetadata,
     IPzDatum,
-    IReferenceToken
-} from '@koralabs/handles-public-api-interfaces';
+    IReferenceToken,
+    HandleType
+} from '@koralabs/kora-labs-common';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -31,7 +32,9 @@ export interface IHandleStoreMetrics {
     elapsedBuildingExec?: number;
     firstMemoryUsage?: number;
     currentBlockHash?: string;
+    tipBlockHash?: string;
     memorySize?: number;
+    networkSync?: number;
 }
 
 export interface SaveMintingTxInput {
@@ -45,7 +48,6 @@ export interface SaveMintingTxInput {
     utxo: string;
     svg_version?: string;
     bg_image?: string;
-    default_in_wallet?: string;
     pfp_image?: string;
     datum?: string;
     script?: { type: string; cbor: string };
@@ -53,6 +55,7 @@ export interface SaveMintingTxInput {
     reference_token?: IReferenceToken;
     amount?: number;
     version?: number;
+    type: HandleType;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -87,4 +90,6 @@ export interface HolderAddressIndex {
 
 export interface Handle extends IPersonalizedHandle {
     amount: number;
+    type: HandleType;
+    default?: boolean;
 }

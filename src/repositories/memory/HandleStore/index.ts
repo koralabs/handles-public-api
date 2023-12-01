@@ -1,4 +1,4 @@
-import { IHandleStats } from '@koralabs/handles-public-api-interfaces';
+import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
@@ -12,17 +12,8 @@ import { buildCharacters, buildNumericModifiers, getRarity } from '../../../serv
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
 import { getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import {
-    IHandleFileContent,
-    IHandleStoreMetrics,
-    SaveMintingTxInput,
-    SavePersonalizationInput,
-    SaveWalletAddressMoveInput,
-    HolderAddressIndex,
-    ISlotHistoryIndex,
-    HandleHistory,
-    Handle
-} from '../interfaces/handleStore.interfaces';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, Handle } from '../interfaces/handleStore.interfaces';
+import { bech32FromHex } from '../../../utils/serialization';
 
 export class HandleStore {
     // Indexes
@@ -37,7 +28,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 27;
+    static storageSchemaVersion = 29;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -54,33 +45,27 @@ export class HandleStore {
 
     static get(key: string): Handle | null {
         const handle = HandleStore.handles.get(key);
-        if (!handle) {
-            return null;
-        }
 
-        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
-        if (holderAddressIndex) {
-            handle.default_in_wallet = holderAddressIndex.defaultHandle;
-        }
-
-        return handle;
+        return this.returnHandleWithDefault(handle);
     }
 
     static getByHex(hex: string): Handle | null {
         let handle: Handle | null = null;
         for (let [key, value] of HandleStore.handles.entries()) {
-          if (value.hex === hex)
-            handle = value;
+            if (value.hex === hex) handle = value;
             break;
         }
+        return this.returnHandleWithDefault(handle);
+    }
 
+    static returnHandleWithDefault(handle?: Handle | null) {
         if (!handle) {
             return null;
         }
 
-        const holderAddressIndex = HandleStore.holderAddressIndex.get(handle.holder);
-        if (holderAddressIndex) {
-            handle.default_in_wallet = holderAddressIndex.defaultHandle;
+        const holder = HandleStore.holderAddressIndex.get(handle.holder);
+        if (holder) {
+            handle.default_in_wallet = holder.defaultHandle;
         }
 
         return handle;
@@ -104,18 +89,8 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
-    static save = async ({
-        handle,
-        oldHandle,
-        saveHistory = true
-    }: {
-        handle: Handle;
-        oldHandle?: Handle;
-        saveHistory?: boolean;
-    }) => {
-        const updatedHandle: Handle = JSON.parse(
-            JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))
-        );
+    static save = async ({ handle, oldHandle, saveHistory = true }: { handle: Handle; oldHandle?: Handle; saveHistory?: boolean }) => {
+        const updatedHandle: Handle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
         const {
             name,
             rarity,
@@ -124,16 +99,21 @@ export class HandleStore {
             numeric_modifiers,
             length,
             resolved_addresses: { ada },
-            updated_slot_number,
-            default_in_wallet
+            updated_slot_number
         } = updatedHandle;
 
-        const holderAddressDetails = getAddressHolderDetails(ada);
-        updatedHandle.holder = holderAddressDetails.address;
-        updatedHandle.holder_type = holderAddressDetails.type;
+        const holder = getAddressHolderDetails(ada);
+        updatedHandle.holder = holder.address;
+        updatedHandle.holder_type = holder.type;
+
+        const handleDefault = handle.default;
+        delete handle.default; // This is a temp property not meant to save to the handle
 
         // Set the main index
         this.handles.set(name, updatedHandle);
+
+        // Set default name during personalization
+        this.setHolderAddressIndex(holder, name, handleDefault, oldHandle?.holder);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);
@@ -144,13 +124,8 @@ export class HandleStore {
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
-        // Set default name during personalization
-        this.setHolderAddressIndex(holderAddressDetails, name, default_in_wallet, oldHandle?.holder);
-
         const isWithinMaxSlot = true;
-        this.metrics.lastSlot &&
-            this.metrics.currentSlot &&
-            this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+        this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
         if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle);
             if (history)
@@ -163,19 +138,8 @@ export class HandleStore {
     };
 
     static remove = async (handleName: string) => {
-        Logger.log({
-            category: LogCategory.INFO,
-            message: `Removing handle ${handleName}`,
-            event: 'HandleStore.remove'
-        });
-
         const handle = this.handles.get(handleName);
         if (!handle) {
-            Logger.log({
-                message: `Handle ${handleName} not found`,
-                event: 'HandleStore.remove',
-                category: LogCategory.WARN
-            });
             return;
         }
 
@@ -203,19 +167,13 @@ export class HandleStore {
 
         // remove the stake key index
         this.holderAddressIndex.get(holder)?.handles.delete(handleName);
-        const holderAddressDetails = getAddressHolderDetails(ada);
-        this.setHolderAddressIndex(holderAddressDetails);
+        this.setHolderAddressIndex(getAddressHolderDetails(ada));
     };
 
-    static setHolderAddressIndex(
-        holderAddressDetails: AddressDetails,
-        handleName?: string,
-        defaultName?: string,
-        oldHolderAddress?: string
-    ) {
+    static setHolderAddressIndex(holderAddressDetails: AddressDetails, handleName?: string, isDefault?: boolean, oldHolderAddress?: string) {
         const { address: holderAddress, knownOwnerName, type } = holderAddressDetails;
 
-        const existingHolderAddressDetails = this.holderAddressIndex.get(holderAddress) ?? {
+        const holder = this.holderAddressIndex.get(holderAddress) ?? {
             handles: new Set(),
             defaultHandle: '',
             manuallySet: false,
@@ -223,88 +181,48 @@ export class HandleStore {
             knownOwnerName
         };
 
+        const getHandlesFromNames = (holder: HolderAddressIndex) => {
+            const handles: Handle[] = [];
+            holder.handles.forEach((h) => {
+                const handle = this.handles.get(h);
+                if (handle) handles.push(handle);
+                else holder.handles.delete(h);
+            });
+            return handles;
+        };
+
         if (oldHolderAddress && handleName) {
             const oldHolder = this.holderAddressIndex.get(oldHolderAddress);
             if (oldHolder) {
                 oldHolder.handles.delete(handleName);
+                oldHolder.manuallySet = holder.manuallySet && oldHolder.defaultHandle != handleName;
+                oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : getDefaultHandle(getHandlesFromNames(oldHolder))?.name ?? '';
             }
         }
 
         // add the new name if provided and does not already exist
-        if (handleName && !existingHolderAddressDetails.handles.has(handleName)) {
-            existingHolderAddressDetails.handles.add(handleName);
+        if (handleName && !holder.handles.has(handleName)) {
+            holder.handles.add(handleName);
         }
 
-        // if by this point, if we have no handles, we need to remove the holder address from the index
-        if (existingHolderAddressDetails.handles.size === 0) {
+        // if by this point, we have no handles, we need to remove the holder address from the index
+        if (holder.handles.size === 0) {
             this.holderAddressIndex.delete(holderAddress);
             return;
         }
-
-        // build the handles using the holderAddressIndex handles property
-        const handles = [...existingHolderAddressDetails.handles].reduce<Handle[]>((agg, name) => {
-            const handle = this.handles.get(name);
-            if (handle) {
-                agg.push(handle);
-            } else {
-                Logger.log({
-                    message: `Handle ${name} not found in handles index, removing from holder address index`,
-                    category: LogCategory.WARN
-                });
-                existingHolderAddressDetails.handles.delete(name);
-            }
-            return agg;
-        }, []);
-
-        const updatedHolderAddressDetails = {
-            ...existingHolderAddressDetails
-        };
-
-        if (existingHolderAddressDetails.manuallySet) {
-            if (existingHolderAddressDetails.defaultHandle === handleName && !!!defaultName) {
-                updatedHolderAddressDetails.manuallySet = false;
-            }
-        } else {
-            updatedHolderAddressDetails.manuallySet = !!defaultName;
-        }
+        // Set manuallySet to the incoming Handle if isDefault. If the incoming handleName is the same as the
+        // current holder default, then we might be turning it off (unsetting it as default)
+        holder.manuallySet = !!isDefault || (holder.manuallySet && holder.defaultHandle != handleName);
 
         // get the default handle or use the defaultName provided (this is used during personalization)
-        const { manuallySet, defaultHandle, handles: existingHandles } = updatedHolderAddressDetails;
+        // Set defaultHandle to incoming if isDefault, otherwise if manuallySet, then keep the current
+        // default. If neither, then run getDefaultHandle algo
+        holder.defaultHandle = !!isDefault && !!handleName ? handleName : holder.manuallySet ? holder.defaultHandle : getDefaultHandle(getHandlesFromNames(holder))?.name ?? '';
 
-        const isSavingNewDefault = !!defaultName;
-        const isManuallySetAndIncludedInHandles = manuallySet && existingHandles.has(defaultHandle);
-
-        if (isSavingNewDefault) {
-            updatedHolderAddressDetails.defaultHandle = defaultName;
-        } else if (isManuallySetAndIncludedInHandles) {
-            updatedHolderAddressDetails.defaultHandle = defaultHandle;
-        } else {
-            updatedHolderAddressDetails.defaultHandle = getDefaultHandle(handles)?.name ?? '';
-        }
-
-        this.holderAddressIndex.set(holderAddress, updatedHolderAddressDetails);
+        this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({
-        hex,
-        name,
-        adaAddress,
-        og_number,
-        image,
-        slotNumber,
-        utxo,
-        datum,
-        script,
-        amount = 1,
-        bg_image = '',
-        pfp_image = '',
-        default_in_wallet = '',
-        svg_version = '',
-        version = 0,
-        image_hash = '',
-        personalization,
-        reference_token
-    }: SaveMintingTxInput): Handle => {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, personalization, reference_token }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
             name,
             hex,
@@ -324,7 +242,7 @@ export class HandleStore {
             image: image,
             image_hash: image_hash,
             bg_image,
-            default_in_wallet,
+            default_in_wallet: '',
             pfp_image,
             created_slot_number: slotNumber,
             updated_slot_number: slotNumber,
@@ -335,7 +253,8 @@ export class HandleStore {
             reference_token,
             amount,
             svg_version,
-            version
+            version,
+            type
         };
 
         return newHandle;
@@ -364,17 +283,7 @@ export class HandleStore {
         return NETWORK === 'production' ? { old } : { old, new: difference };
     }
 
-    static saveSlotHistory({
-        handleHistory,
-        handleName,
-        slotNumber,
-        maxSlots = this.twelveHourSlot
-    }: {
-        handleHistory: HandleHistory;
-        handleName: string;
-        slotNumber: number;
-        maxSlots?: number;
-    }) {
+    static saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = this.twelveHourSlot }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
         let slotHistory = HandleStore.slotHistoryIndex.get(slotNumber);
         if (!slotHistory) {
             slotHistory = {
@@ -421,14 +330,7 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({
-        name,
-        adaAddress,
-        utxo,
-        slotNumber,
-        datum,
-        script
-    }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({ name, adaAddress, utxo, slotNumber, datum, script }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             Logger.log({
@@ -455,20 +357,13 @@ export class HandleStore {
         });
     };
 
-    static async savePersonalizationChange({
-        name,
-        hex,
-        personalization,
-        reference_token,
-        personalizationDatum,
-        addresses,
-        slotNumber,
-        metadata
-    }: SavePersonalizationInput) {
+    static async savePersonalizationChange({ name, hex, personalization, reference_token, personalizationDatum, addresses, slotNumber, metadata }: SavePersonalizationInput) {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
-        const default_in_wallet = personalizationDatum?.default ? name : '';
+        const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
+        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
+        const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
@@ -476,16 +371,16 @@ export class HandleStore {
                 name,
                 hex,
                 slotNumber,
-                adaAddress: '', // address will come from the 222 token
-                utxo: '', // utxo will come from the 222 token,
+                adaAddress: isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : '', // address will come from the 222 token
+                utxo: isVirtualSubHandle ? `${reference_token.tx_id}#${reference_token.index}` : '', // utxo will come from the 222 token,
                 og_number,
                 image,
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
                 reference_token,
-                default_in_wallet,
                 svg_version: personalizationDatum?.svg_version,
-                version
+                version,
+                type: handleType
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -498,6 +393,9 @@ export class HandleStore {
             delete addresses.ada;
         }
 
+        // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
+        const adaAddress = hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
+
         const updatedHandle: Handle = {
             ...existingHandle,
             image,
@@ -509,13 +407,13 @@ export class HandleStore {
             pfp_asset: personalizationDatum?.pfp_asset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
-                ada: existingHandle.resolved_addresses.ada,
+                ada: adaAddress,
                 ...addresses
             },
-            default_in_wallet,
             personalization,
             reference_token,
-            svg_version: personalizationDatum?.svg_version ?? ''
+            svg_version: personalizationDatum?.svg_version ?? '',
+            default: personalizationDatum?.default == 1 ?? false
         };
 
         await HandleStore.save({
@@ -536,8 +434,7 @@ export class HandleStore {
             return;
         }
 
-        const { amount } = existingHandle;
-        const burnAmount = amount - 1;
+        const burnAmount = existingHandle.amount - 1;
 
         if (burnAmount === 0) {
             await HandleStore.remove(handleName);
@@ -586,24 +483,14 @@ export class HandleStore {
     }
 
     static getMetrics(): IHandleStats {
-        const {
-            firstSlot = 0,
-            lastSlot = 0,
-            currentSlot = 0,
-            firstMemoryUsage = 0,
-            elapsedOgmiosExec = 0,
-            elapsedBuildingExec = 0,
-            currentBlockHash = '',
-            memorySize = 0
-        } = this.metrics;
+        const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, elapsedOgmiosExec = 0, elapsedBuildingExec = 0, currentBlockHash = '', memorySize = 0 } = this.metrics;
 
         const handleSlotRange = lastSlot - firstSlot;
         const currentSlotInRange = currentSlot - firstSlot;
 
         const handleCount = this.count();
 
-        const percentageComplete =
-            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+        const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
 
         const currentMemoryUsage = process.memoryUsage().rss;
         const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -628,29 +515,12 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const { firstSlot = 0, lastSlot = 0, currentSlot = 0 } = this.metrics;
-        const handleSlotRange = lastSlot - firstSlot;
-        const currentSlotInRange = currentSlot - firstSlot;
-        const percentageComplete =
-            currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
-
-        const slotDate = getDateStringFromSlot(currentSlot);
-
-        const date = slotDate.getTime();
-        const now = new Date().getTime();
-
-        // console.log(`${date} < ${now - 60000} && ${percentageComplete} != 100.00)`);
-        // date < now - 60000 &&
-
-        return percentageComplete === `100.00`;
+        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1', networkSync = 0 } = this.metrics;
+        //console.log('lastSlot', lastSlot, 'currentSlot', currentSlot, 'currentBlockHash', currentBlockHash, 'tipBlockHash', tipBlockHash);
+        return networkSync == 1 && lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
-    static async saveHandlesFile(
-        slot: number,
-        hash: string,
-        storagePath?: string,
-        testDelay?: boolean
-    ): Promise<boolean> {
+    static async saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): Promise<boolean> {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
@@ -667,19 +537,7 @@ export class HandleStore {
         return result;
     }
 
-    static async saveFileContents({
-        content,
-        storagePath,
-        slot,
-        hash,
-        testDelay
-    }: {
-        storagePath: string;
-        content?: any;
-        slot?: number;
-        hash?: string;
-        testDelay?: boolean;
-    }): Promise<boolean> {
+    static async saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): Promise<boolean> {
         try {
             const worker = new Worker(path.resolve(__dirname, '../../../workers/saveFile.worker.js'), {
                 workerData: {
@@ -792,8 +650,7 @@ export class HandleStore {
             HandleStore.getFile<IHandleFileContent>(this.storageFilePath)
         ]);
 
-        const localContent =
-            localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
+        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
 
         // If we don't have any valid files, return null
         if (!externalHandles && !localContent) {
@@ -872,11 +729,7 @@ export class HandleStore {
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
 
-        Logger.log(
-            `Handle storage found at slot: ${slot} and hash: ${hash} with ${
-                Object.keys(handles ?? {}).length
-            } handles and ${history?.length} history entries`
-        );
+        Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
 
         // if the file contents are new (from the external source), save the handles and history to the store.
         if (isNew) {
@@ -884,6 +737,17 @@ export class HandleStore {
         }
 
         return { slot, hash };
+    }
+
+    static eraseStorage() {
+        // erase all indexes
+        this.handles = new Map<string, Handle>();
+        this.holderAddressIndex = new Map<string, HolderAddressIndex>();
+        this.rarityIndex = new Map<string, Set<string>>();
+        this.ogIndex = new Map<string, Set<string>>();
+        this.charactersIndex = new Map<string, Set<string>>();
+        this.numericModifiersIndex = new Map<string, Set<string>>();
+        this.lengthIndex = new Map<string, Set<string>>();
     }
 
     static async rollBackToGenesis() {
@@ -894,27 +758,13 @@ export class HandleStore {
         });
 
         // erase all indexes
-        this.handles = new Map<string, Handle>();
-        this.holderAddressIndex = new Map<string, HolderAddressIndex>();
-        this.rarityIndex = new Map<string, Set<string>>();
-        this.ogIndex = new Map<string, Set<string>>();
-        this.charactersIndex = new Map<string, Set<string>>();
-        this.numericModifiersIndex = new Map<string, Set<string>>();
-        this.lengthIndex = new Map<string, Set<string>>();
+        this.eraseStorage();
 
         // clear storage files
         await HandleStore.saveFileContents({ storagePath: HandleStore.storageFilePath });
     }
 
-    static async rewindChangesToSlot({
-        slot,
-        hash,
-        lastSlot
-    }: {
-        slot: number;
-        hash: string;
-        lastSlot: number;
-    }): Promise<{name:string, action: string, handle: Partial<Handle> | undefined}[]> {
+    static async rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): Promise<{ name: string; action: string; handle: Partial<Handle> | undefined }[]> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
@@ -947,7 +797,7 @@ export class HandleStore {
                 const existingHandle = this.get(name);
                 if (!existingHandle) {
                     if (handleHistory.old) {
-                        rewoundHandles.push({name, action: "create", handle: handleHistory.old});
+                        rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
                         await this.save({ handle: handleHistory.old as Handle, saveHistory: false });
                         handleUpdates++;
                         continue;
@@ -960,7 +810,7 @@ export class HandleStore {
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
-                    rewoundHandles.push({name, action: "delete", handle: undefined});
+                    rewoundHandles.push({ name, action: 'delete', handle: undefined });
                     await this.remove(name);
                     handleDeletes++;
                     continue;
@@ -972,7 +822,7 @@ export class HandleStore {
                     ...handleHistory.old
                 };
 
-                rewoundHandles.push({name, action: "update", handle: updatedHandle});
+                rewoundHandles.push({ name, action: 'update', handle: updatedHandle });
                 await this.save({ handle: updatedHandle, oldHandle: existingHandle, saveHistory: false });
                 handleUpdates++;
             }

@@ -5,7 +5,7 @@ import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '../utils/cbor';
 import * as scripts from '../config/scripts';
-import { ScriptDetails } from '@koralabs/handles-public-api-interfaces';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -25,6 +25,18 @@ jest.mock('../ioc', () => ({
                     };
                 }
 
+                if (handleName === 'no_ref_token') {
+                    return {
+                        name: handleName,
+                        resolved_addresses: {
+                            ada: 'addr1'
+                        },
+                        utxo: 'utxo#0'
+                    };
+                }
+
+                if (handleName === 'sub@handle') { return null }
+
                 return {
                     name: handleName,
                     utxo: 'utxo#0',
@@ -37,6 +49,14 @@ jest.mock('../ioc', () => ({
                             address: 'script_addr1'
                         }
                     },
+                    reference_token: {
+                        tx_id: 'tx_id',
+                        index: 0,
+                        lovelace: 0,
+                        datum: '',
+                        address: 'addr1_ref_token',
+                        script: { type: 'plutus_v2', cbor: 'a247' }
+                    },
                     datum: 'a247',
                     script: {
                         type: 'plutus_v2',
@@ -45,16 +65,19 @@ jest.mock('../ioc', () => ({
                 };
             },
             getAll: () => {
-                return {searchTotal: 1, handles: [
-                    {
-                        name: 'burritos',
-                        utxo: 'utxo#0',
-                        personalization: {
-                            p: 'z'
-                        },
-                        datum: 'a247'
-                    }
-                ]};
+                return {
+                    searchTotal: 1,
+                    handles: [
+                        {
+                            name: 'burritos',
+                            utxo: 'utxo#0',
+                            personalization: {
+                                p: 'z'
+                            },
+                            datum: 'a247'
+                        }
+                    ]
+                };
             },
             getAllHandleNames: () => {
                 return ['burritos', 'tacos', 'barbacoa'];
@@ -70,8 +93,8 @@ jest.mock('../ioc', () => ({
                     manually_set: false
                 };
             },
-            getIsCaughtUp: () => {
-                return true;
+            currentHttpStatus: () => {
+                return 200;
             },
             getHandleDatumByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
@@ -165,10 +188,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should pass plain text list of Accept is text/plain', async () => {
-            const response = await request(app?.getServer())
-                .get('/handles')
-                .set('api-key', 'valid-key')
-                .set('Accept', 'text/plain; charset=utf-8');
+            const response = await request(app?.getServer()).get('/handles').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
             expect(response.status).toEqual(200);
             expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
         });
@@ -196,15 +216,19 @@ describe('Testing Handles Routes', () => {
         it('should return legendary message when handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual('Legendary handles are not available yet.');
+            expect(response.body.message).toEqual('Legendary handles are not available to mint.');
         });
 
         it('should return invalid message', async () => {
             const response = await request(app?.getServer()).get('/handles/***');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual(
-                'Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.'
-            );
+            expect(response.body.message).toEqual('Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.');
+        });
+
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
         });
 
         it('should return not allowed message', async () => {
@@ -245,9 +269,9 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return legendary message', async () => {
-            const response = await request(app?.getServer()).get('/handles/l/personalized');
+            const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual('Legendary handles are not available yet.');
+            expect(response.body.message).toEqual('Legendary handles are not available to mint.');
         });
 
         it('should return legendary handle if available', async () => {
@@ -262,15 +286,13 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return invalid message', async () => {
-            const response = await request(app?.getServer()).get('/handles/***/personalized');
+            const response = await request(app?.getServer()).get('/handles/***');
             expect(response.status).toEqual(406);
-            expect(response.body.message).toEqual(
-                'Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.'
-            );
+            expect(response.body.message).toEqual('Invalid handle. Only a-z, 0-9, dash (-), underscore (_), and period (.) are allowed.');
         });
 
         it('should return not allowed message', async () => {
-            const response = await request(app?.getServer()).get('/handles/japan/personalized');
+            const response = await request(app?.getServer()).get('/handles/japan');
             expect(response.status).toEqual(451);
             expect(response.body.message).toEqual("Protected word match on 'jap,an'");
         });
@@ -311,9 +333,7 @@ describe('Testing Handles Routes', () => {
 
         it('should decode json if accept is application/json', async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
-            const response = await request(app?.getServer())
-                .get('/handles/burrito/datum')
-                .set('Accept', 'application/json');
+            const response = await request(app?.getServer()).get('/handles/burrito/datum').set('Accept', 'application/json');
             expect(response.status).toEqual(200);
             expect(response.body.constructor_0[0]).toEqual({
                 handles: [{ umm: 'yeah', yo: 'hey' }],
@@ -333,9 +353,7 @@ describe('Testing Handles Routes', () => {
             jest.spyOn(cbor, 'decodeCborToJson').mockImplementation(() => {
                 throw new Error('test');
             });
-            const response = await request(app?.getServer())
-                .get('/handles/taco/datum')
-                .set('Accept', 'application/json');
+            const response = await request(app?.getServer()).get('/handles/taco/datum').set('Accept', 'application/json');
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual('Unable to decode datum to json');
         });
@@ -355,6 +373,26 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/no-utxo/script');
             expect(response.status).toEqual(404);
             expect(response.body).toEqual({ message: 'Script not found' });
+        });
+    });
+
+    describe('[GET] /handles/:handle/reference_token', () => {
+        it('should get reference token datum for a handle', async () => {
+            const scriptDetails: ScriptDetails = {
+                handle: 'pz_script_01',
+                handleHex: 'hex',
+                validatorHash: 'abc'
+            };
+            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            const response = await request(app?.getServer()).get('/handles/burritos/reference_token');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: scriptDetails, tx_id: 'tx_id' });
+        });
+
+        it('should return empty object when reference token cannot be found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_ref_token/reference_token');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({});
         });
     });
 });

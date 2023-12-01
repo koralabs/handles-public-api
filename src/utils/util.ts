@@ -2,7 +2,6 @@ import { Logger } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 import { NETWORK } from '../config';
-import { IPersonalizedHandle, ScriptDetails } from '@koralabs/handles-public-api-interfaces';
 
 export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));
@@ -77,20 +76,4 @@ export const getSlotNumberFromDate = (date: Date): number => {
     // Ignore parens to show intent
     // prettier-ignore
     return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
-};
-
-export const validateScriptDetails = (scriptHandle: IPersonalizedHandle | null, scriptData: ScriptDetails) => {
-    const refScriptUtxo =
-        scriptHandle && scriptHandle.utxo === scriptData.refScriptUtxo ? scriptData.refScriptUtxo : undefined;
-    const refScriptAddress =
-        scriptHandle && scriptHandle.resolved_addresses.ada === scriptData.refScriptAddress
-            ? scriptData.refScriptAddress
-            : undefined;
-    const cbor = scriptHandle && scriptHandle.script?.cbor === scriptData.cbor ? scriptData.cbor : undefined;
-
-    return {
-        refScriptUtxo,
-        refScriptAddress,
-        cbor
-    };
 };
