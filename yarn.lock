@@ -631,10 +631,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/kora-labs-common@^2.0.7":
-  version "2.0.7"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-2.0.7.tgz#e2718090353964eab297a5129be01126e029e38b"
-  integrity sha512-0mY1UaJM/fUeZUx6xSfbHFLpE6AYtzQgxvvZWMn4d2SdUmUHua8H/auKSa15ubK+vV9gXtDCNi97SbQruQRPag==
+"@koralabs/kora-labs-common@^2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-2.2.0.tgz#822255161d6605cff1d4c6f89c673fe29af780b3"
+  integrity sha512-Pmym3zxTV0xsvgNYqCo5E4Xb9/KBYvy11Pqyscw7PcuruXg5U/Awv5KGtJ/Zbsg2AD7pygKRpxkCIB+gD4vIDw==
   dependencies:
     pluralize "^8.0.0"
 
