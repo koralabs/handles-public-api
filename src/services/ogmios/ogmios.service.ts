@@ -44,10 +44,7 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(
-        response: { point: PointOrOrigin; tip: TipOrOrigin },
-        requestNext: () => void
-    ): Promise<void> {
+    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin }, requestNext: () => void): Promise<void> {
         const { current_slot } = HandleStore.getMetrics();
         Logger.log({
             message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
@@ -163,7 +160,7 @@ class OgmiosService {
         const startingPoint = await this.getStartingPoint();
         this.startIntervals();
 
-        await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint]);
+        await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
     }
 }
 
