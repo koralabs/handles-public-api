@@ -28,7 +28,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 30;
+    static storageSchemaVersion = 31;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -222,7 +222,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, personalization, reference_token }: SaveMintingTxInput): Handle => {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, resolved_addresses, personalization, reference_token }: SaveMintingTxInput): Handle => {
         const newHandle: Handle = {
             name,
             hex,
@@ -234,6 +234,7 @@ export class HandleStore {
             characters: buildCharacters(name),
             numeric_modifiers: buildNumericModifiers(name),
             resolved_addresses: {
+                ...resolved_addresses,
                 ada: adaAddress
             },
             og_number,
@@ -357,13 +358,24 @@ export class HandleStore {
         });
     };
 
-    static async savePersonalizationChange({ name, hex, personalization, reference_token, personalizationDatum, addresses, slotNumber, metadata }: SavePersonalizationInput) {
+    static async savePersonalizationChange({ name, hex, personalization, reference_token, personalizationDatum, slotNumber, metadata }: SavePersonalizationInput) {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
         const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
         const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
+
+        // update resolved addresses
+        // remove ada from the new addresses.
+        const addresses = personalizationDatum?.resolved_addresses
+            ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
+                  if (key !== 'ada') {
+                      acc[key] = value;
+                  }
+                  return acc;
+              }, {})
+            : {};
 
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
@@ -378,6 +390,7 @@ export class HandleStore {
                 image_hash: personalizationDatum?.image_hash,
                 personalization,
                 reference_token,
+                resolved_addresses: addresses,
                 svg_version: personalizationDatum?.svg_version,
                 version,
                 type: handleType
@@ -385,12 +398,6 @@ export class HandleStore {
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
             return;
-        }
-
-        // update resolved addresses
-        // remove ada from the new addresses.
-        if (addresses.ada) {
-            delete addresses.ada;
         }
 
         // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
@@ -407,8 +414,8 @@ export class HandleStore {
             pfp_asset: personalizationDatum?.pfp_asset,
             updated_slot_number: slotNumber,
             resolved_addresses: {
-                ada: adaAddress,
-                ...addresses
+                ...addresses,
+                ada: adaAddress
             },
             personalization,
             reference_token,

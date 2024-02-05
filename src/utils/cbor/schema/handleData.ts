@@ -18,9 +18,13 @@ export const handleDatumSchema = {
             socials: 'string',
             vendor: 'string',
             default: 'bool',
+            resolved_addresses: {
+                ada: 'hex',
+                '<string>': 'string'
+            },
             trial: 'bool',
             nsfw: 'bool',
-            svg_version: 'string',
+            svg_version: 'string'
         }
     }
 };

@@ -1,11 +1,4 @@
-import {
-    IPersonalization,
-    IPersonalizedHandle,
-    IHandleMetadata,
-    IPzDatum,
-    IReferenceToken,
-    HandleType
-} from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/kora-labs-common';
 
 export interface HandleHistory {
     old: Partial<Handle> | null;
@@ -53,6 +46,7 @@ export interface SaveMintingTxInput {
     script?: { type: string; cbor: string };
     personalization?: IPersonalization;
     reference_token?: IReferenceToken;
+    resolved_addresses?: Record<string, string>;
     amount?: number;
     version?: number;
     type: HandleType;
@@ -75,9 +69,6 @@ export interface SavePersonalizationInput {
     reference_token: IReferenceToken;
     personalizationDatum: IPzDatum | null;
     metadata: IHandleMetadata | null;
-    addresses: {
-        [chain: string]: string;
-    };
 }
 
 export interface HolderAddressIndex {
