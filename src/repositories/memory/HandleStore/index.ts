@@ -367,7 +367,8 @@ export class HandleStore {
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
         // update resolved addresses
-        // remove ada from the new addresses.
+        // remove ada from the new addresses. The contract should not allow adding an incorrect address
+        // but to be safe, we'll remove the ada address from the resolved addresses
         const addresses = personalizationDatum?.resolved_addresses
             ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
                   if (key !== 'ada') {
@@ -401,7 +402,7 @@ export class HandleStore {
         }
 
         // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
-        const adaAddress = hex.startsWith(AssetNameLabel.LABEL_000) && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
+        const adaAddress = isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
 
         const updatedHandle: Handle = {
             ...existingHandle,
