@@ -28,7 +28,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 29;
+    static storageSchemaVersion = 30;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -645,10 +645,7 @@ export class HandleStore {
         hash: string;
     } | null> {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-        const [externalHandles, localHandles] = await Promise.all([
-            HandleStore.getFileOnline<IHandleFileContent>(fileName),
-            HandleStore.getFile<IHandleFileContent>(this.storageFilePath)
-        ]);
+        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline<IHandleFileContent>(fileName), HandleStore.getFile<IHandleFileContent>(this.storageFilePath)]);
 
         const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
 
