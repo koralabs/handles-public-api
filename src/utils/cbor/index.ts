@@ -38,25 +38,53 @@ class JsonToDatumObject {
         }
     }
 
+    getFormattedKey = (key: string) => {
+        if (key.startsWith('0x')) {
+            return Buffer.from(key.substring(2), 'hex');
+        }
+
+        if (this.keyIsNumeric(key)) {
+            return parseInt(key);
+        }
+
+        if (key.startsWith('~0x')) {
+            key = key.slice(1);
+        }
+
+        console.log('key', key);
+
+        return Buffer.from(key);
+    };
+
+    getHexOrString = (key: string) => {
+        if (key.startsWith('0x')) {
+            return Buffer.from(key.substring(2), 'hex');
+        }
+
+        if (key.startsWith('~0x')) {
+            key = key.slice(1);
+        }
+
+        console.log('key', key);
+
+        return Buffer.from(key);
+    };
+
     encodeCBOR = (encoder: any) => {
         if (Array.isArray(this.json)) {
-            return cbor.Encoder.encodeIndefinite(encoder, this.json)
+            return cbor.Encoder.encodeIndefinite(encoder, this.json);
         } else if (typeof this.json === 'object') {
             if (this.json !== null) {
                 const fieldsMap = new Map();
                 let tag = null;
                 for (let key of Object.keys(this.json)) {
                     let split_key = parseInt(key.split('_').at(1) ?? '');
-                    if (
-                        key.startsWith('constructor_') &&
-                        !isNaN(split_key) &&
-                        [0, 1, 2, 3].includes(split_key as number)
-                    ) {
+                    if (key.startsWith('constructor_') && !isNaN(split_key) && [0, 1, 2, 3].includes(split_key as number)) {
                         tag = 121 + split_key;
                         return encoder.pushAny(new cbor.Tagged(tag, this.json[key]));
                     }
 
-                    const bufferedKey = key.startsWith('0x') ? Buffer.from(key.substring(2), 'hex') : this.keyIsNumeric(key) ? parseInt(key) : Buffer.from(key);
+                    const bufferedKey = this.getFormattedKey(key);
 
                     fieldsMap.set(bufferedKey, this.json[key]);
                 }
@@ -68,13 +96,9 @@ class JsonToDatumObject {
             return encoder.pushAny(this.json);
         } else if (typeof this.json === 'string') {
             // check for hex and if so, decode it
-            const bufferedKey = this.json.startsWith('0x')
-                ? Buffer.from(this.json.substring(2), 'hex')
-                : Buffer.from(this.json);
+            const bufferedString = this.getHexOrString(this.json);
 
-            return bufferedKey.length > 64
-                ? cbor.Encoder.encodeIndefinite(encoder, bufferedKey, { chunkSize: 64 })
-                : encoder.pushAny(bufferedKey);
+            return bufferedString.length > 64 ? cbor.Encoder.encodeIndefinite(encoder, bufferedString, { chunkSize: 64 }) : encoder.pushAny(bufferedString);
         } else if (typeof this.json === 'boolean') {
             return encoder.pushAny(this.json ? 1 : 0);
         } else {
@@ -88,8 +112,8 @@ class JsonToDatumObject {
     };
 
     keyIsNumeric = (key: any) => {
-        return this.numericKeys && key !== null && key.length > 0 && !isNaN(key)
-    }
+        return this.numericKeys && key !== null && key.length > 0 && !isNaN(key);
+    };
 }
 
 export const encodeJsonToDatum = async (json: any, numericKeys = false) => {
@@ -102,7 +126,7 @@ const parseSchema = (key: any, schema: any, defaultKeyType: KeyType, i: number) 
     let schemaValue;
 
     if (Number.isInteger(key)) {
-        key = `${key}`
+        key = `${key}`;
     }
     let mapKey = Buffer.from(key).toString('utf8');
     const hexKey = `0x${Buffer.from(key).toString('hex')}`;
@@ -213,6 +237,11 @@ const decodeObject = (val: any, constr: number | null = null, schema: any = {}, 
             if (schema === 'bool' && isBooleanable(result)) {
                 return boolean(result);
             }
+
+            // Figure out if we want to add the ~ to the front of the hex string
+            // if (result.startsWith('0x')) {
+            //     return `~${result}`;
+            // }
 
             return result;
         }

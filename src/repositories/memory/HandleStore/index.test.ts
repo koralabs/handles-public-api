@@ -1503,7 +1503,7 @@ describe('HandleStore tests', () => {
             expect(virtualSubHandle?.utxo).toEqual(`${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`);
 
             // expect the ada address to be the bech32 encoded version of the reference token address
-            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada.replace('0x', ''), true);
+            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
             expect(virtualSubHandle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
         });
