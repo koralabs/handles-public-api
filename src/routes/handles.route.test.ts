@@ -157,7 +157,7 @@ describe('Testing Handles Routes', () => {
         it('should throw error if length is invalid', async () => {
             const response = await request(app?.getServer()).get('/handles?length=nope');
             expect(response.status).toEqual(400);
-            expect(response.body.message).toEqual('Length must be a number');
+            expect(response.body.message).toEqual('Length must be a number or a range of numbers (ex: 1-28) and can\'t exceed 28');
         });
 
         it('should throw error if rarity is invalid', async () => {

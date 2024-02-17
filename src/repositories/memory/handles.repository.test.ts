@@ -149,6 +149,16 @@ describe('MemoryHandlesRepository Tests', () => {
             expect(result).toEqual(['taco']);
         });
 
+        it('should search all handle names', async () => {
+            jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
+            const repo = new MemoryHandlesRepository();
+            const search = new HandleSearchModel({
+                length: '4-7'
+            });
+            const result = await repo.getAllHandleNames(search, 'asc');
+            expect(result).toEqual(['burrito','taco']);
+        });
+
         it('should sort handles randomly', async () => {
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handlesFixture);
             const repo = new MemoryHandlesRepository();

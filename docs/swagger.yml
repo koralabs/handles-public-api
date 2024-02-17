@@ -37,7 +37,7 @@ paths:
           $ref: "#/components/schemas/Characters"
       - name: length
         in: query
-        description: Length of handles to return
+        description: Length of handles to return. This will also accept a range. For example `2-7` will get all Handles with a length >=2 and <=7
         required: false
         schema:
           type: integer

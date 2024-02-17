@@ -9,7 +9,7 @@ import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
-        const EMPTY = 'empty';
+        const EMPTY = '|empty|';
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
@@ -22,7 +22,15 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         // get handle name arrays for all the search parameters
         const characterArray = getHandles(HandleStore.charactersIndex, characters);
-        const lengthArray = getHandles(HandleStore.lengthIndex, length);
+        let lengthArray: string[] = [];
+        if (length?.includes('-')) {
+            for (let i=parseInt(length.split('-')[0]);i<=parseInt(length.split('-')[1]);i++){
+                lengthArray = lengthArray.concat(getHandles(HandleStore.lengthIndex, `${i}`))
+            }
+        }
+        else {
+            lengthArray = getHandles(HandleStore.lengthIndex, length);
+        }
         const rarityArray = getHandles(HandleStore.rarityIndex, rarity);
         const numericModifiersArray = getHandles(HandleStore.numericModifiersIndex, numeric_modifiers);
         const ogArray = og ? getHandles(HandleStore.ogIndex, '1') : [];
