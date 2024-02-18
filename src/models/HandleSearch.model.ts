@@ -65,15 +65,30 @@ export class HandleSearchModel {
     }
 
     set length(value) {
-        if (value && !isNumeric(value)) {
-            throw new ModelException('Length must be a number');
+        const lengthMErrorMsg = 'Length must be a number or a range of numbers (ex: 1-28) and can\'t exceed 28';
+        if (!value) {
+            this._length = value;
+            return;
+        }
+        let minLength = value;
+        let maxLength = value;
+        if (value?.includes('-')) {
+            minLength = value.split('-')[0];
+            maxLength = value.split('-')[1];
+        }
+        if (!isNumeric(minLength) || !isNumeric(maxLength)) {
+            throw new ModelException(lengthMErrorMsg);
         }
 
-        if (value && parseInt(value) > 15) {
-            throw new ModelException('Length exceeded');
+        if (parseInt(minLength) > 28 || parseInt(maxLength) > 28) {
+            throw new ModelException(lengthMErrorMsg);
         }
 
+        if (parseInt(minLength) > parseInt(maxLength)) {
+            throw new ModelException('Invalid length range');
+        }
         this._length = value;
+
     }
 
     get numeric_modifiers() {
