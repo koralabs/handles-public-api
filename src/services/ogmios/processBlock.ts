@@ -25,13 +25,7 @@ const buildPersonalization = async ({ personalizationDatum, personalization }: B
     // start timer for ipfs calls
     const ipfsTimer = Date.now();
 
-    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all(
-        [   { link: portal, schema: portalSchema },
-            { link: designer, schema: designerSchema },
-            { link: socials, schema: socialsSchema },
-            { link: vendor }
-        ].map(getDataFromIPFSLink)
-    );
+    const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(getDataFromIPFSLink));
 
     // stop timer for ipfs calls
     const endIpfsTimer = Date.now() - ipfsTimer;
@@ -213,7 +207,6 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
         name,
         personalization,
         reference_token,
-        addresses: {}, // TODO: get other crypto addresses from personalization data
         slotNumber,
         metadata,
         personalizationDatum
@@ -328,9 +321,7 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
         }
 
         // get metadata so we can use it later
-        const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId
-                ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT])
-                : null;
+        const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT]) : null;
 
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < txBody.body.outputs.length; i++) {
