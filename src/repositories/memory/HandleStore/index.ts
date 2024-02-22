@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, ApiHandle, HandleType, IHandleStats } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
@@ -12,12 +12,12 @@ import { buildCharacters, buildNumericModifiers, getRarity } from '../../../serv
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
 import { getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, Handle } from '../interfaces/handleStore.interfaces';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory } from '../interfaces/handleStore.interfaces';
 import { bech32FromHex } from '../../../utils/serialization';
 
 export class HandleStore {
     // Indexes
-    private static handles = new Map<string, Handle>();
+    private static handles = new Map<string, ApiHandle>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
     static rarityIndex = new Map<string, Set<string>>();
@@ -43,14 +43,14 @@ export class HandleStore {
     static storageFileName = `handles.json`;
     static storageFilePath = `${HandleStore.storageFolder}/${NETWORK}/snapshot/${HandleStore.storageFileName}`;
 
-    static get(key: string): Handle | null {
+    static get(key: string): ApiHandle | null {
         const handle = HandleStore.handles.get(key);
 
         return this.returnHandleWithDefault(handle);
     }
 
-    static getByHex(hex: string): Handle | null {
-        let handle: Handle | null = null;
+    static getByHex(hex: string): ApiHandle | null {
+        let handle: ApiHandle | null = null;
         for (let [key, value] of HandleStore.handles.entries()) {
             if (value.hex === hex) handle = value;
             break;
@@ -58,7 +58,7 @@ export class HandleStore {
         return this.returnHandleWithDefault(handle);
     }
 
-    static returnHandleWithDefault(handle?: Handle | null) {
+    static returnHandleWithDefault(handle?: ApiHandle | null) {
         if (!handle) {
             return null;
         }
@@ -76,9 +76,9 @@ export class HandleStore {
     };
 
     static getHandles = () => {
-        const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as Handle));
+        const handles = Array.from(HandleStore.handles, ([_, value]) => ({ ...value } as ApiHandle));
         return handles.map((handle) => {
-            const existingHandle = HandleStore.get(handle.name) as Handle;
+            const existingHandle = HandleStore.get(handle.name) as ApiHandle;
             return existingHandle;
         });
     };
@@ -89,8 +89,8 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
-    static save = async ({ handle, oldHandle, saveHistory = true }: { handle: Handle; oldHandle?: Handle; saveHistory?: boolean }) => {
-        const updatedHandle: Handle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
+    static save = async ({ handle, oldHandle, saveHistory = true }: { handle: ApiHandle; oldHandle?: ApiHandle; saveHistory?: boolean }) => {
+        const updatedHandle: ApiHandle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
         const {
             name,
             rarity,
@@ -182,7 +182,7 @@ export class HandleStore {
         };
 
         const getHandlesFromNames = (holder: HolderAddressIndex) => {
-            const handles: Handle[] = [];
+            const handles: ApiHandle[] = [];
             holder.handles.forEach((h) => {
                 const handle = this.handles.get(h);
                 if (handle) handles.push(handle);
@@ -222,8 +222,8 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, resolved_addresses, personalization, reference_token }: SaveMintingTxInput): Handle => {
-        const newHandle: Handle = {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, resolved_addresses, personalization, reference_token }: SaveMintingTxInput): ApiHandle => {
+        const newHandle: ApiHandle = {
             name,
             hex,
             holder: '', // Populate on save
@@ -261,7 +261,7 @@ export class HandleStore {
         return newHandle;
     };
 
-    static buildHandleHistory(newHandle: Partial<Handle>, oldHandle?: Partial<Handle>): HandleHistory | null {
+    static buildHandleHistory(newHandle: Partial<ApiHandle>, oldHandle?: Partial<ApiHandle>): HandleHistory | null {
         const { name } = newHandle;
         if (!oldHandle) {
             return NODE_ENV === 'production' ? { old: null } : { old: null, new: { name } };
@@ -275,7 +275,7 @@ export class HandleStore {
 
         // using the diff, we need to get the same properties from oldHandle
         const old = Object.keys(difference).reduce<Record<string, unknown>>((agg, key) => {
-            agg[key] = oldHandle[key as keyof Handle];
+            agg[key] = oldHandle[key as keyof ApiHandle];
             return agg;
         }, {});
 
@@ -345,7 +345,7 @@ export class HandleStore {
         const updatedHandle = {
             ...existingHandle,
             utxo,
-            resolved_addresses: { ada: adaAddress },
+            resolved_addresses: { ...existingHandle.resolved_addresses, ada: adaAddress },
             updated_slot_number: slotNumber,
             has_datum: !!datum,
             datum: isDatumEndpointEnabled() && datum ? datum : undefined,
@@ -404,7 +404,7 @@ export class HandleStore {
         // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
         const adaAddress = isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
 
-        const updatedHandle: Handle = {
+        const updatedHandle: ApiHandle = {
             ...existingHandle,
             image,
             image_hash: personalizationDatum?.image_hash ?? '',
@@ -679,7 +679,7 @@ export class HandleStore {
         };
 
         let filesContent: {
-            handles: Record<string, Handle>;
+            handles: Record<string, ApiHandle>;
             history: [number, ISlotHistoryIndex][];
             slot: number;
             schemaVersion: number;
@@ -746,7 +746,7 @@ export class HandleStore {
 
     static eraseStorage() {
         // erase all indexes
-        this.handles = new Map<string, Handle>();
+        this.handles = new Map<string, ApiHandle>();
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
         this.rarityIndex = new Map<string, Set<string>>();
         this.ogIndex = new Map<string, Set<string>>();
@@ -769,7 +769,7 @@ export class HandleStore {
         await HandleStore.saveFileContents({ storagePath: HandleStore.storageFilePath });
     }
 
-    static async rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): Promise<{ name: string; action: string; handle: Partial<Handle> | undefined }[]> {
+    static async rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): Promise<{ name: string; action: string; handle: Partial<ApiHandle> | undefined }[]> {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
@@ -803,7 +803,7 @@ export class HandleStore {
                 if (!existingHandle) {
                     if (handleHistory.old) {
                         rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
-                        await this.save({ handle: handleHistory.old as Handle, saveHistory: false });
+                        await this.save({ handle: handleHistory.old as ApiHandle, saveHistory: false });
                         handleUpdates++;
                         continue;
                     }
@@ -822,7 +822,7 @@ export class HandleStore {
                 }
 
                 // otherwise we need to update the handle with the old values
-                const updatedHandle: Handle = {
+                const updatedHandle: ApiHandle = {
                     ...existingHandle,
                     ...handleHistory.old
                 };

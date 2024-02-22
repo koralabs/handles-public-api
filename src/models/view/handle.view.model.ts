@@ -1,4 +1,4 @@
-import { IHandle, Rarity } from '@koralabs/kora-labs-common';
+import { ApiHandle, HandleType, IHandle, IPersonalization, IReferenceToken, Rarity } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 
 export class HandleViewModel {
@@ -19,7 +19,10 @@ export class HandleViewModel {
     pfp_asset?: string;
     bg_image?: string;
     bg_asset?: string;
-    resolved_addresses: { ada: string; eth?: string | undefined; btc?: string | undefined };
+    resolved_addresses: {
+        ada: string;
+        [key: string]: string;
+    };
     created_slot_number: number;
     updated_slot_number: number;
     has_datum: boolean;
@@ -28,7 +31,7 @@ export class HandleViewModel {
     svg_version: string;
     version: number;
 
-    constructor(handle: IHandle) {
+    constructor(handle: ApiHandle) {
         if (!handle.utxo) {
             throw new HttpException(404, 'Handle not found');
         }

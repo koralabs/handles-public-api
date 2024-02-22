@@ -1,10 +1,9 @@
-import { AssetNameLabel, HandleType, Rarity } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, ApiHandle, HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
-import { Handle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -139,7 +138,7 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const expectedItem: Handle = {
+    const expectedItem: ApiHandle = {
         characters: 'letters,numbers',
         hex: hexName,
         holder: 'some_stake1',

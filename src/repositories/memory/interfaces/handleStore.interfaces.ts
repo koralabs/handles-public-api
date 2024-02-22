@@ -1,8 +1,8 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ApiHandle } from '@koralabs/kora-labs-common';
 
 export interface HandleHistory {
-    old: Partial<Handle> | null;
-    new?: Partial<Handle> | null;
+    old: Partial<ApiHandle> | null;
+    new?: Partial<ApiHandle> | null;
 }
 
 export interface ISlotHistoryIndex {
@@ -13,7 +13,7 @@ export interface IHandleFileContent {
     slot: number;
     hash: string;
     schemaVersion?: number;
-    handles: Record<string, Handle>;
+    handles: Record<string, ApiHandle>;
     history: [number, ISlotHistoryIndex][];
 }
 
@@ -77,10 +77,4 @@ export interface HolderAddressIndex {
     manuallySet: boolean;
     type: string;
     knownOwnerName: string;
-}
-
-export interface Handle extends IPersonalizedHandle {
-    amount: number;
-    type: HandleType;
-    default?: boolean;
 }
