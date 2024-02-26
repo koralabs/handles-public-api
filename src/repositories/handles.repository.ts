@@ -1,14 +1,15 @@
-import { ApiHandle, IHandleStats } from '@koralabs/kora-labs-common';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HolderAddressDetailsResponse } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import { HolderPaginationModel } from '../models/holderPagination.model';
+import { StoredHandle } from './memory/interfaces/handleStore.interfaces';
 
 interface IHandlesRepository {
-    getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: ApiHandle[] }>;
+    getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
     getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
-    getHandleByName: (handleName: string) => Promise<ApiHandle | null>;
-    getHandleByHex: (handleHex: string) => Promise<ApiHandle | null>;
+    getHandleByName: (handleName: string) => Promise<StoredHandle | null>;
+    getHandleByHex: (handleHex: string) => Promise<StoredHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;
     getAllHolders: (params: { pagination: HolderPaginationModel }) => Promise<HolderAddressDetailsResponse[]>;
     getHandleStats: () => IHandleStats;

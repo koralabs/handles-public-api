@@ -1,9 +1,9 @@
-import { ApiHandle, HandleType, Rarity } from '@koralabs/kora-labs-common';
-import { ISlotHistoryIndex, HolderAddressIndex } from '../../interfaces/handleStore.interfaces';
+import { HandleType, Rarity } from '@koralabs/kora-labs-common';
+import { ISlotHistoryIndex, HolderAddressIndex, StoredHandle } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';
 
-export const handlesFixture: ApiHandle[] = [
+export const handlesFixture: StoredHandle[] = [
     {
         hex: 'barbacoa-hex',
         name: 'barbacoa',
@@ -146,8 +146,8 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
     ]
 ]);
 
-export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<ApiHandle[]> => {
-    let handles: ApiHandle[] = [];
+export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
+    let handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
         if (!HandleStore.get(handleName)) {

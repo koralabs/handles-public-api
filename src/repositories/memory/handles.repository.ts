@@ -1,4 +1,4 @@
-import { ApiHandle, IHandleStats } from '@koralabs/kora-labs-common';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -6,6 +6,7 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
+import { StoredHandle } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
@@ -57,7 +58,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
-                ? nonEmptyHandles.reduce<ApiHandle[]>((agg, name) => {
+                ? nonEmptyHandles.reduce<StoredHandle[]>((agg, name) => {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
@@ -65,7 +66,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       }
                       return agg;
                   }, [])
-                : HandleStore.getHandles().reduce<ApiHandle[]>((agg, handle) => {
+                : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                       if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
                           agg.push(handle);
                       }
@@ -78,7 +79,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return array;
     }
 
-    public async getAll({ pagination, search }: { pagination: HandlePaginationModel; search: HandleSearchModel }): Promise<{ searchTotal: number; handles: ApiHandle[] }> {
+    public async getAll({ pagination, search }: { pagination: HandlePaginationModel; search: HandleSearchModel }): Promise<{ searchTotal: number; handles: StoredHandle[] }> {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
         let items = this.search(search);
@@ -148,14 +149,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return filteredHandles.map((handle) => handle.name);
     }
 
-    public async getHandleByName(handleName: string): Promise<ApiHandle | null> {
+    public async getHandleByName(handleName: string): Promise<StoredHandle | null> {
         const handle = HandleStore.get(handleName);
         if (handle) return handle;
 
         return null;
     }
 
-    public async getHandleByHex(handleHex: string): Promise<ApiHandle | null> {
+    public async getHandleByHex(handleHex: string): Promise<StoredHandle | null> {
         const handle = HandleStore.getByHex(handleHex);
         if (handle) return handle;
 

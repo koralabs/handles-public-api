@@ -4,13 +4,14 @@ import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.inte
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, ApiHandle } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern } from '@koralabs/kora-labs-common';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { decodeCborToJson, KeyType } from '../utils/cbor';
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
+import { StoredHandle } from '../repositories/memory/interfaces/handleStore.interfaces';
 
 class HandlesController {
     public getAll = async (req: Request<RequestWithRegistry, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
@@ -56,9 +57,9 @@ class HandlesController {
         }
     };
 
-    public static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: ApiHandle | null }> => {
+    public static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
         const handleRepo = new handleRepoName() as IHandlesRepository;
-        let handle: ApiHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
+        let handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
 
         if (!handle) {
             const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);

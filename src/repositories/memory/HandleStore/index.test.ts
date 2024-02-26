@@ -561,7 +561,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x444',
                 validated_by: '',
                 resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 trial: 0,
@@ -639,6 +639,7 @@ describe('HandleStore tests', () => {
                                     nsfw: false
                                 },
                                 reference_token: defaultReferenceToken,
+                                last_update_address: '0x444',
                                 pfp_image: 'todo',
                                 resolved_addresses: {
                                     btc: '2213kjsjkn',
@@ -891,7 +892,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x222',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -947,7 +948,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x333',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -1011,7 +1012,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x444',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -1072,6 +1073,7 @@ describe('HandleStore tests', () => {
                                 trial: false,
                                 nsfw: false
                             },
+                            last_update_address: '0x222',
                             reference_token: defaultReferenceToken,
                             updated_slot_number: 200
                         },
@@ -1097,6 +1099,7 @@ describe('HandleStore tests', () => {
                                 designer: { font_shadow_color: '0xEEE', text_ribbon_colors: undefined },
                                 socials: undefined
                             },
+                            last_update_address: '0x333',
                             updated_slot_number: 300
                         },
                         old: {
@@ -1110,6 +1113,7 @@ describe('HandleStore tests', () => {
                                 trial: false,
                                 nsfw: false
                             },
+                            last_update_address: '0x222',
                             updated_slot_number: 200
                         }
                     }
@@ -1124,6 +1128,7 @@ describe('HandleStore tests', () => {
                         new: {
                             default: false,
                             personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
+                            last_update_address: '0x444',
                             updated_slot_number: 400
                         },
                         old: {
@@ -1136,6 +1141,7 @@ describe('HandleStore tests', () => {
                                 nsfw: false,
                                 trial: false
                             },
+                            last_update_address: '0x333',
                             updated_slot_number: 300
                         }
                     }
