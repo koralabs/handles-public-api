@@ -666,10 +666,6 @@ describe('processBlock Tests', () => {
                     1,
                     {
                         standard_image: '',
-                        portal: '',
-                        designer: '',
-                        socials: '',
-                        vendor: '',
                         default: false,
                         last_update_address: '',
                         validated_by: '',

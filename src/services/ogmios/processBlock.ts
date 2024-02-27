@@ -12,7 +12,7 @@ import { socialsSchema } from '../../utils/cbor/schema/socials';
 
 const blackListedIpfsCids: string[] = [];
 
-const getDataFromIPFSLink = async ({ link, schema }: { link: string; schema?: any }): Promise<any | undefined> => {
+const getDataFromIPFSLink = async ({ link, schema }: { link?: string; schema?: any }): Promise<any | undefined> => {
     if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
     const cid = link.split('ipfs://')[1];
@@ -98,10 +98,6 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
 
     const requiredProperties: IPzDatum = {
         standard_image: '',
-        portal: '',
-        designer: '',
-        socials: '',
-        vendor: '',
         default: 0,
         last_update_address: '',
         validated_by: '',
