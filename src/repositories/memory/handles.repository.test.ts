@@ -156,7 +156,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 length: '4-7'
             });
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['burrito','taco']);
+            expect(result).toEqual(['burrito', 'taco']);
         });
 
         it('should sort handles randomly', async () => {
@@ -316,5 +316,24 @@ describe('MemoryHandlesRepository Tests', () => {
                 expect(error.message).toEqual('Not found');
             }
         });
+    });
+
+    describe('getSubHandleSettings', () => {
+        it('should not get subhandle settings if handle does not exist', async () => {
+            const repo = new MemoryHandlesRepository();
+            try {
+                await repo.getSubHandleSettings('nope@handle');
+                throw new Error('expected error');
+            } catch (error: any) {
+                expect(error.message).toEqual('Not found');
+            }
+        });
+
+        // TODO: add subhandle settings to handle store
+        // it('should get subhandle settings by name', async () => {
+        //     const repo = new MemoryHandlesRepository();
+        //     const result = await repo.getSubHandleSettings('salsa');
+        //     expect(result).toEqual(null);
+        // });
     });
 });

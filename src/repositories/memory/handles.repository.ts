@@ -190,6 +190,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return datum;
     }
 
+    public async getSubHandleSettings(handleName: string): Promise<{ enableNft?: boolean; enableVirtual?: boolean } | null> {
+        const handle = HandleStore.get(handleName);
+        if (!handle || !handle.utxo) {
+            throw new HttpException(404, 'Not found');
+        }
+
+        const { subhandle_settings } = handle;
+        return subhandle_settings ?? null;
+    }
+
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
     }

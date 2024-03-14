@@ -8,6 +8,10 @@ export interface StoredHandle extends IPersonalizedHandle {
         ada: string;
         [key: string]: string;
     };
+    subhandle_settings?: {
+        enableNft?: boolean;
+        enableVirtual?: boolean;
+    };
 }
 
 export interface HandleHistory {

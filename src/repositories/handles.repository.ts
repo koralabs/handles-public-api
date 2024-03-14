@@ -16,6 +16,7 @@ interface IHandlesRepository {
     getTotalHandlesStats: () => { total_handles: number; total_holders: number };
     currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
+    getSubHandleSettings: (handleName: string) => Promise<{ enableNft?: boolean; enableVirtual?: boolean } | null>;
 }
 
 export default IHandlesRepository;

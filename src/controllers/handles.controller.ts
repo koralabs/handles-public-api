@@ -193,6 +193,29 @@ class HandlesController {
             next(error);
         }
     }
+
+    public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+
+            if (!handleData?.handle) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
+
+            if (!settings) {
+                res.status(404).send({ message: 'SubHandle settings not found' });
+                return;
+            }
+
+            res.status(handleData.code).json(settings);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default HandlesController;

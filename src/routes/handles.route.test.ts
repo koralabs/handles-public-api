@@ -35,7 +35,9 @@ jest.mock('../ioc', () => ({
                     };
                 }
 
-                if (handleName === 'sub@handle') { return null }
+                if (handleName === 'nope@handle') {
+                    return null;
+                }
 
                 return {
                     name: handleName,
@@ -104,6 +106,16 @@ jest.mock('../ioc', () => ({
                 }
 
                 return `${handleName}_datum`;
+            },
+            getSubHandleSettings: (handleName: string) => {
+                if (handleName === 'no_settings@handle') {
+                    return null;
+                }
+
+                return {
+                    enableNft: true,
+                    enableVirtual: true
+                };
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -157,7 +169,7 @@ describe('Testing Handles Routes', () => {
         it('should throw error if length is invalid', async () => {
             const response = await request(app?.getServer()).get('/handles?length=nope');
             expect(response.status).toEqual(400);
-            expect(response.body.message).toEqual('Length must be a number or a range of numbers (ex: 1-28) and can\'t exceed 28');
+            expect(response.body.message).toEqual("Length must be a number or a range of numbers (ex: 1-28) and can't exceed 28");
         });
 
         it('should throw error if rarity is invalid', async () => {
@@ -226,7 +238,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return 404 for unminted subhandle', async () => {
-            const response = await request(app?.getServer()).get('/handles/sub@handle');
+            const response = await request(app?.getServer()).get('/handles/nope@handle');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Handle not found');
         });
@@ -393,6 +405,26 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/no_ref_token/reference_token');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({});
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandle_settings', () => {
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandle_settings');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return No sub handle settings found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_settings@handle/subhandle_settings');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return No sub handle settings found', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ enableNft: true, enableVirtual: true });
         });
     });
 });
