@@ -1,15 +1,18 @@
-import {
-    IPersonalization,
-    IPersonalizedHandle,
-    IHandleMetadata,
-    IPzDatum,
-    IReferenceToken,
-    HandleType
-} from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/kora-labs-common';
+
+export interface StoredHandle extends IPersonalizedHandle {
+    amount: number;
+    type: HandleType;
+    default?: boolean;
+    resolved_addresses: {
+        ada: string;
+        [key: string]: string;
+    };
+}
 
 export interface HandleHistory {
-    old: Partial<Handle> | null;
-    new?: Partial<Handle> | null;
+    old: Partial<StoredHandle> | null;
+    new?: Partial<StoredHandle> | null;
 }
 
 export interface ISlotHistoryIndex {
@@ -20,7 +23,7 @@ export interface IHandleFileContent {
     slot: number;
     hash: string;
     schemaVersion?: number;
-    handles: Record<string, Handle>;
+    handles: Record<string, StoredHandle>;
     history: [number, ISlotHistoryIndex][];
 }
 
@@ -51,8 +54,10 @@ export interface SaveMintingTxInput {
     pfp_image?: string;
     datum?: string;
     script?: { type: string; cbor: string };
+    last_update_address?: string;
     personalization?: IPersonalization;
     reference_token?: IReferenceToken;
+    resolved_addresses?: Record<string, string>;
     amount?: number;
     version?: number;
     type: HandleType;
@@ -75,9 +80,6 @@ export interface SavePersonalizationInput {
     reference_token: IReferenceToken;
     personalizationDatum: IPzDatum | null;
     metadata: IHandleMetadata | null;
-    addresses: {
-        [chain: string]: string;
-    };
 }
 
 export interface HolderAddressIndex {
@@ -86,10 +88,4 @@ export interface HolderAddressIndex {
     manuallySet: boolean;
     type: string;
     knownOwnerName: string;
-}
-
-export interface Handle extends IPersonalizedHandle {
-    amount: number;
-    type: HandleType;
-    default?: boolean;
 }

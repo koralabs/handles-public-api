@@ -342,6 +342,7 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
+                resolved_addresses: { ada: '0x123', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 trial: 0,
                 nsfw: 0,
                 agreed_terms: '',
@@ -355,7 +356,6 @@ describe('HandleStore tests', () => {
                 personalization: personalizationData,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: { ada: 'addr123' },
                 metadata: {
                     name: 'chimichanga',
                     image: 'ipfs://123',
@@ -411,7 +411,7 @@ describe('HandleStore tests', () => {
                             old: {
                                 created_slot_number: 99,
                                 default_in_wallet: 'taco',
-                                resolved_addresses: { ada: '' },
+                                resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
                                 updated_slot_number: 99,
                                 utxo: '',
                                 image_hash: '0x123',
@@ -561,8 +561,9 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x444',
                 validated_by: '',
+                resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 trial: 0,
                 nsfw: 0,
                 agreed_terms: '',
@@ -574,7 +575,6 @@ describe('HandleStore tests', () => {
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
-                addresses: {},
                 slotNumber: 200,
                 personalizationDatum,
                 metadata: {
@@ -596,6 +596,7 @@ describe('HandleStore tests', () => {
             expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.pfp_image).toEqual('todo');
             expect(handle?.bg_image).toEqual('todo');
+            expect(handle?.resolved_addresses).toEqual({ ada: 'addr123', btc: '2213kjsjkn', eth: 'sad2wsad' });
             expect(handle?.personalization).toEqual({
                 designer: {
                     bg_border_color: '0xtodo',
@@ -638,7 +639,12 @@ describe('HandleStore tests', () => {
                                     nsfw: false
                                 },
                                 reference_token: defaultReferenceToken,
+                                last_update_address: '0x444',
                                 pfp_image: 'todo',
+                                resolved_addresses: {
+                                    btc: '2213kjsjkn',
+                                    eth: 'sad2wsad'
+                                },
                                 updated_slot_number: 200
                             },
                             old: {
@@ -646,6 +652,9 @@ describe('HandleStore tests', () => {
                                 personalization: undefined,
                                 reference_token: undefined,
                                 pfp_image: '',
+                                resolved_addresses: {
+                                    ada: 'addr123'
+                                },
                                 updated_slot_number: 100
                             }
                         }
@@ -685,6 +694,7 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
+                resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 trial: 0,
                 nsfw: 0,
                 agreed_terms: '',
@@ -697,7 +707,6 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: {},
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -738,7 +747,7 @@ describe('HandleStore tests', () => {
                     script: undefined,
                     pfp_image: '',
                     rarity: 'basic',
-                    resolved_addresses: { ada: '' },
+                    resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
                     updated_slot_number: 200,
                     utxo: '',
                     amount: 1,
@@ -801,7 +810,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: {},
+
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -883,7 +892,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x222',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -897,7 +906,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: {},
+
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -939,7 +948,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x333',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -953,7 +962,7 @@ describe('HandleStore tests', () => {
                 personalization: newPersonalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: newPersonalizationDatum,
-                addresses: {},
+
                 slotNumber: 300,
                 metadata: {
                     name: 'nacho-cheese',
@@ -1003,7 +1012,7 @@ describe('HandleStore tests', () => {
                 designer: '',
                 socials: '',
                 vendor: '',
-                last_update_address: '',
+                last_update_address: '0x444',
                 validated_by: '',
                 trial: 0,
                 nsfw: 0,
@@ -1017,7 +1026,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdatesWithDefaultWalletChange,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: finalPersonalizationDatum,
-                addresses: {},
+
                 slotNumber: 400,
                 metadata: {
                     name: handleName,
@@ -1064,6 +1073,7 @@ describe('HandleStore tests', () => {
                                 trial: false,
                                 nsfw: false
                             },
+                            last_update_address: '0x222',
                             reference_token: defaultReferenceToken,
                             updated_slot_number: 200
                         },
@@ -1089,6 +1099,7 @@ describe('HandleStore tests', () => {
                                 designer: { font_shadow_color: '0xEEE', text_ribbon_colors: undefined },
                                 socials: undefined
                             },
+                            last_update_address: '0x333',
                             updated_slot_number: 300
                         },
                         old: {
@@ -1102,6 +1113,7 @@ describe('HandleStore tests', () => {
                                 trial: false,
                                 nsfw: false
                             },
+                            last_update_address: '0x222',
                             updated_slot_number: 200
                         }
                     }
@@ -1116,6 +1128,7 @@ describe('HandleStore tests', () => {
                         new: {
                             default: false,
                             personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
+                            last_update_address: '0x444',
                             updated_slot_number: 400
                         },
                         old: {
@@ -1128,6 +1141,7 @@ describe('HandleStore tests', () => {
                                 nsfw: false,
                                 trial: false
                             },
+                            last_update_address: '0x333',
                             updated_slot_number: 300
                         }
                     }
@@ -1171,7 +1185,7 @@ describe('HandleStore tests', () => {
                 personalization: tacoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatum,
-                addresses: {},
+
                 slotNumber: 100,
                 metadata: {
                     name: 'taco',
@@ -1225,7 +1239,7 @@ describe('HandleStore tests', () => {
                 personalization: burritoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: burritoPersonalizationDatum,
-                addresses: {},
+
                 slotNumber: 200,
                 metadata: {
                     name: 'burrito',
@@ -1279,7 +1293,7 @@ describe('HandleStore tests', () => {
                 personalization: barbacoaPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: barbacoaPersonalizationDatum,
-                addresses: {},
+
                 slotNumber: 300,
                 metadata: {
                     name: 'barbacoa',
@@ -1333,7 +1347,7 @@ describe('HandleStore tests', () => {
                 personalization: tacoPzUpdate2,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatumUpdate2,
-                addresses: {},
+
                 slotNumber: 400,
                 metadata: {
                     name: 'taco',
@@ -1405,7 +1419,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: {},
+
                 slotNumber: 300,
                 metadata: {
                     name: handleHex,
@@ -1471,7 +1485,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                addresses: {},
+
                 slotNumber: 300,
                 metadata: {
                     name: handleHex,
@@ -1495,7 +1509,7 @@ describe('HandleStore tests', () => {
             expect(virtualSubHandle?.utxo).toEqual(`${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`);
 
             // expect the ada address to be the bech32 encoded version of the reference token address
-            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada.replace('0x', ''), true);
+            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
             expect(virtualSubHandle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
         });

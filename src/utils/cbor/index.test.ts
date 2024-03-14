@@ -368,7 +368,7 @@ describe('CBOR tests', () => {
         });
     });
 
-    describe('Enode/decode numeric keys', () => {
+    describe('Encode/decode numeric keys', () => {
         const getJson = () => [
             '0x008e4ac0583cfeb7a1bb3434f10afc8439aa4d5e7eac6e6f2822ce5b9dfc56a127f684fe6d2bb4eedaef9525a69f0fa08b5796599cb6eae25d',
             '0x700401221efdbba348b80457d4f27b17db1b45ad510511a8756ff564b5',
@@ -430,6 +430,26 @@ describe('CBOR tests', () => {
         it('Should convert cbor to portal datum', async () => {
             const decoded = await decodeCborToJson(cbor, schema);
             expect(decoded).toEqual(getJson());
+        });
+    });
+
+    describe('Encode/deode 0x strings', () => {
+        const getJson = () => ['~0x008e4ac0583cfeb7a1bb3434f10afc8439aa4d5e7eac6e6f2822ce5b9dfc56a127f684fe6d2bb4eedaef9525a69f0fa08b5796599cb6eae25d'];
+
+        const schema = {
+            '[all]': 'string'
+        };
+
+        const cbor = '9f5f584030783030386534616330353833636665623761316262333433346631306166633834333961613464356537656163366536663238323263653562396466633536583461313237663638346665366432626234656564616566393532356136396630666130386235373936353939636236656165323564ffff';
+
+        it('Should convert from JSON to TxMetadataJson with numberic keys', async () => {
+            const encoded = await encodeJsonToDatum(getJson());
+            expect(encoded).toEqual(cbor);
+        });
+
+        it('Should convert cbor to portal datum', async () => {
+            const decoded = await decodeCborToJson(cbor, schema);
+            expect(decoded).toEqual(['0x008e4ac0583cfeb7a1bb3434f10afc8439aa4d5e7eac6e6f2822ce5b9dfc56a127f684fe6d2bb4eedaef9525a69f0fa08b5796599cb6eae25d']);
         });
     });
 });

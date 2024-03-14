@@ -1,4 +1,4 @@
-import { IHandleStats, IPersonalizedHandle } from '@koralabs/kora-labs-common';
+import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -6,6 +6,7 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
+import { StoredHandle } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
@@ -24,11 +25,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const characterArray = getHandles(HandleStore.charactersIndex, characters);
         let lengthArray: string[] = [];
         if (length?.includes('-')) {
-            for (let i=parseInt(length.split('-')[0]);i<=parseInt(length.split('-')[1]);i++){
-                lengthArray = lengthArray.concat(getHandles(HandleStore.lengthIndex, `${i}`))
+            for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
+                lengthArray = lengthArray.concat(getHandles(HandleStore.lengthIndex, `${i}`));
             }
-        }
-        else {
+        } else {
             lengthArray = getHandles(HandleStore.lengthIndex, length);
         }
         const rarityArray = getHandles(HandleStore.rarityIndex, rarity);
@@ -45,19 +45,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const holderAddressItemsArray = getHolderAddressHandles(holder_address);
 
         // filter out any empty arrays
-        const filteredArrays = [
-            characterArray,
-            lengthArray,
-            rarityArray,
-            numericModifiersArray,
-            holderAddressItemsArray,
-            ogArray
-        ].filter((a) => a.length);
+        const filteredArrays = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderAddressItemsArray, ogArray].filter((a) => a.length);
 
         // get the intersection of all the arrays
-        const handleNames = filteredArrays.length
-            ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c)))
-            : [];
+        const handleNames = filteredArrays.length ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c))) : [];
 
         // remove duplicates by getting the unique names
         const uniqueHandleNames = [...new Set(handleNames)];
@@ -67,7 +58,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
-                ? nonEmptyHandles.reduce<IPersonalizedHandle[]>((agg, name) => {
+                ? nonEmptyHandles.reduce<StoredHandle[]>((agg, name) => {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
@@ -75,7 +66,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       }
                       return agg;
                   }, [])
-                : HandleStore.getHandles().reduce<IPersonalizedHandle[]>((agg, handle) => {
+                : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                       if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
                           agg.push(handle);
                       }
@@ -88,27 +79,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return array;
     }
 
-    public async getAll({
-        pagination,
-        search
-    }: {
-        pagination: HandlePaginationModel;
-        search: HandleSearchModel;
-    }): Promise<{searchTotal: number, handles: IPersonalizedHandle[]}> {
+    public async getAll({ pagination, search }: { pagination: HandlePaginationModel; search: HandleSearchModel }): Promise<{ searchTotal: number; handles: StoredHandle[] }> {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
         let items = this.search(search);
-    
+
         if (slotNumber) {
-            items.sort((a, b) =>
-                sort === 'desc'
-                    ? b.updated_slot_number - a.updated_slot_number
-                    : a.updated_slot_number - b.updated_slot_number ?? 0
-            );
+            items.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number ?? 0));
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-            return {searchTotal: items.length, handles};
+            return { searchTotal: items.length, handles };
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
@@ -125,14 +106,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        return {searchTotal: items.length, handles};
+        return { searchTotal: items.length, handles };
     }
 
-    public async getAllHolders({
-        pagination
-    }: {
-        pagination: HolderPaginationModel;
-    }): Promise<HolderAddressDetailsResponse[]> {
+    public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetailsResponse[]> {
         const { page, sort, recordsPerPage } = pagination;
 
         const items: HolderAddressDetailsResponse[] = new Array();
@@ -167,21 +144,19 @@ class MemoryHandlesRepository implements IHandlesRepository {
                 .map(({ value }) => value);
             return shuffledHandles.map((handle) => handle.name);
         } else {
-            filteredHandles.sort((a, b) =>
-                sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)
-            );
+            filteredHandles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
         }
         return filteredHandles.map((handle) => handle.name);
     }
 
-    public async getHandleByName(handleName: string): Promise<IPersonalizedHandle | null> {
+    public async getHandleByName(handleName: string): Promise<StoredHandle | null> {
         const handle = HandleStore.get(handleName);
         if (handle) return handle;
 
         return null;
     }
 
-    public async getHandleByHex(handleHex: string): Promise<IPersonalizedHandle | null> {
+    public async getHandleByHex(handleHex: string): Promise<StoredHandle | null> {
         const handle = HandleStore.getByHex(handleHex);
         if (handle) return handle;
 

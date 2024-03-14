@@ -1,5 +1,6 @@
-import { IHandle, Rarity } from '@koralabs/kora-labs-common';
+import { Rarity } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
+import { StoredHandle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
 export class HandleViewModel {
     hex: string;
@@ -19,16 +20,20 @@ export class HandleViewModel {
     pfp_asset?: string;
     bg_image?: string;
     bg_asset?: string;
-    resolved_addresses: { ada: string; eth?: string | undefined; btc?: string | undefined };
+    resolved_addresses: {
+        ada: string;
+        [key: string]: string;
+    };
     created_slot_number: number;
     updated_slot_number: number;
     has_datum: boolean;
     image_hash: string;
     standard_image_hash: string;
     svg_version: string;
+    last_update_address?: string;
     version: number;
 
-    constructor(handle: IHandle) {
+    constructor(handle: StoredHandle) {
         if (!handle.utxo) {
             throw new HttpException(404, 'Handle not found');
         }
@@ -57,6 +62,7 @@ export class HandleViewModel {
         this.svg_version = handle.svg_version;
         this.image_hash = handle.image_hash?.replace('0x', '');
         this.standard_image_hash = handle.standard_image_hash?.replace('0x', '');
+        this.last_update_address = handle.last_update_address;
         this.version = handle.version;
     }
 }
