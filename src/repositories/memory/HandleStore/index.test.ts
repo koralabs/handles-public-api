@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
+import { HandleType, IPersonalization, IPzDatum, IReferenceToken, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -1512,6 +1512,271 @@ describe('HandleStore tests', () => {
             expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
             expect(virtualSubHandle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+        });
+    });
+
+    describe('saveSubHandleSettingsChange tests', () => {
+        it('Should update SubHandle settings', async () => {
+            await HandleStore.saveMintedHandle({
+                hex: 'shrimp-taco-hex',
+                name: 'shrimp-taco',
+                adaAddress: 'addr123',
+                og_number: 0,
+                utxo: 'utxo123#0',
+                image: 'ipfs://123',
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
+            });
+
+            const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const settings: ISubHandleSettingsDatum = {
+                nft: {
+                    enablePz: 1,
+                    enabled: 1,
+                    tierPricing: [
+                        [1, 1000],
+                        [2, 500],
+                        [3, 250],
+                        [4, 10]
+                    ]
+                },
+                virtual: {
+                    enablePz: 1,
+                    enabled: 1,
+                    expires_in_days: 360,
+                    tierPricing: [[1, 15]]
+                }
+            };
+
+            await HandleStore.saveSubHandleSettingsChange({
+                name: 'shrimp-taco',
+                reference_token,
+                settings,
+                slotNumber: 200
+            });
+
+            const handle = HandleStore.get('shrimp-taco');
+            expect(handle?.subhandle_settings).toEqual({
+                reference_token,
+                settings
+            });
+
+            expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
+                [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
+                [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
+                [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
+                [100, { 'shrimp-taco': { new: { name: 'shrimp-taco' }, old: null } }],
+                [
+                    200,
+                    {
+                        'shrimp-taco': {
+                            new: {
+                                subhandle_settings: {
+                                    settings,
+                                    reference_token
+                                },
+                                updated_slot_number: 200
+                            },
+                            old: {
+                                updated_slot_number: 100
+                            }
+                        }
+                    }
+                ]
+            ]);
+        });
+
+        it('Should update settings and history correctly when saving multiple times', async () => {
+            const handleName = 'halibut-taco';
+            const handleHex = `${handleName}-hex`;
+            await HandleStore.saveMintedHandle({
+                hex: handleHex,
+                name: handleName,
+                adaAddress: 'addr123',
+                og_number: 0,
+                utxo: 'utxo123#0',
+                image: '',
+                slotNumber: 100,
+                image_hash: '0x123',
+                svg_version: '1.0.0',
+                type: HandleType.HANDLE
+            });
+
+            const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const settings: ISubHandleSettingsDatum = {
+                nft: {
+                    enablePz: 1,
+                    enabled: 1,
+                    tierPricing: [
+                        [1, 1000],
+                        [2, 500],
+                        [3, 250],
+                        [4, 10]
+                    ]
+                },
+                virtual: {
+                    enablePz: 1,
+                    enabled: 1,
+                    expires_in_days: 360,
+                    tierPricing: [[1, 15]]
+                }
+            };
+
+            // First settings change
+            await HandleStore.saveSubHandleSettingsChange({
+                name: handleName,
+                reference_token,
+                settings,
+                slotNumber: 200
+            });
+
+            const handle = HandleStore.get(handleName);
+            expect(handle?.subhandle_settings).toEqual({
+                reference_token: { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
+                settings
+            });
+
+            const newSettingsChange: any = {
+                enablePz: 0,
+                tierPricing: [[1, 1000]]
+            };
+
+            await HandleStore.saveSubHandleSettingsChange({
+                name: handleName,
+                reference_token,
+                settings: {
+                    ...settings,
+                    nft: {
+                        ...settings.nft,
+                        ...newSettingsChange
+                    }
+                },
+                slotNumber: 300
+            });
+
+            const finalSettingsChange: any = {
+                enablePz: 1,
+                tierPricing: [
+                    [1, 1],
+                    [2, 2],
+                    [3, 3],
+                    [4, 4],
+                    [5, 5],
+                    [6, 6],
+                    [7, 7]
+                ]
+            };
+
+            await HandleStore.saveSubHandleSettingsChange({
+                name: handleName,
+                reference_token,
+                settings: {
+                    ...settings,
+                    nft: {
+                        ...settings.nft,
+                        ...finalSettingsChange
+                    }
+                },
+                slotNumber: 400
+            });
+
+            // expect the first to be old null, meaning it was minted
+            expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([100, { [handleName]: { new: { name: handleName }, old: null } }]);
+
+            // expect the second to have the first pz updates.
+            expect(Array.from(HandleStore.slotHistoryIndex)[4]).toEqual([
+                200,
+                {
+                    [handleName]: {
+                        new: {
+                            subhandle_settings: {
+                                settings,
+                                reference_token
+                            },
+                            updated_slot_number: 200
+                        },
+                        old: {
+                            updated_slot_number: 100
+                        }
+                    }
+                }
+            ]);
+
+            // expect the third to have the second pz updates which didn't include social links
+            expect(Array.from(HandleStore.slotHistoryIndex)[5]).toEqual([
+                300,
+                {
+                    [handleName]: {
+                        new: {
+                            subhandle_settings: {
+                                settings: {
+                                    nft: {
+                                        enablePz: 0,
+                                        tierPricing: [[1, 1000]]
+                                    }
+                                }
+                            },
+                            updated_slot_number: 300
+                        },
+                        old: {
+                            subhandle_settings: {
+                                settings,
+                                reference_token
+                            },
+                            updated_slot_number: 200
+                        }
+                    }
+                }
+            ]);
+
+            // expect the third to have the second pz updates which didn't include social links
+            expect(Array.from(HandleStore.slotHistoryIndex)[6]).toEqual([
+                400,
+                {
+                    [handleName]: {
+                        new: {
+                            subhandle_settings: {
+                                settings: {
+                                    nft: {
+                                        enablePz: 1,
+                                        tierPricing: [
+                                            [1, 1],
+                                            [2, 2],
+                                            [3, 3],
+                                            [4, 4],
+                                            [5, 5],
+                                            [6, 6],
+                                            [7, 7]
+                                        ]
+                                    }
+                                }
+                            },
+                            updated_slot_number: 400
+                        },
+                        old: {
+                            subhandle_settings: {
+                                reference_token,
+                                settings: {
+                                    nft: {
+                                        enablePz: 0,
+                                        enabled: 1,
+                                        tierPricing: [[1, 1000]]
+                                    },
+                                    virtual: {
+                                        enablePz: 1,
+                                        enabled: 1,
+                                        expires_in_days: 360,
+                                        tierPricing: [[1, 15]]
+                                    }
+                                }
+                            },
+                            updated_slot_number: 300
+                        }
+                    }
+                }
+            ]);
         });
     });
 

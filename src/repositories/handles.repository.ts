@@ -3,7 +3,7 @@ import { HolderAddressDetailsResponse } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import { HolderPaginationModel } from '../models/holderPagination.model';
-import { StoredHandle } from './memory/interfaces/handleStore.interfaces';
+import { StoredHandle, SubHandleSettings } from './memory/interfaces/handleStore.interfaces';
 
 interface IHandlesRepository {
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
@@ -16,7 +16,7 @@ interface IHandlesRepository {
     getTotalHandlesStats: () => { total_handles: number; total_holders: number };
     currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
-    getSubHandleSettings: (handleName: string) => Promise<{ enableNft?: boolean; enableVirtual?: boolean } | null>;
+    getSubHandleSettings: (handleName: string) => Promise<SubHandleSettings | null>;
 }
 
 export default IHandlesRepository;

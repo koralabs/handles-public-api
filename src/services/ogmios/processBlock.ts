@@ -9,6 +9,7 @@ import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
 import { portalSchema } from '../../utils/cbor/schema/portal';
 import { designerSchema } from '../../utils/cbor/schema/designer';
 import { socialsSchema } from '../../utils/cbor/schema/socials';
+import { subHandleSettingsDatumSchema } from '../../utils/cbor/schema/subHandleSettings';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -209,6 +210,38 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
     });
 };
 
+const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
+    const { name } = getHandleNameFromAssetName(assetName);
+
+    if (!datum) {
+        Logger.log({
+            message: `no datum for SubHandle token ${assetName}`,
+            category: LogCategory.ERROR,
+            event: 'processBlock.processSubHandleSettingsToken.noDatum'
+        });
+        return;
+    }
+
+    const [txId, indexString] = utxo.split('#');
+    const index = parseInt(indexString);
+    let reference_token = {
+        tx_id: txId,
+        index,
+        lovelace,
+        datum,
+        address
+    };
+
+    const settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
+
+    await HandleStore.saveSubHandleSettingsChange({
+        name,
+        settings,
+        reference_token,
+        slotNumber
+    });
+};
+
 const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
     if (assetName.includes(AssetNameLabel.LABEL_222)) {
         await processAssetToken({
@@ -227,6 +260,11 @@ const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lo
 
     if (assetName.includes(AssetNameLabel.LABEL_100) || assetName.includes(AssetNameLabel.LABEL_000)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
+        return;
+    }
+
+    if (assetName.includes(AssetNameLabel.LABEL_001)) {
+        await processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 

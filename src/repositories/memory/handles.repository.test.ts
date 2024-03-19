@@ -7,7 +7,7 @@ import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
-import { HandleType } from '@koralabs/kora-labs-common';
+import { HandleType, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
 
 describe('MemoryHandlesRepository Tests', () => {
     jest.mock('../../utils/addresses');
@@ -319,6 +319,23 @@ describe('MemoryHandlesRepository Tests', () => {
     });
 
     describe('getSubHandleSettings', () => {
+        beforeAll(async () => {
+            const saveHandleInput: SaveMintingTxInput = {
+                hex: 'chili-colorado-hex',
+                name: 'chili-colorado',
+                adaAddress: 'addr1chili-colorado',
+                og_number: 0,
+                image: '',
+                slotNumber: 0,
+                utxo: 'test_tx#0',
+                datum: 'a2some2key6another2key',
+                image_hash: '',
+                svg_version: '',
+                type: HandleType.HANDLE
+            };
+            await Promise.all([HandleStore.saveMintedHandle(saveHandleInput)]);
+        });
+
         it('should not get subhandle settings if handle does not exist', async () => {
             const repo = new MemoryHandlesRepository();
             try {
@@ -329,11 +346,41 @@ describe('MemoryHandlesRepository Tests', () => {
             }
         });
 
-        // TODO: add subhandle settings to handle store
-        // it('should get subhandle settings by name', async () => {
-        //     const repo = new MemoryHandlesRepository();
-        //     const result = await repo.getSubHandleSettings('salsa');
-        //     expect(result).toEqual(null);
-        // });
+        it('should get subhandle settings by name', async () => {
+            const repo = new MemoryHandlesRepository();
+
+            const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const settings: ISubHandleSettingsDatum = {
+                nft: {
+                    enablePz: 1,
+                    enabled: 1,
+                    tierPricing: [
+                        [1, 1000],
+                        [2, 500],
+                        [3, 250],
+                        [4, 10]
+                    ]
+                },
+                virtual: {
+                    enablePz: 1,
+                    enabled: 1,
+                    expires_in_days: 360,
+                    tierPricing: [[1, 15]]
+                }
+            };
+
+            await HandleStore.saveSubHandleSettingsChange({
+                name: 'chili-colorado',
+                reference_token,
+                settings,
+                slotNumber: 0
+            });
+
+            const result = await repo.getSubHandleSettings('chili-colorado');
+            expect(result).toEqual({
+                reference_token,
+                settings
+            });
+        });
     });
 });

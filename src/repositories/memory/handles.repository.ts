@@ -6,7 +6,7 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
-import { StoredHandle } from './interfaces/handleStore.interfaces';
+import { StoredHandle, SubHandleSettings } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
@@ -190,7 +190,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return datum;
     }
 
-    public async getSubHandleSettings(handleName: string): Promise<{ enableNft?: boolean; enableVirtual?: boolean } | null> {
+    public async getSubHandleSettings(handleName: string): Promise<SubHandleSettings | null> {
         const handle = HandleStore.get(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');

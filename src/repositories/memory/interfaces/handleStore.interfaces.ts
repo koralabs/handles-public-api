@@ -1,4 +1,9 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
+
+export interface SubHandleSettings {
+    settings: ISubHandleSettingsDatum;
+    reference_token: IReferenceToken;
+}
 
 export interface StoredHandle extends IPersonalizedHandle {
     amount: number;
@@ -8,10 +13,7 @@ export interface StoredHandle extends IPersonalizedHandle {
         ada: string;
         [key: string]: string;
     };
-    subhandle_settings?: {
-        enableNft?: boolean;
-        enableVirtual?: boolean;
-    };
+    subhandle_settings?: SubHandleSettings;
 }
 
 export interface HandleHistory {
@@ -84,6 +86,13 @@ export interface SavePersonalizationInput {
     reference_token: IReferenceToken;
     personalizationDatum: IPzDatum | null;
     metadata: IHandleMetadata | null;
+}
+
+export interface SaveSubHandleSettingsInput {
+    name: string;
+    settings: ISubHandleSettingsDatum;
+    reference_token: IReferenceToken;
+    slotNumber: number;
 }
 
 export interface HolderAddressIndex {

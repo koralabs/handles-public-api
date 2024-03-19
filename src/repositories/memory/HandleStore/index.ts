@@ -6,13 +6,12 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { Worker } from 'worker_threads';
-import { diff } from 'deep-object-diff';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
-import { getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle } from '../interfaces/handleStore.interfaces';
+import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../interfaces/handleStore.interfaces';
 import { bech32FromHex } from '../../../utils/serialization';
 
 export class HandleStore {
@@ -424,6 +423,35 @@ export class HandleStore {
             svg_version: personalizationDatum?.svg_version ?? '',
             default: personalizationDatum?.default == 1 ?? false,
             last_update_address: personalizationDatum?.last_update_address
+        };
+
+        await HandleStore.save({
+            handle: updatedHandle,
+            oldHandle: existingHandle
+        });
+    }
+
+    static async saveSubHandleSettingsChange({ name, settings, reference_token, slotNumber }: SaveSubHandleSettingsInput) {
+        const existingHandle = HandleStore.get(name);
+        if (!existingHandle) {
+            // There should always be an existing root handle for a subhandle
+            const message = `Cannot save subhandle settings for ${name} because root handle does not exist`;
+            Logger.log({
+                message,
+                event: 'HandleStore.saveSubHandleSettingsChange',
+                category: LogCategory.NOTIFY
+            });
+
+            throw new Error(message);
+        }
+
+        const updatedHandle: StoredHandle = {
+            ...existingHandle,
+            subhandle_settings: {
+                settings,
+                reference_token
+            },
+            updated_slot_number: slotNumber
         };
 
         await HandleStore.save({
