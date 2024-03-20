@@ -1,4 +1,5 @@
 import { Logger } from '@koralabs/kora-labs-common';
+import crc8 from 'crc/crc8';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 import { NETWORK } from '../config';
@@ -122,4 +123,28 @@ export const diff = (lhs: any, rhs: any) => {
         acc[key] = difference; // return updated key
         return acc; // return updated key
     }, deletedValues);
+};
+
+export const checkNameLabel = (assetName: string) => {
+    const assetNameString = typeof assetName === 'string' ? assetName : new TextDecoder().decode(assetName);
+    let isCip67 = false;
+    let assetLabel = null;
+    let actualAssetName = Buffer.from(assetName, 'hex').toString('utf8');
+    if (assetNameString.length >= 8) {
+        const maybeAssetLabel = assetNameString.slice(0, 8);
+        if (maybeAssetLabel.startsWith('0') && maybeAssetLabel.endsWith('0')) {
+            const label = maybeAssetLabel.slice(1, 5);
+            const check = maybeAssetLabel.slice(5, 7);
+            if (crc8(Buffer.from(label, 'hex')).toString(16).padStart(2, '0') == check) {
+                isCip67 = true;
+                assetLabel = `${parseInt(label, 16).toString().padStart(3, '0')}`;
+                actualAssetName = Buffer.from(assetName.slice(8), 'hex').toString('utf8');
+            }
+        }
+    }
+    return {
+        isCip67,
+        assetLabel,
+        assetName: actualAssetName
+    };
 };

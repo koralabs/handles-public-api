@@ -10,6 +10,7 @@ import { portalSchema } from '../../utils/cbor/schema/portal';
 import { designerSchema } from '../../utils/cbor/schema/designer';
 import { socialsSchema } from '../../utils/cbor/schema/socials';
 import { subHandleSettingsDatumSchema } from '../../utils/cbor/schema/subHandleSettings';
+import { checkNameLabel } from '../../utils/util';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -324,8 +325,19 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
 };
 
 const isMintingTransaction = (txBody: TxBody, assetName: string) => {
-    const result = txBody.body.mint?.assets?.[assetName];
-    return result !== undefined;
+    const assetNameInMintAssets = txBody.body.mint?.assets?.[assetName] !== undefined;
+    // is CIP67 is false OR is CIP67 is true and label is 222
+    const { isCip67, assetLabel } = checkNameLabel(assetName);
+    if (isCip67) {
+        if (assetLabel === '222') {
+            return assetNameInMintAssets;
+        }
+
+        return false;
+    }
+
+    // not cip68
+    return assetNameInMintAssets;
 };
 
 export const processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
