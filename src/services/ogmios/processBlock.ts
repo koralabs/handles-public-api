@@ -235,6 +235,8 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
 
     const settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
 
+    Logger.log({ message: `saving ${JSON.stringify({ settings, reference_token })}`, category: LogCategory.INFO, event: 'processSubHandleSettingsToken' });
+
     await HandleStore.saveSubHandleSettingsChange({
         name,
         settings,
@@ -432,9 +434,9 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                             isMintTx
                         };
 
-                        // if (assetName.includes(AssetNameLabel.LABEL_000)) {
-                        //     console.log('assetName', assetName);
-                        // }
+                        if (assetName.includes(AssetNameLabel.LABEL_001)) {
+                            Logger.log({ message: `SubHandleSettings ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.subHandleSettings' });
+                        }
 
                         if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
