@@ -434,6 +434,8 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                             isMintTx
                         };
 
+                        Logger.log({ message: `Process ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
+
                         if (assetName.includes('73685f73657474696e67735f303032')) {
                             Logger.log({ message: `Asset Found ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.foundAsset' });
                         }
