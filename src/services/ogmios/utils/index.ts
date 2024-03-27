@@ -74,7 +74,7 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
         hex = hex.split('.')[1];
     }
 
-    const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
+    const nameWithoutLabel: string = [...Object.values(AssetNameLabel), '00001070'].reduce((acc, label) => acc.replace(label, ''), hex);
 
     return {
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
@@ -137,8 +137,7 @@ export const getRarity = (name: string): Rarity => {
     return Rarity.basic;
 };
 
-export const stringifyBlock = (metadata: any) =>
-    JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
+export const stringifyBlock = (metadata: any) => JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
 
 export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
     let ogmiosResults = null;
