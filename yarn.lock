@@ -631,11 +631,13 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/kora-labs-common@2.6.1":
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-2.6.1.tgz#c5c4a754343ffbf961f23765b774cb5a7f98b980"
-  integrity sha512-V2stwJL7BYQ/V6NaTEq5zguDhKDrSmZGtzyKT6nEvB57VlBZlyaz+VhVLx5FYw2ytrX2MpqQz+ffrldEToWMZw==
+"@koralabs/kora-labs-common@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-3.0.0.tgz#ee3ea55de18771e2faaaad5860122d8c3ef2935e"
+  integrity sha512-sWLwqofYDvtyJ6hzJrD6QK+4o0fhi9k8hWigD/rViKbXtXKJPbQ8FCBzSxP18E5sz3K/mc36kIaeZsNzabmPaQ==
   dependencies:
+    boolean "^3.2.0"
+    cbor "^9.0.2"
     pluralize "^8.0.0"
 
 "@messageformat/core@^3.0.1":
@@ -1507,6 +1509,13 @@ cbor@^8.1.0:
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/cbor/-/cbor-8.1.0.tgz#cfc56437e770b73417a2ecbfc9caf6b771af60d5"
   integrity sha512-DwGjNW9omn6EwP70aXsn7FQJx5kO12tX0bZkaTjzdVFM6/7nhA4t0EENocKGx6D2Bch9PE2KzCUf5SceBdeijg==
+  dependencies:
+    nofilter "^3.1.0"
+
+cbor@^9.0.2:
+  version "9.0.2"
+  resolved "https://registry.yarnpkg.com/cbor/-/cbor-9.0.2.tgz#536b4f2d544411e70ec2b19a2453f10f83cd9fdb"
+  integrity sha512-JPypkxsB10s9QOWwa6zwPzqE1Md3vqpPc+cai4sAecuCsRyAtAl/pMyhPlMbT/xtPnm2dznJZYRLui57qiRhaQ==
   dependencies:
     nofilter "^3.1.0"
 
