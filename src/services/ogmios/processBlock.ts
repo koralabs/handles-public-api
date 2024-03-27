@@ -235,8 +235,6 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
 
     const settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
 
-    Logger.log({ message: `saving ${JSON.stringify({ settings, reference_token })}`, category: LogCategory.INFO, event: 'processSubHandleSettingsToken' });
-
     await HandleStore.saveSubHandleSettingsChange({
         name,
         settings,
