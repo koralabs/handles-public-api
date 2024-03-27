@@ -266,7 +266,7 @@ const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lo
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_001)) {
+    if (assetName.includes('00001070')) {
         await processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
@@ -437,7 +437,7 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                         console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
                         Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LABEL_001 ${AssetNameLabel.LABEL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
-                        if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                        if ([...Object.values(AssetNameLabel), '00001070'].some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
                         } else {
                             await processAssetToken(input);
