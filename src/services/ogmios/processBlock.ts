@@ -2,7 +2,7 @@ import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
+import { buildOnChainObject, getHandleNameFromAssetName, stringifyBlock } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { decodeCborToJson } from '../../utils/cbor';
 import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
@@ -435,14 +435,14 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                         };
 
                         console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                        Logger.log({ message: `Process ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
+                        Logger.log({ message: `Process ${stringifyBlock(input)} | has assetNameLabel ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
                         if (assetName.includes('73685f73657474696e67735f303032')) {
-                            Logger.log({ message: `Asset Found ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.foundAsset' });
+                            Logger.log({ message: `Asset Found ${stringifyBlock(input)}`, category: LogCategory.INFO, event: 'processAssetToken.foundAsset' });
                         }
 
                         if (assetName.includes(AssetNameLabel.LABEL_001)) {
-                            Logger.log({ message: `SubHandleSettings ${JSON.stringify(input)}`, category: LogCategory.INFO, event: 'processAssetToken.subHandleSettings' });
+                            Logger.log({ message: `SubHandleSettings ${stringifyBlock(input)}`, category: LogCategory.INFO, event: 'processAssetToken.subHandleSettings' });
                         }
 
                         if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
