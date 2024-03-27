@@ -435,15 +435,7 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                         };
 
                         console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                        Logger.log({ message: `Process ${stringifyBlock(input)} | has assetNameLabel ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
-
-                        if (assetName.includes('73685f73657474696e67735f303032')) {
-                            Logger.log({ message: `Asset Found ${stringifyBlock(input)}`, category: LogCategory.INFO, event: 'processAssetToken.foundAsset' });
-                        }
-
-                        if (assetName.includes(AssetNameLabel.LABEL_001)) {
-                            Logger.log({ message: `SubHandleSettings ${stringifyBlock(input)}`, category: LogCategory.INFO, event: 'processAssetToken.subHandleSettings' });
-                        }
+                        Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LABEL_001 ${AssetNameLabel.LABEL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
                         if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
