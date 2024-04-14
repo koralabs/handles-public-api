@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
@@ -214,13 +214,15 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
 const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
     const { name } = getHandleNameFromAssetName(assetName);
 
+    let settings: ISubHandleSettingsDatum = {};
     if (!datum) {
         Logger.log({
             message: `no datum for SubHandle token ${assetName}`,
             category: LogCategory.ERROR,
             event: 'processBlock.processSubHandleSettingsToken.noDatum'
         });
-        return;
+    } else {
+        settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
     }
 
     const [txId, indexString] = utxo.split('#');
@@ -229,11 +231,9 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
         tx_id: txId,
         index,
         lovelace,
-        datum,
+        datum: datum ?? '',
         address
     };
-
-    const settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
 
     await HandleStore.saveSubHandleSettingsChange({
         name,
