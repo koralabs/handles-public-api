@@ -17,6 +17,7 @@ interface IHandlesRepository {
     currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
     getSubHandleSettings: (handleName: string) => Promise<SubHandleSettings | null>;
+    getSubHandles: (handleName: string) => Promise<StoredHandle[]>;
 }
 
 export default IHandlesRepository;

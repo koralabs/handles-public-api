@@ -319,10 +319,12 @@ describe('MemoryHandlesRepository Tests', () => {
     });
 
     describe('getSubHandleSettings', () => {
+        const rootHandleName = 'chili-colorado';
+
         beforeAll(async () => {
-            const saveHandleInput: SaveMintingTxInput = {
+            const rootHandleInput: SaveMintingTxInput = {
                 hex: 'chili-colorado-hex',
-                name: 'chili-colorado',
+                name: rootHandleName,
                 adaAddress: 'addr1chili-colorado',
                 og_number: 0,
                 image: '',
@@ -333,7 +335,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 svg_version: '',
                 type: HandleType.HANDLE
             };
-            await Promise.all([HandleStore.saveMintedHandle(saveHandleInput)]);
+            await Promise.all([HandleStore.saveMintedHandle(rootHandleInput)]);
         });
 
         it('should not get subhandle settings if handle does not exist', async () => {
@@ -370,17 +372,46 @@ describe('MemoryHandlesRepository Tests', () => {
             };
 
             await HandleStore.saveSubHandleSettingsChange({
-                name: 'chili-colorado',
+                name: rootHandleName,
                 reference_token,
                 settings,
                 slotNumber: 0
             });
 
-            const result = await repo.getSubHandleSettings('chili-colorado');
+            const result = await repo.getSubHandleSettings(rootHandleName);
             expect(result).toEqual({
                 reference_token,
                 settings
             });
+        });
+    });
+
+    describe('getSubHandles', () => {
+        const rootHandleName = 'chili-verde';
+        const subHandle = `taco@${rootHandleName}`;
+
+        beforeAll(async () => {
+            const subHandleInput: SaveMintingTxInput = {
+                hex: `${subHandle}-hex`,
+                name: subHandle,
+                adaAddress: `addr1${rootHandleName}`,
+                og_number: 0,
+                image: '',
+                slotNumber: 0,
+                utxo: 'test_tx#0',
+                datum: 'a2some2key6another2key',
+                image_hash: '',
+                svg_version: '',
+                type: HandleType.NFT_SUBHANDLE
+            };
+            await Promise.all([HandleStore.saveMintedHandle(subHandleInput)]);
+        });
+
+        it('should get subhandles for root handle', async () => {
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getSubHandles(rootHandleName);
+            expect(result.length).toEqual(1);
+            expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ name: subHandle })]));
         });
     });
 });

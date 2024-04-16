@@ -19,6 +19,7 @@ export class HandleStore {
     private static handles = new Map<string, StoredHandle>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
+    static subHandlesIndex = new Map<string, Set<string>>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
@@ -88,6 +89,10 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
+    static getRootHandleSubHandles = (rootHandle: string) => {
+        return HandleStore.subHandlesIndex.get(rootHandle) ?? new Set();
+    };
+
     static save = async ({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => {
         const updatedHandle: StoredHandle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
         const {
@@ -122,6 +127,11 @@ export class HandleStore {
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
+
+        if (name.includes('@')) {
+            const rootHandle = name.split('@')[1];
+            this.addIndexSet(this.subHandlesIndex, rootHandle, name);
+        }
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
@@ -163,6 +173,12 @@ export class HandleStore {
         this.charactersIndex.get(characters)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
+
+        // delete from subhandles index
+        if (handleName.includes('@')) {
+            const rootHandle = handleName.split('@')[1];
+            this.subHandlesIndex.get(rootHandle)?.delete(handleName);
+        }
 
         // remove the stake key index
         this.holderAddressIndex.get(holder)?.handles.delete(handleName);
@@ -500,6 +516,7 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.handles),
             ...this.convertMapsToObjects(this.rarityIndex),
             ...this.convertMapsToObjects(this.ogIndex),
+            ...this.convertMapsToObjects(this.subHandlesIndex),
             ...this.convertMapsToObjects(this.lengthIndex),
             ...this.convertMapsToObjects(this.charactersIndex),
             ...this.convertMapsToObjects(this.numericModifiersIndex)
@@ -780,6 +797,7 @@ export class HandleStore {
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
         this.rarityIndex = new Map<string, Set<string>>();
         this.ogIndex = new Map<string, Set<string>>();
+        this.subHandlesIndex = new Map<string, Set<string>>();
         this.charactersIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();

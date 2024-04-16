@@ -5,7 +5,7 @@ import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '../utils/cbor';
 import * as scripts from '../config/scripts';
-import { ScriptDetails } from '@koralabs/kora-labs-common';
+import { HandleType, ScriptDetails } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -116,6 +116,13 @@ jest.mock('../ioc', () => ({
                     enableNft: true,
                     enableVirtual: true
                 };
+            },
+            getSubHandles: (handleName: string) => {
+                return [
+                    { name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE },
+                    { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
+                    { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+                ];
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -425,6 +432,42 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({ enableNft: true, enableVirtual: true });
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandles', () => {
+        it('should return 404 for handle not found subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandles');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return all subhandles', async () => {
+            const handleName = 'taco';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([
+                { name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE },
+                { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+            ]);
+        });
+
+        it('should return all virtual subHandles', async () => {
+            const handleName = 'burritos';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=virtual`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([
+                { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+            ]);
+        });
+
+        it('should return all nft subHandles', async () => {
+            const handleName = 'burritos';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=nft`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([{ name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE }]);
         });
     });
 });

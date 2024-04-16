@@ -4,7 +4,7 @@ import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.inte
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType } from '@koralabs/kora-labs-common';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
@@ -212,6 +212,29 @@ class HandlesController {
             }
 
             res.status(handleData.code).json(settings);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public async getSubHandles(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+
+            if (!handleData?.handle) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            let subHandles = await handleRepo.getSubHandles(handleData.handle.name);
+
+            if (req.query.type) {
+                const type = req.query.type === 'virtual' ? HandleType.VIRTUAL_SUBHANDLE : HandleType.NFT_SUBHANDLE;
+                subHandles = subHandles.filter((subHandle) => subHandle.type === type);
+            }
+
+            res.status(handleData.code).json(subHandles);
         } catch (error) {
             next(error);
         }

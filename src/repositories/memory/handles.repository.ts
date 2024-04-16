@@ -200,6 +200,17 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return subhandle_settings ?? null;
     }
 
+    public async getSubHandles(handleName: string): Promise<StoredHandle[]> {
+        const subHandles = HandleStore.getRootHandleSubHandles(handleName);
+        return [...subHandles].reduce<StoredHandle[]>((agg, item) => {
+            const subHandle = HandleStore.get(item);
+            if (subHandle) {
+                agg.push(subHandle);
+            }
+            return agg;
+        }, []);
+    }
+
     public getHandleStats(): IHandleStats {
         return HandleStore.getMetrics();
     }

@@ -469,9 +469,10 @@ describe('HandleStore tests', () => {
 
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
+            const subHandleName = 'sub@hndl';
             await HandleStore.saveMintedHandle({
                 hex: '000de14073756240686e646c',
-                name: 'sub@hndl',
+                name: subHandleName,
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
@@ -483,9 +484,13 @@ describe('HandleStore tests', () => {
                 type: HandleType.NFT_SUBHANDLE
             });
 
-            const handle = HandleStore.get('sub@hndl');
-            expect(handle?.name).toEqual('sub@hndl');
+            const handle = HandleStore.get(subHandleName);
+            expect(handle?.name).toEqual(subHandleName);
             expect(handle?.type).toEqual(HandleType.NFT_SUBHANDLE);
+
+            // expect subHandle to get added to the subHandlesIndex
+            const subHandles = HandleStore.getRootHandleSubHandles('hndl');
+            expect([...subHandles]).toEqual([subHandleName]);
         });
 
         it('Should save an Virtual Sub Handle', async () => {
@@ -516,6 +521,10 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get(handleName);
             expect(handle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+
+            // expect subHandle to get added to the subHandlesIndex
+            const subHandles = HandleStore.getRootHandleSubHandles('hndl');
+            expect([...subHandles]).toEqual([handleName]);
         });
     });
 

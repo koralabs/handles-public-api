@@ -18,6 +18,7 @@ class HandlesRoute extends BaseRoute {
         this.router.get(`${this.path}/:handle/datum`, this.injectRegistryMiddleware, this.handlesController.getHandleDatum);
         this.router.get(`${this.path}/:handle/script`, this.injectRegistryMiddleware, this.handlesController.getHandleScript);
         this.router.get(`${this.path}/:handle/subhandle_settings`, this.injectRegistryMiddleware, this.handlesController.getSubHandleSettings);
+        this.router.get(`${this.path}/:handle/subhandles`, this.injectRegistryMiddleware, this.handlesController.getSubHandles);
     }
 }
 
