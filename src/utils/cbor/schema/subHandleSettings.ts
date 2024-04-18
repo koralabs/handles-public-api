@@ -20,5 +20,6 @@ export const subHandleSettingsDatumSchema = {
     virtual: {
         ...subHandleSettings,
         expires_in_days: 'number'
-    }
+    },
+    buy_down_paid: 'number'
 };
