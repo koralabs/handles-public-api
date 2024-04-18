@@ -1,15 +1,10 @@
 import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName, stringifyBlock } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import { decodeCborToJson } from '../../utils/cbor';
-import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
-import { portalSchema } from '../../utils/cbor/schema/portal';
-import { designerSchema } from '../../utils/cbor/schema/designer';
-import { socialsSchema } from '../../utils/cbor/schema/socials';
-import { subHandleSettingsDatumSchema } from '../../utils/cbor/schema/subHandleSettings';
 import { checkNameLabel } from '../../utils/util';
 
 const blackListedIpfsCids: string[] = [];
@@ -155,7 +150,7 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
 };
 
 const buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
-    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
+    const decodedDatum = await decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     return buildValidDatum(handle, hex, datumObjectConstructor);
@@ -222,7 +217,7 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
             event: 'processBlock.processSubHandleSettingsToken.noDatum'
         });
     } else {
-        settings = await decodeCborToJson(datum, subHandleSettingsDatumSchema);
+        settings = await decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
     }
 
     const [txId, indexString] = utxo.split('#');

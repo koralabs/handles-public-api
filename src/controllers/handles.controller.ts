@@ -5,10 +5,10 @@ import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
 import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType } from '@koralabs/kora-labs-common';
+import { decodeCborToJson, KeyType } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
-import { decodeCborToJson, KeyType } from '../utils/cbor';
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { StoredHandle } from '../repositories/memory/interfaces/handleStore.interfaces';
@@ -158,7 +158,7 @@ class HandlesController {
 
             if (req.headers?.accept?.startsWith('application/json')) {
                 try {
-                    const decodedDatum = await decodeCborToJson(handleDatum, {}, req.query.default_key_type as KeyType);
+                    const decodedDatum = await decodeCborToJson({ cborString: handleDatum, schema: {}, defaultKeyType: req.query.default_key_type as KeyType });
                     res.set('Content-Type', 'application/json');
                     res.status(handleRepo.currentHttpStatus()).json(decodedDatum);
                     return;

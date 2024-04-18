@@ -3,7 +3,7 @@ import App from '../app';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
-import * as cbor from '../utils/cbor';
+import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import * as scripts from '../config/scripts';
 import { HandleType, ScriptDetails } from '@koralabs/kora-labs-common';
 

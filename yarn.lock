@@ -631,10 +631,10 @@
     "@jridgewell/resolve-uri" "3.1.0"
     "@jridgewell/sourcemap-codec" "1.4.14"
 
-"@koralabs/kora-labs-common@3.1.2":
-  version "3.1.2"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-3.1.2.tgz#ab3a1b4cb40d546321cc429fea5b52122d8abe12"
-  integrity sha512-HjFwWI1Xp6mBTO0u0FbgfFUNXdGAGmODE4oq9WZUOBQ4ub/U/JLf1yNyXMheT7ToIjqjqVcHlXvzL0GsQRQICw==
+"@koralabs/kora-labs-common@3.1.4":
+  version "3.1.4"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-3.1.4.tgz#a6ba1633ab388d4c69f078105c6e6c95842b6b80"
+  integrity sha512-+TcbeBA+SMa4vb0Bm08LLnkPg3hn86d3QpDhPypIJ3+Rlyua4TDJV6PXoIElRQCick7rj+M26g5ZPzOIUfTpDQ==
   dependencies:
     boolean "^3.2.0"
     cbor "^9.0.2"
