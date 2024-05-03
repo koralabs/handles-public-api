@@ -5,7 +5,7 @@ SHELL ["/bin/bash", "-c"]
 ADD ./dist/ entrypoint.sh setup_env.sh deployment_info.json ./
 RUN \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 zstd && \
-    curl -fsSL https://github.com/input-output-hk/cardano-node/releases/download/8.1.2/cardano-node-8.1.2-linux.tar.gz | tar -xz && \
+    curl -fsSL https://github.com/input-output-hk/cardano-node/releases/download/8.9.1/cardano-node-8.9.1-linux.tar.gz | tar -xz && \
     rm -f ./cardano-node-1.35.6-linux.tar.gz && \
     chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p handles && touch handles/handles.json && \
     git clone https://github.com/input-output-hk/cardano-world.git && \
