@@ -64,8 +64,8 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     echo "Starting cardano-node."
 
     exec ./cardano-node run \
-        --config ./cardano-world/docs/environments/${NETWORK}/config.json \
-        --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
+        --config ./share/${NETWORK}/config.json \
+        --topology ./share/${NETWORK}/topology.json \
         --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
