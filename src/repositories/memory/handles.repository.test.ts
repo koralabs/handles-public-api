@@ -4,7 +4,7 @@ import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
-import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
+import { HolderAddressIndex, SaveMintingTxInput, StoredHandleSubHandleSettings } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import { HandleType, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
@@ -352,25 +352,27 @@ describe('MemoryHandlesRepository Tests', () => {
             const repo = new MemoryHandlesRepository();
 
             const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-            const settings: ISubHandleSettingsDatumStruct = [
-                [
-                    1,
-                    1,
+            const settings: StoredHandleSubHandleSettings = {
+                constructor_0: [
                     [
-                        [1, 1000],
-                        [2, 500],
-                        [3, 250],
-                        [4, 10]
+                        1,
+                        1,
+                        [
+                            [1, 1000],
+                            [2, 500],
+                            [3, 250],
+                            [4, 10]
+                        ],
+                        {},
+                        0
                     ],
-                    {},
+                    [1, 1, [[1, 15]], {}, 360],
+                    0,
+                    0,
+                    '0x',
                     0
-                ],
-                [1, 1, [[1, 15]], {}, 360],
-                0,
-                0,
-                '0x',
-                0
-            ];
+                ]
+            };
 
             await HandleStore.saveSubHandleSettingsChange({
                 name: rootHandleName,

@@ -1,9 +1,9 @@
-import { IHandleStats, IReferenceToken, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { IHandleStats, IReferenceToken } from '@koralabs/kora-labs-common';
 import { HolderAddressDetailsResponse } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import { HolderPaginationModel } from '../models/holderPagination.model';
-import { StoredHandle, SubHandleSettings } from './memory/interfaces/handleStore.interfaces';
+import { StoredHandle, StoredHandleSubHandleSettings } from './memory/interfaces/handleStore.interfaces';
 
 interface IHandlesRepository {
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
@@ -16,7 +16,7 @@ interface IHandlesRepository {
     getTotalHandlesStats: () => { total_handles: number; total_holders: number };
     currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
-    getSubHandleSettings: (handleName: string) => Promise<{ settings?: ISubHandleSettingsDatumStruct; reference_token: IReferenceToken } | null>;
+    getSubHandleSettings: (handleName: string) => Promise<{ settings?: StoredHandleSubHandleSettings; reference_token: IReferenceToken } | null>;
     getSubHandles: (handleName: string) => Promise<StoredHandle[]>;
 }
 

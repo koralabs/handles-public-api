@@ -5,6 +5,10 @@ export interface SubHandleSettings {
     reference_token: IReferenceToken;
 }
 
+export interface StoredHandleSubHandleSettings {
+    constructor_0: ISubHandleSettingsDatumStruct;
+}
+
 export interface StoredHandle extends IPersonalizedHandle {
     amount: number;
     type: HandleType;
@@ -14,7 +18,7 @@ export interface StoredHandle extends IPersonalizedHandle {
         [key: string]: string;
     };
     subhandle_settings?: {
-        settings?: ISubHandleSettingsDatumStruct;
+        settings?: StoredHandleSubHandleSettings;
         reference_token: IReferenceToken;
     };
 }
@@ -93,7 +97,7 @@ export interface SavePersonalizationInput {
 
 export interface SaveSubHandleSettingsInput {
     name: string;
-    settings?: ISubHandleSettingsDatumStruct;
+    settings?: StoredHandleSubHandleSettings;
     reference_token: IReferenceToken;
     slotNumber: number;
 }

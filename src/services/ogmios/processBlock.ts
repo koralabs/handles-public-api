@@ -6,6 +6,7 @@ import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName, stringifyBlock } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { checkNameLabel } from '../../utils/util';
+import { StoredHandleSubHandleSettings } from '../../repositories/memory/interfaces/handleStore.interfaces';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -209,7 +210,7 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
 const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
     const { name } = getHandleNameFromAssetName(assetName);
 
-    let settings: ISubHandleSettingsDatumStruct | undefined;
+    let settings: StoredHandleSubHandleSettings | undefined;
     if (!datum) {
         Logger.log({
             message: `no datum for SubHandle token ${assetName}`,
