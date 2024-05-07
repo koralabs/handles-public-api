@@ -120,7 +120,7 @@ describe('Utils Tests', () => {
     });
 
     describe('memoryWatcher', () => {
-        const buildHeapInfo = (usedSize?: number, sizeLimit?: number) => ({
+        const buildHeapInfo = (usedSize?: number, sizeLimit?: number): v8.HeapInfo => ({
             total_heap_size: 0,
             total_heap_size_executable: 0,
             total_physical_size: 0,
@@ -131,7 +131,10 @@ describe('Utils Tests', () => {
             peak_malloced_memory: 0,
             does_zap_garbage: 0 as DoesZapCodeSpaceFlag,
             number_of_native_contexts: 0,
-            number_of_detached_contexts: 0
+            number_of_detached_contexts: 0,
+            total_global_handles_size: 0,
+            used_global_handles_size: 0,
+            external_memory: 0
         });
 
         it('should log a notification and kill the process', () => {

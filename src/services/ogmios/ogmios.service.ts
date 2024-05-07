@@ -14,7 +14,7 @@ import * as url from 'url';
 let startOgmiosExec = 0;
 
 class OgmiosService {
-    public intervals: NodeJS.Timer[] = [];
+    public intervals: NodeJS.Timeout[] = [];
     private startTime: number;
     private firstMemoryUsage: number;
 
