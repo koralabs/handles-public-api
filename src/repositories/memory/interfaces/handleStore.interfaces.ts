@@ -1,4 +1,4 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettingsDatum, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 
 export interface SubHandleSettings {
     settings: ISubHandleSettingsDatum;
@@ -13,7 +13,10 @@ export interface StoredHandle extends IPersonalizedHandle {
         ada: string;
         [key: string]: string;
     };
-    subhandle_settings?: SubHandleSettings;
+    subhandle_settings?: {
+        settings?: ISubHandleSettingsDatumStruct;
+        reference_token: IReferenceToken;
+    };
 }
 
 export interface HandleHistory {
@@ -90,7 +93,7 @@ export interface SavePersonalizationInput {
 
 export interface SaveSubHandleSettingsInput {
     name: string;
-    settings: ISubHandleSettingsDatum;
+    settings?: ISubHandleSettingsDatumStruct;
     reference_token: IReferenceToken;
     slotNumber: number;
 }

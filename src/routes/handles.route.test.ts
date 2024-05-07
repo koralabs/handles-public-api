@@ -112,9 +112,16 @@ jest.mock('../ioc', () => ({
                     return null;
                 }
 
+                if (handleName === 'not@array') {
+                    return {};
+                }
+
                 return {
-                    enableNft: true,
-                    enableVirtual: true
+                    settings: [
+                        [1, 1],
+                        [1, 1]
+                    ],
+                    reference_token: {}
                 };
             },
             getSubHandles: (handleName: string) => {
@@ -428,10 +435,16 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('SubHandle settings not found');
         });
 
-        it('should return No sub handle settings found', async () => {
+        it('should return invalid settings', async () => {
+            const response = await request(app?.getServer()).get('/handles/not@array/subhandle_settings');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('Invalid SubHandle settings');
+        });
+
+        it('should return settings', async () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ enableNft: true, enableVirtual: true });
+            expect(response.body).toEqual({ reference_token: {}, settings: { nft: { public_minting_enabled: 1, pz_enabled: 1 }, virtual: { public_minting_enabled: 1, pz_enabled: 1 } } });
         });
     });
 

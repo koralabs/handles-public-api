@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatum } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatum, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
@@ -209,7 +209,7 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
 const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
     const { name } = getHandleNameFromAssetName(assetName);
 
-    let settings: ISubHandleSettingsDatum = {};
+    let settings: ISubHandleSettingsDatumStruct | undefined;
     if (!datum) {
         Logger.log({
             message: `no datum for SubHandle token ${assetName}`,
