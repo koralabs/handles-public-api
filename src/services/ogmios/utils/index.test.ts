@@ -1,12 +1,5 @@
 import { Logger } from '@koralabs/kora-labs-common';
-import {
-    buildNumericModifiers,
-    getRarity,
-    stringifyBlock,
-    buildOnChainObject,
-    memoryWatcher,
-    getHandleNameFromAssetName
-} from '.';
+import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher, getHandleNameFromAssetName } from '.';
 import v8 from 'v8';
 import { AssetNameLabel } from '@koralabs/kora-labs-common';
 
@@ -172,28 +165,22 @@ describe('Utils Tests', () => {
         });
 
         it('should return handle name from policyId.hex', () => {
-            const handle = getHandleNameFromAssetName(
-                'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.6275727269746f'
-            );
+            const handle = getHandleNameFromAssetName('f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.6275727269746f');
             expect(handle).toEqual(expectedHandle);
         });
 
         it('should strip off 222 asset name label and return handle name', () => {
-            const handle = getHandleNameFromAssetName(
-                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LABEL_222}6275727269746f`
-            );
+            const handle = getHandleNameFromAssetName(`f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_222}6275727269746f`);
             expect(handle).toEqual({
-                hex: `${AssetNameLabel.LABEL_222}6275727269746f`,
+                hex: `${AssetNameLabel.LBL_222}6275727269746f`,
                 name: 'burrito'
             });
         });
 
         it('should strip off 100 asset name label and return handle name', () => {
-            const handle = getHandleNameFromAssetName(
-                `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LABEL_100}6275727269746f`
-            );
+            const handle = getHandleNameFromAssetName(`f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_100}6275727269746f`);
             expect(handle).toEqual({
-                hex: `${AssetNameLabel.LABEL_100}6275727269746f`,
+                hex: `${AssetNameLabel.LBL_100}6275727269746f`,
                 name: 'burrito'
             });
         });

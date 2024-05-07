@@ -379,7 +379,7 @@ export class HandleStore {
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
         const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
-        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
+        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LBL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
         // update resolved addresses

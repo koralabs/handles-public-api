@@ -68,11 +68,11 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
     const { constructor_0 } = datumObject;
 
     const getHandleType = (hex: string): HandleType => {
-        if (hex.startsWith(AssetNameLabel.LABEL_000)) {
+        if (hex.startsWith(AssetNameLabel.LBL_000)) {
             return HandleType.VIRTUAL_SUBHANDLE;
         }
 
-        if (hex.startsWith(AssetNameLabel.LABEL_222) && handle.includes('@')) {
+        if (hex.startsWith(AssetNameLabel.LBL_222) && handle.includes('@')) {
             return HandleType.NFT_SUBHANDLE;
         }
 
@@ -239,7 +239,7 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
 };
 
 const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
-    if (assetName.includes(AssetNameLabel.LABEL_222)) {
+    if (assetName.includes(AssetNameLabel.LBL_222)) {
         await processAssetToken({
             assetName,
             slotNumber,
@@ -254,18 +254,13 @@ const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lo
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_100) || assetName.includes(AssetNameLabel.LABEL_000)) {
+    if (assetName.includes(AssetNameLabel.LBL_100) || assetName.includes(AssetNameLabel.LBL_000)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 
     if (assetName.includes('00001070')) {
         await processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
-        return;
-    }
-
-    if (assetName.includes(AssetNameLabel.LABEL_333)) {
-        Logger.log(`FT token found ${assetName}. Not implemented yet`);
         return;
     }
 
@@ -295,7 +290,7 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
         let og_number = 0;
         let version = 0;
 
-        if (assetName.includes(AssetNameLabel.LABEL_222)) {
+        if (assetName.includes(AssetNameLabel.LBL_222)) {
             const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
             og_number = data?.og_number ?? 0;
             image = data?.image ?? '';
@@ -428,7 +423,7 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                         };
 
                         console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                        Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LABEL_001 ${AssetNameLabel.LABEL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
+                        Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
                         if ([...Object.values(AssetNameLabel), '00001070'].some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);

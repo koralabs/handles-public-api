@@ -275,7 +275,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -288,7 +288,7 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
+            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             image: '',
             name: handleName,
             og_number: 0,
@@ -301,7 +301,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -314,7 +314,7 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
+            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0',
@@ -324,7 +324,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 100 asset class tokens', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -402,7 +402,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 001 SubHandle settings token', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_001}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_001}${Buffer.from(handleName).toString('hex')}`;
 
         const saveSubHandleSettingsChangeSpy = jest.spyOn(HandleStore, 'saveSubHandleSettingsChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -447,7 +447,7 @@ describe('processBlock Tests', () => {
 
     it('should process as NFT Sub handle', async () => {
         const handleName = `sub@hndl`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
 
         const saveMintedHandleSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -478,7 +478,7 @@ describe('processBlock Tests', () => {
 
     it('Should process virtual sub handle', async () => {
         const handleName = `virtual@hndl`;
-        const handleHexName = `${AssetNameLabel.LABEL_000}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_000}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -551,7 +551,7 @@ describe('processBlock Tests', () => {
 
     it('Should validate datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -578,7 +578,7 @@ describe('processBlock Tests', () => {
 
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -600,7 +600,7 @@ describe('processBlock Tests', () => {
     it('Should burn tokens', async () => {
         const slot = 1234;
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
         const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
