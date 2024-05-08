@@ -15,7 +15,7 @@ RUN \
     declare -a ERAS=(byron shelley alonzo conway) && \
     for net in "${NETWORKS[@]}"; \
     do \
-        mkdir -r ${net} && \
+        mkdir -p ${net} && \
         curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json && \
         curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json && \
         for era in "${ERAS[@]}"; \
