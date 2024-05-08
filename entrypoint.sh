@@ -48,7 +48,8 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         if [ "${NETWORK}" == "mainnet" ] && [ ! -f "$DB_FILE" ]; then
             mkdir -p ${NODE_DB}
             echo "No cardano-node db detected. Grabbing latest snapshot with Mithril."
-            curl -fsSL https://github.com/input-output-hk/mithril/releases/download/2337.0/mithril-2337.0-linux-x64.tar.gz | tar -xz
+            MITHRIL_VERSION=2412.0
+            curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
             export NETWORK=mainnet
             export AGGREGATOR_ENDPOINT=https://aggregator.release-mainnet.api.mithril.network/aggregator
             export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/release-mainnet/genesis.vkey)
@@ -64,8 +65,8 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
     echo "Starting cardano-node."
 
     exec ./cardano-node run \
-        --config ./share/${NETWORK}/config.json \
-        --topology ./share/${NETWORK}/topology.json \
+        --config ./cardano-world/docs/environments/${NETWORK}/config.json \
+        --topology ./cardano-world/docs/environments/${NETWORK}/topology.json \
         --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
