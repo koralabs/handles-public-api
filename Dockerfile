@@ -3,7 +3,7 @@ ENV NETWORK=mainnet
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 ADD ./dist/ entrypoint.sh setup_env.sh deployment_info.json ./
-ADD ./config.json ./topology.json ./preprod/
+# ADD ./config.json ./topology.json ./preprod/
 RUN \
     CARDANO_NODE_VER=8.9.2 && \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 zstd && \
@@ -17,6 +17,8 @@ RUN \
     for net in "${NETWORKS[@]}"; \
     do \
         mkdir -p ${net} && \
+        curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json && \
+        curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json && \
         for era in "${ERAS[@]}"; \
         do \
             curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json; \
