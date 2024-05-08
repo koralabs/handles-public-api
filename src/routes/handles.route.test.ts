@@ -117,12 +117,10 @@ jest.mock('../ioc', () => ({
                 }
 
                 return {
-                    settings: {
-                        constructor_0: [
-                            [1, 1],
-                            [1, 1]
-                        ]
-                    },
+                    settings: [
+                        [1, 1],
+                        [1, 1]
+                    ],
                     reference_token: {}
                 };
             },

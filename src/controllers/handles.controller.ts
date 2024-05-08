@@ -211,14 +211,12 @@ class HandlesController {
                 return;
             }
 
-            const { settings: storedSettings, reference_token } = settings;
+            const { settings: settingsStruct, reference_token } = settings;
 
-            if (!storedSettings?.constructor_0 || !Array.isArray(storedSettings.constructor_0)) {
+            if (!Array.isArray(settingsStruct)) {
                 res.status(400).send({ message: 'Invalid SubHandle settings' });
                 return;
             }
-
-            const settingsStruct = storedSettings.constructor_0;
 
             const buildTypeSettings = (typeSettings: ISubHandleSettingsItemDatumStruct): ISubHandleSettings => {
                 return {

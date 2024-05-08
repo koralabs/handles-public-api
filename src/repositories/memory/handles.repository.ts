@@ -1,4 +1,4 @@
-import { IHandleStats, IReferenceToken } from '@koralabs/kora-labs-common';
+import { IHandleStats, IReferenceToken, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -6,7 +6,7 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
-import { StoredHandle, StoredHandleSubHandleSettings } from './interfaces/handleStore.interfaces';
+import { StoredHandle } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
@@ -190,7 +190,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return datum;
     }
 
-    public async getSubHandleSettings(handleName: string): Promise<{ settings?: StoredHandleSubHandleSettings; reference_token: IReferenceToken } | null> {
+    public async getSubHandleSettings(handleName: string): Promise<{ settings?: ISubHandleSettingsDatumStruct; reference_token: IReferenceToken } | null> {
         const handle = HandleStore.get(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
