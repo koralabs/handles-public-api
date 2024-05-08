@@ -4,7 +4,7 @@ WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 ADD ./dist/ entrypoint.sh setup_env.sh deployment_info.json ./
 RUN \
-    CARDANO_NODE_VER=8.9.1 && \
+    CARDANO_NODE_VER=8.9.2 && \
     apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 zstd && \
     curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz && \
     rm -f ./cardano-node-${CARDANO_NODE_VER}-linux.tar.gz && \
