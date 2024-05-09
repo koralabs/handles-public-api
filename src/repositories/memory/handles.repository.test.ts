@@ -369,6 +369,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 0,
                 0,
                 '0x',
+                '0x',
                 0
             ];
             await HandleStore.saveSubHandleSettingsChange({

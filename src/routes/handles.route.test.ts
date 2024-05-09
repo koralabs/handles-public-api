@@ -444,7 +444,7 @@ describe('Testing Handles Routes', () => {
         it('should return settings', async () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ reference_token: {}, settings: { nft: { public_minting_enabled: 1, pz_enabled: 1 }, virtual: { public_minting_enabled: 1, pz_enabled: 1 } } });
+            expect(response.body).toEqual({ reference_token: {}, settings: { migrate_sig_required: false, nft: { public_minting_enabled: true, pz_enabled: true }, virtual: { public_minting_enabled: true, pz_enabled: true } } });
         });
     });
 

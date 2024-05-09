@@ -4,7 +4,7 @@ import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.inte
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettingsDatum, ISubHandleSettings, ISubHandleSettingsItemDatumStruct } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleSettingsItemDatumStruct, ISubHandleTypeSettings } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
@@ -218,23 +218,24 @@ class HandlesController {
                 return;
             }
 
-            const buildTypeSettings = (typeSettings: ISubHandleSettingsItemDatumStruct): ISubHandleSettings => {
+            const buildTypeSettings = (typeSettings: ISubHandleSettingsItemDatumStruct): ISubHandleTypeSettings => {
                 return {
-                    public_minting_enabled: typeSettings[0],
-                    pz_enabled: typeSettings[1],
+                    public_minting_enabled: typeSettings[0] === 1,
+                    pz_enabled: typeSettings[1] === 1,
                     tier_pricing: typeSettings[2],
                     creator_defaults: typeSettings[3],
                     expires_slot: typeSettings[4]
                 };
             };
 
-            const settingsDatum: ISubHandleSettingsDatum = {
+            const settingsDatum: ISubHandleSettings = {
                 nft: buildTypeSettings(settingsStruct[0]),
                 virtual: buildTypeSettings(settingsStruct[1]),
                 buy_down_price: settingsStruct[2],
                 buy_down_paid: settingsStruct[3],
                 agreed_terms: settingsStruct[4],
-                migrate_sig_required: settingsStruct[5]
+                payment_address: settingsStruct[5],
+                migrate_sig_required: settingsStruct[6] === 1
             };
 
             res.status(handleData.code).json({

@@ -1,7 +1,7 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettingsDatum, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 
 export interface SubHandleSettings {
-    settings: ISubHandleSettingsDatum;
+    settings: ISubHandleSettings;
     reference_token: IReferenceToken;
 }
 

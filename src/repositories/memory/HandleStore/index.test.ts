@@ -1557,6 +1557,7 @@ describe('HandleStore tests', () => {
                 0,
                 0,
                 '0x',
+                '0x',
                 0
             ];
 
@@ -1632,6 +1633,7 @@ describe('HandleStore tests', () => {
                 0,
                 0,
                 '0x',
+                '0x',
                 0
             ];
 
@@ -1649,7 +1651,7 @@ describe('HandleStore tests', () => {
                 settings
             });
 
-            const newSettings: ISubHandleSettingsDatumStruct = [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', 0];
+            const newSettings: ISubHandleSettingsDatumStruct = [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', '0x', 0];
 
             await HandleStore.saveSubHandleSettingsChange({
                 name: handleName,
@@ -1677,6 +1679,7 @@ describe('HandleStore tests', () => {
                 [1, 1, [[1, 15]], {}, 360],
                 0,
                 0,
+                '0x',
                 '0x',
                 0
             ];
@@ -1717,7 +1720,7 @@ describe('HandleStore tests', () => {
                     [handleName]: {
                         new: {
                             subhandle_settings: {
-                                settings: [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', 0]
+                                settings: [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', '0x', 0]
                             },
                             updated_slot_number: 300
                         },
@@ -1759,6 +1762,7 @@ describe('HandleStore tests', () => {
                                     0,
                                     0,
                                     '0x',
+                                    '0x',
                                     0
                                 ]
                             },
@@ -1767,7 +1771,7 @@ describe('HandleStore tests', () => {
                         old: {
                             subhandle_settings: {
                                 reference_token,
-                                settings: [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', 0]
+                                settings: [[1, 0, [[1, 1000]], {}, 0], [1, 1, [[1, 15]], {}, 360], 0, 0, '0x', '0x', 0]
                             },
                             updated_slot_number: 300
                         }
