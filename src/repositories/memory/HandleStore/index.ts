@@ -650,12 +650,16 @@ export class HandleStore {
         }
     }
 
-    static async prepareHandlesStorage(): Promise<{
+    static async prepareHandlesStorage(loadS3 = true): Promise<{
         slot: number;
         hash: string;
     } | null> {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-        const [externalHandles, localHandles] = await Promise.all([HandleStore.getFileOnline<IHandleFileContent>(fileName), HandleStore.getFile<IHandleFileContent>(this.storageFilePath)]);
+        const files = [HandleStore.getFile<IHandleFileContent>(this.storageFilePath)];
+        if (loadS3) {
+            files.push(HandleStore.getFileOnline<IHandleFileContent>(fileName));
+        }
+        const [localHandles, externalHandles] = await Promise.all(files);
 
         const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
 
