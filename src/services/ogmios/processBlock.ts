@@ -209,15 +209,12 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
 const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
     const { name } = getHandleNameFromAssetName(assetName);
 
-    let settings: ISubHandleSettingsDatumStruct | undefined;
     if (!datum) {
         Logger.log({
             message: `no datum for SubHandle token ${assetName}`,
             category: LogCategory.ERROR,
             event: 'processBlock.processSubHandleSettingsToken.noDatum'
         });
-    } else {
-        settings = await decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
     }
 
     const [txId, indexString] = utxo.split('#');
@@ -232,7 +229,7 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
 
     await HandleStore.saveSubHandleSettingsChange({
         name,
-        settings,
+        settingsDatum: datum,
         reference_token,
         slotNumber
     });

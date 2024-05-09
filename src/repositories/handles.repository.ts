@@ -16,7 +16,7 @@ interface IHandlesRepository {
     getTotalHandlesStats: () => { total_handles: number; total_holders: number };
     currentHttpStatus: () => number;
     getHandleDatumByName: (handleName: string) => Promise<string | null>;
-    getSubHandleSettings: (handleName: string) => Promise<{ settings?: ISubHandleSettingsDatumStruct; reference_token: IReferenceToken } | null>;
+    getSubHandleSettings: (handleName: string) => Promise<{ settings?: string; reference_token: IReferenceToken } | null>;
     getSubHandles: (handleName: string) => Promise<StoredHandle[]>;
 }
 

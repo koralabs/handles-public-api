@@ -190,7 +190,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return datum;
     }
 
-    public async getSubHandleSettings(handleName: string): Promise<{ settings?: ISubHandleSettingsDatumStruct; reference_token: IReferenceToken } | null> {
+    public async getSubHandleSettings(handleName: string): Promise<{ settings?: string; reference_token: IReferenceToken } | null> {
         const handle = HandleStore.get(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');

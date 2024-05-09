@@ -5,7 +5,7 @@ import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
 import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleSettingsItemDatumStruct, ISubHandleTypeSettings } from '@koralabs/kora-labs-common';
-import { decodeCborToJson, DefaultTextFormat } from '@koralabs/kora-labs-common/utils/cbor';
+import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
@@ -206,22 +206,30 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
 
-            if (!settings) {
+            if (!settings || !settings.settings) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            const { settings: settingsStruct, reference_token } = settings;
+            const { settings: settingsDatumString, reference_token } = settings;
 
-            if (!Array.isArray(settingsStruct)) {
+            if (req.headers?.accept?.startsWith('text/plain')) {
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.status(handleRepo.currentHttpStatus()).send(settingsDatumString);
+                return;
+            }
+
+            const decodedSettings = await decodeCborToJson({ cborString: settingsDatumString, schema: subHandleSettingsDatumSchema });
+
+            if (!Array.isArray(decodedSettings)) {
                 res.status(400).send({ message: 'Invalid SubHandle settings' });
                 return;
             }
 
-            const buildTypeSettings = (typeSettings: ISubHandleSettingsItemDatumStruct): ISubHandleTypeSettings => {
+            const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
                 return {
-                    public_minting_enabled: typeSettings[0] === 1,
-                    pz_enabled: typeSettings[1] === 1,
+                    public_minting_enabled: typeSettings[0],
+                    pz_enabled: typeSettings[1],
                     tier_pricing: typeSettings[2],
                     creator_defaults: typeSettings[3],
                     expires_slot: typeSettings[4]
@@ -229,13 +237,13 @@ class HandlesController {
             };
 
             const settingsDatum: ISubHandleSettings = {
-                nft: buildTypeSettings(settingsStruct[0]),
-                virtual: buildTypeSettings(settingsStruct[1]),
-                buy_down_price: settingsStruct[2],
-                buy_down_paid: settingsStruct[3],
-                agreed_terms: settingsStruct[4],
-                payment_address: settingsStruct[5],
-                migrate_sig_required: settingsStruct[6] === 1
+                nft: buildTypeSettings(decodedSettings[0]),
+                virtual: buildTypeSettings(decodedSettings[1]),
+                buy_down_price: decodedSettings[2],
+                buy_down_paid: decodedSettings[3],
+                agreed_terms: decodedSettings[4],
+                payment_address: decodedSettings[5],
+                migrate_sig_required: decodedSettings[6]
             };
 
             res.status(handleData.code).json({
