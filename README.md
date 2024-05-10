@@ -52,7 +52,7 @@ All of the options below can be passed into the container using `-e ENV_VAR=valu
 
 > `OGMIOS_HOST=<http url with port>` Required for running with `MODE=api-only`.
 
-> `DISABLE_NODE_SNAPSHOT=true` By default, the container will try and download a cardano-node snapshot from https://csnapshots.io/ to reduce spin-up time. Use this option to skip the snapshot download and start cardano-node from origin. **🚩WARNING:** this can take a few days.
+> `DISABLE_NODE_SNAPSHOT=true` By default, the container will try and download a cardano-node snapshot with Mithril to reduce spin-up time. Use this option to skip the snapshot download and start cardano-node from origin. **🚩WARNING:** this can take a few days.
 
 > `DISABLE_HANDLES_SNAPSHOT=true` By default, the container will try and download a Handles snapshot from S3 to reduce spin-up time. Use this option to skip the snapshot download and start the Ogmios Handles scan from origin. **🚩WARNING:** this can take a few hours.
 
