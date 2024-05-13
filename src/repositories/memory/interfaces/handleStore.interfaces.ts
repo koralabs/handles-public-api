@@ -17,6 +17,10 @@ export interface StoredHandle extends IPersonalizedHandle {
         settings?: string;
         reference_token: IReferenceToken;
     };
+    sub_rarity?: string;
+    sub_length?: number;
+    sub_characters?: string;
+    sub_numeric_modifiers?: string;
 }
 
 export interface HandleHistory {
@@ -70,6 +74,10 @@ export interface SaveMintingTxInput {
     amount?: number;
     version?: number;
     type: HandleType;
+    sub_rarity?: string;
+    sub_length?: number;
+    sub_characters?: string;
+    sub_numeric_modifiers?: string;
 }
 
 export interface SaveWalletAddressMoveInput {

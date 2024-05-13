@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IPersonalization, IPzDatum, IReferenceToken, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -481,7 +481,11 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.NFT_SUBHANDLE
+                type: HandleType.NFT_SUBHANDLE,
+                sub_rarity: 'rare',
+                sub_length: 10,
+                sub_characters: 'letters',
+                sub_numeric_modifiers: 'numbers'
             });
 
             const handle = HandleStore.get(subHandleName);
@@ -516,7 +520,11 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.VIRTUAL_SUBHANDLE
+                type: HandleType.VIRTUAL_SUBHANDLE,
+                sub_rarity: 'rare',
+                sub_length: 10,
+                sub_characters: 'letters',
+                sub_numeric_modifiers: 'numbers'
             });
 
             const handle = HandleStore.get(handleName);
@@ -1390,7 +1398,11 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.NFT_SUBHANDLE
+                type: HandleType.NFT_SUBHANDLE,
+                sub_rarity: 'rare',
+                sub_length: 10,
+                sub_characters: 'letters',
+                sub_numeric_modifiers: 'numbers'
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -1507,7 +1519,11 @@ describe('HandleStore tests', () => {
                     numeric_modifiers: 'todo',
                     version: 0,
                     og: 0,
-                    handle_type: HandleType.VIRTUAL_SUBHANDLE
+                    handle_type: HandleType.VIRTUAL_SUBHANDLE,
+                    sub_rarity: 'rare',
+                    sub_length: 10,
+                    sub_characters: 'letters',
+                    sub_numeric_modifiers: 'numbers'
                 }
             });
 

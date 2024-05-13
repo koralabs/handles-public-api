@@ -32,6 +32,12 @@ export class HandleViewModel {
     svg_version: string;
     last_update_address?: string;
     version: number;
+    handle_type: string;
+
+    sub_rarity?: string;
+    sub_length?: number;
+    sub_characters?: string;
+    sub_numeric_modifiers?: string;
 
     constructor(handle: StoredHandle) {
         if (!handle.utxo) {
@@ -64,5 +70,12 @@ export class HandleViewModel {
         this.standard_image_hash = handle.standard_image_hash?.replace('0x', '');
         this.last_update_address = handle.last_update_address;
         this.version = handle.version;
+        this.handle_type = handle.type;
+
+        // SubHandle settings
+        this.sub_rarity = handle.sub_rarity;
+        this.sub_length = handle.sub_length;
+        this.sub_characters = handle.sub_characters;
+        this.sub_numeric_modifiers = handle.sub_numeric_modifiers;
     }
 }

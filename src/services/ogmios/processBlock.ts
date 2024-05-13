@@ -286,12 +286,20 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
         let image = '';
         let og_number = 0;
         let version = 0;
+        let sub_characters;
+        let sub_length;
+        let sub_numeric_modifiers;
+        let sub_rarity;
 
         if (assetName.includes(AssetNameLabel.LBL_222)) {
             const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
             og_number = data?.og_number ?? 0;
             image = data?.image ?? '';
             version = data?.version ?? 0;
+            sub_characters = data?.sub_characters;
+            sub_length = data?.sub_length;
+            sub_numeric_modifiers = data?.sub_numeric_modifiers;
+            sub_rarity = data?.sub_rarity;
         } else {
             const data = handleMetadata && handleMetadata[name];
             og_number = data?.core?.og_number ?? 0;
@@ -303,7 +311,11 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
             ...input,
             og_number,
             image,
-            version
+            version,
+            sub_characters,
+            sub_length,
+            sub_numeric_modifiers,
+            sub_rarity
         });
         // Do a webhook processor call here
     } else {
@@ -419,7 +431,11 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                             isMintTx
                         };
 
-                        console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
+                        // if (assetName.includes('0000000076324073685f73657474696e67735f303131')) {
+                        //     console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
+                        // }
+
+                        // console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
                         Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
                         if ([...Object.values(AssetNameLabel), '00001070'].some((v) => assetName.startsWith(`${policyId}.${v}`))) {
