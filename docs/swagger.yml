@@ -30,6 +30,12 @@ paths:
         `Accepts` header is set to `text/plain`. If the `Accepts` header is set
         tp `application/json` it will return a paginated list of JSON Handle objects instead.
       parameters:
+      - name: search
+        in: query
+        description: A portion of the handle name to search for 
+        required: false
+        schema:
+          type: string
       - name: characters
         in: query
         required: false
