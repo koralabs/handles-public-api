@@ -1,4 +1,4 @@
-import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { createInteractionContext, InteractionContext, IntersectionNotFoundError } from '@cardano-ogmios/client';
 import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
@@ -14,13 +14,15 @@ import * as url from 'url';
 let startOgmiosExec = 0;
 
 class OgmiosService {
-    public intervals: NodeJS.Timer[] = [];
+    public intervals: NodeJS.Timeout[] = [];
     private startTime: number;
     private firstMemoryUsage: number;
+    private loadS3 = true;
 
-    constructor() {
+    constructor(loadS3 = true) {
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
+        this.loadS3 = loadS3;
     }
 
     private async rollForward(
@@ -111,7 +113,7 @@ class OgmiosService {
 
     public async getStartingPoint(): Promise<Point> {
         const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
-        const handlesContent = await HandleStore.prepareHandlesStorage();
+        const handlesContent = await HandleStore.prepareHandlesStorage(this.loadS3);
 
         if (!handlesContent) {
             Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
@@ -151,16 +153,26 @@ class OgmiosService {
                 }
             }
         );
-
         const client = await createLocalChainSyncClient(context, {
             rollForward: this.rollForward,
             rollBackward: this.rollBackward
         });
 
         const startingPoint = await this.getStartingPoint();
-        this.startIntervals();
 
-        await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+        try {
+            await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+            this.startIntervals();
+        }
+        catch (err) {
+            this.intervals.forEach(clearInterval);
+            if (err instanceof IntersectionNotFoundError) {
+                // this means the slot that came back from the files is bad
+                await HandleStore.rollBackToGenesis();
+            }
+            await client.shutdown();
+            throw err;
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { delay, dynamicallyLoad, writeConsoleLine } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
+import { IntersectionNotFoundError } from '@cardano-ogmios/client';
 
 class App {
     public app: express.Application;
@@ -79,12 +80,16 @@ class App {
 
         const startOgmios = async () => {
             let ogmiosStarted = false;
+            let loadS3 = true;
             while (!ogmiosStarted) {
                 try {
-                    const ogmiosService = new OgmiosService();
+                    const ogmiosService = new OgmiosService(loadS3);
                     await ogmiosService.startSync();
                     ogmiosStarted = true;
                 } catch (error: any) {
+                    if (error instanceof IntersectionNotFoundError) {
+                        loadS3 = false;
+                    }
                     Logger.log({
                         message: `Unable to start Ogmios: ${error.message}`,
                         category: LogCategory.ERROR,

@@ -112,21 +112,19 @@ export const createLocalChainSyncClient = async (
             requestNext(socket);
         };
 
-        socket.on('message', async (message: string) => {
-            await processMessage(message);
-        });
-
         return resolve({
             context,
-            shutdown: () =>
-                new Promise((resolve) => {
-                    ensureSocketIsOpen(socket);
-                    socket.once('close', resolve);
-                    socket.close();
-                }),
+            shutdown: async () => {
+                    if (socket.CONNECTING || socket.OPEN) {
+                        socket.close();
+                    }
+                },
             startSync: async (points, inFlight) => {
                 const intersection = await findIntersect(context, points || [await createPointFromCurrentTip(context)]);
                 ensureSocketIsOpen(socket);
+                socket.on('message', async (message: string) => {
+                    await processMessage(message);
+                });
                 for (let n = 0; n < (inFlight || 100); n += 1) {
                     requestNext(socket);
                 }
