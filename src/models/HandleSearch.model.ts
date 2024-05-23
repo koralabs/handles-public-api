@@ -1,4 +1,4 @@
-import { Rarity } from '@koralabs/kora-labs-common';
+import { HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { ModelException } from '../exceptions/ModelException';
 import { isNumeric } from '../utils/util';
 
@@ -10,6 +10,7 @@ interface HandleSearchInput {
     search?: string;
     holder_address?: string;
     personalized?: boolean;
+    handle_type?: string;
     og?: string;
 }
 
@@ -21,10 +22,11 @@ export class HandleSearchModel {
     private _search?: string;
     private _holder_address?: string;
     private _personalized?: boolean;
+    private _handle_type?: string;
     private _og?: boolean;
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handle_type } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
@@ -32,6 +34,7 @@ export class HandleSearchModel {
         this.search = search;
         this.holder_address = holder_address;
         this.personalized = personalized;
+        this.handle_type = handle_type;
         this.og = og === 'true';
     }
 
@@ -60,12 +63,24 @@ export class HandleSearchModel {
         this._rarity = value;
     }
 
+    get handle_type() {
+        return this._handle_type;
+    }
+
+    set handle_type(value) {
+        const validHandleType = Object.values(HandleType);
+        if (value && !validHandleType.some((v) => value.split(',').includes(v))) {
+            throw new ModelException(`handle_type must be ${validHandleType.join(', ')}`);
+        }
+        this._handle_type = value;
+    }
+
     get length() {
         return this._length;
     }
 
     set length(value) {
-        const lengthMErrorMsg = 'Length must be a number or a range of numbers (ex: 1-28) and can\'t exceed 28';
+        const lengthMErrorMsg = "Length must be a number or a range of numbers (ex: 1-28) and can't exceed 28";
         if (!value) {
             this._length = value;
             return;
@@ -88,7 +103,6 @@ export class HandleSearchModel {
             throw new ModelException('Invalid length range');
         }
         this._length = value;
-
     }
 
     get numeric_modifiers() {
@@ -130,7 +144,7 @@ export class HandleSearchModel {
     set personalized(value) {
         this._personalized = value;
     }
-    
+
     get og() {
         return this._og;
     }

@@ -1,4 +1,4 @@
-import { IHandleStats, IReferenceToken, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { IHandleStats, IReferenceToken } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -11,7 +11,7 @@ import { StoredHandle } from './interfaces/handleStore.interfaces';
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = '|empty|';
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og } = searchModel;
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
         const getHandles = (index: Map<string, Set<string>>, key: string | undefined) => {
@@ -62,12 +62,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
+                          if (handle_type && handle.type !== handle_type) return agg;
                           agg.push(handle);
                       }
                       return agg;
                   }, [])
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                       if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
+                          if (handle_type && handle.type !== handle_type) return agg;
                           agg.push(handle);
                       }
                       return agg;
@@ -89,7 +91,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-            return { searchTotal: items.length, handles };
+            return { searchTotal: handles.length, handles };
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
@@ -106,7 +108,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        return { searchTotal: items.length, handles };
+        return { searchTotal: handles.length, handles };
     }
 
     public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetailsResponse[]> {

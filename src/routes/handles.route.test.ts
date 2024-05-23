@@ -204,6 +204,13 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual("'page' and 'slot_number' can't be used together");
         });
 
+        it('should throw error if handle_type is invalid', async () => {
+            const response = await request(app?.getServer()).get('/handles?handle_type=taco');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('handle_type must be virtual_subhandle, nft_subhandle, handle');
+        });
+
         it('should throw error if search query is less than 3 characters', async () => {
             const response = await request(app?.getServer()).get('/handles?search=ab');
 

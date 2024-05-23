@@ -16,7 +16,7 @@ import { StoredHandle } from '../repositories/memory/interfaces/handleStore.inte
 class HandlesController {
     public getAll = async (req: Request<RequestWithRegistry, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
+            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
 
             const search = new HandleSearchModel({
                 characters,
@@ -26,6 +26,7 @@ class HandlesController {
                 search: searchQuery,
                 holder_address,
                 personalized,
+                handle_type,
                 og
             });
 
