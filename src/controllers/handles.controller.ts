@@ -4,7 +4,7 @@ import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.inte
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleSettingsItemDatumStruct, ISubHandleTypeSettings } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
@@ -232,8 +232,7 @@ class HandlesController {
                     public_minting_enabled: typeSettings[0],
                     pz_enabled: typeSettings[1],
                     tier_pricing: typeSettings[2],
-                    creator_defaults: typeSettings[3],
-                    expires_slot: typeSettings[4]
+                    creator_defaults: typeSettings[3]
                 };
             };
 
@@ -242,9 +241,10 @@ class HandlesController {
                 virtual: buildTypeSettings(decodedSettings[1]),
                 buy_down_price: decodedSettings[2],
                 buy_down_paid: decodedSettings[3],
-                agreed_terms: decodedSettings[4],
-                payment_address: decodedSettings[5],
-                migrate_sig_required: decodedSettings[6]
+                buy_down_percent: decodedSettings[4],
+                agreed_terms: decodedSettings[5],
+                migrate_sig_required: decodedSettings[6],
+                payment_address: decodedSettings[7]
             };
 
             res.status(handleData.code).json({

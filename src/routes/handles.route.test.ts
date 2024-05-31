@@ -117,7 +117,7 @@ jest.mock('../ioc', () => ({
                 }
 
                 return {
-                    settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda100ff',
+                    settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff',
                     reference_token: {}
                 };
             },
@@ -449,7 +449,7 @@ describe('Testing Handles Routes', () => {
         it('should return settings cbor', async () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings').set('Accept', 'text/plain; charset=utf-8');
             expect(response.status).toEqual(200);
-            expect(response.text).toEqual('9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda100ff');
+            expect(response.text).toEqual('9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff');
         });
 
         it('should return settings json', async () => {
@@ -461,26 +461,24 @@ describe('Testing Handles Routes', () => {
                     agreed_terms: 'http://localhost:3007/#tou',
                     buy_down_paid: 0,
                     buy_down_price: 0,
+                    buy_down_percent: 0,
                     migrate_sig_required: false,
                     nft: {
                         public_minting_enabled: true,
                         pz_enabled: true,
                         creator_defaults: { bg_image: '' },
-                        expires_slot: 0,
                         tier_pricing: [
                             [1, 200000000],
                             [2, 100000000],
-                            [3, 50000000],
-                            [4, 10000000]
+                            [3, 50000000]
                         ]
                     },
                     payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
                     virtual: {
                         creator_defaults: { bg_image: '' },
-                        expires_slot: 0,
-                        public_minting_enabled: false,
-                        pz_enabled: false,
-                        tier_pricing: []
+                        public_minting_enabled: true,
+                        pz_enabled: true,
+                        tier_pricing: [[1, 20000000]]
                     }
                 }
             });
