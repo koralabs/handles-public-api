@@ -7,7 +7,6 @@ export interface SubHandleSettings {
 
 export interface StoredHandle extends IPersonalizedHandle {
     amount: number;
-    type: HandleType;
     default?: boolean;
     resolved_addresses: {
         ada: string;
@@ -73,7 +72,7 @@ export interface SaveMintingTxInput {
     resolved_addresses?: Record<string, string>;
     amount?: number;
     version?: number;
-    type: HandleType;
+    handle_type: HandleType;
     sub_rarity?: string;
     sub_length?: number;
     sub_characters?: string;

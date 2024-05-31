@@ -279,7 +279,7 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
         utxo,
         datum,
         script,
-        type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
+        handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
     };
 
     if (isMintTx) {

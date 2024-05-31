@@ -62,14 +62,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
-                          if (handle_type && handle.type !== handle_type) return agg;
+                          if (handle_type && handle.handle_type !== handle_type) return agg;
                           agg.push(handle);
                       }
                       return agg;
                   }, [])
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                       if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
-                          if (handle_type && handle.type !== handle_type) return agg;
+                          if (handle_type && handle.handle_type !== handle_type) return agg;
                           agg.push(handle);
                       }
                       return agg;

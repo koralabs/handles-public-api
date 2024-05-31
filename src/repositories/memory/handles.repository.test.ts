@@ -46,7 +46,7 @@ describe('MemoryHandlesRepository Tests', () => {
         standard_image: '',
         standard_image_hash: '',
         svg_version: '',
-        type: 'virtual_subhandle',
+        handle_type: 'virtual_subhandle',
         updated_slot_number: 8,
         utxo: '#0',
         version: 0
@@ -72,7 +72,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                type
+                handle_type
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -85,7 +85,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                type
+                handle_type
             });
         });
 
@@ -270,7 +270,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum: '',
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
             const handles = [...handlesFixture, newHandle];
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
@@ -368,7 +368,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             };
             await Promise.all([
                 HandleStore.saveMintedHandle(saveHandleInput),
@@ -420,7 +420,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             };
             await Promise.all([HandleStore.saveMintedHandle(rootHandleInput)]);
         });
@@ -471,7 +471,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.NFT_SUBHANDLE
+                handle_type: HandleType.NFT_SUBHANDLE
             };
             await Promise.all([HandleStore.saveMintedHandle(subHandleInput)]);
         });

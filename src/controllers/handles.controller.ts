@@ -270,7 +270,7 @@ class HandlesController {
 
             if (req.query.type) {
                 const type = req.query.type === 'virtual' ? HandleType.VIRTUAL_SUBHANDLE : HandleType.NFT_SUBHANDLE;
-                subHandles = subHandles.filter((subHandle) => subHandle.type === type);
+                subHandles = subHandles.filter((subHandle) => subHandle.handle_type === type);
             }
 
             res.status(handleData.code).json(subHandles);

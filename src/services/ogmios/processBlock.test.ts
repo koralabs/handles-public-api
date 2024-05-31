@@ -164,7 +164,7 @@ describe('processBlock Tests', () => {
         svg_version: '',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
+        handle_type: HandleType.HANDLE,
         default: false
     };
 
@@ -184,7 +184,7 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -215,7 +215,7 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             datum,
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -240,7 +240,7 @@ describe('processBlock Tests', () => {
                 cbor: 'a2some_cbor'
             },
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -259,7 +259,7 @@ describe('processBlock Tests', () => {
             name,
             slotNumber: 0,
             utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -295,7 +295,7 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -318,7 +318,7 @@ describe('processBlock Tests', () => {
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -453,7 +453,7 @@ describe('processBlock Tests', () => {
             og_number: 0,
             script: undefined,
             slotNumber: 0,
-            type: HandleType.NFT_SUBHANDLE,
+            handle_type: HandleType.NFT_SUBHANDLE,
             utxo: 'some_id#0',
             version: 0
         });

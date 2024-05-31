@@ -60,7 +60,7 @@ describe('HandleStore tests', () => {
                 image_hash,
                 standard_image_hash,
                 svg_version,
-                type
+                handle_type
             } = handle;
             await HandleStore.saveMintedHandle({
                 adaAddress,
@@ -73,7 +73,7 @@ describe('HandleStore tests', () => {
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
                 svg_version,
-                type
+                handle_type
             });
         }
     });
@@ -240,7 +240,7 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
         });
     });
@@ -274,7 +274,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get('nachos');
@@ -306,7 +306,7 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             // expect to get the correct slot history with all new handles
@@ -381,7 +381,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0xtodo',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get('chimichanga');
@@ -438,7 +438,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             await HandleStore.saveMintedHandle({
@@ -452,7 +452,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const handle = HandleStore.get(sushiHandle);
@@ -481,7 +481,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.NFT_SUBHANDLE,
+                handle_type: HandleType.NFT_SUBHANDLE,
                 sub_rarity: 'rare',
                 sub_length: 10,
                 sub_characters: 'letters',
@@ -490,7 +490,7 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get(subHandleName);
             expect(handle?.name).toEqual(subHandleName);
-            expect(handle?.type).toEqual(HandleType.NFT_SUBHANDLE);
+            expect(handle?.handle_type).toEqual(HandleType.NFT_SUBHANDLE);
 
             // expect subHandle to get added to the subHandlesIndex
             const subHandles = HandleStore.getRootHandleSubHandles('hndl');
@@ -520,7 +520,7 @@ describe('HandleStore tests', () => {
                 datum: 'datum123',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.VIRTUAL_SUBHANDLE,
+                handle_type: HandleType.VIRTUAL_SUBHANDLE,
                 sub_rarity: 'rare',
                 sub_length: 10,
                 sub_characters: 'letters',
@@ -528,7 +528,7 @@ describe('HandleStore tests', () => {
             });
 
             const handle = HandleStore.get(handleName);
-            expect(handle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+            expect(handle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
 
             // expect subHandle to get added to the subHandlesIndex
             const subHandles = HandleStore.getRootHandleSubHandles('hndl');
@@ -548,7 +548,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -770,7 +770,7 @@ describe('HandleStore tests', () => {
                     amount: 1,
                     holder_type: '',
                     version: 0,
-                    type: HandleType.HANDLE
+                    handle_type: HandleType.HANDLE
                 }
             });
         });
@@ -788,7 +788,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -878,7 +878,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -1398,7 +1398,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.NFT_SUBHANDLE,
+                handle_type: HandleType.NFT_SUBHANDLE,
                 sub_rarity: 'rare',
                 sub_length: 10,
                 sub_characters: 'letters',
@@ -1459,7 +1459,7 @@ describe('HandleStore tests', () => {
 
             const nftSubHandle = HandleStore.get(handleName);
             expect(nftSubHandle?.personalization).toEqual(personalizationUpdates);
-            expect(nftSubHandle?.type).toEqual(HandleType.NFT_SUBHANDLE);
+            expect(nftSubHandle?.handle_type).toEqual(HandleType.NFT_SUBHANDLE);
         });
 
         it('should save details for virtual handle', async () => {
@@ -1536,7 +1536,7 @@ describe('HandleStore tests', () => {
             // expect the ada address to be the bech32 encoded version of the reference token address
             expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
-            expect(virtualSubHandle?.type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+            expect(virtualSubHandle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
         });
     });
 
@@ -1552,7 +1552,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
@@ -1609,7 +1609,7 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
@@ -1748,7 +1748,7 @@ describe('HandleStore tests', () => {
                 datum: 'a2datum_salsa',
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
 
             const existingHandle = HandleStore.get(handleName);
@@ -1791,7 +1791,7 @@ describe('HandleStore tests', () => {
                 has_datum: false,
                 holder_type: '',
                 version: 0,
-                type: HandleType.HANDLE,
+                handle_type: HandleType.HANDLE,
                 default_in_wallet: 'salsa'
             });
 

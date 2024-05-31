@@ -70,7 +70,7 @@ export class HandleViewModel {
         this.standard_image_hash = handle.standard_image_hash?.replace('0x', '');
         this.last_update_address = handle.last_update_address;
         this.version = handle.version;
-        this.handle_type = handle.type;
+        this.handle_type = handle.handle_type;
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;

@@ -123,9 +123,9 @@ jest.mock('../ioc', () => ({
             },
             getSubHandles: (handleName: string) => {
                 return [
-                    { name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE },
-                    { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
-                    { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+                    { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
+                    { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                    { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
                 ];
             }
         }),
@@ -497,9 +497,9 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles`);
             expect(response.status).toEqual(200);
             expect(response.body).toEqual([
-                { name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE },
-                { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
-                { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+                { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
+                { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
             ]);
         });
 
@@ -508,8 +508,8 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=virtual`);
             expect(response.status).toEqual(200);
             expect(response.body).toEqual([
-                { name: `sh2@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE },
-                { name: `sh3@${handleName}`, type: HandleType.VIRTUAL_SUBHANDLE }
+                { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
             ]);
         });
 
@@ -517,7 +517,7 @@ describe('Testing Handles Routes', () => {
             const handleName = 'burritos';
             const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=nft`);
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: `sh1@${handleName}`, type: HandleType.NFT_SUBHANDLE }]);
+            expect(response.body).toEqual([{ name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE }]);
         });
     });
 });

@@ -237,7 +237,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity }: SaveMintingTxInput): StoredHandle => {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity }: SaveMintingTxInput): StoredHandle => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -271,7 +271,7 @@ export class HandleStore {
             amount,
             svg_version,
             version,
-            type,
+            handle_type,
             sub_characters,
             sub_length,
             sub_numeric_modifiers,
@@ -414,7 +414,7 @@ export class HandleStore {
                 resolved_addresses: addresses,
                 svg_version: personalizationDatum?.svg_version,
                 version,
-                type: handleType,
+                handle_type: handleType,
                 sub_rarity: metadata?.sub_rarity,
                 sub_length: metadata?.sub_length,
                 sub_characters: metadata?.sub_characters,
