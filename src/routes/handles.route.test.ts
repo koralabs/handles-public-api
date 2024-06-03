@@ -5,7 +5,7 @@ import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import * as scripts from '../config/scripts';
-import { HandleType, ScriptDetails } from '@koralabs/kora-labs-common';
+import { HandleType, ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -286,7 +286,8 @@ describe('Testing Handles Routes', () => {
             const scriptDetails: ScriptDetails = {
                 handle: 'pz_script_01',
                 handleHex: 'hex',
-                validatorHash: 'abc'
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
             };
             jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
@@ -412,7 +413,8 @@ describe('Testing Handles Routes', () => {
             const scriptDetails: ScriptDetails = {
                 handle: 'pz_script_01',
                 handleHex: 'hex',
-                validatorHash: 'abc'
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
             };
             jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/reference_token');

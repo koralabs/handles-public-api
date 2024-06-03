@@ -1,7 +1,7 @@
 import request from 'supertest';
 import App from '../app';
-import { ScriptType, scripts } from '../config/scripts';
-import { ScriptDetails } from '@koralabs/kora-labs-common';
+import { scripts } from '../config/scripts';
+import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 

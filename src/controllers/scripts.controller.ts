@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { ScriptDetailsWithType, scripts } from '../config/scripts';
+import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 class ScriptsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
@@ -34,7 +35,7 @@ class ScriptsController {
             }
 
             res.status(handleRepo.currentHttpStatus()).json(
-                allScripts.reduce<{ [scriptAddress: string]: ScriptDetailsWithType }>((acc, [key, value]) => {
+                allScripts.reduce<{ [scriptAddress: string]: ScriptDetails }>((acc, [key, value]) => {
                     acc[key] = value;
                     return acc;
                 }, {})

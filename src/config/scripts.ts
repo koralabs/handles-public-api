@@ -1,17 +1,8 @@
-import { ScriptDetails } from '@koralabs/kora-labs-common';
-
-export enum ScriptType {
-    PZ_CONTRACT = 'pz_contract',
-    SUB_HANDLE_SETTINGS = 'sub_handle_settings'
-}
-
-export interface ScriptDetailsWithType extends ScriptDetails {
-    type: ScriptType;
-}
+import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 export interface Scripts {
     [network: string]: {
-        [scriptAddress: string]: ScriptDetailsWithType;
+        [scriptAddress: string]: ScriptDetails;
     };
 }
 
@@ -222,6 +213,7 @@ export const scripts: Scripts = {
     preview: {
         addr_test1wr6eszvevvpgqtjv3l6lfp7dawgj5cl50pmzx29awzurmzq56wtyn: {
             handle: 'pz_contract_2',
+            txBuildVersion: 1,
             handleHex: '000de140707a5f636f6e74726163745f32',
             validatorHash: 'f59809996302802e4c8ff5f487cdeb912a63f478762328bd70b83d88',
             refScriptUtxo: '43ff5e668352199ae008f0e9fc38ba85a99604575c13ab0224f997b118582772#0',
