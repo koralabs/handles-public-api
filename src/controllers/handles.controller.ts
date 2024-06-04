@@ -14,6 +14,33 @@ import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceTok
 import { StoredHandle } from '../repositories/memory/interfaces/handleStore.interfaces';
 
 class HandlesController {
+    private static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
+        const handleRepo = new handleRepoName() as IHandlesRepository;
+        let handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
+
+        if (!handle) {
+            const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);
+            if (!validHandle.valid) {
+                return {
+                    code: AvailabilityResponseCode.NOT_ACCEPTABLE,
+                    message: validHandle.message,
+                    handle
+                };
+            }
+            const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
+
+            if (!protectedWordsResult.available) {
+                return {
+                    code: protectedWordsResult.code,
+                    message: (protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS ? protectedWordsResult.reason : protectedWordsResult.message) ?? null,
+                    handle
+                };
+            }
+            return { code: 404, message: 'Handle not found', handle };
+        }
+        return { code: handleRepo.currentHttpStatus(), message: null, handle };
+    };
+
     public getAll = async (req: Request<RequestWithRegistry, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
@@ -56,33 +83,6 @@ class HandlesController {
         } catch (error) {
             next(error);
         }
-    };
-
-    public static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
-        const handleRepo = new handleRepoName() as IHandlesRepository;
-        let handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
-
-        if (!handle) {
-            const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);
-            if (!validHandle.valid) {
-                return {
-                    code: AvailabilityResponseCode.NOT_ACCEPTABLE,
-                    message: validHandle.message,
-                    handle
-                };
-            }
-            const protectedWordsResult = await ProtectedWords.checkAvailability(handleName);
-
-            if (!protectedWordsResult.available) {
-                return {
-                    code: protectedWordsResult.code,
-                    message: (protectedWordsResult.code === AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS ? protectedWordsResult.reason : protectedWordsResult.message) ?? null,
-                    handle
-                };
-            }
-            return { code: 404, message: 'Handle not found', handle };
-        }
-        return { code: handleRepo.currentHttpStatus(), message: null, handle };
     };
 
     public getHandle = async (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> => {

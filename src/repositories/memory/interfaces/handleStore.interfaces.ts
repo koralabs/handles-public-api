@@ -1,4 +1,4 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct, BoolInt } from '@koralabs/kora-labs-common';
 
 export interface SubHandleSettings {
     settings: ISubHandleSettings;
@@ -20,6 +20,11 @@ export interface StoredHandle extends IPersonalizedHandle {
     sub_length?: number;
     sub_characters?: string;
     sub_numeric_modifiers?: string;
+    virtual?: {
+        expires_slot: number;
+        public_mint: boolean;
+    };
+    original_address?: string;
 }
 
 export interface HandleHistory {

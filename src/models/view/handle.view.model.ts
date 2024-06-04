@@ -39,6 +39,12 @@ export class HandleViewModel {
     sub_characters?: string;
     sub_numeric_modifiers?: string;
 
+    original_address?: string;
+    virtual?: {
+        expires_slot: number;
+        public_mint: boolean;
+    };
+
     constructor(handle: StoredHandle) {
         if (!handle.utxo) {
             throw new HttpException(404, 'Handle not found');
@@ -77,5 +83,8 @@ export class HandleViewModel {
         this.sub_length = handle.sub_length;
         this.sub_characters = handle.sub_characters;
         this.sub_numeric_modifiers = handle.sub_numeric_modifiers;
+
+        this.virtual = handle.virtual;
+        this.original_address = handle.original_address;
     }
 }
