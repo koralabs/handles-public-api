@@ -11,7 +11,7 @@ import { StoredHandle } from './interfaces/handleStore.interfaces';
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = '|empty|';
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og } = searchModel;
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handles } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
         const getHandles = (index: Map<string, Set<string>>, key: string | undefined) => {
@@ -62,14 +62,16 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
+                          if (handles && !handles.includes(handle.name)) return agg;
                           agg.push(handle);
                       }
                       return agg;
                   }, [])
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
-                      if (!search || (search && (handle.name.includes(search) || handle.hex.includes(search)))) {
-                          agg.push(handle);
-                      }
+                      if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
+                      if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
+
+                      agg.push(handle);
                       return agg;
                   }, []);
 

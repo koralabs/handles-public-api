@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
-import { IGetAllQueryParams, IGetHandleRequest } from '../interfaces/handle.interface';
+import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
@@ -17,6 +17,49 @@ class HandlesController {
     public getAll = async (req: Request<RequestWithRegistry, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
+
+            const search = new HandleSearchModel({
+                characters,
+                length,
+                rarity,
+                numeric_modifiers,
+                search: searchQuery,
+                holder_address,
+                personalized,
+                og
+            });
+
+            const pagination = new HandlePaginationModel({
+                page,
+                sort,
+                handlesPerPage: records_per_page,
+                slotNumber: slot_number
+            });
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+
+            if (req.headers?.accept?.startsWith('text/plain')) {
+                const { sort: sortParam } = pagination;
+                const handles = await handleRepo.getAllHandleNames(search, sortParam);
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.set('x-handles-search-total', handles.length.toString());
+                res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
+                return;
+            }
+
+            let result = await handleRepo.getAll({ pagination, search });
+
+            res.set('x-handles-search-total', result.searchTotal.toString())
+                .status(handleRepo.currentHttpStatus())
+                .json(result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle)));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    public search = async (req: Request<RequestWithRegistry, {}, ISearchBody, {}>, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handles } = req.body;
 
             const search = new HandleSearchModel({
                 characters,
