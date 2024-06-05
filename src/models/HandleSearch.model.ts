@@ -146,8 +146,8 @@ export class HandleSearchModel {
     }
 
     set handles(value) {
-        if (value && !Array.isArray(value)) {
-            this.handles = undefined;
+        if (!Array.isArray(value)) {
+            this._handles = undefined;
         }
         this._handles = value;
     }
