@@ -217,6 +217,16 @@ describe('Testing Handles Routes', () => {
             expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
         });
 
+        it('should fail if handles is not an array', async () => {
+            const response = await request(app?.getServer())
+                .post('/handles/list')
+                .set('Content-Type', 'application/json')
+                .send({ handles: ['burritos'] });
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('expected array and received object');
+        });
+
         it('should return handles when handles is set', async () => {
             const response = await request(app?.getServer()).post('/handles/list').set('Content-Type', 'application/json').send(['burritos']);
 

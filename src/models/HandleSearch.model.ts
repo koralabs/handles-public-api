@@ -146,8 +146,8 @@ export class HandleSearchModel {
     }
 
     set handles(value) {
-        if (!Array.isArray(value)) {
-            this._handles = undefined;
+        if (value && !Array.isArray(value)) {
+            throw new ModelException(`expected array and received ${typeof value}`);
         }
         this._handles = value;
     }
