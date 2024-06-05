@@ -15,7 +15,7 @@ export interface IGetAllQueryParams {
     og?: 'true' | 'false';
 }
 
-export interface ISearchBody extends IGetAllQueryParams {
+export interface ISearchBody {
     handles: string[];
 }
 

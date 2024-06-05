@@ -57,9 +57,10 @@ class HandlesController {
         }
     };
 
-    public search = async (req: Request<RequestWithRegistry, {}, ISearchBody, {}>, res: Response, next: NextFunction): Promise<void> => {
+    public list = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handles } = req.body;
+            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
+            const { handles } = req.body;
 
             const search = new HandleSearchModel({
                 characters,
@@ -69,7 +70,8 @@ class HandlesController {
                 search: searchQuery,
                 holder_address,
                 personalized,
-                og
+                og,
+                handles
             });
 
             const pagination = new HandlePaginationModel({
@@ -91,10 +93,9 @@ class HandlesController {
             }
 
             let result = await handleRepo.getAll({ pagination, search });
+            const handlesViewModel = result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle));
 
-            res.set('x-handles-search-total', result.searchTotal.toString())
-                .status(handleRepo.currentHttpStatus())
-                .json(result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle)));
+            res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
         } catch (error) {
             next(error);
         }
