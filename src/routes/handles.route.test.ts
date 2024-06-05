@@ -218,10 +218,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return handles when handles is set', async () => {
-            const response = await request(app?.getServer())
-                .post('/handles/list')
-                .set('Content-Type', 'application/json')
-                .send({ handles: ['burritos'] });
+            const response = await request(app?.getServer()).post('/handles/list').set('Content-Type', 'application/json').send(['burritos']);
 
             expect(response.status).toEqual(200);
             expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);

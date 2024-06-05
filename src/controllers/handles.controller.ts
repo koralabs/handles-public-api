@@ -60,7 +60,7 @@ class HandlesController {
     public list = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
-            const { handles } = req.body;
+            const handles = req.body;
 
             const search = new HandleSearchModel({
                 characters,
