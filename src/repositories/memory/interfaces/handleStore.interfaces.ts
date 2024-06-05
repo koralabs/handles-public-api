@@ -82,6 +82,11 @@ export interface SaveMintingTxInput {
     sub_length?: number;
     sub_characters?: string;
     sub_numeric_modifiers?: string;
+    virtual?: {
+        expires_slot: number;
+        public_mint: boolean;
+    };
+    original_address?: string;
 }
 
 export interface SaveWalletAddressMoveInput {

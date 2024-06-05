@@ -237,7 +237,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity }: SaveMintingTxInput): StoredHandle => {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): StoredHandle => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -275,7 +275,9 @@ export class HandleStore {
             sub_characters,
             sub_length,
             sub_numeric_modifiers,
-            sub_rarity
+            sub_rarity,
+            virtual,
+            original_address
         };
 
         return newHandle;
@@ -386,6 +388,8 @@ export class HandleStore {
         const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LBL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
+        const virtual = personalizationDatum?.virtual ? { expires_slot: personalizationDatum.virtual.expires_slot, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+
         // update resolved addresses
         // remove ada from the new addresses. The contract should not allow adding an incorrect address
         // but to be safe, we'll remove the ada address from the resolved addresses
@@ -418,7 +422,9 @@ export class HandleStore {
                 sub_rarity: metadata?.sub_rarity,
                 sub_length: metadata?.sub_length,
                 sub_characters: metadata?.sub_characters,
-                sub_numeric_modifiers: metadata?.sub_numeric_modifiers
+                sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
+                virtual,
+                original_address: personalizationDatum?.original_address
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -446,7 +452,8 @@ export class HandleStore {
             reference_token,
             svg_version: personalizationDatum?.svg_version ?? '',
             default: personalizationDatum?.default == 1 ?? false,
-            last_update_address: personalizationDatum?.last_update_address
+            last_update_address: personalizationDatum?.last_update_address,
+            virtual
         };
 
         await HandleStore.save({

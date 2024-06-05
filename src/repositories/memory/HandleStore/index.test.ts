@@ -508,6 +508,10 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             const handleName = 'virtual@hndl';
+            const virtual = {
+                expires_slot: 200,
+                public_mint: true
+            };
 
             await HandleStore.saveMintedHandle({
                 hex: '000000007669727475616c40686e646c',
@@ -524,11 +528,15 @@ describe('HandleStore tests', () => {
                 sub_rarity: 'rare',
                 sub_length: 10,
                 sub_characters: 'letters',
-                sub_numeric_modifiers: 'numbers'
+                sub_numeric_modifiers: 'numbers',
+                virtual,
+                original_address: '0x123'
             });
 
             const handle = HandleStore.get(handleName);
             expect(handle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+            expect(handle?.virtual).toEqual(virtual);
+            expect(handle?.original_address).toEqual('0x123');
 
             // expect subHandle to get added to the subHandlesIndex
             const subHandles = HandleStore.getRootHandleSubHandles('hndl');
