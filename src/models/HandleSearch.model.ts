@@ -11,6 +11,7 @@ interface HandleSearchInput {
     holder_address?: string;
     personalized?: boolean;
     og?: string;
+    handles?: string[];
 }
 
 export class HandleSearchModel {
@@ -22,9 +23,10 @@ export class HandleSearchModel {
     private _holder_address?: string;
     private _personalized?: boolean;
     private _og?: boolean;
+    private _handles?: string[];
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handles } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
@@ -33,6 +35,7 @@ export class HandleSearchModel {
         this.holder_address = holder_address;
         this.personalized = personalized;
         this.og = og === 'true';
+        this.handles = handles;
     }
 
     get characters() {
@@ -65,7 +68,7 @@ export class HandleSearchModel {
     }
 
     set length(value) {
-        const lengthMErrorMsg = 'Length must be a number or a range of numbers (ex: 1-28) and can\'t exceed 28';
+        const lengthMErrorMsg = "Length must be a number or a range of numbers (ex: 1-28) and can't exceed 28";
         if (!value) {
             this._length = value;
             return;
@@ -88,7 +91,6 @@ export class HandleSearchModel {
             throw new ModelException('Invalid length range');
         }
         this._length = value;
-
     }
 
     get numeric_modifiers() {
@@ -130,12 +132,23 @@ export class HandleSearchModel {
     set personalized(value) {
         this._personalized = value;
     }
-    
+
     get og() {
         return this._og;
     }
 
     set og(value) {
         this._og = value;
+    }
+
+    get handles() {
+        return this._handles;
+    }
+
+    set handles(value) {
+        if (value && !Array.isArray(value)) {
+            throw new ModelException(`expected array and received ${typeof value}`);
+        }
+        this._handles = value;
     }
 }

@@ -15,6 +15,8 @@ export interface IGetAllQueryParams {
     og?: 'true' | 'false';
 }
 
+export type ISearchBody = string[];
+
 export interface IGetAllHoldersQueryParams {
     records_per_page?: string;
     page?: string;
