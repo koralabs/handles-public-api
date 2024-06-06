@@ -12,7 +12,7 @@ import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.v
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { StoredHandle } from '../repositories/memory/interfaces/handleStore.interfaces';
-import { isEmpty } from '../utils/util';
+import { _isEmpty } from '../utils/util';
 
 class HandlesController {
     private static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
@@ -89,7 +89,7 @@ class HandlesController {
     public list = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
-            const handles = !isEmpty(req.body) ? req.body : undefined;
+            const handles = !_isEmpty(req.body) ? req.body : undefined;
 
             const search = new HandleSearchModel({
                 characters,

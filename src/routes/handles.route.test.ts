@@ -38,9 +38,6 @@ jest.mock('../ioc', () => ({
                 if (handleName === 'nope@handle') {
                     return null;
                 }
-                if (handleName === 'sub@handle') {
-                    return null;
-                }
 
                 return {
                     name: handleName,
