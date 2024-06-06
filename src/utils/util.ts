@@ -8,6 +8,8 @@ export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));
 };
 
+export const isEmpty = (obj: any) => [Object, Array].includes((obj || {}).constructor) && !Object.entries(obj || {}).length;
+
 export const delay = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };

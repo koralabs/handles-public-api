@@ -38,6 +38,9 @@ jest.mock('../ioc', () => ({
                 if (handleName === 'nope@handle') {
                     return null;
                 }
+                if (handleName === 'sub@handle') {
+                    return null;
+                }
 
                 return {
                     name: handleName,
@@ -220,6 +223,91 @@ describe('Testing Handles Routes', () => {
 
         it('should pass plain text list of Accept is text/plain', async () => {
             const response = await request(app?.getServer()).get('/handles').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
+            expect(response.status).toEqual(200);
+            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
+        });
+    });
+
+    describe('[POST] /handles/list', () => {
+        it('should throw error if records_per_page is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?records_per_page=two');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_LIMIT_INVALID_FORMAT);
+        });
+
+        it('should throw error if sort is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?records_per_page=1&sort=hmm');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual(ERROR_TEXT.HANDLE_SORT_INVALID);
+        });
+
+        it('should return handles', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?records_per_page=1&sort=asc');
+
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
+        });
+
+        it('should fail if handles is not an array', async () => {
+            const response = await request(app?.getServer())
+                .post('/handles/list')
+                .set('Content-Type', 'application/json')
+                .send({ handles: ['burritos'] });
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('expected array and received object');
+        });
+
+        it('should return handles when handles is set', async () => {
+            const response = await request(app?.getServer()).post('/handles/list').set('Content-Type', 'application/json').send(['burritos']);
+
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
+        });
+
+        it('should throw error if characters is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?characters=nope');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('characters must be letters, numbers, special');
+        });
+
+        it('should throw error if length is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?length=nope');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual("Length must be a number or a range of numbers (ex: 1-28) and can't exceed 28");
+        });
+
+        it('should throw error if rarity is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?rarity=nope');
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('rarity must be basic, common, rare, ultra_rare, legendary');
+        });
+
+        it('should throw error if numeric_modifiers is invalid', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?numeric_modifiers=nope');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('numeric_modifiers must be negative, decimal');
+        });
+
+        it('should throw error if page and slot number are used together', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?page=1&slot_number=123');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual("'page' and 'slot_number' can't be used together");
+        });
+
+        it('should throw error if search query is less than 3 characters', async () => {
+            const response = await request(app?.getServer()).post('/handles/list?search=ab');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('search must be at least 3 characters');
+        });
+
+        it('should pass plain text list of Accept is text/plain', async () => {
+            const response = await request(app?.getServer()).post('/handles/list').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
             expect(response.status).toEqual(200);
             expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
         });

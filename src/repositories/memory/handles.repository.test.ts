@@ -215,6 +215,22 @@ describe('MemoryHandlesRepository Tests', () => {
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual({ searchTotal: 1, handles: [expectedVirtualHandle] });
         });
+
+        it('should find handles by name using the handle parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ handles: ['barbacoa', 'taco'] });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[0], handlesFixture[2]] });
+        });
+
+        it('should find handles by hex using the handle parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ handles: ['barbacoa-hex'] });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[0]] });
+        });
     });
 
     describe('getAllHandleNames', () => {

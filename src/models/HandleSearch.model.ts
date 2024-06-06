@@ -12,6 +12,7 @@ interface HandleSearchInput {
     personalized?: boolean;
     handle_type?: string;
     og?: string;
+    handles?: string[];
 }
 
 export class HandleSearchModel {
@@ -24,9 +25,10 @@ export class HandleSearchModel {
     private _personalized?: boolean;
     private _handle_type?: string;
     private _og?: boolean;
+    private _handles?: string[];
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handle_type } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handle_type, handles } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
@@ -36,6 +38,7 @@ export class HandleSearchModel {
         this.personalized = personalized;
         this.handle_type = handle_type;
         this.og = og === 'true';
+        this.handles = handles;
     }
 
     get characters() {
@@ -151,5 +154,16 @@ export class HandleSearchModel {
 
     set og(value) {
         this._og = value;
+    }
+
+    get handles() {
+        return this._handles;
+    }
+
+    set handles(value) {
+        if (value && !Array.isArray(value)) {
+            throw new ModelException(`expected array and received ${typeof value}`);
+        }
+        this._handles = value;
     }
 }
