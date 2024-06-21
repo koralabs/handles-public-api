@@ -277,7 +277,8 @@ class HandlesController {
                     public_minting_enabled: typeSettings[0],
                     pz_enabled: typeSettings[1],
                     tier_pricing: typeSettings[2],
-                    creator_defaults: typeSettings[3]
+                    default_styles: typeSettings[3],
+                    save_original_address: typeSettings[4]
                 };
             };
 

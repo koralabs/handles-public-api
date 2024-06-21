@@ -553,7 +553,7 @@ describe('Testing Handles Routes', () => {
                     nft: {
                         public_minting_enabled: true,
                         pz_enabled: true,
-                        creator_defaults: { bg_image: '' },
+                        default_styles: { bg_image: '' },
                         tier_pricing: [
                             [1, 200000000],
                             [2, 100000000],
@@ -562,7 +562,7 @@ describe('Testing Handles Routes', () => {
                     },
                     payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
                     virtual: {
-                        creator_defaults: { bg_image: '' },
+                        default_styles: { bg_image: '' },
                         public_minting_enabled: true,
                         pz_enabled: true,
                         tier_pricing: [[1, 20000000]]
