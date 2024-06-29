@@ -453,7 +453,8 @@ export class HandleStore {
             svg_version: personalizationDatum?.svg_version ?? '',
             default: personalizationDatum?.default == 1 ?? false,
             last_update_address: personalizationDatum?.last_update_address,
-            virtual
+            virtual,
+            original_address: personalizationDatum?.original_address
         };
 
         await HandleStore.save({

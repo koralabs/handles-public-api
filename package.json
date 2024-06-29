@@ -49,12 +49,13 @@
     "prettier-eslint-cli": "^7.1.0",
     "supertest": "^6.2.4",
     "ts-jest": "^29.0.1",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.1.0",
     "typescript": "^4.8.3"
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
-    "@koralabs/kora-labs-common": "4.2.1",
+    "@koralabs/kora-labs-common": "4.2.3",
     "bech32": "^2.0.0",
     "boolean": "^3.2.0",
     "cbor": "^8.1.0",
