@@ -339,14 +339,12 @@ class HandlesController {
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
             const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
 
-            if (!settings || !settings.settings) {
+            if (!settings?.utxo) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            const { utxo } = settings;
-
-            res.status(handleData.code).json(utxo);
+            res.status(handleData.code).json(settings.utxo);
         } catch (error) {
             next(error);
         }
