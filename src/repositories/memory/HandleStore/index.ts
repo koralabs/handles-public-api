@@ -463,7 +463,7 @@ export class HandleStore {
         });
     }
 
-    static async saveSubHandleSettingsChange({ name, settingsDatum, reference_token, slotNumber }: SaveSubHandleSettingsInput) {
+    static async saveSubHandleSettingsChange({ name, settingsDatum, utxoDetails, slotNumber }: SaveSubHandleSettingsInput) {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             // There should always be an existing root handle for a subhandle
@@ -481,7 +481,7 @@ export class HandleStore {
             ...existingHandle,
             subhandle_settings: {
                 settings: settingsDatum,
-                reference_token
+                utxo: utxoDetails
             },
             updated_slot_number: slotNumber
         };

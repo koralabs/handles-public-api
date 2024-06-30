@@ -219,7 +219,7 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
 
     const [txId, indexString] = utxo.split('#');
     const index = parseInt(indexString);
-    let reference_token = {
+    const utxoDetails = {
         tx_id: txId,
         index,
         lovelace,
@@ -230,7 +230,7 @@ const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, love
     await HandleStore.saveSubHandleSettingsChange({
         name,
         settingsDatum: datum,
-        reference_token,
+        utxoDetails,
         slotNumber
     });
 };

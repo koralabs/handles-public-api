@@ -1563,19 +1563,19 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
 
             await HandleStore.saveSubHandleSettingsChange({
                 name: 'shrimp-taco',
-                reference_token,
+                utxoDetails,
                 settingsDatum: settings,
                 slotNumber: 200
             });
 
             const handle = HandleStore.get('shrimp-taco');
             expect(handle?.subhandle_settings).toEqual({
-                reference_token,
+                utxo: utxoDetails,
                 settings
             });
 
@@ -1591,7 +1591,7 @@ describe('HandleStore tests', () => {
                             new: {
                                 subhandle_settings: {
                                     settings,
-                                    reference_token
+                                    utxo: utxoDetails
                                 },
                                 updated_slot_number: 200
                             },
@@ -1620,20 +1620,20 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const reference_token = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
 
             // First settings change
             await HandleStore.saveSubHandleSettingsChange({
                 name: handleName,
-                reference_token,
+                utxoDetails,
                 settingsDatum: settings,
                 slotNumber: 200
             });
 
             const handle = HandleStore.get(handleName);
             expect(handle?.subhandle_settings).toEqual({
-                reference_token: { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
+                utxo: { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
                 settings
             });
 
@@ -1641,7 +1641,7 @@ describe('HandleStore tests', () => {
 
             await HandleStore.saveSubHandleSettingsChange({
                 name: handleName,
-                reference_token,
+                utxoDetails,
                 settingsDatum: newSettings,
                 slotNumber: 300
             });
@@ -1650,7 +1650,7 @@ describe('HandleStore tests', () => {
 
             await HandleStore.saveSubHandleSettingsChange({
                 name: handleName,
-                reference_token,
+                utxoDetails,
                 settingsDatum: finalSettings,
                 slotNumber: 400
             });
@@ -1666,7 +1666,7 @@ describe('HandleStore tests', () => {
                         new: {
                             subhandle_settings: {
                                 settings,
-                                reference_token
+                                utxo: utxoDetails
                             },
                             updated_slot_number: 200
                         },
@@ -1691,7 +1691,7 @@ describe('HandleStore tests', () => {
                         old: {
                             subhandle_settings: {
                                 settings,
-                                reference_token
+                                utxo: utxoDetails
                             },
                             updated_slot_number: 200
                         }
@@ -1712,7 +1712,7 @@ describe('HandleStore tests', () => {
                         },
                         old: {
                             subhandle_settings: {
-                                reference_token,
+                                utxo: utxoDetails,
                                 settings: 'def'
                             },
                             updated_slot_number: 300

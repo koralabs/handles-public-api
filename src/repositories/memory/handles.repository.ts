@@ -1,4 +1,4 @@
-import { IHandleStats, IReferenceToken } from '@koralabs/kora-labs-common';
+import { IHandleStats, IUTxO } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -195,7 +195,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return datum;
     }
 
-    public async getSubHandleSettings(handleName: string): Promise<{ settings?: string; reference_token: IReferenceToken } | null> {
+    public async getSubHandleSettings(handleName: string): Promise<{ settings?: string; utxo: IUTxO } | null> {
         const handle = HandleStore.get(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');

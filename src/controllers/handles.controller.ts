@@ -4,7 +4,7 @@ import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interface
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings, IReferenceToken } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
@@ -157,23 +157,49 @@ class HandlesController {
         }
     }
 
+    private static async buildHandleReferenceToken(handle: string, handlesRepo: any, asHex: boolean): Promise<{ reference_token?: IReferenceToken; code: number }> {
+        const handleData = await HandlesController.getHandleFromRepo(handle, handlesRepo, asHex);
+
+        const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
+
+        if (!reference_token) {
+            return { code: handleData.code };
+        }
+
+        const scriptData = getScript(reference_token.address);
+        if (scriptData) {
+            // add to the reference_token the script data
+            reference_token.script = scriptData;
+        }
+
+        return { reference_token, code: handleData.code };
+    }
+
     public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
-
-            const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
+            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
 
             if (!reference_token) {
-                res.status(handleData.code).json({});
+                res.status(code).json({});
                 return;
             }
-            const scriptData = getScript(reference_token.address);
-            if (scriptData) {
-                // add to the reference_token the script data
-                reference_token.script = scriptData;
+
+            res.status(code).json(reference_token);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public async getHandleReferenceUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+
+            if (!reference_token) {
+                res.status(code).json({});
+                return;
             }
 
-            res.status(handleData.code).json(reference_token);
+            res.status(code).json(reference_token);
         } catch (error) {
             next(error);
         }
@@ -257,7 +283,7 @@ class HandlesController {
                 return;
             }
 
-            const { settings: settingsDatumString, reference_token } = settings;
+            const { settings: settingsDatumString } = settings;
 
             if (req.headers?.accept?.startsWith('text/plain')) {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
@@ -294,9 +320,33 @@ class HandlesController {
             };
 
             res.status(handleData.code).json({
-                settings: settingsDatum,
-                reference_token
+                settings: settingsDatum
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public async getSubHandleSettingsUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+        try {
+            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+
+            if (!handleData?.handle) {
+                res.status(404).send({ message: 'Handle not found' });
+                return;
+            }
+
+            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
+
+            if (!settings || !settings.settings) {
+                res.status(404).send({ message: 'SubHandle settings not found' });
+                return;
+            }
+
+            const { utxo } = settings;
+
+            res.status(handleData.code).json(utxo);
         } catch (error) {
             next(error);
         }

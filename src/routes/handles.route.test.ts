@@ -118,7 +118,14 @@ jest.mock('../ioc', () => ({
 
                 return {
                     settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff',
-                    reference_token: {}
+                    utxo: {
+                        tx_id: 'tx_id',
+                        index: 0,
+                        lovelace: 0,
+                        datum: '',
+                        address: 'addr1_ref_token',
+                        script: { type: 'plutus_v2', cbor: 'a247' }
+                    }
                 };
             },
             getSubHandles: (handleName: string) => {
@@ -514,6 +521,27 @@ describe('Testing Handles Routes', () => {
         });
     });
 
+    describe('[GET] /handles/:handle/utxo', () => {
+        it('should get reference token datum for a handle', async () => {
+            const scriptDetails: ScriptDetails = {
+                handle: 'pz_script_01',
+                handleHex: 'hex',
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
+            };
+            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            const response = await request(app?.getServer()).get('/handles/burritos/utxo');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: scriptDetails, tx_id: 'tx_id' });
+        });
+
+        it('should return empty object when reference token cannot be found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_ref_token/reference_token');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({});
+        });
+    });
+
     describe('[GET] /handles/:handle/subhandle_settings', () => {
         it('should return 404 for unminted subhandle', async () => {
             const response = await request(app?.getServer()).get('/handles/nope@handle/subhandle_settings');
@@ -543,7 +571,6 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
-                reference_token: {},
                 settings: {
                     agreed_terms: 'http://localhost:3007/#tou',
                     buy_down_paid: 0,
@@ -569,6 +596,32 @@ describe('Testing Handles Routes', () => {
                     }
                 }
             });
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandle_settings/utxo', () => {
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return No sub handle settings found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_settings@handle/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return invalid settings', async () => {
+            const response = await request(app?.getServer()).get('/handles/not@array/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return settings utxo json', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings/utxo');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' });
         });
     });
 
