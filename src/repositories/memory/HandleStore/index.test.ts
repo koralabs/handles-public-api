@@ -60,7 +60,8 @@ describe('HandleStore tests', () => {
                 image_hash,
                 standard_image_hash,
                 svg_version,
-                handle_type
+                handle_type,
+                last_update_address
             } = handle;
             await HandleStore.saveMintedHandle({
                 adaAddress,
@@ -73,6 +74,7 @@ describe('HandleStore tests', () => {
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
                 svg_version,
+                last_update_address,
                 handle_type
             });
         }
@@ -227,6 +229,7 @@ describe('HandleStore tests', () => {
                 name: 'barbacoa',
                 image: '',
                 image_hash: '',
+                last_update_address: '',
                 svg_version: '1.0.0',
                 standard_image_hash: '',
                 numeric_modifiers: '',
@@ -755,6 +758,7 @@ describe('HandleStore tests', () => {
                     created_slot_number: 200,
                     datum: undefined,
                     default_in_wallet: '',
+                    last_update_address: '',
                     has_datum: false,
                     hex: 'sour-cream-hex',
                     holder: '',

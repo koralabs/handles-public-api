@@ -342,7 +342,8 @@ export class HandleStore {
                 image: existingHandle.image,
                 og_number: existingHandle.og_number,
                 version: existingHandle.version,
-                personalization: existingHandle.personalization
+                personalization: existingHandle.personalization,
+                last_update_address: existingHandle.last_update_address
             };
             const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });
@@ -424,6 +425,7 @@ export class HandleStore {
                 sub_characters: metadata?.sub_characters,
                 sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
                 virtual,
+                last_update_address: personalizationDatum?.last_update_address,
                 original_address: personalizationDatum?.original_address
             };
             const handle = HandleStore.buildHandle(buildHandleInput);

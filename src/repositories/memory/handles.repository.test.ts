@@ -48,6 +48,7 @@ describe('MemoryHandlesRepository Tests', () => {
         svg_version: '',
         handle_type: 'virtual_subhandle',
         updated_slot_number: 8,
+        last_update_address: '',
         utxo: '#0',
         version: 0
     };
@@ -72,7 +73,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                handle_type
+                handle_type,
+                last_update_address
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -85,7 +87,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                handle_type
+                handle_type,
+                last_update_address
             });
         });
 
