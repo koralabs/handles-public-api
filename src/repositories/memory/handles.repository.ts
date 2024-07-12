@@ -1,4 +1,4 @@
-import { IHandleStats } from '@koralabs/kora-labs-common';
+import { IHandleStats, IUTxO } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -11,7 +11,8 @@ import { StoredHandle } from './interfaces/handleStore.interfaces';
 class MemoryHandlesRepository implements IHandlesRepository {
     private search(searchModel: HandleSearchModel) {
         const EMPTY = '|empty|';
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handles } = searchModel;
+
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
         const getHandles = (index: Map<string, Set<string>>, key: string | undefined) => {
@@ -62,6 +63,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                       const handle = HandleStore.get(name);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
+                          if (handle_type && handle.handle_type !== handle_type) return agg;
                           if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
                           agg.push(handle);
                       }
@@ -69,6 +71,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                   }, [])
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                       if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
+                      if (handle_type && handle.handle_type !== handle_type) return agg;
                       if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
 
                       agg.push(handle);
@@ -91,7 +94,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-            return { searchTotal: items.length, handles };
+            return { searchTotal: handles.length, handles };
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
@@ -108,7 +111,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        return { searchTotal: items.length, handles };
+        return { searchTotal: handles.length, handles };
     }
 
     public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetailsResponse[]> {
@@ -190,6 +193,27 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const { has_datum, datum = null } = handle;
         if (!has_datum) return null;
         return datum;
+    }
+
+    public async getSubHandleSettings(handleName: string): Promise<{ settings?: string; utxo: IUTxO } | null> {
+        const handle = HandleStore.get(handleName);
+        if (!handle || !handle.utxo) {
+            throw new HttpException(404, 'Not found');
+        }
+
+        const { subhandle_settings } = handle;
+        return subhandle_settings ?? null;
+    }
+
+    public async getSubHandles(handleName: string): Promise<StoredHandle[]> {
+        const subHandles = HandleStore.getRootHandleSubHandles(handleName);
+        return [...subHandles].reduce<StoredHandle[]>((agg, item) => {
+            const subHandle = HandleStore.get(item);
+            if (subHandle) {
+                agg.push(subHandle);
+            }
+            return agg;
+        }, []);
     }
 
     public getHandleStats(): IHandleStats {

@@ -3,9 +3,9 @@ import App from '../app';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
-import * as cbor from '../utils/cbor';
+import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import * as scripts from '../config/scripts';
-import { ScriptDetails } from '@koralabs/kora-labs-common';
+import { HandleType, ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -35,7 +35,7 @@ jest.mock('../ioc', () => ({
                     };
                 }
 
-                if (handleName === 'sub@handle') {
+                if (handleName === 'nope@handle') {
                     return null;
                 }
 
@@ -106,6 +106,34 @@ jest.mock('../ioc', () => ({
                 }
 
                 return `${handleName}_datum`;
+            },
+            getSubHandleSettings: (handleName: string) => {
+                if (handleName === 'no_settings@handle') {
+                    return null;
+                }
+
+                if (handleName === 'not@array') {
+                    return {};
+                }
+
+                return {
+                    settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff',
+                    utxo: {
+                        tx_id: 'tx_id',
+                        index: 0,
+                        lovelace: 0,
+                        datum: '',
+                        address: 'addr1_ref_token',
+                        script: { type: 'plutus_v2', cbor: 'a247' }
+                    }
+                };
+            },
+            getSubHandles: (handleName: string) => {
+                return [
+                    { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
+                    { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                    { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
+                ];
             }
         }),
         ['apiKeysRepo']: jest.fn().mockReturnValue({
@@ -126,6 +154,7 @@ describe('Testing Handles Routes', () => {
 
     afterEach(() => {
         jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
     describe('[GET] /handles', () => {
@@ -180,6 +209,13 @@ describe('Testing Handles Routes', () => {
 
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual("'page' and 'slot_number' can't be used together");
+        });
+
+        it('should throw error if handle_type is invalid', async () => {
+            const response = await request(app?.getServer()).get('/handles?handle_type=taco');
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('handle_type must be virtual_subhandle, nft_subhandle, handle');
         });
 
         it('should throw error if search query is less than 3 characters', async () => {
@@ -313,7 +349,7 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return 404 for unminted subhandle', async () => {
-            const response = await request(app?.getServer()).get('/handles/sub@handle');
+            const response = await request(app?.getServer()).get('/handles/nope@handle');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Handle not found');
         });
@@ -342,7 +378,8 @@ describe('Testing Handles Routes', () => {
             const scriptDetails: ScriptDetails = {
                 handle: 'pz_script_01',
                 handleHex: 'hex',
-                validatorHash: 'abc'
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
             };
             jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
@@ -468,7 +505,8 @@ describe('Testing Handles Routes', () => {
             const scriptDetails: ScriptDetails = {
                 handle: 'pz_script_01',
                 handleHex: 'hex',
-                validatorHash: 'abc'
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
             };
             jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/reference_token');
@@ -480,6 +518,146 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/no_ref_token/reference_token');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({});
+        });
+    });
+
+    describe('[GET] /handles/:handle/utxo', () => {
+        it('should get reference token datum for a handle', async () => {
+            const scriptDetails: ScriptDetails = {
+                handle: 'pz_script_01',
+                handleHex: 'hex',
+                validatorHash: 'abc',
+                type: ScriptType.PZ_CONTRACT
+            };
+            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            const response = await request(app?.getServer()).get('/handles/burritos/utxo');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: scriptDetails, tx_id: 'tx_id' });
+        });
+
+        it('should return empty object when reference token cannot be found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_ref_token/reference_token');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({});
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandle_settings', () => {
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandle_settings');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return No sub handle settings found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_settings@handle/subhandle_settings');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return invalid settings', async () => {
+            const response = await request(app?.getServer()).get('/handles/not@array/subhandle_settings');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return settings cbor', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle/subhandle_settings').set('Accept', 'text/plain; charset=utf-8');
+            expect(response.status).toEqual(200);
+            expect(response.text).toEqual('9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff');
+        });
+
+        it('should return settings json', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({
+                settings: {
+                    agreed_terms: 'http://localhost:3007/#tou',
+                    buy_down_paid: 0,
+                    buy_down_price: 0,
+                    buy_down_percent: 0,
+                    migrate_sig_required: false,
+                    nft: {
+                        public_minting_enabled: true,
+                        pz_enabled: true,
+                        default_styles: { bg_image: '' },
+                        tier_pricing: [
+                            [1, 200000000],
+                            [2, 100000000],
+                            [3, 50000000]
+                        ]
+                    },
+                    payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                    virtual: {
+                        default_styles: { bg_image: '' },
+                        public_minting_enabled: true,
+                        pz_enabled: true,
+                        tier_pricing: [[1, 20000000]]
+                    }
+                }
+            });
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandle_settings/utxo', () => {
+        it('should return 404 for unminted subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return No sub handle settings found', async () => {
+            const response = await request(app?.getServer()).get('/handles/no_settings@handle/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return invalid settings', async () => {
+            const response = await request(app?.getServer()).get('/handles/not@array/subhandle_settings/utxo');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('SubHandle settings not found');
+        });
+
+        it('should return settings utxo json', async () => {
+            const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings/utxo');
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' });
+        });
+    });
+
+    describe('[GET] /handles/:handle/subhandles', () => {
+        it('should return 404 for handle not found subhandle', async () => {
+            const response = await request(app?.getServer()).get('/handles/nope@handle/subhandles');
+            expect(response.status).toEqual(404);
+            expect(response.body.message).toEqual('Handle not found');
+        });
+
+        it('should return all subhandles', async () => {
+            const handleName = 'taco';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([
+                { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
+                { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
+            ]);
+        });
+
+        it('should return all virtual subHandles', async () => {
+            const handleName = 'burritos';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=virtual`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([
+                { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
+            ]);
+        });
+
+        it('should return all nft subHandles', async () => {
+            const handleName = 'burritos';
+            const response = await request(app?.getServer()).get(`/handles/${handleName}/subhandles?type=nft`);
+            expect(response.status).toEqual(200);
+            expect(response.body).toEqual([{ name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE }]);
         });
     });
 });

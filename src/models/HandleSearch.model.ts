@@ -1,4 +1,4 @@
-import { Rarity } from '@koralabs/kora-labs-common';
+import { HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { ModelException } from '../exceptions/ModelException';
 import { isNumeric } from '../utils/util';
 
@@ -10,6 +10,7 @@ interface HandleSearchInput {
     search?: string;
     holder_address?: string;
     personalized?: boolean;
+    handle_type?: string;
     og?: string;
     handles?: string[];
 }
@@ -22,11 +23,12 @@ export class HandleSearchModel {
     private _search?: string;
     private _holder_address?: string;
     private _personalized?: boolean;
+    private _handle_type?: string;
     private _og?: boolean;
     private _handles?: string[];
 
     constructor(input?: HandleSearchInput) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handles } = input ?? {};
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, personalized, handle_type, handles } = input ?? {};
         this.characters = characters;
         this.length = length;
         this.rarity = rarity;
@@ -34,6 +36,7 @@ export class HandleSearchModel {
         this.search = search;
         this.holder_address = holder_address;
         this.personalized = personalized;
+        this.handle_type = handle_type;
         this.og = og === 'true';
         this.handles = handles;
     }
@@ -61,6 +64,18 @@ export class HandleSearchModel {
             throw new ModelException(`rarity must be ${validRarity.join(', ')}`);
         }
         this._rarity = value;
+    }
+
+    get handle_type() {
+        return this._handle_type;
+    }
+
+    set handle_type(value) {
+        const validHandleType = Object.values(HandleType);
+        if (value && !validHandleType.some((v) => value.split(',').includes(v))) {
+            throw new ModelException(`handle_type must be ${validHandleType.join(', ')}`);
+        }
+        this._handle_type = value;
     }
 
     get length() {

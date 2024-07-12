@@ -3,19 +3,20 @@ import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
+import { ScriptDetails } from '@koralabs/kora-labs-common';
 
 class ScriptsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { latest = false } = req.query;
+            const { latest = false, type = null } = req.query;
 
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
 
             const network = process.env.NETWORK ?? 'preview';
-            const allScripts = scripts[network];
+            const allScripts = type ? Object.entries(scripts[network]).filter(([_, value]) => value.type === type) : Object.entries(scripts[network]);
 
             if (latest) {
-                const latestScript = Object.entries(scripts[network]).find(([_, value]) => value.latest);
+                const latestScript = allScripts.find(([_, value]) => value.latest);
 
                 if (!latestScript) {
                     // send a 404 if no latest script is found
@@ -33,7 +34,12 @@ class ScriptsController {
                 return;
             }
 
-            res.status(handleRepo.currentHttpStatus()).json(allScripts);
+            res.status(handleRepo.currentHttpStatus()).json(
+                allScripts.reduce<{ [scriptAddress: string]: ScriptDetails }>((acc, [key, value]) => {
+                    acc[key] = value;
+                    return acc;
+                }, {})
+            );
         } catch (error) {
             next(error);
         }

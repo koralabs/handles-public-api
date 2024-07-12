@@ -6,13 +6,12 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { Worker } from 'worker_threads';
-import { diff } from 'deep-object-diff';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
-import { getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle } from '../interfaces/handleStore.interfaces';
+import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../interfaces/handleStore.interfaces';
 import { bech32FromHex } from '../../../utils/serialization';
 
 export class HandleStore {
@@ -20,6 +19,7 @@ export class HandleStore {
     private static handles = new Map<string, StoredHandle>();
     static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
     static holderAddressIndex = new Map<string, HolderAddressIndex>();
+    static subHandlesIndex = new Map<string, Set<string>>();
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
@@ -28,7 +28,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 31;
+    static storageSchemaVersion = 33;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -89,6 +89,10 @@ export class HandleStore {
         indexSet.set(indexKey, set);
     };
 
+    static getRootHandleSubHandles = (rootHandle: string) => {
+        return HandleStore.subHandlesIndex.get(rootHandle) ?? new Set();
+    };
+
     static save = async ({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => {
         const updatedHandle: StoredHandle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
         const {
@@ -123,6 +127,11 @@ export class HandleStore {
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
+
+        if (name.includes('@')) {
+            const rootHandle = name.split('@')[1];
+            this.addIndexSet(this.subHandlesIndex, rootHandle, name);
+        }
 
         const isWithinMaxSlot = true;
         this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
@@ -164,6 +173,12 @@ export class HandleStore {
         this.charactersIndex.get(characters)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
+
+        // delete from subhandles index
+        if (handleName.includes('@')) {
+            const rootHandle = handleName.split('@')[1];
+            this.subHandlesIndex.get(rootHandle)?.delete(handleName);
+        }
 
         // remove the stake key index
         this.holderAddressIndex.get(holder)?.handles.delete(handleName);
@@ -222,7 +237,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address }: SaveMintingTxInput): StoredHandle => {
+    static buildHandle = ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): StoredHandle => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -256,7 +271,13 @@ export class HandleStore {
             amount,
             svg_version,
             version,
-            type
+            handle_type,
+            sub_characters,
+            sub_length,
+            sub_numeric_modifiers,
+            sub_rarity,
+            virtual,
+            original_address
         };
 
         return newHandle;
@@ -321,7 +342,8 @@ export class HandleStore {
                 image: existingHandle.image,
                 og_number: existingHandle.og_number,
                 version: existingHandle.version,
-                personalization: existingHandle.personalization
+                personalization: existingHandle.personalization,
+                last_update_address: existingHandle.last_update_address
             };
             const builtHandle = HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });
@@ -364,8 +386,10 @@ export class HandleStore {
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
         const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
-        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LABEL_000);
+        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LBL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
+
+        const virtual = personalizationDatum?.virtual ? { expires_slot: personalizationDatum.virtual.expires_slot, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
 
         // update resolved addresses
         // remove ada from the new addresses. The contract should not allow adding an incorrect address
@@ -395,7 +419,14 @@ export class HandleStore {
                 resolved_addresses: addresses,
                 svg_version: personalizationDatum?.svg_version,
                 version,
-                type: handleType
+                handle_type: handleType,
+                sub_rarity: metadata?.sub_rarity,
+                sub_length: metadata?.sub_length,
+                sub_characters: metadata?.sub_characters,
+                sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
+                virtual,
+                last_update_address: personalizationDatum?.last_update_address,
+                original_address: personalizationDatum?.original_address
             };
             const handle = HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -423,7 +454,38 @@ export class HandleStore {
             reference_token,
             svg_version: personalizationDatum?.svg_version ?? '',
             default: personalizationDatum?.default == 1 ?? false,
-            last_update_address: personalizationDatum?.last_update_address
+            last_update_address: personalizationDatum?.last_update_address,
+            virtual,
+            original_address: personalizationDatum?.original_address
+        };
+
+        await HandleStore.save({
+            handle: updatedHandle,
+            oldHandle: existingHandle
+        });
+    }
+
+    static async saveSubHandleSettingsChange({ name, settingsDatum, utxoDetails, slotNumber }: SaveSubHandleSettingsInput) {
+        const existingHandle = HandleStore.get(name);
+        if (!existingHandle) {
+            // There should always be an existing root handle for a subhandle
+            const message = `Cannot save subhandle settings for ${name} because root handle does not exist`;
+            Logger.log({
+                message,
+                event: 'HandleStore.saveSubHandleSettingsChange',
+                category: LogCategory.NOTIFY
+            });
+
+            throw new Error(message);
+        }
+
+        const updatedHandle: StoredHandle = {
+            ...existingHandle,
+            subhandle_settings: {
+                settings: settingsDatum,
+                utxo: utxoDetails
+            },
+            updated_slot_number: slotNumber
         };
 
         await HandleStore.save({
@@ -472,6 +534,7 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.handles),
             ...this.convertMapsToObjects(this.rarityIndex),
             ...this.convertMapsToObjects(this.ogIndex),
+            ...this.convertMapsToObjects(this.subHandlesIndex),
             ...this.convertMapsToObjects(this.lengthIndex),
             ...this.convertMapsToObjects(this.charactersIndex),
             ...this.convertMapsToObjects(this.numericModifiersIndex)
@@ -756,6 +819,7 @@ export class HandleStore {
         this.holderAddressIndex = new Map<string, HolderAddressIndex>();
         this.rarityIndex = new Map<string, Set<string>>();
         this.ogIndex = new Map<string, Set<string>>();
+        this.subHandlesIndex = new Map<string, Set<string>>();
         this.charactersIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();

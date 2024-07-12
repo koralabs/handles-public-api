@@ -1,13 +1,30 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IPzDatum, IReferenceToken, HandleType } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IUTxO, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct, BoolInt } from '@koralabs/kora-labs-common';
+
+export interface SubHandleSettings {
+    settings: ISubHandleSettings;
+    utxo: IUTxO;
+}
 
 export interface StoredHandle extends IPersonalizedHandle {
     amount: number;
-    type: HandleType;
     default?: boolean;
     resolved_addresses: {
         ada: string;
         [key: string]: string;
     };
+    subhandle_settings?: {
+        settings?: string;
+        utxo: IUTxO;
+    };
+    sub_rarity?: string;
+    sub_length?: number;
+    sub_characters?: string;
+    sub_numeric_modifiers?: string;
+    virtual?: {
+        expires_slot: number;
+        public_mint: boolean;
+    };
+    original_address?: string;
 }
 
 export interface HandleHistory {
@@ -60,7 +77,16 @@ export interface SaveMintingTxInput {
     resolved_addresses?: Record<string, string>;
     amount?: number;
     version?: number;
-    type: HandleType;
+    handle_type: HandleType;
+    sub_rarity?: string;
+    sub_length?: number;
+    sub_characters?: string;
+    sub_numeric_modifiers?: string;
+    virtual?: {
+        expires_slot: number;
+        public_mint: boolean;
+    };
+    original_address?: string;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -80,6 +106,13 @@ export interface SavePersonalizationInput {
     reference_token: IReferenceToken;
     personalizationDatum: IPzDatum | null;
     metadata: IHandleMetadata | null;
+}
+
+export interface SaveSubHandleSettingsInput {
+    name: string;
+    settingsDatum?: string;
+    utxoDetails: IUTxO;
+    slotNumber: number;
 }
 
 export interface HolderAddressIndex {

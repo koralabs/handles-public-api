@@ -27,11 +27,12 @@ export const handlesFixture: StoredHandle[] = [
         has_datum: false,
         amount: 1,
         image_hash: '',
+        last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE
     },
     {
         hex: 'burrito-hex',
@@ -56,11 +57,12 @@ export const handlesFixture: StoredHandle[] = [
         has_datum: false,
         amount: 1,
         image_hash: '',
+        last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE
     },
     {
         hex: 'taco-hex',
@@ -85,11 +87,12 @@ export const handlesFixture: StoredHandle[] = [
         has_datum: false,
         amount: 1,
         image_hash: '',
+        last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE
     }
 ];
 
@@ -158,7 +161,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                 og_number: Math.floor(Math.random() * 2438),
                 slotNumber: i,
-                type: HandleType.HANDLE,
+                handle_type: HandleType.HANDLE,
                 utxo: createRandomUtxo()
             });
             if (saveToHandleStore) {
@@ -209,7 +212,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                         og_number: Math.floor(Math.random() * 2438),
                         slotNumber: beginningSlot + i,
-                        type: HandleType.HANDLE,
+                        handle_type: HandleType.HANDLE,
                         utxo: createRandomUtxo()
                     });
                     await HandleStore.save({ handle: newHandle });

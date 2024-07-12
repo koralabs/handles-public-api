@@ -1,4 +1,5 @@
 import { Logger } from '@koralabs/kora-labs-common';
+import crc8 from 'crc/crc8';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 import { NETWORK } from '../config';
@@ -7,7 +8,7 @@ export const isNumeric = (n: string) => {
     return !isNaN(parseFloat(n)) && isFinite(parseFloat(n));
 };
 
-export const isEmpty = (obj: any) => [Object, Array].includes((obj || {}).constructor) && !Object.entries(obj || {}).length;
+export const _isEmpty = (obj: any) => [Object, Array].includes((obj || {}).constructor) && !Object.entries(obj || {}).length;
 
 export const delay = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,4 +79,74 @@ export const getSlotNumberFromDate = (date: Date): number => {
     // Ignore parens to show intent
     // prettier-ignore
     return (Math.floor(date.getTime() / 1000) - 1596491091) + 4924800;
+};
+
+export const isObject = (o: any) => o != null && typeof o === 'object';
+export const hasOwnProperty = (o: any, ...args: [v: PropertyKey]) => Object.prototype.hasOwnProperty.call(o, ...args);
+export const isDate = (d: any) => d instanceof Date;
+export const isEmpty = (o: any) => Object.keys(o).length === 0;
+export const isEmptyObject = (o: any) => isObject(o) && isEmpty(o);
+export const makeObjectWithoutPrototype = () => Object.create(null);
+
+export const diff = (lhs: any, rhs: any) => {
+    if (lhs === rhs) return {}; // equal return no diff
+
+    if (!isObject(lhs) || !isObject(rhs)) return rhs; // return updated rhs
+
+    const deletedValues = Object.keys(lhs).reduce((acc, key) => {
+        if (!hasOwnProperty(rhs, key)) {
+            acc[key] = undefined;
+        }
+
+        return acc;
+    }, makeObjectWithoutPrototype());
+
+    if (isDate(lhs) || isDate(rhs)) {
+        if (lhs.valueOf() == rhs.valueOf()) return {};
+        return rhs;
+    }
+
+    if (Array.isArray(lhs) || Array.isArray(rhs)) {
+        if (lhs.length === rhs.length && JSON.stringify(lhs) === JSON.stringify(rhs)) return {}; // return no diff
+        return rhs; // return updated rhs
+    }
+
+    return Object.keys(rhs).reduce((acc, key) => {
+        if (!hasOwnProperty(lhs, key)) {
+            acc[key] = rhs[key]; // return added r key
+            return acc;
+        }
+
+        const difference = diff(lhs[key], rhs[key]);
+
+        // If the difference is empty, and the lhs is an empty object or the rhs is not an empty object
+        if (isEmptyObject(difference) && !isDate(difference) && (isEmptyObject(lhs[key]) || !isEmptyObject(rhs[key]))) return acc; // return no diff
+
+        acc[key] = difference; // return updated key
+        return acc; // return updated key
+    }, deletedValues);
+};
+
+export const checkNameLabel = (assetName: string) => {
+    const assetNameString = typeof assetName === 'string' ? assetName : new TextDecoder().decode(assetName);
+    let isCip67 = false;
+    let assetLabel = null;
+    let actualAssetName = Buffer.from(assetName, 'hex').toString('utf8');
+    if (assetNameString.length >= 8) {
+        const maybeAssetLabel = assetNameString.slice(0, 8);
+        if (maybeAssetLabel.startsWith('0') && maybeAssetLabel.endsWith('0')) {
+            const label = maybeAssetLabel.slice(1, 5);
+            const check = maybeAssetLabel.slice(5, 7);
+            if (crc8(Buffer.from(label, 'hex')).toString(16).padStart(2, '0') == check) {
+                isCip67 = true;
+                assetLabel = `${parseInt(label, 16).toString().padStart(3, '0')}`;
+                actualAssetName = Buffer.from(assetName.slice(8), 'hex').toString('utf8');
+            }
+        }
+    }
+    return {
+        isCip67,
+        assetLabel,
+        assetName: actualAssetName
+    };
 };

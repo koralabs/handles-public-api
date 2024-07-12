@@ -1,5 +1,5 @@
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { decodeCborToJson } from '../cbor';
+import { decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { requestIpfs } from './requestIpfs';
 import { getIpfsGateway } from '../../config';
 
@@ -14,9 +14,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
             if (ipfsGateway.length > 12) {
                 result = await requestIpfs(`${ipfsGateway}${cid}`);
             } else {
-                throw new Error(
-                    `Status from primary gateway resulted in status ${result.statusCode}. Backup gateway "${ipfsGateway}" is invalid`
-                );
+                throw new Error(`Status from primary gateway resulted in status ${result.statusCode}. Backup gateway "${ipfsGateway}" is invalid`);
             }
         }
 
@@ -24,7 +22,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
 
         if (cbor) {
             try {
-                const json = await decodeCborToJson(cbor, schema);
+                const json = await decodeCborToJson({ cborString: cbor, schema });
                 if (json.hasOwnProperty('constructor_0')) {
                     const [data] = json.constructor_0;
                     return data;

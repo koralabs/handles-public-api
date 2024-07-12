@@ -1,14 +1,11 @@
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { buildOnChainObject, getHandleNameFromAssetName } from './utils';
+import { buildOnChainObject, getHandleNameFromAssetName, stringifyBlock } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import { decodeCborToJson } from '../../utils/cbor';
-import { handleDatumSchema } from '../../utils/cbor/schema/handleData';
-import { portalSchema } from '../../utils/cbor/schema/portal';
-import { designerSchema } from '../../utils/cbor/schema/designer';
-import { socialsSchema } from '../../utils/cbor/schema/socials';
+import { checkNameLabel } from '../../utils/util';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -71,11 +68,11 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
     const { constructor_0 } = datumObject;
 
     const getHandleType = (hex: string): HandleType => {
-        if (hex.startsWith(AssetNameLabel.LABEL_000)) {
+        if (hex.startsWith(AssetNameLabel.LBL_000)) {
             return HandleType.VIRTUAL_SUBHANDLE;
         }
 
-        if (hex.startsWith(AssetNameLabel.LABEL_222) && handle.includes('@')) {
+        if (hex.startsWith(AssetNameLabel.LBL_222) && handle.includes('@')) {
             return HandleType.NFT_SUBHANDLE;
         }
 
@@ -153,7 +150,7 @@ export const buildValidDatum = (handle: string, hex: string, datumObject: any): 
 };
 
 const buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
-    const decodedDatum = await decodeCborToJson(datum, handleDatumSchema);
+    const decodedDatum = await decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
     const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
 
     return buildValidDatum(handle, hex, datumObjectConstructor);
@@ -209,8 +206,37 @@ const processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelac
     });
 };
 
+const processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
+    const { name } = getHandleNameFromAssetName(assetName);
+
+    if (!datum) {
+        Logger.log({
+            message: `no datum for SubHandle token ${assetName}`,
+            category: LogCategory.ERROR,
+            event: 'processBlock.processSubHandleSettingsToken.noDatum'
+        });
+    }
+
+    const [txId, indexString] = utxo.split('#');
+    const index = parseInt(indexString);
+    const utxoDetails = {
+        tx_id: txId,
+        index,
+        lovelace,
+        datum: datum ?? '',
+        address
+    };
+
+    await HandleStore.saveSubHandleSettingsChange({
+        name,
+        settingsDatum: datum,
+        utxoDetails,
+        slotNumber
+    });
+};
+
 const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
-    if (assetName.includes(AssetNameLabel.LABEL_222)) {
+    if (assetName.includes(AssetNameLabel.LBL_222)) {
         await processAssetToken({
             assetName,
             slotNumber,
@@ -225,13 +251,13 @@ const processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lo
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_100) || assetName.includes(AssetNameLabel.LABEL_000)) {
+    if (assetName.includes(AssetNameLabel.LBL_100) || assetName.includes(AssetNameLabel.LBL_000)) {
         await processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 
-    if (assetName.includes(AssetNameLabel.LABEL_333)) {
-        Logger.log(`FT token found ${assetName}. Not implemented yet`);
+    if (assetName.includes('00001070')) {
+        await processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
         return;
     }
 
@@ -253,19 +279,27 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
         utxo,
         datum,
         script,
-        type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
+        handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
     };
 
     if (isMintTx) {
         let image = '';
         let og_number = 0;
         let version = 0;
+        let sub_characters;
+        let sub_length;
+        let sub_numeric_modifiers;
+        let sub_rarity;
 
-        if (assetName.includes(AssetNameLabel.LABEL_222)) {
+        if (assetName.includes(AssetNameLabel.LBL_222)) {
             const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
             og_number = data?.og_number ?? 0;
             image = data?.image ?? '';
             version = data?.version ?? 0;
+            sub_characters = data?.sub_characters;
+            sub_length = data?.sub_length;
+            sub_numeric_modifiers = data?.sub_numeric_modifiers;
+            sub_rarity = data?.sub_rarity;
         } else {
             const data = handleMetadata && handleMetadata[name];
             og_number = data?.core?.og_number ?? 0;
@@ -277,7 +311,11 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
             ...input,
             og_number,
             image,
-            version
+            version,
+            sub_characters,
+            sub_length,
+            sub_numeric_modifiers,
+            sub_rarity
         });
         // Do a webhook processor call here
     } else {
@@ -286,8 +324,19 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
 };
 
 const isMintingTransaction = (txBody: TxBody, assetName: string) => {
-    const result = txBody.body.mint?.assets?.[assetName];
-    return result !== undefined;
+    const assetNameInMintAssets = txBody.body.mint?.assets?.[assetName] !== undefined;
+    // is CIP67 is false OR is CIP67 is true and label is 222
+    const { isCip67, assetLabel } = checkNameLabel(assetName);
+    if (isCip67) {
+        if (assetLabel === '222') {
+            return assetNameInMintAssets;
+        }
+
+        return false;
+    }
+
+    // not cip68
+    return assetNameInMintAssets;
 };
 
 export const processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
@@ -382,11 +431,14 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
                             isMintTx
                         };
 
-                        // if (assetName.includes(AssetNameLabel.LABEL_000)) {
-                        //     console.log('assetName', assetName);
+                        // if (assetName.includes('0000000076324073685f73657474696e67735f303131')) {
+                        //     console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
                         // }
 
-                        if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))) {
+                        // console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
+                        Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
+
+                        if ([...Object.values(AssetNameLabel), '00001070'].some((v) => assetName.startsWith(`${policyId}.${v}`))) {
                             await processAssetClassToken(input);
                         } else {
                             await processAssetToken(input);

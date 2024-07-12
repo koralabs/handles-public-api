@@ -2,14 +2,57 @@ import { HandlePaginationModel } from '../../models/handlePagination.model';
 import { HandleSearchModel } from '../../models/HandleSearch.model';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
-import { handlesFixture, holdersFixture, createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
+import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
 import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
-import { HandleType } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 
 describe('MemoryHandlesRepository Tests', () => {
+    const expectedVirtualHandle = {
+        amount: 1,
+        bg_image: '',
+        characters: 'letters',
+        created_slot_number: 8,
+        default_in_wallet: 'taco',
+        has_datum: false,
+        hex: '0000000076407461636f',
+        holder: 'stake-key1',
+        holder_type: '',
+        image: '',
+        image_hash: '',
+        length: 6,
+        name: 'v@taco',
+        numeric_modifiers: '',
+        og_number: 0,
+        personalization: {
+            nsfw: false,
+            trial: false,
+            validated_by: ''
+        },
+        pfp_image: '',
+        rarity: 'common',
+        reference_token: {
+            address: '',
+            datum: '',
+            index: 0,
+            lovelace: 0,
+            tx_id: ''
+        },
+        resolved_addresses: {
+            ada: 'addr_test1kqn99rzddnrh63f8lz4hj3j36z4raukuqmj0t47nds6x2xkt9e3'
+        },
+        standard_image: '',
+        standard_image_hash: '',
+        svg_version: '',
+        handle_type: 'virtual_subhandle',
+        updated_slot_number: 8,
+        last_update_address: '',
+        utxo: '#0',
+        version: 0
+    };
+
     jest.mock('../../utils/addresses');
     beforeAll(async () => {
         jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
@@ -30,7 +73,8 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                type
+                handle_type,
+                last_update_address
             } = handle;
             return HandleStore.saveMintedHandle({
                 adaAddress,
@@ -43,9 +87,47 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash,
                 svg_version,
-                type
+                handle_type,
+                last_update_address
             });
         });
+
+        saves.push(
+            HandleStore.savePersonalizationChange({
+                name: 'v@taco',
+                hex: `${AssetNameLabel.LBL_000}76407461636f`,
+                personalization: {
+                    validated_by: '',
+                    trial: false,
+                    nsfw: false
+                },
+                reference_token: {
+                    tx_id: '',
+                    index: 0,
+                    lovelace: 0,
+                    datum: '',
+                    address: ''
+                },
+                personalizationDatum: {
+                    standard_image: '',
+                    image_hash: '',
+                    standard_image_hash: '',
+                    default: 0,
+                    validated_by: '',
+                    trial: 0,
+                    nsfw: 0,
+                    last_update_address: '',
+                    svg_version: '',
+                    agreed_terms: '',
+                    migrate_sig_required: 0,
+                    resolved_addresses: {
+                        ada: '0xb026528c4d6cc77d4527f8ab794651d0aa3ef2dc06e4f5d7d36c3465'
+                    }
+                },
+                slotNumber: 8,
+                metadata: null
+            })
+        );
         await Promise.all(saves);
     });
 
@@ -59,7 +141,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ page: '1', handlesPerPage: '1', sort: 'asc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
+            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[0]] });
         });
 
         it('should find handles by rarity', async () => {
@@ -67,7 +149,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ rarity: 'common' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[1], handlesFixture[2]] });
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[1], handlesFixture[2], expectedVirtualHandle] });
         });
 
         it('should no handles with compounded searches', async () => {
@@ -91,7 +173,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel();
             const search = new HandleSearchModel({ holder_address: 'stake-key1' });
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: handlesFixture.length, handles: handlesFixture });
+            expect(result).toEqual({ searchTotal: handlesFixture.length + 1, handles: [...handlesFixture, expectedVirtualHandle] });
         });
 
         it('should find no handles using invalid holder_address parameter', async () => {
@@ -108,7 +190,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, handlesPerPage: '1' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[0]] });
+            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[0]] });
         });
 
         it('should paginate handles by slot number and sort ascending by default', async () => {
@@ -126,7 +208,15 @@ describe('MemoryHandlesRepository Tests', () => {
             const pagination = new HandlePaginationModel({ slotNumber: `${updated_slot_number}`, sort: 'desc' });
             const search = new HandleSearchModel({});
             const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[1], handlesFixture[0]] });
+            expect(result).toEqual({ searchTotal: 3, handles: [handlesFixture[1], handlesFixture[0], expectedVirtualHandle] });
+        });
+
+        it('should find handles using handle_type parameter', async () => {
+            const repo = new MemoryHandlesRepository();
+            const pagination = new HandlePaginationModel();
+            const search = new HandleSearchModel({ handle_type: HandleType.VIRTUAL_SUBHANDLE });
+            const result = await repo.getAll({ pagination, search });
+            expect(result).toEqual({ searchTotal: 1, handles: [expectedVirtualHandle] });
         });
 
         it('should find handles by name using the handle parameter', async () => {
@@ -172,7 +262,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 length: '4-7'
             });
             const result = await repo.getAllHandleNames(search, 'asc');
-            expect(result).toEqual(['burrito', 'taco']);
+            expect(result).toEqual(['burrito', 'taco', 'v@taco']);
         });
 
         it('should sort handles randomly', async () => {
@@ -199,7 +289,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum: '',
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             });
             const handles = [...handlesFixture, newHandle];
             jest.spyOn(HandleStore, 'getHandles').mockReturnValue(handles);
@@ -227,7 +317,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 default_handle: 'taco',
                 known_owner_name: 'unknown',
                 manually_set: false,
-                total_handles: 3,
+                total_handles: 4,
                 type: ''
             });
         });
@@ -272,7 +362,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 current_block_hash: '',
                 current_memory_used: expect.any(Number),
                 current_slot: 0,
-                handle_count: 3,
+                handle_count: 4,
                 memory_size: 0,
                 ogmios_elapsed: '0:00',
                 percentage_complete: '0.00',
@@ -297,7 +387,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 datum,
                 image_hash: '',
                 svg_version: '',
-                type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE
             };
             await Promise.all([
                 HandleStore.saveMintedHandle(saveHandleInput),
@@ -331,6 +421,85 @@ describe('MemoryHandlesRepository Tests', () => {
             } catch (error: any) {
                 expect(error.message).toEqual('Not found');
             }
+        });
+    });
+
+    describe('getSubHandleSettings', () => {
+        const rootHandleName = 'chili-colorado';
+
+        beforeAll(async () => {
+            const rootHandleInput: SaveMintingTxInput = {
+                hex: 'chili-colorado-hex',
+                name: rootHandleName,
+                adaAddress: 'addr1chili-colorado',
+                og_number: 0,
+                image: '',
+                slotNumber: 0,
+                utxo: 'test_tx#0',
+                datum: 'a2some2key6another2key',
+                image_hash: '',
+                svg_version: '',
+                handle_type: HandleType.HANDLE
+            };
+            await Promise.all([HandleStore.saveMintedHandle(rootHandleInput)]);
+        });
+
+        it('should not get subhandle settings if handle does not exist', async () => {
+            const repo = new MemoryHandlesRepository();
+            try {
+                await repo.getSubHandleSettings('nope@handle');
+                throw new Error('expected error');
+            } catch (error: any) {
+                expect(error.message).toEqual('Not found');
+            }
+        });
+
+        it('should get subhandle settings by name', async () => {
+            const repo = new MemoryHandlesRepository();
+
+            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const settings = 'abc';
+            await HandleStore.saveSubHandleSettingsChange({
+                name: rootHandleName,
+                utxoDetails,
+                settingsDatum: settings,
+                slotNumber: 0
+            });
+
+            const result = await repo.getSubHandleSettings(rootHandleName);
+            expect(result).toEqual({
+                utxo: utxoDetails,
+                settings
+            });
+        });
+    });
+
+    describe('getSubHandles', () => {
+        const rootHandleName = 'chili-verde';
+        const subHandle = `taco@${rootHandleName}`;
+
+        beforeAll(async () => {
+            const subHandleInput: SaveMintingTxInput = {
+                hex: `${subHandle}-hex`,
+                name: subHandle,
+                adaAddress: `addr1${rootHandleName}`,
+                og_number: 0,
+                image: '',
+                slotNumber: 0,
+                utxo: 'test_tx#0',
+                datum: 'a2some2key6another2key',
+                image_hash: '',
+                svg_version: '',
+                handle_type: HandleType.NFT_SUBHANDLE
+            };
+            await Promise.all([HandleStore.saveMintedHandle(subHandleInput)]);
+        });
+
+        it('should get subhandles for root handle', async () => {
+            const repo = new MemoryHandlesRepository();
+            const result = await repo.getSubHandles(rootHandleName);
+            expect(result.length).toEqual(1);
+            expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ name: subHandle })]));
         });
     });
 });

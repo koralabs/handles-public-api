@@ -164,7 +164,7 @@ describe('processBlock Tests', () => {
         svg_version: '',
         holder_type: '',
         version: 0,
-        type: HandleType.HANDLE,
+        handle_type: HandleType.HANDLE,
         default: false
     };
 
@@ -184,7 +184,7 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -215,7 +215,7 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             datum,
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -240,7 +240,7 @@ describe('processBlock Tests', () => {
                 cbor: 'a2some_cbor'
             },
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -259,7 +259,7 @@ describe('processBlock Tests', () => {
             name,
             slotNumber: 0,
             utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
@@ -275,7 +275,7 @@ describe('processBlock Tests', () => {
 
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -288,20 +288,20 @@ describe('processBlock Tests', () => {
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
+            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             image: '',
             name: handleName,
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
         const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -314,17 +314,17 @@ describe('processBlock Tests', () => {
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
             datum: undefined,
-            hex: `${AssetNameLabel.LABEL_222}6275727269746f73`,
+            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0',
-            type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE
         });
     });
 
     it('Should process 100 asset class tokens', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -379,7 +379,7 @@ describe('processBlock Tests', () => {
                 designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
                 image_hash: '0xabcd',
                 last_update_address: '0xabcd',
-                migrate_sig_required: 0,
+                migrate_sig_required: false,
                 nsfw: false,
                 pfp_image: '',
                 portal: '',
@@ -400,9 +400,37 @@ describe('processBlock Tests', () => {
         });
     });
 
+    it('Should process 001 SubHandle settings token', async () => {
+        const handleName = `burritos`;
+        const handleHexName = `${AssetNameLabel.LBL_001}${Buffer.from(handleName).toString('hex')}`;
+
+        const saveSubHandleSettingsChangeSpy = jest.spyOn(HandleStore, 'saveSubHandleSettingsChange');
+        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
+
+        const cbor = '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff';
+
+        await processBlock({
+            policyId,
+            txBlock: txBlock({
+                handleHexName,
+                isMint: false,
+                datum: cbor
+            }) as TxBlock,
+            tip
+        });
+
+        expect(saveSubHandleSettingsChangeSpy).toHaveBeenCalledWith({
+            name: 'burritos',
+            utxoDetails: { address: 'addr123', datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff', index: 0, lovelace: 1, tx_id: 'some_id' },
+            settingsDatum: cbor,
+            slotNumber: 0
+        });
+    });
+
     it('should process as NFT Sub handle', async () => {
         const handleName = `sub@hndl`;
-        const handleHexName = `${AssetNameLabel.LABEL_222}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
 
         const saveMintedHandleSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -425,7 +453,7 @@ describe('processBlock Tests', () => {
             og_number: 0,
             script: undefined,
             slotNumber: 0,
-            type: HandleType.NFT_SUBHANDLE,
+            handle_type: HandleType.NFT_SUBHANDLE,
             utxo: 'some_id#0',
             version: 0
         });
@@ -433,14 +461,14 @@ describe('processBlock Tests', () => {
 
     it('Should process virtual sub handle', async () => {
         const handleName = `virtual@hndl`;
-        const handleHexName = `${AssetNameLabel.LABEL_000}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_000}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         const cbor =
-            'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b14e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff';
+            'd8799fae426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f64696669657273404a7375625f6c656e677468044a7375625f7261726974794562617369634e7375625f6368617261637465727340557375625f6e756d657269635f6d6f646966696572734001b14e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff';
 
         await processBlock({
             policyId,
@@ -464,7 +492,11 @@ describe('processBlock Tests', () => {
                 og: false,
                 og_number: 0,
                 rarity: 'basic',
-                version: 1
+                version: 1,
+                sub_characters: '',
+                sub_length: 4,
+                sub_numeric_modifiers: '',
+                sub_rarity: 'basic'
             },
             name: handleName,
             personalization: {
@@ -488,7 +520,7 @@ describe('processBlock Tests', () => {
                 designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
                 image_hash: '0xabcd',
                 last_update_address: '0xabcd',
-                migrate_sig_required: 0,
+                migrate_sig_required: false,
                 nsfw: false,
                 pfp_image: '',
                 portal: '',
@@ -506,7 +538,7 @@ describe('processBlock Tests', () => {
 
     it('Should validate datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -533,7 +565,7 @@ describe('processBlock Tests', () => {
 
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
         const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
@@ -555,7 +587,7 @@ describe('processBlock Tests', () => {
     it('Should burn tokens', async () => {
         const slot = 1234;
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LABEL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
         const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -698,7 +730,11 @@ describe('processBlock Tests', () => {
                         characters: '',
                         numeric_modifiers: '',
                         version: 0,
-                        holder_type: HandleType.NFT_SUBHANDLE
+                        holder_type: HandleType.NFT_SUBHANDLE,
+                        sub_characters: '',
+                        sub_length: 0,
+                        sub_numeric_modifiers: '',
+                        sub_rarity: ''
                     },
                     1,
                     {

@@ -1,5 +1,5 @@
 import { decodeCborFromIPFSFile } from './index';
-import * as cbor from '../cbor';
+import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import * as config from '../../config';
 import * as ipfs from './requestIpfs';
 
