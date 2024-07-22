@@ -21,7 +21,7 @@ export interface StoredHandle extends IPersonalizedHandle {
     sub_characters?: string;
     sub_numeric_modifiers?: string;
     virtual?: {
-        expires_slot: number;
+        expires_time: number;
         public_mint: boolean;
     };
     original_address?: string;
@@ -83,7 +83,7 @@ export interface SaveMintingTxInput {
     sub_characters?: string;
     sub_numeric_modifiers?: string;
     virtual?: {
-        expires_slot: number;
+        expires_time: number;
         public_mint: boolean;
     };
     original_address?: string;

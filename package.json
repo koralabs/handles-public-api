@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "@cardano-ogmios/client": "^5.5.5",
-    "@koralabs/kora-labs-common": "4.2.5",
+    "@koralabs/kora-labs-common": "4.3.3",
     "bech32": "^2.0.0",
     "boolean": "^3.2.0",
     "cbor": "^8.1.0",

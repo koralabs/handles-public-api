@@ -389,7 +389,7 @@ export class HandleStore {
         const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LBL_000);
         const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
 
-        const virtual = personalizationDatum?.virtual ? { expires_slot: personalizationDatum.virtual.expires_slot, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+        const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
 
         // update resolved addresses
         // remove ada from the new addresses. The contract should not allow adding an incorrect address
