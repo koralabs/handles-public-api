@@ -456,7 +456,9 @@ export class HandleStore {
             default: personalizationDatum?.default == 1 ?? false,
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
-            original_address: personalizationDatum?.original_address
+            original_address: personalizationDatum?.original_address,
+            // set the utxo to incoming reference_token for virtual subhandles
+            ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
         };
 
         await HandleStore.save({
