@@ -373,7 +373,7 @@ describe('processBlock Tests', () => {
                 address: 'addr123'
             },
             personalizationDatum: {
-                agreed_terms: '0x',
+                agreed_terms: '',
                 bg_image: '',
                 default: false,
                 designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
@@ -514,7 +514,7 @@ describe('processBlock Tests', () => {
                 address: 'addr123'
             },
             personalizationDatum: {
-                agreed_terms: '0x',
+                agreed_terms: '',
                 bg_image: '',
                 default: false,
                 designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',

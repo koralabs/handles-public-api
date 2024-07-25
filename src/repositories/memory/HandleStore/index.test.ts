@@ -512,7 +512,7 @@ describe('HandleStore tests', () => {
 
             const handleName = 'virtual@hndl';
             const virtual = {
-                expires_slot: 200,
+                expires_time: 200,
                 public_mint: true
             };
 

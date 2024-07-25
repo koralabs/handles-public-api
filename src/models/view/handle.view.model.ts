@@ -41,7 +41,7 @@ export class HandleViewModel {
 
     original_address?: string;
     virtual?: {
-        expires_slot: number;
+        expires_time: number;
         public_mint: boolean;
     };
 
