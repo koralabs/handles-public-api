@@ -9,9 +9,8 @@ import { HandleStore } from './HandleStore';
 import { StoredHandle } from './interfaces/handleStore.interfaces';
 
 class MemoryHandlesRepository implements IHandlesRepository {
+    public EMPTY = '|empty|';
     private search(searchModel: HandleSearchModel) {
-        const EMPTY = '|empty|';
-
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
         // helper function to get a list of hashes from the Set indexes
@@ -19,7 +18,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             if (!key) return [];
 
             const array = Array.from(index.get(key) ?? [], (value) => value);
-            return array.length === 0 ? [EMPTY] : array;
+            return array.length === 0 ? [this.EMPTY] : array;
         };
 
         // get handle name arrays for all the search parameters
@@ -40,7 +39,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             if (!key) return [];
 
             const array = Array.from(HandleStore.holderAddressIndex.get(key)?.handles ?? [], (value) => value);
-            return array.length === 0 ? [EMPTY] : array;
+            return array.length === 0 ? [this.EMPTY] : array;
         };
 
         const holderAddressItemsArray = getHolderAddressHandles(holder_address);
@@ -55,7 +54,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const uniqueHandleNames = [...new Set(handleNames)];
 
         // remove the empty names
-        const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== EMPTY);
+        const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== this.EMPTY);
 
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
@@ -152,6 +151,14 @@ class MemoryHandlesRepository implements IHandlesRepository {
             filteredHandles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
         }
         return filteredHandles.map((handle) => handle.name);
+    }
+
+    public getHandlesByPaymentKeyHashes = (hashes:string[]): string[]  => {
+        return hashes.map((h) => {
+                const array = Array.from(HandleStore.charactersIndex.get(h) ?? [], (value) => value);
+                return array.length === 0 ? [this.EMPTY] : array;
+            }
+        ).flat();
     }
 
     public async getHandleByName(handleName: string): Promise<StoredHandle | null> {

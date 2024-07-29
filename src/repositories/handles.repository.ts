@@ -7,7 +7,8 @@ import { StoredHandle } from './memory/interfaces/handleStore.interfaces';
 
 interface IHandlesRepository {
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
-    getAllHandleNames(search: HandleSearchModel, sort: string): Promise<string[]>;
+    getHandlesByPaymentKeyHashes: (hashes: string[]) => string[];
+    getAllHandleNames: (search: HandleSearchModel, sort: string) => Promise<string[]>;
     getHandleByName: (handleName: string) => Promise<StoredHandle | null>;
     getHandleByHex: (handleHex: string) => Promise<StoredHandle | null>;
     getHolderAddressDetails: (key: string) => Promise<HolderAddressDetailsResponse>;

@@ -23,6 +23,7 @@ export class HandleStore {
     static rarityIndex = new Map<string, Set<string>>();
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
+    static paymentKeyHashesIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
 
@@ -103,7 +104,8 @@ export class HandleStore {
             numeric_modifiers,
             length,
             resolved_addresses: { ada },
-            updated_slot_number
+            updated_slot_number,
+            payment_key_hash
         } = updatedHandle;
 
         const holder = getAddressHolderDetails(ada);
@@ -125,6 +127,7 @@ export class HandleStore {
         const ogFlag = og_number === 0 ? 0 : 1;
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
+        this.addIndexSet(this.paymentKeyHashesIndex, characters, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
@@ -171,6 +174,7 @@ export class HandleStore {
         this.rarityIndex.get(rarity)?.delete(handleName);
         this.ogIndex.get(`${ogFlag}`)?.delete(handleName);
         this.charactersIndex.get(characters)?.delete(handleName);
+        this.paymentKeyHashesIndex.get(characters)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
 
