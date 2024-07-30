@@ -139,7 +139,7 @@ class HandlesController {
         try {
             const hashes = !isEmpty(req.body) ? req.body as string[] : undefined;
             const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
-            const handles = handleRepo.getHandles(HandleStore.paymentKeyHashes, hashes!);
+            const handles = handleRepo.getHandlesByPaymentKeyHashes(hashes!);
             await this._searchFromList(req, res, next, handles);
         } catch (error) {
             next(error);

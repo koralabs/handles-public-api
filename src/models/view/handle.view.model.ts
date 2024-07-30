@@ -33,6 +33,7 @@ export class HandleViewModel {
     last_update_address?: string;
     version: number;
     handle_type: string;
+    payment_key_hash?: string;
 
     sub_rarity?: string;
     sub_length?: number;
@@ -77,6 +78,7 @@ export class HandleViewModel {
         this.last_update_address = handle.last_update_address;
         this.version = handle.version;
         this.handle_type = handle.handle_type;
+        this.payment_key_hash = handle.payment_key_hash;
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;

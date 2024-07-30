@@ -12,6 +12,7 @@ export interface StoredHandle extends IPersonalizedHandle {
         ada: string;
         [key: string]: string;
     };
+    payment_key_hash?: string;
     subhandle_settings?: {
         settings?: string;
         utxo: IUTxO;
@@ -87,6 +88,7 @@ export interface SaveMintingTxInput {
         public_mint: boolean;
     };
     original_address?: string;
+    payment_key_hash?: string;
 }
 
 export interface SaveWalletAddressMoveInput {

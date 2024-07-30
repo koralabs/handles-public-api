@@ -155,7 +155,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandlesByPaymentKeyHashes = (hashes:string[]): string[]  => {
         return hashes.map((h) => {
-                const array = Array.from(HandleStore.charactersIndex.get(h) ?? [], (value) => value);
+                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? [], (value) => value);
                 return array.length === 0 ? [this.EMPTY] : array;
             }
         ).flat();

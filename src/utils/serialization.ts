@@ -1,5 +1,6 @@
-import { Logger } from '@koralabs/kora-labs-common';
+import { decodeCborToJson, Logger } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
+import bs58 from 'bs58';
 
 export enum AddressType {
     Wallet = 'wallet',
@@ -91,6 +92,30 @@ export const buildStakeKey = (address: string): string | null => {
         return stakeAddress;
     } catch (error: any) {
         Logger.log(`Error building stake key ${error.message}`);
+        return null;
+    }
+};
+
+export const getPaymentKeyHash = async (address: string): Promise<string | null> => {
+    try {
+        const decoded = decodeAddress(address);
+        if (!decoded) {
+            try {
+                // Try Byron addresses
+                const jsonAddress = await decodeCborToJson({cborString: Buffer.from(bs58.decode(address)).toString('hex')});
+                const innerAddress = await decodeCborToJson({cborString: (jsonAddress[0].value as Buffer).toString('hex')});
+                return (innerAddress[0] as Buffer).toString('hex').slice(2);
+            }
+            catch {
+                return null;
+            }
+        }
+        else {
+            return decoded.slice(2, 58);
+        }
+
+    } catch (error: any) {
+        Logger.log(`Error getting payment key ${error.message}`);
         return null;
     }
 };

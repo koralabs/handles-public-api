@@ -26,6 +26,7 @@ describe('MemoryHandlesRepository Tests', () => {
         name: 'v@taco',
         numeric_modifiers: '',
         og_number: 0,
+        payment_key_hash: "73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272",
         personalization: {
             nsfw: false,
             trial: false,
@@ -41,7 +42,7 @@ describe('MemoryHandlesRepository Tests', () => {
             tx_id: ''
         },
         resolved_addresses: {
-            ada: 'addr_test1kqn99rzddnrh63f8lz4hj3j36z4raukuqmj0t47nds6x2xkt9e3'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         standard_image: '',
         standard_image_hash: '',
@@ -121,7 +122,7 @@ describe('MemoryHandlesRepository Tests', () => {
                     agreed_terms: '',
                     migrate_sig_required: 0,
                     resolved_addresses: {
-                        ada: '0xb026528c4d6cc77d4527f8ab794651d0aa3ef2dc06e4f5d7d36c3465'
+                        ada: '0x6073528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
                     }
                 },
                 slotNumber: 8,
@@ -278,7 +279,7 @@ describe('MemoryHandlesRepository Tests', () => {
         });
 
         it('should remove handles without a UTxO', async () => {
-            const newHandle = HandleStore.buildHandle({
+            const newHandle = await HandleStore.buildHandle({
                 hex: 'new-handle-hex',
                 name: 'new-handle',
                 adaAddress: '',

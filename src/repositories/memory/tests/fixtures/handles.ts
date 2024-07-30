@@ -154,7 +154,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
         if (!HandleStore.get(handleName)) {
-            const handle = HandleStore.buildHandle({
+            const handle = await HandleStore.buildHandle({
                 adaAddress: createRandomAddress(),
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
@@ -205,7 +205,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
             case 0: // add
                 const handleName = createRandomHandleName();
                 if (!HandleStore.get(handleName)) {
-                    const newHandle = HandleStore.buildHandle({
+                    const newHandle = await HandleStore.buildHandle({
                         adaAddress: createRandomAddress(),
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
