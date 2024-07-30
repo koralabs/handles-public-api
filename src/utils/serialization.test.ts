@@ -53,6 +53,8 @@ describe('Serialization Test', () => {
                 .toEqual("73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272");
             expect(await (getPaymentKeyHash("addr_test1xznnmfk43w5cag3m7e9nnfe0wcsg5lx8afv4u9utjk3zxvy4cujapvhtklq9nl02hvl4z6p24lgtwgplelma7w78hxpqrxzwz4")))
                 .toEqual("a73da6d58ba98ea23bf64b39a72f76208a7cc7ea595e178b95a22330");
+            expect(await (getPaymentKeyHash("addr_test1qpnqgjfm0y2dnjsyauvteu8u034x7nxjjms8dxtjck8msplan4acsu62leue4yrwmt6spxr8qzpkmw2vw59mlgr2jagsslke7a")))
+                .toEqual("6604493b7914d9ca04ef18bcf0fc7c6a6f4cd296e0769972c58fb807");
         });
         it('should get payment keyhash from Byron addresses', async () => {
             expect(await (getPaymentKeyHash("Ae2tdPwUPEZFRbyhz3cpfC2CumGzNkFBN2L42rcUc2yjQpEkxDbkPodpMAi")))

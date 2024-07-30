@@ -29,7 +29,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 33;
+    static storageSchemaVersion = 34;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -110,7 +110,8 @@ export class HandleStore {
         const holder = getAddressHolderDetails(ada);
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
-        const payment_key_hash = (await getPaymentKeyHash(ada));
+        const payment_key_hash = (await getPaymentKeyHash(ada)) ?? undefined;
+        updatedHandle.payment_key_hash = payment_key_hash;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -144,7 +145,7 @@ export class HandleStore {
                     handleHistory: history,
                     handleName: name,
                     slotNumber: updated_slot_number
-                });
+                }); 
         }
     };
 
