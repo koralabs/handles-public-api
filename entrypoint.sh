@@ -19,7 +19,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./cardano-world/docs/environments/${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
