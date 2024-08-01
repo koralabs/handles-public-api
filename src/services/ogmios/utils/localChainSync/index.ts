@@ -76,12 +76,14 @@ export const createLocalChainSyncClient = async (
             let processTheBlock = false;
 
             // check if the message contains the Handle policy ID or is a RollBackward
+            // SEE ./docs/ogmios-point.json
             if (message.indexOf('"result":{"RollBackward"') >= 0) {
                 processTheBlock = true;
             } else {
                 //console.log('MESSAGE', message);
                 processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
                 const ogmiosStatus = await fetchHealth();
+                // SEE ./docs/ogmios-block.json
                 let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
                 let blockMatch: string | null = (message.match(/"headerHash":\s?"([0-9a-fA-F]*)"/m) || ['', ''])[1];
                 let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];

@@ -366,6 +366,7 @@ export const processBlock = async ({ policyId, txBlock, tip }: { policyId: strin
         }
 
         // get metadata so we can use it later
+        // SEE ./docs/ogmios-tx.json
         const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT]) : null;
 
         // Iterate through all the outputs and find asset keys that start with our policyId
