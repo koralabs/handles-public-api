@@ -27,6 +27,7 @@ then
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
+    # --include-transaction-cbor
     ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
 
