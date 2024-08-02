@@ -9,7 +9,7 @@ describe('processRollback', () => {
         const rollbackSlot = 1234;
         const rollbackHash = '1234-hash';
         const tipSlot = 2000;
-        processRollback({ slot: rollbackSlot, hash: rollbackHash }, { slot: tipSlot, hash: 'tip_hash', blockNo: 4 });
+        processRollback({ slot: rollbackSlot, id: rollbackHash }, { slot: tipSlot, id: 'tip_hash', height: 4 });
 
         expect(rewindSpy).toHaveBeenCalledWith({ slot: rollbackSlot, hash: rollbackHash, lastSlot: tipSlot });
     });

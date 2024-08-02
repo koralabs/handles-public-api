@@ -1,9 +1,9 @@
-import { createInteractionContext, InteractionContext, IntersectionNotFoundError } from '@cardano-ogmios/client';
-import { PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
+import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
+import { Block, BlockPraos, Point, PointOrOrigin, Tip, TipOrOrigin } from '@cardano-ogmios/schema';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { BlockTip, TxBlock } from '../../interfaces/ogmios.interfaces';
+import { TxBlock } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { handleEraBoundaries, Point, POLICY_IDS } from './constants';
+import { handleEraBoundaries, POLICY_IDS } from './constants';
 import { processBlock } from './processBlock';
 import { processRollback } from './processRollback';
 import { memoryWatcher } from './utils';
@@ -27,7 +27,7 @@ class OgmiosService {
 
     private async rollForward(
         response: {
-            block: unknown;
+            block: Block;
             tip: unknown;
         },
         requestNext: () => void
@@ -39,7 +39,12 @@ class OgmiosService {
         HandleStore.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
         const policyId = POLICY_IDS[process.env.NETWORK ?? 'preview'][0];
-        await processBlock({ policyId, txBlock: response.block as TxBlock, tip: response.tip as BlockTip });
+
+        if (response.block.type !== 'praos') {
+            throw new Error(`Block type ${response.block.type} is not supported`);
+        }
+
+        await processBlock({ policyId, txBlock: response.block as BlockPraos, tip: response.tip as Tip });
 
         // start timer for ogmios rollForward
         startOgmiosExec = Date.now();
@@ -120,14 +125,14 @@ class OgmiosService {
             return initialStartingPoint;
         }
 
-        const { slot, hash } = handlesContent;
-        return { slot, hash };
+        const { slot, hash: id } = handlesContent;
+        return { slot, id };
     }
 
     public async startSync() {
         HandleStore.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
-            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].hash,
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
@@ -161,12 +166,11 @@ class OgmiosService {
         const startingPoint = await this.getStartingPoint();
 
         try {
-            await client.startSync(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+            await client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
             this.startIntervals();
-        }
-        catch (err) {
+        } catch (err: any) {
             this.intervals.forEach(clearInterval);
-            if (err instanceof IntersectionNotFoundError) {
+            if (err.code === 1000) {
                 // this means the slot that came back from the files is bad
                 await HandleStore.rollBackToGenesis();
             }

@@ -75,7 +75,7 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
         hex = hex.split('.')[1];
     }
 
-    const nameWithoutLabel: string = [...Object.values(AssetNameLabel), '00001070'].reduce((acc, label) => acc.replace(label, ''), hex);
+    const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
 
     return {
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),

@@ -16,15 +16,13 @@ describe('OgmiosService Tests', () => {
     describe('startSync', () => {
         it('Should call ogmios functions and start sync', async () => {
             // @ts-ignore;
-            const createChainSyncClientSpy = jest
-                .spyOn(localChainSync, 'createLocalChainSyncClient')
-                .mockResolvedValue({
-                    // @ts-ignore;
-                    startSync: (result) => {
-                        expect(result).toEqual(['origin']);
-                        return jest.fn();
-                    }
-                });
+            const createChainSyncClientSpy = jest.spyOn(localChainSync, 'createLocalChainSyncClient').mockResolvedValue({
+                // @ts-ignore;
+                resume: (result) => {
+                    expect(result).toEqual(['origin']);
+                    return jest.fn();
+                }
+            });
             const createInteractionContextSpy = jest.spyOn(ogmiosClient, 'createInteractionContext');
             jest.spyOn(HandleStore, 'getFile');
             jest.spyOn(HandleStore, 'getFileOnline');
@@ -67,7 +65,7 @@ describe('OgmiosService Tests', () => {
             const startingPoint = await ogmiosService.getStartingPoint();
             expect(startingPoint).toEqual({
                 slot: 2,
-                hash: 'b'
+                id: 'b'
             });
         });
     });
