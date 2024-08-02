@@ -3,7 +3,6 @@ ENV NETWORK=mainnet
 WORKDIR /app
 SHELL ["/bin/bash", "-c"]
 ADD ./dist/ entrypoint.sh setup_env.sh deployment_info.json ./
-# ADD ./config.json ./topology.json ./preprod/
 RUN \
     CARDANO_NODE_VER=9.1.0 && \
     OGMIOS_VER=6.5.0 && \

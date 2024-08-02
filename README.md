@@ -48,7 +48,12 @@ To use Preview or PreProd environments just add `-e NETWORK=preview` or `-e NETW
 
 ## OTHER OPTIONS
 All of the options below can be passed into the container using `-e ENV_VAR=value` arguments on the `docker run...` command.
-> `MODE=api-only` will skip cardano-node and ogmios and will only run the API NodeJS Express app. This requires `OGMIOS_HOST` to be set.
+> `MODE=<api-only|ogmios|cardano-node|both|all>`
+`api-only` will skip cardano-node and Ogmios and will only run the API NodeJS Express app. This requires `OGMIOS_HOST` to be set.
+`ogmios` will run only Ogmios 
+`cardano-node` will run only cardano-node
+`both` will wun both cardano-node and Ogmios
+`all` DEFAULT - This runs cardano-node, ogmios, and the API
 
 > `OGMIOS_HOST=<http url with port>` Required for running with `MODE=api-only`.
 
@@ -60,9 +65,9 @@ All of the options below can be passed into the container using `-e ENV_VAR=valu
 
 ## NOTES
 
-It can take a few hours to download the cardano-node snapshot and begin an Ogmios scan.
+Depending on your internet connectino, it can take a 45 minutes to a few hours to download the cardano-node snapshot and begin an Ogmios scan.
 
-A minimum of 16GB of RAM is required when running the container - 20GB recommended. If running in Ogmios-only mode, 4GB minimum is required, 8GB recommended.
+A minimum of 24GB of RAM is required when running the container - 32GB recommended. If running in Ogmios-only mode, 4GB minimum is required, 8GB recommended.
 
 The containers are setup for graceful cardano-node shutdown, but if you have to shut it down manually, for a more graceful shutdown (which helps subsequent load times), try running on the host (or in the container):
 ```sh

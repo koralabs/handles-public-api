@@ -5,6 +5,11 @@ export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}
 DISABLE_NODE_SNAPSHOT=${DISABLE_NODE_SNAPSHOT:-false}
+# api-only
+# ogmios
+# cardano-node
+# both (cardano-node + ogmios)
+# all [default] (cardano-node + ogmios + api)
 MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}

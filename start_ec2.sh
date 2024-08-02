@@ -9,7 +9,7 @@ if [ ! -f "$CW_INSTALL_FILE" ]; then
         -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json;
 fi
 
-docker run koralabs/handles-api -p 3001:3001 \
+docker run -p 3001:3001 \
     -e ENABLE_SOCKET_REDIRECT=true \
     -e MODE=cardano-node \
     -e NETWORK=preview \
@@ -19,4 +19,5 @@ docker run koralabs/handles-api -p 3001:3001 \
     --health-interval=30 \
     --health-retries=3 \
     --health-start-period=60 \
-    --restart=always
+    --restart=always \
+    koralabs/handles-api --include-transaction-cbor
