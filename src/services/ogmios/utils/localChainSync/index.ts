@@ -1,7 +1,7 @@
 import fastq from 'fastq';
-import { createPointFromCurrentTip, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
-import { findIntersect, Intersection, requestNext, UnknownResultError } from '@cardano-ogmios/client/dist/ChainSync';
-import { Block, Ogmios, PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
+import { ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
+import { ChainSynchronizationClient, findIntersection, Intersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
+import { Block, Ogmios, Point, PointOrOrigin, TipOrOrigin } from '@cardano-ogmios/schema';
 import { POLICY_IDS } from '../../constants';
 import { HandleStore } from '../../../../repositories/memory/HandleStore';
 import { fetchHealth } from '..';
@@ -38,34 +38,31 @@ export interface ChainSyncMessageHandlers {
 }
 
 /** @category Constructor */
-export const createLocalChainSyncClient = async (
-    context: InteractionContext,
-    messageHandlers: ChainSyncMessageHandlers,
-    options?: { sequential?: boolean }
-): Promise<ChainSyncClient> => {
+export const createLocalChainSyncClient = async (context: InteractionContext, messageHandlers: ChainSyncMessageHandlers, options?: { sequential?: boolean }): Promise<ChainSynchronizationClient> => {
     const { socket } = context;
     return new Promise((resolve) => {
-        const messageHandler = async (response: Ogmios['RequestNextResponse']) => {
-            if ('RollBackward' in response.result) {
-                await messageHandlers.rollBackward(
-                    {
-                        point: response.result.RollBackward.point,
-                        tip: response.result.RollBackward.tip
-                    },
-                    () => requestNext(socket)
-                );
-            } else if ('RollForward' in response.result) {
-                await messageHandlers.rollForward(
-                    {
-                        block: response.result.RollForward.block,
-                        tip: response.result.RollForward.tip
-                    },
-                    () => {
-                        requestNext(socket);
-                    }
-                );
-            } else {
-                throw new UnknownResultError(response.result);
+        const messageHandler = async (response: Ogmios['NextBlockResponse']) => {
+            if (isNextBlockResponse(response)) {
+                switch (response.result.direction) {
+                    case 'backward':
+                        return await messageHandlers.rollBackward(
+                            {
+                                point: response.result.point,
+                                tip: response.result.tip
+                            },
+                            () => nextBlock(socket)
+                        );
+                    case 'forward':
+                        return await messageHandlers.rollForward(
+                            {
+                                block: response.result.block,
+                                tip: response.result.tip
+                            },
+                            () => nextBlock(socket)
+                        );
+                    default:
+                        break;
+                }
             }
         };
 
@@ -76,18 +73,17 @@ export const createLocalChainSyncClient = async (
             let processTheBlock = false;
 
             // check if the message contains the Handle policy ID or is a RollBackward
-            // SEE ./docs/ogmios-point.json
-            if (message.indexOf('"result":{"RollBackward"') >= 0) {
+            if (message.indexOf('"result":{"direction":"backward"') >= 0) {
                 processTheBlock = true;
             } else {
                 //console.log('MESSAGE', message);
                 processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
                 const ogmiosStatus = await fetchHealth();
                 // SEE ./docs/ogmios-block.json
-                let slotMatch: string | null = (message.match(/"header":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
-                let blockMatch: string | null = (message.match(/"headerHash":\s?"([0-9a-fA-F]*)"/m) || ['', ''])[1];
+                let slotMatch: string | null = (message.match(/"block":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
+                let blockMatch: string | null = (message.match(/"block":{(?:(?!"id").)*"id":\s?([0-9a-fA-F]*)/m) || ['', '0'])[1];
                 let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
-                let tipHashMatch: string | null = (message.match(/"tip":.*?"hash":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
+                let tipHashMatch: string | null = (message.match(/"tip":.*?"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                 //console.log({slotMatch, blockMatch, tipSlotMatch});
                 HandleStore.setMetrics({
                     currentSlot: parseInt(slotMatch),
@@ -100,8 +96,8 @@ export const createLocalChainSyncClient = async (
             }
 
             if (processTheBlock) {
-                const response: Ogmios['RequestNextResponse'] = safeJSON.parse(message);
-                if (response.methodname === 'RequestNext') {
+                const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
+                if (response.method === 'nextBlock') {
                     try {
                         await responseHandler(response);
                         return;
@@ -111,27 +107,52 @@ export const createLocalChainSyncClient = async (
                 }
             }
 
-            requestNext(socket);
+            nextBlock(socket);
         };
 
         return resolve({
             context,
             shutdown: async () => {
-                    if (socket.CONNECTING || socket.OPEN) {
-                        socket.close();
-                    }
-                },
-            startSync: async (points, inFlight) => {
-                const intersection = await findIntersect(context, points || [await createPointFromCurrentTip(context)]);
+                if (socket.CONNECTING || socket.OPEN) {
+                    socket.close();
+                }
+            },
+            resume: async (points, inFlight) => {
+                const intersection = await findIntersection(context, points || [await createPointFromCurrentTip(context)]);
                 ensureSocketIsOpen(socket);
                 socket.on('message', async (message: string) => {
                     await processMessage(message);
                 });
                 for (let n = 0; n < (inFlight || 100); n += 1) {
-                    requestNext(socket);
+                    nextBlock(socket);
                 }
                 return intersection;
             }
         });
     });
 };
+
+/** @category ChainSynchronization */
+export class TipIsOriginError extends Error {
+    public constructor() {
+        super();
+        this.message = 'Unable to produce point as the chain tip is the origin';
+    }
+}
+
+/** @internal */
+export async function createPointFromCurrentTip(context: InteractionContext): Promise<Point> {
+    const { tip } = await findIntersection(context, ['origin']);
+    if (tip === 'origin') {
+        throw new TipIsOriginError();
+    }
+    return {
+        id: tip.id,
+        slot: tip.slot
+    } as Point;
+}
+
+/** @internal */
+export function isNextBlockResponse(response: any): response is Ogmios['NextBlockResponse'] {
+    return typeof (response as Ogmios['NextBlockResponse'])?.result?.direction !== 'undefined';
+}

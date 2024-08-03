@@ -38,11 +38,6 @@ export interface HandleOnChainMetadata {
     website: string;
 }
 
-export interface BlockTip {
-    slot: number;
-    hash: string;
-    blockNo: number;
-}
 export interface TxMetadata {
     body: {
         blob?: {

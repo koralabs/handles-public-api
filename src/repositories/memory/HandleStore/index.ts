@@ -29,7 +29,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 34;
+    static storageSchemaVersion = 35;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -145,7 +145,7 @@ export class HandleStore {
                     handleHistory: history,
                     handleName: name,
                     slotNumber: updated_slot_number
-                }); 
+                });
         }
     };
 
@@ -174,7 +174,7 @@ export class HandleStore {
         this.rarityIndex.get(rarity)?.delete(handleName);
         this.ogIndex.get(`${ogFlag}`)?.delete(handleName);
         this.charactersIndex.get(characters)?.delete(handleName);
-        const payment_key_hash = (await getPaymentKeyHash(ada));
+        const payment_key_hash = await getPaymentKeyHash(ada);
         if (payment_key_hash) this.paymentKeyHashesIndex.get(payment_key_hash)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
