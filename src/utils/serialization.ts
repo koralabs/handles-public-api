@@ -111,7 +111,7 @@ export const getPaymentKeyHash = async (address: string): Promise<string | null>
             }
         }
         else {
-            console.log(decoded)
+            //console.log(decoded)
             return decoded.slice(2, 58);
         }
 

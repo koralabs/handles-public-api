@@ -151,7 +151,7 @@ class HandlesController {
             const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
             res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message });
         } catch (error) {
-            console.log(error);
+            //console.log(error);
             next(error);
         }
     };
