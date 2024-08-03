@@ -298,27 +298,28 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@cardano-ogmios/client@^5.5.5":
-  version "5.6.0"
-  resolved "https://registry.yarnpkg.com/@cardano-ogmios/client/-/client-5.6.0.tgz#c2b23f25562688f604686699390b6b06b4cf3a76"
-  integrity sha512-F0kWQ+TTc3OvSsp9CmxAPqo7fpB9yjrK+Lp52IqGG2YJVwyIynvHwlOW0cZNsRLO+KXwJrSoKdj9rHI0Vix4iw==
+"@cardano-ogmios/client@^6.5.0":
+  version "6.5.0"
+  resolved "https://registry.yarnpkg.com/@cardano-ogmios/client/-/client-6.5.0.tgz#181b31696b6f07413c798fa2c068eb14c31e6355"
+  integrity sha512-hdianZyQ7r/mr0bfOQ5cZkeClF4hs1rz8R0JBwn+S/Iv0ElfcvhuOamy8whxc2n+rFnfVIyHoSoBHRMibyWKxw==
   dependencies:
-    "@cardano-ogmios/schema" "5.6.0"
-    "@cardanosolutions/json-bigint" "^1.0.0"
+    "@cardano-ogmios/schema" "6.5.0"
+    "@cardanosolutions/json-bigint" "^1.0.1"
     "@types/json-bigint" "^1.0.1"
+    bech32 "^2.0.0"
     cross-fetch "^3.1.4"
     fastq "^1.11.0"
     isomorphic-ws "^4.0.1"
     nanoid "^3.1.31"
     ts-custom-error "^3.2.0"
-    ws "^7.4.6"
+    ws "^7.5.10"
 
-"@cardano-ogmios/schema@5.6.0":
-  version "5.6.0"
-  resolved "https://registry.yarnpkg.com/@cardano-ogmios/schema/-/schema-5.6.0.tgz#7ab280953ad677ba93a03492613a41ba3e72e854"
-  integrity sha512-JTlh/gOS5iM4b7CKc3dFRs2UC6fY+PeLiOv6fKxFSOSRMZ59sLgv+oGqjnzyVeZFUt6o683C9zFmBzh60l8KnA==
+"@cardano-ogmios/schema@6.5.0", "@cardano-ogmios/schema@^6.5.0":
+  version "6.5.0"
+  resolved "https://registry.yarnpkg.com/@cardano-ogmios/schema/-/schema-6.5.0.tgz#e831f75387bbc6ea69d755e12d1da9b5bc7d4d81"
+  integrity sha512-tE2LvqfZ1SNBm4C6H/VITtFQ/zOJ8diGuHFPe30Pvg4hQzmD/1ekGCb73MJkcKy2WGpIRjnk/uwAzczc7Y320A==
 
-"@cardanosolutions/json-bigint@^1.0.0":
+"@cardanosolutions/json-bigint@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@cardanosolutions/json-bigint/-/json-bigint-1.0.1.tgz#077dad78f010c2fd195cf035b1b680dc6d98d50b"
   integrity sha512-mbYL6jtHqMFCZnTFhmkmoeDzHMBino0gMiGQnOJE7CwzZzkK2HCpH0MTBk+84QDadMEGX7iFt7uB+levm1a+bQ==
@@ -6026,10 +6027,10 @@ write-file-atomic@^4.0.2:
     imurmurhash "^0.1.4"
     signal-exit "^3.0.7"
 
-ws@^7.4.6:
-  version "7.5.9"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-7.5.9.tgz#54fa7db29f4c7cec68b1ddd3a89de099942bb591"
-  integrity sha512-F+P9Jil7UiSKSkppIiD94dN07AwvFixvLIj1Og1Rl9GGMuNipJnV9JzjD6XuqmAeiswGvUmNLjr5cFuXwNS77Q==
+ws@^7.5.10:
+  version "7.5.10"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-7.5.10.tgz#58b5c20dc281633f6c19113f39b349bd8bd558d9"
+  integrity sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==
 
 xdg-basedir@^3.0.0:
   version "3.0.0"

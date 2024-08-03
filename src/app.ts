@@ -7,10 +7,9 @@ import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { delay, dynamicallyLoad, writeConsoleLine } from './utils/util';
+import { delay, dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
-import { IntersectionNotFoundError } from '@cardano-ogmios/client';
 
 class App {
     public app: express.Application;
@@ -87,7 +86,7 @@ class App {
                     await ogmiosService.startSync();
                     ogmiosStarted = true;
                 } catch (error: any) {
-                    if (error instanceof IntersectionNotFoundError) {
+                    if (error.code === 1000) {
                         loadS3 = false;
                     }
                     Logger.log({
@@ -100,7 +99,7 @@ class App {
                     //     category: LogCategory.INFO,
                     //     event: 'startOgmios.failed.error'
                     // });
-                    await delay(30*1000)
+                    await delay(30 * 1000);
                 }
             }
         };

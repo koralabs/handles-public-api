@@ -8,13 +8,13 @@ export const processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) =>
         Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
         await HandleStore.rollBackToGenesis();
     } else {
-        const { slot, hash } = point;
+        const { slot, id } = point;
         let lastSlot = 0;
         if (tip !== 'origin') {
             lastSlot = tip.slot;
         }
 
         // The idea here is we need to rollback all changes from a given slot
-        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+        await HandleStore.rewindChangesToSlot({ slot, hash: id, lastSlot });
     }
 };

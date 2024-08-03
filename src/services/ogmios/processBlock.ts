@@ -1,11 +1,12 @@
 import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
-import { BlockTip, HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput } from '../../interfaces/ogmios.interfaces';
+import { HandleOnChainData, MetadataLabel, TxBlock, TxBlockBody, TxBody, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildOnChainObject, getHandleNameFromAssetName, stringifyBlock } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { checkNameLabel } from '../../utils/util';
+import { Block, BlockPraos, StringNoSchema, Tip, Transaction } from '@cardano-ogmios/schema';
 
 const blackListedIpfsCids: string[] = [];
 
@@ -323,8 +324,8 @@ const processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, 
     }
 };
 
-const isMintingTransaction = (txBody: TxBody, assetName: string) => {
-    const assetNameInMintAssets = txBody.body.mint?.assets?.[assetName] !== undefined;
+const isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) => {
+    const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
     // is CIP67 is false OR is CIP67 is true and label is 222
     const { isCip67, assetLabel } = checkNameLabel(assetName);
     if (isCip67) {
@@ -339,111 +340,101 @@ const isMintingTransaction = (txBody: TxBody, assetName: string) => {
     return assetNameInMintAssets;
 };
 
-export const processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: TxBlock; tip: BlockTip }) => {
+export const processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: BlockPraos; tip: Tip }) => {
     const startBuildingExec = Date.now();
 
-    const txBlockType = txBlock[Object.keys(txBlock)[0] as 'alonzo' | 'shelley' | 'babbage'] as TxBlockBody;
-
     const lastSlot = tip.slot;
-    const currentSlot = txBlockType?.header?.slot ?? 0;
-    const currentBlockHash = txBlockType?.headerHash ?? '0';
-    const tipBlockHash = tip?.hash ?? '1';
+    const currentSlot = txBlock?.slot ?? 0;
+    const currentBlockHash = txBlock.id ?? '0';
+    const tipBlockHash = tip?.id ?? '1';
 
     HandleStore.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
 
-    for (let b = 0; b < txBlockType?.body.length; b++) {
-        const txBody = txBlockType?.body[b];
+    for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
+        const txBody = txBlock?.transactions?.[b];
         const txId = txBody?.id;
 
         // Look for burn transactions
-        const mintAssets = Object.entries(txBody.body.mint?.assets ?? {});
+        const mintAssets = Object.entries(txBody?.mint ?? {});
         for (let i = 0; i < mintAssets.length; i++) {
-            const [assetName, value] = mintAssets[i];
-            if (assetName.startsWith(policyId) && value === BigInt(-1)) {
-                const { name } = getHandleNameFromAssetName(assetName);
-                await HandleStore.burnHandle(name, currentSlot);
+            const [policy, assetInfo] = mintAssets[i];
+            if (policy === policyId) {
+                const [assetName, quantity] = Object.entries(assetInfo)[0];
+                if (quantity === BigInt(-1)) {
+                    const { name } = getHandleNameFromAssetName(assetName);
+                    await HandleStore.burnHandle(name, currentSlot);
+                }
             }
         }
 
         // get metadata so we can use it later
-        const handleMetadata = txBody.metadata?.body?.blob?.[MetadataLabel.NFT]?.map?.[0]?.k?.string === policyId ? buildOnChainObject<HandleOnChainData>(txBody.metadata?.body?.blob?.[MetadataLabel.NFT]) : null;
+        const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
 
         // Iterate through all the outputs and find asset keys that start with our policyId
-        for (let i = 0; i < txBody.body.outputs.length; i++) {
-            const o = txBody.body.outputs[i];
-            if (o.value.assets) {
-                const keys = Object.keys(o.value.assets);
-                for (let j = 0; j < keys.length; j++) {
-                    if (keys[j].toString().startsWith(policyId)) {
-                        const assetName = keys[j].toString();
-                        const { datum = null, script: outputScript } = o;
+        for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
+            const o = txBody?.outputs[i];
+            const asset = o?.value?.[policyId];
+            if (asset) {
+                const assetName = Object.keys(asset)[0];
+                const { datum = null, script: outputScript } = o;
 
-                        // We need to get the datum. This can either be a string or json object.
-                        let datumString;
-                        try {
-                            datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                        } catch (error) {
-                            Logger.log({
-                                message: `Error decoding datum for ${txId}`,
-                                category: LogCategory.ERROR,
-                                event: 'processBlock.decodingDatum'
-                            });
-                        }
+                // We need to get the datum. This can either be a string or json object.
+                let datumString;
+                try {
+                    datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
+                } catch (error) {
+                    Logger.log({
+                        message: `Error decoding datum for ${txId}`,
+                        category: LogCategory.ERROR,
+                        event: 'processBlock.decodingDatum'
+                    });
+                }
 
-                        const isMintTx = isMintingTransaction(txBody, assetName);
-                        if (assetName === policyId) {
-                            // Don't save nameless token.
-                            continue;
-                        }
+                const isMintTx = isMintingTransaction(assetName, policyId, txBody);
+                if (assetName === policyId) {
+                    // Don't save nameless token.
+                    continue;
+                }
 
-                        let script: { type: string; cbor: string } | undefined;
-                        if (outputScript) {
-                            try {
-                                const [type, cbor] = Object.entries(outputScript)[0];
-                                script = {
-                                    type: type.replace(':', '_'),
-                                    cbor
-                                };
-                            } catch (error) {
-                                Logger.log({
-                                    message: `Error error getting script for ${txId}`,
-                                    category: LogCategory.ERROR,
-                                    event: 'processBlock.decodingScript'
-                                });
-                            }
-                        }
-
-                        const data = handleMetadata ? handleMetadata[policyId] : undefined;
-                        const {
-                            address,
-                            value: { coins }
-                        } = o;
-
-                        const input: ProcessAssetTokenInput = {
-                            assetName,
-                            address,
-                            slotNumber: currentSlot,
-                            utxo: `${txId}#${i}`,
-                            lovelace: coins,
-                            datum: datumString,
-                            script,
-                            handleMetadata: data,
-                            isMintTx
+                let script: { type: string; cbor: string } | undefined;
+                if (outputScript) {
+                    try {
+                        script = {
+                            type: outputScript.language.replace(':', '_'),
+                            cbor: outputScript.cbor ?? ''
                         };
-
-                        // if (assetName.includes('0000000076324073685f73657474696e67735f303131')) {
-                        //     console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                        // }
-
-                        // console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                        Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
-
-                        if ([...Object.values(AssetNameLabel), '00001070'].some((v) => assetName.startsWith(`${policyId}.${v}`))) {
-                            await processAssetClassToken(input);
-                        } else {
-                            await processAssetToken(input);
-                        }
+                    } catch (error) {
+                        Logger.log({
+                            message: `Error error getting script for ${txId}`,
+                            category: LogCategory.ERROR,
+                            event: 'processBlock.decodingScript'
+                        });
                     }
+                }
+
+                const input: ProcessAssetTokenInput = {
+                    assetName,
+                    address: o.address,
+                    slotNumber: currentSlot,
+                    utxo: `${txId}#${i}`,
+                    lovelace: parseInt(o.value['ada'].lovelace.toString()),
+                    datum: datumString,
+                    script,
+                    handleMetadata,
+                    isMintTx
+                };
+
+                // if (assetName.includes('0000000076324073685f73657474696e67735f303131')) {
+                //     console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
+                // }
+
+                // console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
+                // Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
+
+                if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(v))) {
+                    await processAssetClassToken(input);
+                } else {
+                    await processAssetToken(input);
                 }
             }
         }

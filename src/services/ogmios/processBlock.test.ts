@@ -1,10 +1,10 @@
 import { AssetNameLabel, HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
-import { BlockTip, TxBlock, TxMetadata } from '../../interfaces/ogmios.interfaces';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import { buildValidDatum, processBlock } from './processBlock';
 import * as ipfs from '../../utils/ipfs';
 import { StoredHandle } from '../../repositories/memory/interfaces/handleStore.interfaces';
+import { Block, BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -13,130 +13,134 @@ describe('processBlock Tests', () => {
         jest.clearAllMocks();
     });
 
-    const tip: BlockTip = {
+    const tip: Tip = {
         slot: 0,
-        hash: 'some_hash',
-        blockNo: 0
+        id: 'some_hash',
+        height: 0
     };
 
     const policyId = '123';
     const hexName = '7465737431323334';
     const name = 'test1234';
 
-    const metadata = (policy: string, handleName: string): TxMetadata => ({
-        body: {
-            blob: {
-                721: {
-                    map: [
-                        {
-                            k: {
-                                string: policy
-                            },
-                            v: {
-                                map: [
-                                    {
-                                        k: {
-                                            string: handleName
-                                        },
-                                        v: {
-                                            map: [
-                                                {
-                                                    k: {
-                                                        string: 'image'
-                                                    },
-                                                    v: {
-                                                        string: `ifps://some_hash_${handleName}`
-                                                    }
-                                                },
-                                                {
-                                                    k: {
-                                                        string: 'core'
-                                                    },
-                                                    v: {
-                                                        map: [
-                                                            {
-                                                                k: {
-                                                                    string: 'og'
-                                                                },
-                                                                v: {
-                                                                    int: BigInt(1)
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    }
-                                ]
+    const metadata = (policy: string, handleName: string) => ({
+        hash: 'some_hash',
+        labels: {
+            721: {
+                json: {
+                    [policy]: {
+                        [handleName]: {
+                            image: `ifps://some_hash_${handleName}`,
+                            core: {
+                                og: BigInt(1)
                             }
                         }
-                    ]
+                    }
                 }
             }
         }
     });
 
-    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Record<string, string>; isBurn?: boolean; slot?: number }) => ({
-        babbage: {
-            body: [
-                !isBurn
-                    ? {
-                          id: 'some_id',
-                          body: {
-                              outputs: [
-                                  {
-                                      datum,
-                                      script,
-                                      address,
-                                      value: {
-                                          coins: 1,
-                                          assets: {
-                                              [`${`${policy}.${handleHexName}`}`]: 1
-                                          }
-                                      }
-                                  }
-                              ],
-                              mint: isMint
-                                  ? {
-                                        coins: 1,
-                                        assets: {
-                                            [`${`${policy}.${handleHexName}`}`]: 1
-                                        }
-                                    }
-                                  : {}
-                          },
-                          metadata: metadata(policy, handleName)
-                      }
-                    : {
-                          id: 'some_id_2',
-                          body: {
-                              outputs: [
-                                  {
-                                      datum,
-                                      address,
-                                      value: {
-                                          coins: 1,
-                                          assets: {}
-                                      }
-                                  }
-                              ],
-                              mint: {
-                                  coins: 0,
-                                  assets: {
-                                      [`${`${policy}.${handleHexName}`}`]: BigInt(-1)
+    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number }): BlockPraos => ({
+        ancestor: 'test',
+        era: 'babbage',
+        type: 'praos',
+        size: { bytes: 0 },
+        protocol: { version: { major: 0, minor: 0, patch: 0 } },
+        height: 10,
+        id: 'some_block_hash',
+        slot,
+        issuer: {
+            leaderValue: {},
+            operationalCertificate: {
+                count: 1,
+                kes: {
+                    period: 1,
+                    verificationKey: ''
+                }
+            },
+            verificationKey: '',
+            vrfVerificationKey: ''
+        },
+        transactions: [
+            !isBurn
+                ? {
+                      id: 'some_id',
+                      spends: 'inputs',
+                      inputs: [
+                          {
+                              index: 0,
+                              transaction: {
+                                  id: 'some_id'
+                              }
+                          }
+                      ],
+                      outputs: [
+                          {
+                              datum,
+                              script,
+                              address,
+                              value: {
+                                  ada: {
+                                      lovelace: BigInt(1)
+                                  },
+                                  [policy]: {
+                                      [handleHexName]: BigInt(1)
                                   }
                               }
-                          },
-                          metadata: null
-                      }
-            ],
-            headerHash: 'some_hash',
-            header: {
-                slot,
-                blockHash: 'some_block_hash'
-            }
-        }
+                          }
+                      ],
+                      mint: isMint
+                          ? {
+                                [policyId]: {
+                                    [handleHexName]: BigInt(1)
+                                }
+                            }
+                          : undefined,
+                      metadata: metadata(policy, handleName),
+                      signatories: [
+                          {
+                              key: '',
+                              signature: ''
+                          }
+                      ]
+                  }
+                : {
+                      id: 'some_id_2',
+                      spends: 'inputs',
+                      inputs: [
+                          {
+                              index: 0,
+                              transaction: {
+                                  id: 'some_id'
+                              }
+                          }
+                      ],
+                      outputs: [
+                          {
+                              datum,
+                              address,
+                              value: {
+                                  ada: {
+                                      lovelace: BigInt(1)
+                                  }
+                              }
+                          }
+                      ],
+                      mint: {
+                          [policy]: {
+                              [handleHexName]: BigInt(-1)
+                          }
+                      },
+                      metadata: undefined,
+                      signatories: [
+                          {
+                              key: '',
+                              signature: ''
+                          }
+                      ]
+                  }
+        ]
     });
 
     const expectedItem: StoredHandle = {
@@ -173,7 +177,7 @@ describe('processBlock Tests', () => {
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({}) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({}), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -189,7 +193,7 @@ describe('processBlock Tests', () => {
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
             tipBlockHash: 'some_hash',
-            currentBlockHash: 'some_hash',
+            currentBlockHash: 'some_block_hash',
             currentSlot: 0,
             lastSlot: 0
         });
@@ -203,7 +207,7 @@ describe('processBlock Tests', () => {
 
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({ datum }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ datum }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -220,12 +224,12 @@ describe('processBlock Tests', () => {
     });
 
     it('Should save script', async () => {
-        const script = { 'plutus:v2': 'a2some_cbor' };
+        const script: Script = { language: 'plutus:v2', cbor: 'a2some_cbor' };
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
 
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({ script }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ script }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -251,7 +255,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
-        await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }), tip });
 
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: newAddress,
@@ -267,7 +271,7 @@ describe('processBlock Tests', () => {
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         const saveAddressSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
 
-        await processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }) as TxBlock, tip });
+        await processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
 
         expect(saveSpy).toHaveBeenCalledTimes(0);
         expect(saveAddressSpy).toHaveBeenCalledTimes(0);
@@ -281,7 +285,7 @@ describe('processBlock Tests', () => {
 
         await processBlock({
             policyId,
-            txBlock: txBlock({ handleHexName }) as TxBlock,
+            txBlock: txBlock({ handleHexName }) as BlockPraos,
             tip
         });
 
@@ -307,7 +311,7 @@ describe('processBlock Tests', () => {
 
         await processBlock({
             policyId,
-            txBlock: txBlock({ handleHexName, isMint: false }) as TxBlock,
+            txBlock: txBlock({ handleHexName, isMint: false }) as BlockPraos,
             tip
         });
 
@@ -339,7 +343,7 @@ describe('processBlock Tests', () => {
                 handleHexName,
                 isMint: false,
                 datum: cbor
-            }) as TxBlock,
+            }),
             tip
         });
 
@@ -416,7 +420,7 @@ describe('processBlock Tests', () => {
                 handleHexName,
                 isMint: false,
                 datum: cbor
-            }) as TxBlock,
+            }),
             tip
         });
 
@@ -440,7 +444,7 @@ describe('processBlock Tests', () => {
             txBlock: txBlock({
                 handleHexName,
                 isMint: true
-            }) as TxBlock,
+            }) as BlockPraos,
             tip
         });
 
@@ -476,7 +480,7 @@ describe('processBlock Tests', () => {
                 handleHexName,
                 isMint: false,
                 datum: cbor
-            }) as TxBlock,
+            }),
             tip
         });
 
@@ -551,7 +555,7 @@ describe('processBlock Tests', () => {
                 handleHexName,
                 isMint: false,
                 datum: 'd87a9fa1446e616d65447461636fff'
-            }) as TxBlock,
+            }),
             tip
         });
 
@@ -572,7 +576,7 @@ describe('processBlock Tests', () => {
 
         await processBlock({
             policyId,
-            txBlock: txBlock({ handleHexName, isMint: false }) as TxBlock,
+            txBlock: txBlock({ handleHexName, isMint: false }),
             tip
         });
 
@@ -580,7 +584,7 @@ describe('processBlock Tests', () => {
         expect(loggerSpy).toHaveBeenCalledWith({
             category: 'ERROR',
             event: 'processBlock.processAssetReferenceToken.noDatum',
-            message: 'no datum for reference token 123.000643b06275727269746f73'
+            message: 'no datum for reference token 000643b06275727269746f73'
         });
     });
 
@@ -593,7 +597,7 @@ describe('processBlock Tests', () => {
 
         await processBlock({
             policyId,
-            txBlock: txBlock({ handleHexName, isBurn: true, slot }) as TxBlock,
+            txBlock: txBlock({ handleHexName, isBurn: true, slot }),
             tip
         });
 

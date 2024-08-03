@@ -5,7 +5,12 @@ export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}
 DISABLE_NODE_SNAPSHOT=${DISABLE_NODE_SNAPSHOT:-false}
-MODE=${MODE:-both}
+# api-only
+# ogmios
+# cardano-node
+# both (cardano-node + ogmios)
+# all [default] (cardano-node + ogmios + api)
+MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 
@@ -19,7 +24,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./cardano-world/docs/environments/${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
@@ -27,6 +32,7 @@ then
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
+    # --include-transaction-cbor
     ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
 
@@ -37,7 +43,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 fi
 
-if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "api-only" ]]; then
+if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
 fi
