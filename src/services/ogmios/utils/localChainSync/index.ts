@@ -81,7 +81,7 @@ export const createLocalChainSyncClient = async (context: InteractionContext, me
                 const ogmiosStatus = await fetchHealth();
                 // SEE ./docs/ogmios-block.json
                 let slotMatch: string | null = (message.match(/"block":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
-                let blockMatch: string | null = (message.match(/"block":{(?:(?!"id").)*"id":\s?([0-9a-fA-F]*)/m) || ['', '0'])[1];
+                let blockMatch: string | null = (message.match(/"block":{(?:(?!"id").)*"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                 let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
                 let tipHashMatch: string | null = (message.match(/"tip":.*?"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                 //console.log({slotMatch, blockMatch, tipSlotMatch});
