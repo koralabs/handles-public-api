@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
+import { HandleType, IHandleMetadata, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -1489,15 +1489,37 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            const metadata: IHandleMetadata = {
+                name: handleHex,
+                image: 'ipfs://123',
+                mediaType: 'image/jpeg',
+                og_number: 0,
+                rarity: 'todo',
+                length: 2,
+                characters: 'todo',
+                numeric_modifiers: 'todo',
+                version: 0,
+                og: 0,
+                handle_type: HandleType.VIRTUAL_SUBHANDLE,
+                sub_rarity: 'rare',
+                sub_length: 10,
+                sub_characters: 'letters',
+                sub_numeric_modifiers: 'numbers'
+            };
+
             const personalizationDatum: IPzDatum = {
+                virtual: {
+                    expires_time: 1,
+                    public_mint: 0
+                },
+                resolved_addresses: {
+                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
+                },
                 default: 0,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
                 standard_image_hash: '0x123',
-                resolved_addresses: {
-                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
-                },
                 svg_version: '1.0.0',
                 standard_image: '',
                 portal: '',
@@ -1518,25 +1540,8 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-
                 slotNumber: 300,
-                metadata: {
-                    name: handleHex,
-                    image: 'ipfs://123',
-                    mediaType: 'image/jpeg',
-                    og_number: 0,
-                    rarity: 'todo',
-                    length: 2,
-                    characters: 'todo',
-                    numeric_modifiers: 'todo',
-                    version: 0,
-                    og: 0,
-                    handle_type: HandleType.VIRTUAL_SUBHANDLE,
-                    sub_rarity: 'rare',
-                    sub_length: 10,
-                    sub_characters: 'letters',
-                    sub_numeric_modifiers: 'numbers'
-                }
+                metadata
             });
 
             const virtualSubHandle = HandleStore.get(handleName);
@@ -1549,6 +1554,36 @@ describe('HandleStore tests', () => {
             expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
             expect(virtualSubHandle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+
+            expect(virtualSubHandle?.virtual).toEqual({ expires_time: 1, public_mint: false });
+
+            const newPzDatum: IPzDatum = {
+                ...personalizationDatum,
+                virtual: {
+                    expires_time: 2,
+                    public_mint: 0
+                }
+            };
+
+            const newReferenceToken: IReferenceToken = {
+                ...defaultReferenceToken,
+                tx_id: 'abc123',
+                index: 1
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                reference_token: newReferenceToken,
+                personalizationDatum: newPzDatum,
+                slotNumber: 400,
+                metadata
+            });
+
+            const updatedVirtualSubHandle = HandleStore.get(handleName);
+            expect(updatedVirtualSubHandle?.virtual).toEqual({ expires_time: 2, public_mint: false });
+            expect(updatedVirtualSubHandle?.utxo).toEqual(`${newReferenceToken.tx_id}#${newReferenceToken.index}`);
         });
     });
 
