@@ -1,3 +1,4 @@
+import path from 'path';
 import cors from 'cors';
 import { Logger, LogCategory } from '@koralabs/kora-labs-common';
 import express from 'express';
@@ -27,6 +28,13 @@ class App {
         this.initializeDynamicHandlers();
     }
 
+    private _getDynamicLoadDirectories(): string[] {
+        if (this.env == 'development' && process.env.DYNAMIC_LOAD_DIR) {
+            return [__dirname, ...process.env.DYNAMIC_LOAD_DIR.split(';')];
+        }
+        return [__dirname]; 
+    }
+
     public listen() {
         const server = this.app.listen(this.port, () => {
             Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
@@ -48,14 +56,17 @@ class App {
 
     private async initializeDynamicHandlers() {
         this.initializeSwagger();
+        const dirs = this._getDynamicLoadDirectories();
+        for(let i=0;i<dirs.length;i++) {
+            const dir = dirs[i];
+            const middlewares = await dynamicallyLoad(path.resolve(`${dir}/middlewares`), DynamicLoadType.MIDDLEWARE);
+            middlewares.forEach((middleware) => {
+                this.app.use(middleware);
+            });
 
-        const middlewares = await dynamicallyLoad(`${__dirname}/middlewares`, DynamicLoadType.MIDDLEWARE);
-        middlewares.forEach((middleware) => {
-            this.app.use(middleware);
-        });
-
-        const routes = await dynamicallyLoad(`${__dirname}/routes`, DynamicLoadType.ROUTE);
-        this.initializeRoutes(routes);
+            const routes = await dynamicallyLoad(path.resolve(`${dir}/routes`), DynamicLoadType.ROUTE);
+            this.initializeRoutes(routes); 
+        }
 
         this.app.use(errorMiddleware);
     }
