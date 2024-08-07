@@ -3,7 +3,7 @@ import IHandlesRepository from '../repositories/handles.repository';
 import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
-import { ScriptDetails } from '@koralabs/kora-labs-common';
+import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 class ScriptsController {
     public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
@@ -16,7 +16,7 @@ class ScriptsController {
             const allScripts = type ? Object.entries(scripts[network]).filter(([_, value]) => value.type === type) : Object.entries(scripts[network]);
 
             if (latest) {
-                const latestScript = allScripts.find(([_, value]) => value.latest);
+                const latestScript = allScripts.find(([_, value]) => value.latest && (type ? value.type === type : value.type === ScriptType.PZ_CONTRACT));
 
                 if (!latestScript) {
                     // send a 404 if no latest script is found
