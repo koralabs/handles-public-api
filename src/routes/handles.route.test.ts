@@ -1,6 +1,6 @@
 import request from 'supertest';
 import App from '../app';
-import { registry } from '../ioc';
+import registry from '../ioc/main.registry';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
@@ -10,8 +10,7 @@ import { HandleType, ScriptDetails, ScriptType } from '@koralabs/kora-labs-commo
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
@@ -140,7 +139,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -149,8 +147,8 @@ afterAll(async () => {
 
 describe('Testing Handles Routes', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App(registry);
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
 
     afterEach(() => {

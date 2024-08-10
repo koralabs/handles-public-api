@@ -1,5 +1,8 @@
 import App from './app';
-import { registry } from './ioc';
+import util from 'util'
 
-const app = new App(registry);
-app.listen();
+const app = new App();
+
+util.promisify(app.listen);
+
+Promise.all([app.listen()]);

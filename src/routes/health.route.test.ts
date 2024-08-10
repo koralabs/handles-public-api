@@ -1,7 +1,7 @@
 import request from 'supertest';
 import App from '../app';
 import * as ogmiosUtils from '../services/ogmios/utils';
-import { registry } from '../ioc';
+import registry from '../ioc/main.registry';
 import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import MemoryHandlesRepository from '../repositories/memory/handles.repository';
@@ -22,8 +22,7 @@ const getStats = (): IHandleStats => ({
     schema_version: 1
 });
 let caughtUp = jest.fn().mockReturnValue(true);
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
                 if (['nope'].includes(handleName)) return null;
@@ -54,7 +53,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -63,8 +61,8 @@ afterAll(async () => {
 
 describe('Health Routes Test', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App(registry);
+    beforeEach(async () => {
+        app = await new App().initialize();
         percentage = '';
     });
 
@@ -132,8 +130,6 @@ describe('Health Routes Test', () => {
             });
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             caughtUp.mockReturnValue(false);
-            //(registry['handlesRepo'] as unknown as jest.Mock).mockReturnValue(false);
-            //jest.spyOn(MemoryHandlesRepository.prototype, 'isCaughtUp').mockReturnValue(false);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(202);
             expect(response.body).toEqual({
@@ -162,8 +158,6 @@ describe('Health Routes Test', () => {
             percentage = '100.00';
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             caughtUp.mockReturnValue(true);
-            //(registry as unknown as jest.Mock).mockReturnValue(true);
-            //jest.spyOn(MemoryHandlesRepository.prototype, 'isCaughtUp').mockReturnValue(true);
             const response = await request(app?.getServer()).get('/health');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({

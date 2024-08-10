@@ -11,7 +11,7 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { delay, dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
-import { IRegistry } from './ioc';
+import { IRegistry } from './interfaces/registry.interface';
 
 class App {
     public app: express.Application;
@@ -20,31 +20,35 @@ class App {
     public startTimer: number;
     public registry: IRegistry;
 
-    constructor(registry: IRegistry) {
+    constructor() {
         this.app = express();
-        this.app.set("registry", registry)
-        this.registry = registry;
+        this.registry = {} as IRegistry;
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
         this.startTimer = Date.now();
-
-        this.initializeMiddleware();
-        this.initializeDynamicHandlers();
     }
 
     private _getDynamicLoadDirectories(): string[] {
-        if (this.env == 'development' && process.env.DYNAMIC_LOAD_DIR) {
+        if ((this.env == 'development' || this.env == 'test') && process.env.DYNAMIC_LOAD_DIR) {
             return [__dirname, ...process.env.DYNAMIC_LOAD_DIR.split(';')];
         }
         return [__dirname]; 
     }
 
-    public listen() {
+    public async listen() {
+        await this.initialize();
         const server = this.app.listen(this.port, () => {
             Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
         });
         server.keepAliveTimeout = 61 * 1000;
+    }
+
+    public async initialize() {
+        this.initializeMiddleware();
+        await this.initializeDynamicHandlers();
+        this.app.use(errorMiddleware);
         this.initializeStorage();
+        return this;
     }
 
     public getServer() {
@@ -61,6 +65,7 @@ class App {
     private async initializeDynamicHandlers() {
         this.initializeSwagger();
         const dirs = this._getDynamicLoadDirectories();
+        
         for(let i=0;i<dirs.length;i++) {
             const dir = dirs[i];
             const middlewares = await dynamicallyLoad(path.resolve(`${dir}/middlewares`), DynamicLoadType.MIDDLEWARE);
@@ -69,16 +74,18 @@ class App {
             });
 
             const routes = await dynamicallyLoad(path.resolve(`${dir}/routes`), DynamicLoadType.ROUTE);
-            this.initializeRoutes(routes); 
+            routes.forEach((route) => {
+                this.app.use('/', route.router);
+            });
+
+            const registries = await dynamicallyLoad(path.resolve(`${dir}/ioc`), DynamicLoadType.REGISTRY);
+            registries.forEach((registry: IRegistry) => {
+                for (const [key, value] of Object.entries(registry)) {
+                    this.registry[key] = value;
+                }
+            });
         }
-
-        this.app.use(errorMiddleware);
-    }
-
-    private initializeRoutes(routes: Routes[]) {
-        routes.forEach((route) => {
-            this.app.use('/', route.router);
-        });
+        this.app.set("registry", this.registry);
     }
 
     private async initializeStorage() {

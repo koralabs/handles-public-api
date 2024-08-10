@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
-import { IRegistry } from '../ioc';
+import { IRegistry } from '../interfaces/registry.interface';;
 import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 class ScriptsController {

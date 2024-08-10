@@ -2,12 +2,11 @@ import request from 'supertest';
 import App from '../app';
 import { scripts } from '../config/scripts';
 import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
-import { registry } from '../ioc';
+import registry from '../ioc/main.registry';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
                 return {
@@ -27,7 +26,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -36,8 +34,8 @@ afterAll(async () => {
 
 describe('Scripts Routes Test', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App(registry);
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
 
     afterEach(() => {

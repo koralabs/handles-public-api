@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { IGetAllHoldersQueryParams, IGetHolderAddressDetailsRequest } from '../interfaces/handle.interface';
 import { HolderPaginationModel } from '../models/holderPagination.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { IRegistry } from '../ioc';
+import { IRegistry } from '../interfaces/registry.interface';;
 
 class HoldersController {
     public getAll = async (

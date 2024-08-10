@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
 import { fetchHealth } from '../services/ogmios/utils';
-import { IRegistry } from '../ioc';
+import { IRegistry } from '../interfaces/registry.interface';;
 
 enum HealthStatus {
     CURRENT = 'current',

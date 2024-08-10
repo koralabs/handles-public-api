@@ -1,11 +1,10 @@
 import request from 'supertest';
 import App from '../app';
-import { registry } from '../ioc';
+import registry from '../ioc/main.registry';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getTotalHandlesStats: () => {
                 return {
@@ -19,7 +18,7 @@ jest.mock('../ioc', () => ({
             get: (key: string) => key === 'valid-key'
         })
     }
-}));
+));
 
 afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
@@ -27,8 +26,8 @@ afterAll(async () => {
 
 describe('Stats Routes Test', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App(registry);
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
 
     afterEach(() => {

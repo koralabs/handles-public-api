@@ -12,7 +12,7 @@ import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { StoredHandle } from '../interfaces/handleStore.interfaces';
 import { isEmpty } from '../utils/util';
-import { IRegistry } from '../ioc';
+import { IRegistry } from '../interfaces/registry.interface';;
 
 class HandlesController {
     private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
