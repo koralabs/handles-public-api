@@ -463,7 +463,9 @@ export class HandleStore {
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined
+            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined,
+            // set the utxo to incoming reference_token for virtual subhandles
+            ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
         };
 
         await HandleStore.save({
