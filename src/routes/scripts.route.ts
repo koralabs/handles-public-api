@@ -13,7 +13,7 @@ class ScriptsRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.injectRegistryMiddleware, this.scriptsController.index);
+        this.router.get(`${this.path}`, this.scriptsController.index);
     }
 }
 

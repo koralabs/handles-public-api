@@ -1,5 +1,3 @@
-import { IRegistry } from '../ioc';
-
 export interface IGetAllQueryParams {
     records_per_page?: string;
     page?: string;
@@ -25,12 +23,10 @@ export interface IGetAllHoldersQueryParams {
 }
 
 export interface IGetHandleRequest {
-    registry: IRegistry;
     handle: string;
 }
 
 export interface IGetHolderAddressDetailsRequest {
-    registry: IRegistry;
     address: string;
 }
 

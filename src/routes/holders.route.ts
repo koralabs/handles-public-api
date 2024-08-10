@@ -11,12 +11,8 @@ class HandlesRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.injectRegistryMiddleware, this.holdersController.getAll);
-        this.router.get(
-            `${this.path}/:address`,
-            this.injectRegistryMiddleware,
-            this.holdersController.getHolderAddressDetails
-        );
+        this.router.get(`${this.path}`, this.holdersController.getAll);
+        this.router.get(`${this.path}/:address`, this.holdersController.getHolderAddressDetails);
     }
 }
 

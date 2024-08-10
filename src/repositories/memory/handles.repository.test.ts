@@ -4,10 +4,10 @@ import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
-import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import { AssetNameLabel, HandleType, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { HolderAddressIndex, SaveMintingTxInput } from '../../interfaces/handleStore.interfaces';
 
 describe('MemoryHandlesRepository Tests', () => {
     const expectedVirtualHandle = {

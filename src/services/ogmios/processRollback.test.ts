@@ -1,7 +1,10 @@
-import { processRollback } from './processRollback';
+import OgmiosService from './ogmios.service';
 import { HandleStore } from '../../repositories/memory/HandleStore';
+import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
 
 jest.mock('../../repositories/memory/HandleStore');
+
+const ogmios = new OgmiosService(new MemoryHandlesRepository());
 
 describe('processRollback', () => {
     it('should apply previous changes to handle', () => {
@@ -9,14 +12,14 @@ describe('processRollback', () => {
         const rollbackSlot = 1234;
         const rollbackHash = '1234-hash';
         const tipSlot = 2000;
-        processRollback({ slot: rollbackSlot, id: rollbackHash }, { slot: tipSlot, id: 'tip_hash', height: 4 });
+        ogmios['processRollback']({ slot: rollbackSlot, id: rollbackHash }, { slot: tipSlot, id: 'tip_hash', height: 4 });
 
         expect(rewindSpy).toHaveBeenCalledWith({ slot: rollbackSlot, hash: rollbackHash, lastSlot: tipSlot });
     });
 
     it('should rollback to genesis if point is origin', () => {
         const rollbackSpy = jest.spyOn(HandleStore, 'rollBackToGenesis');
-        processRollback('origin', 'origin');
+        ogmios['processRollback']('origin', 'origin');
 
         expect(rollbackSpy).toHaveBeenCalledTimes(1);
     });

@@ -1,12 +1,15 @@
 import { AssetNameLabel, HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { buildValidDatum, processBlock } from './processBlock';
+import OgmiosService from './ogmios.service';
 import * as ipfs from '../../utils/ipfs';
-import { StoredHandle } from '../../repositories/memory/interfaces/handleStore.interfaces';
 import { Block, BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
+import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
+import { StoredHandle } from '../../interfaces/handleStore.interfaces';
 
 jest.mock('../../repositories/memory/HandleStore');
+
+const ogmios = new OgmiosService(new MemoryHandlesRepository());
 
 describe('processBlock Tests', () => {
     afterEach(() => {
@@ -177,7 +180,7 @@ describe('processBlock Tests', () => {
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({}), tip });
+        await ogmios['processBlock']({ policyId, txBlock: txBlock({}), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -207,7 +210,7 @@ describe('processBlock Tests', () => {
 
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({ datum }), tip });
+        await ogmios['processBlock']({ policyId, txBlock: txBlock({ datum }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -229,7 +232,7 @@ describe('processBlock Tests', () => {
 
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({ policyId, txBlock: txBlock({ script }), tip });
+        await ogmios['processBlock']({ policyId, txBlock: txBlock({ script }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
             adaAddress: 'addr123',
@@ -255,7 +258,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
 
-        await processBlock({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }), tip });
+        await ogmios['processBlock']({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }), tip });
 
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             adaAddress: newAddress,
@@ -271,7 +274,7 @@ describe('processBlock Tests', () => {
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         const saveAddressSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
 
-        await processBlock({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
+        await ogmios['processBlock']({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
 
         expect(saveSpy).toHaveBeenCalledTimes(0);
         expect(saveAddressSpy).toHaveBeenCalledTimes(0);
@@ -283,7 +286,7 @@ describe('processBlock Tests', () => {
         const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({ handleHexName }) as BlockPraos,
             tip
@@ -309,7 +312,7 @@ describe('processBlock Tests', () => {
         const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({ handleHexName, isMint: false }) as BlockPraos,
             tip
@@ -337,7 +340,7 @@ describe('processBlock Tests', () => {
         const cbor =
             'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b24e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400527265736f6c7665645f616464726573736573a34361646142abcd436274634f7133736b64736b6a6b656a326b6e644365746849333234656b646a6b3345747269616c00446e73667700ff';
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({
                 handleHexName,
@@ -414,7 +417,7 @@ describe('processBlock Tests', () => {
 
         const cbor = '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff';
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({
                 handleHexName,
@@ -439,7 +442,7 @@ describe('processBlock Tests', () => {
         const saveMintedHandleSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({
                 handleHexName,
@@ -474,7 +477,7 @@ describe('processBlock Tests', () => {
         const cbor =
             'd8799fae426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f64696669657273404a7375625f6c656e677468044a7375625f7261726974794562617369634e7375625f6368617261637465727340557375625f6e756d657269635f6d6f646966696572734001b14e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff';
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({
                 handleHexName,
@@ -549,7 +552,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
         const loggerSpy = jest.spyOn(Logger, 'log').mockImplementation();
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({
                 handleHexName,
@@ -574,7 +577,7 @@ describe('processBlock Tests', () => {
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({ handleHexName, isMint: false }),
             tip
@@ -595,7 +598,7 @@ describe('processBlock Tests', () => {
         const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await processBlock({
+        await ogmios['processBlock']({
             policyId,
             txBlock: txBlock({ handleHexName, isBurn: true, slot }),
             tip
@@ -609,7 +612,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_12: [{}, 1, {}]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: null, personalizationDatum: null });
         });
 
@@ -617,7 +620,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_0: [{}, 1, {}]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: {}, personalizationDatum: {} });
         });
 
@@ -625,7 +628,7 @@ describe('processBlock Tests', () => {
             const datum = {
                 constructor_0: [{ a: 'a' }, 1, { b: 'b' }]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: { a: 'a' }, personalizationDatum: { b: 'b' } });
         });
 
@@ -658,7 +661,7 @@ describe('processBlock Tests', () => {
                 ]
             };
 
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toEqual({
                 metadata: {
                     characters: '',
@@ -716,7 +719,7 @@ describe('processBlock Tests', () => {
                     }
                 ]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toBeTruthy();
         });
 
@@ -761,7 +764,7 @@ describe('processBlock Tests', () => {
                     }
                 ]
             };
-            const result = buildValidDatum('taco', 'taco', datum);
+            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
             expect(result).toBeTruthy();
         });
     });

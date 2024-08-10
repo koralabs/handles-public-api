@@ -11,18 +11,18 @@ class HandlesRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.injectRegistryMiddleware, this.handlesController.getAll);
-        this.router.post(`${this.path}/list`, this.injectRegistryMiddleware, this.handlesController.list);
-        this.router.post(`${this.path}/list-from-hashes`, this.injectRegistryMiddleware, this.handlesController.listFromHashes);
-        this.router.get(`${this.path}/:handle`, this.injectRegistryMiddleware, this.handlesController.getHandle);
-        this.router.get(`${this.path}/:handle/personalized`, this.injectRegistryMiddleware, this.handlesController.getPersonalizedHandle);
-        this.router.get(`${this.path}/:handle/reference_token`, this.injectRegistryMiddleware, this.handlesController.getHandleReferenceToken);
-        this.router.get(`${this.path}/:handle/utxo`, this.injectRegistryMiddleware, this.handlesController.getHandleReferenceUTxO);
-        this.router.get(`${this.path}/:handle/datum`, this.injectRegistryMiddleware, this.handlesController.getHandleDatum);
-        this.router.get(`${this.path}/:handle/script`, this.injectRegistryMiddleware, this.handlesController.getHandleScript);
-        this.router.get(`${this.path}/:handle/subhandle_settings`, this.injectRegistryMiddleware, this.handlesController.getSubHandleSettings);
-        this.router.get(`${this.path}/:handle/subhandle_settings/utxo`, this.injectRegistryMiddleware, this.handlesController.getSubHandleSettingsUTxO);
-        this.router.get(`${this.path}/:handle/subhandles`, this.injectRegistryMiddleware, this.handlesController.getSubHandles);
+        this.router.get(`${this.path}`, this.handlesController.getAll);
+        this.router.post(`${this.path}/list`, this.handlesController.list);
+        this.router.post(`${this.path}/list-from-hashes`, this.handlesController.listFromHashes);
+        this.router.get(`${this.path}/:handle`, this.handlesController.getHandle);
+        this.router.get(`${this.path}/:handle/personalized`, this.handlesController.getPersonalizedHandle);
+        this.router.get(`${this.path}/:handle/reference_token`, this.handlesController.getHandleReferenceToken);
+        this.router.get(`${this.path}/:handle/utxo`, this.handlesController.getHandleReferenceUTxO);
+        this.router.get(`${this.path}/:handle/datum`, this.handlesController.getHandleDatum);
+        this.router.get(`${this.path}/:handle/script`, this.handlesController.getHandleScript);
+        this.router.get(`${this.path}/:handle/subhandle_settings`, this.handlesController.getSubHandleSettings);
+        this.router.get(`${this.path}/:handle/subhandle_settings/utxo`, this.handlesController.getSubHandleSettingsUTxO);
+        this.router.get(`${this.path}/:handle/subhandles`, this.handlesController.getSubHandles);
     }
 }
 

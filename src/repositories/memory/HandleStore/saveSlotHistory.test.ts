@@ -1,5 +1,5 @@
 import { HandleStore } from '.';
-import { HandleHistory } from '../interfaces/handleStore.interfaces';
+import { HandleHistory } from '../../../interfaces/handleStore.interfaces';
 import { slotHistoryFixture } from '../tests/fixtures/handles';
 
 describe('saveSlotHistory', () => {

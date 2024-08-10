@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/handle.interface';
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
@@ -11,13 +10,15 @@ import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
-import { StoredHandle } from '../repositories/memory/interfaces/handleStore.interfaces';
+import { StoredHandle } from '../interfaces/handleStore.interfaces';
 import { isEmpty } from '../utils/util';
-import { HandleStore } from '../repositories/memory/HandleStore';
+import { IRegistry } from '../ioc';
 
 class HandlesController {
-    private static getHandleFromRepo = async (handleName: string, handleRepoName: any, asHex = false): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
-        const handleRepo = new handleRepoName() as IHandlesRepository;
+    private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
+        const handleName = req.params.handle;
+        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+        const asHex = req.query.hex == 'true';
         let handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
 
         if (!handle) {
@@ -43,7 +44,7 @@ class HandlesController {
         return { code: handleRepo.currentHttpStatus(), message: null, handle };
     };
 
-    public getAll = async (req: Request<RequestWithRegistry, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
 
@@ -66,7 +67,7 @@ class HandlesController {
                 slotNumber: slot_number
             });
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
 
             if (req.headers?.accept?.startsWith('text/plain')) {
                 const { sort: sortParam } = pagination;
@@ -87,7 +88,7 @@ class HandlesController {
         }
     };
 
-    private _searchFromList = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
+    private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
         const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
 
         const search = new HandleSearchModel({
@@ -109,7 +110,7 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
 
         if (req.headers?.accept?.startsWith('text/plain')) {
             const { sort: sortParam } = pagination;
@@ -126,7 +127,7 @@ class HandlesController {
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
     }
 
-    public list = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public list = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const handles = !isEmpty(req.body) ? req.body : undefined;
             await this._searchFromList(req, res, next, handles);
@@ -135,10 +136,10 @@ class HandlesController {
         }
     };
 
-    public listFromHashes = async (req: Request<RequestWithRegistry, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public listFromHashes = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const hashes = !isEmpty(req.body) ? req.body as string[] : undefined;
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             const handles = handleRepo.getHandlesByPaymentKeyHashes(hashes!);
             await this._searchFromList(req, res, next, handles);
         } catch (error) {
@@ -148,7 +149,7 @@ class HandlesController {
 
     public getHandle = async (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
             res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message });
         } catch (error) {
             //console.log(error);
@@ -158,7 +159,7 @@ class HandlesController {
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             const { personalization } = new PersonalizedHandleViewModel(handleData.handle);
 
@@ -173,8 +174,12 @@ class HandlesController {
         }
     }
 
-    private static async buildHandleReferenceToken(handle: string, handlesRepo: any, asHex: boolean): Promise<{ reference_token?: IReferenceToken; code: number }> {
-        const handleData = await HandlesController.getHandleFromRepo(handle, handlesRepo, asHex);
+    private static async buildHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>): Promise<{ reference_token?: IReferenceToken; code: number }> {
+        const handleName = req.params.handle;
+        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+        const asHex = req.query.hex == 'true';
+
+        const handleData = await HandlesController.getHandleFromRepo(req);
 
         const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
 
@@ -193,7 +198,7 @@ class HandlesController {
 
     public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req);
 
             if (!reference_token) {
                 res.status(code).json({});
@@ -208,7 +213,7 @@ class HandlesController {
 
     public async getHandleReferenceUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req);
 
             if (!reference_token) {
                 res.status(code).json({});
@@ -228,14 +233,14 @@ class HandlesController {
                 return;
             }
             const handleName = req.params.handle;
-            const handleData = await HandlesController.getHandleFromRepo(handleName, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData.handle) {
                 res.status(404).send({ message: 'Handle datum not found' });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
 
             const handleDatum = await handleRepo.getHandleDatumByName(handleData.handle.name);
 
@@ -264,7 +269,7 @@ class HandlesController {
 
     public async getHandleScript(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
@@ -284,14 +289,14 @@ class HandlesController {
 
     public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
 
             if (!settings || !settings.settings) {
@@ -345,14 +350,14 @@ class HandlesController {
 
     public async getSubHandleSettingsUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
 
             if (!settings?.utxo) {
@@ -368,14 +373,14 @@ class HandlesController {
 
     public async getSubHandles(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req.params.handle, req.params.registry.handlesRepo, req.query.hex == 'true');
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             let subHandles = await handleRepo.getSubHandles(handleData.handle.name);
 
             if (req.query.type) {

@@ -1,16 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
-import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { scripts } from '../config/scripts';
 import { LatestScriptResult } from '../interfaces/scripts.interface';
 import { ScriptDetails } from '@koralabs/kora-labs-common';
+import { IRegistry } from '../ioc';
 
 class ScriptsController {
-    public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
+    public index = async (req: Request<Request>, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { latest = false, type = null } = req.query;
 
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
 
             const network = process.env.NETWORK ?? 'preview';
             const allScripts = type ? Object.entries(scripts[network]).filter(([_, value]) => value.type === type) : Object.entries(scripts[network]);

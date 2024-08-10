@@ -1,7 +1,7 @@
 import { IHandleStats } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
-import { HttpException } from '../exceptions/HttpException';
+import { registry } from '../ioc';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -54,7 +54,7 @@ afterAll(async () => {
 describe('Home Routes Test', () => {
     let app: App | null;
     beforeEach(() => {
-        app = new App();
+        app = new App(registry);
     });
 
     afterEach(() => {

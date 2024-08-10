@@ -11,15 +11,19 @@ import OgmiosService from './services/ogmios/ogmios.service';
 import { delay, dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
+import { IRegistry } from './ioc';
 
 class App {
     public app: express.Application;
     public env: string;
     public port: string | number;
     public startTimer: number;
+    public registry: IRegistry;
 
-    constructor() {
+    constructor(registry: IRegistry) {
         this.app = express();
+        this.app.set("registry", registry)
+        this.registry = registry;
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
         this.startTimer = Date.now();
@@ -93,7 +97,7 @@ class App {
             let loadS3 = true;
             while (!ogmiosStarted) {
                 try {
-                    const ogmiosService = new OgmiosService(loadS3);
+                    const ogmiosService = new OgmiosService(this.registry.handlesRepo(), loadS3);
                     await ogmiosService.startSync();
                     ogmiosStarted = true;
                 } catch (error: any) {

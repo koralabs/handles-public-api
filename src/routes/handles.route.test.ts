@@ -1,5 +1,6 @@
 import request from 'supertest';
 import App from '../app';
+import { registry } from '../ioc';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
@@ -149,7 +150,7 @@ afterAll(async () => {
 describe('Testing Handles Routes', () => {
     let app: App | null;
     beforeEach(() => {
-        app = new App();
+        app = new App(registry);
     });
 
     afterEach(() => {

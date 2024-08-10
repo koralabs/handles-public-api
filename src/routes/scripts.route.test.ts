@@ -2,6 +2,7 @@ import request from 'supertest';
 import App from '../app';
 import { scripts } from '../config/scripts';
 import { ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
+import { registry } from '../ioc';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -36,7 +37,7 @@ afterAll(async () => {
 describe('Scripts Routes Test', () => {
     let app: App | null;
     beforeEach(() => {
-        app = new App();
+        app = new App(registry);
     });
 
     afterEach(() => {

@@ -1,5 +1,6 @@
 import request from 'supertest';
 import App from '../app';
+import { registry } from '../ioc';
 
 jest.mock('../services/ogmios/ogmios.service');
 
@@ -27,7 +28,7 @@ afterAll(async () => {
 describe('Stats Routes Test', () => {
     let app: App | null;
     beforeEach(() => {
-        app = new App();
+        app = new App(registry);
     });
 
     afterEach(() => {

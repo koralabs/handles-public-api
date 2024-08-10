@@ -11,7 +11,7 @@ import { buildCharacters, buildNumericModifiers, getRarity } from '../../../serv
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
 import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../interfaces/handleStore.interfaces';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../../../interfaces/handleStore.interfaces';
 import { bech32FromHex, getPaymentKeyHash } from '../../../utils/serialization';
 
 export class HandleStore {

@@ -1,7 +1,7 @@
 import { HandleType, Rarity } from '@koralabs/kora-labs-common';
-import { ISlotHistoryIndex, HolderAddressIndex, StoredHandle } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';
+import { HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '../../../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: StoredHandle[] = [
     {
