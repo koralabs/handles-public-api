@@ -30,7 +30,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 35;
+    static storageSchemaVersion = 36;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
