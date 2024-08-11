@@ -80,8 +80,8 @@ describe('rewindChangesToSlot', () => {
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('123');
-        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('456');
+        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
+        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });

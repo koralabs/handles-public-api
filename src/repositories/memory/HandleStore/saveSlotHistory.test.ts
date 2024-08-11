@@ -37,7 +37,7 @@ describe('saveSlotHistory', () => {
                 2,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: '123' } }
+                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
                     }
                 }
             ],
@@ -45,7 +45,7 @@ describe('saveSlotHistory', () => {
                 3,
                 {
                     burrito: {
-                        old: { resolved_addresses: { ada: '123' } }
+                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
                     }
                 }
             ],
@@ -53,7 +53,7 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: '456' } }
+                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
                     }
                 }
             ],
@@ -99,7 +99,7 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: '456' } }
+                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
                     },
                     nacho: { old: null }
                 }

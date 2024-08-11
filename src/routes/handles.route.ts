@@ -13,7 +13,6 @@ class HandlesRoute extends BaseRoute {
     private initializeRoutes() {
         this.router.get(`${this.path}`, this.handlesController.getAll);
         this.router.post(`${this.path}/list`, this.handlesController.list);
-        this.router.post(`${this.path}/list-from-hashes`, this.handlesController.listFromHashes);
         this.router.get(`${this.path}/:handle`, this.handlesController.getHandle);
         this.router.get(`${this.path}/:handle/personalized`, this.handlesController.getPersonalizedHandle);
         this.router.get(`${this.path}/:handle/reference_token`, this.handlesController.getHandleReferenceToken);

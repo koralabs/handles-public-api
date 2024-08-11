@@ -19,7 +19,7 @@ describe('buildHandleHistory', () => {
                     ada: 'taco_addr'
                 }
             },
-            old: { resolved_addresses: { ada: '123' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         });
     });
 

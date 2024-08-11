@@ -12,6 +12,7 @@ export interface IGetAllQueryParams {
     personalized?: boolean;
     og?: 'true' | 'false';
     handle_type?: string;
+    type: string;
 }
 
 export type ISearchBody = string[];

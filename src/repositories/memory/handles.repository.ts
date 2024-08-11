@@ -6,7 +6,7 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
-import { IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle } from '../../interfaces/handleStore.interfaces';
+import { HolderAddressIndex, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle } from '../../interfaces/handleStore.interfaces';
 import { memoryWatcher } from '../../services/ogmios/utils';
 
 class MemoryHandlesRepository implements IHandlesRepository {
@@ -261,9 +261,25 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return filteredHandles.map((handle) => handle.name);
     }
 
-    public getHandlesByPaymentKeyHashes = (hashes:string[]): string[]  => {
+    public getHandlesByPaymentKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
-                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? [], (value) => value);
+                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? []);
+                return array.length === 0 ? [this.EMPTY] : array;
+            }
+        ).flat();
+    }
+
+    public getHandlesByHolderAddresses = (addresses: string[]): string[]  => {
+        return addresses.map((h) => {
+                const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
+                return array.length === 0 ? [this.EMPTY] : array;
+            }
+        ).flat();
+    }
+
+    public getHandlesByAddresses = (addresses: string[]): string[]  => {
+        return addresses.map((h) => {
+            const array = Array.from(HandleStore.addressesIndex.get(h) ?? []);
                 return array.length === 0 ? [this.EMPTY] : array;
             }
         ).flat();

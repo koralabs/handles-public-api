@@ -22,7 +22,7 @@ describe('processBlock Tests', () => {
         height: 0
     };
 
-    const policyId = '123';
+    const policyId = 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w';
     const hexName = '7465737431323334';
     const name = 'test1234';
 
@@ -172,7 +172,8 @@ describe('processBlock Tests', () => {
         holder_type: '',
         version: 0,
         handle_type: HandleType.HANDLE,
-        default: false
+        default: false,
+        payment_key_hash: ''
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {

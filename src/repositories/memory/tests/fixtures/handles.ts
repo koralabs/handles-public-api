@@ -17,7 +17,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -32,7 +32,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     },
     {
         hex: 'burrito-hex',
@@ -47,7 +48,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -62,7 +63,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     },
     {
         hex: 'taco-hex',
@@ -77,7 +79,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -92,7 +94,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     }
 ];
 
@@ -111,17 +114,17 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     },
     2: {
         barbacoa: {
-            old: { resolved_addresses: { ada: '123' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     },
     3: {
         burrito: {
-            old: { resolved_addresses: { ada: '123' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     },
     4: {
         barbacoa: {
-            old: { resolved_addresses: { ada: '456' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     }
 };

@@ -9,6 +9,8 @@ interface IHandlesRepository {
     initialize: () => Promise<void>;
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
     getHandlesByPaymentKeyHashes: (hashes: string[]) => string[];
+    getHandlesByAddresses: (addresses: string[]) => string[];
+    getHandlesByHolderAddresses: (addresses: string[]) => string[];
     getAllHandleNames: (search: HandleSearchModel, sort: string) => Promise<string[]>;
     getHandleByName: (handleName: string) => Promise<StoredHandle | null>;
     getHandleByHex: (handleHex: string) => Promise<StoredHandle | null>;

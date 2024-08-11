@@ -1,4 +1,4 @@
-import { decodeCborToJson, Logger } from '@koralabs/kora-labs-common';
+import { decodeCborToJson, IS_PRODUCTION, Logger } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
 import bs58 from 'bs58';
 
@@ -82,7 +82,7 @@ export const buildStakeKey = (address: string): string | null => {
         const delegationType = `${getDelegationAddressType(parsedChar)}${isTestnet ? '0' : '1'}`;
 
         // stake part of the address is the last 56 bytes
-        const stakeAddressDecoded = delegationType + decoded.substr(decoded.length - 56);
+        const stakeAddressDecoded = delegationType + decoded.slice(decoded.length - 56);
         const stakeAddress = bech32.encode(
             prefix,
             bech32.toWords(Uint8Array.from(Buffer.from(stakeAddressDecoded, 'hex'))),
@@ -121,8 +121,8 @@ export const getPaymentKeyHash = async (address: string): Promise<string | null>
     }
 };
 
-export const bech32FromHex = (hex: string, isTestnet = false): string => {
-    const prefix = isTestnet ? 'addr_test' : 'addr';
+export const bech32FromHex = (hex: string, isTestnet = !IS_PRODUCTION, type: 'addr' | 'stake' | 'pool' | 'drep' = 'addr'): string => {
+    const prefix = isTestnet ? `${type}_test` : type;
     const bytes = Uint8Array.from(Buffer.from(hex, 'hex'));
     const words = bech32.toWords(bytes);
     return bech32.encode(prefix, words, bytes.length * 2 + prefix.length);

@@ -26,7 +26,6 @@ jest.mock('fs', () => ({
 
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
-jest.mock('../../../utils/serialization');
 jest.mock('../../../utils/addresses');
 
 describe('HandleStore tests', () => {
@@ -126,7 +125,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'basic',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo1#0'
                             }),
@@ -147,7 +146,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo2#0'
                             }),
@@ -168,7 +167,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo3#0'
                             })
@@ -237,13 +236,14 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 pfp_image: '',
                 rarity: 'basic',
-                resolved_addresses: { ada: '123' },
+                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                payment_key_hash: "73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272",
             });
         });
     });
@@ -309,7 +309,8 @@ describe('HandleStore tests', () => {
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                payment_key_hash: null
             });
 
             // expect to get the correct slot history with all new handles
@@ -782,7 +783,8 @@ describe('HandleStore tests', () => {
                     amount: 1,
                     holder_type: '',
                     version: 0,
-                    handle_type: HandleType.HANDLE
+                    handle_type: HandleType.HANDLE,
+                    payment_key_hash: null
                 }
             });
         });
@@ -1839,7 +1841,8 @@ describe('HandleStore tests', () => {
                 holder_type: '',
                 version: 0,
                 handle_type: HandleType.HANDLE,
-                default_in_wallet: 'salsa'
+                default_in_wallet: 'salsa',
+                payment_key_hash: null
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);

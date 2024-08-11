@@ -24,6 +24,7 @@ export class HandleStore {
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    static addressesIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
 
@@ -110,7 +111,7 @@ export class HandleStore {
         const holder = getAddressHolderDetails(ada);
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
-        const payment_key_hash = (await getPaymentKeyHash(ada)) ?? undefined;
+        const payment_key_hash = (await getPaymentKeyHash(ada))!;
         updatedHandle.payment_key_hash = payment_key_hash;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
@@ -127,7 +128,8 @@ export class HandleStore {
         const ogFlag = og_number === 0 ? 0 : 1;
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
-        if (payment_key_hash) this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
+        this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
+        this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
@@ -174,8 +176,9 @@ export class HandleStore {
         this.rarityIndex.get(rarity)?.delete(handleName);
         this.ogIndex.get(`${ogFlag}`)?.delete(handleName);
         this.charactersIndex.get(characters)?.delete(handleName);
-        const payment_key_hash = await getPaymentKeyHash(ada);
-        if (payment_key_hash) this.paymentKeyHashesIndex.get(payment_key_hash)?.delete(handleName);
+        const payment_key_hash = (await getPaymentKeyHash(ada))!;
+        this.paymentKeyHashesIndex.get(payment_key_hash)?.delete(handleName);
+        this.addressesIndex.get(ada)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
 
@@ -283,7 +286,7 @@ export class HandleStore {
             sub_rarity,
             virtual,
             original_address,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined
+            payment_key_hash: (await getPaymentKeyHash(adaAddress))!
         };
 
         return newHandle;
@@ -463,7 +466,7 @@ export class HandleStore {
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined,
+            payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
             // set the utxo to incoming reference_token for virtual subhandles
             ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
         };
@@ -547,7 +550,8 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.lengthIndex),
             ...this.convertMapsToObjects(this.charactersIndex),
             ...this.convertMapsToObjects(this.paymentKeyHashesIndex),
-            ...this.convertMapsToObjects(this.numericModifiersIndex)
+            ...this.convertMapsToObjects(this.numericModifiersIndex),
+            ...this.convertMapsToObjects(this.addressesIndex)
         };
 
         return Buffer.byteLength(JSON.stringify(object));
@@ -832,6 +836,7 @@ export class HandleStore {
         this.subHandlesIndex = new Map<string, Set<string>>();
         this.charactersIndex = new Map<string, Set<string>>();
         this.paymentKeyHashesIndex = new Map<string, Set<string>>();
+        this.addressesIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();
     }

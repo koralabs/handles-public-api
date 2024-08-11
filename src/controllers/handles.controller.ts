@@ -3,7 +3,7 @@ import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interface
 import { HandlePaginationModel } from '../models/handlePagination.model';
 import { HandleSearchModel } from '../models/HandleSearch.model';
 import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings, IReferenceToken } from '@koralabs/kora-labs-common';
+import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings, IReferenceToken, parseAssetNameLabel, IS_PRODUCTION } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
@@ -12,7 +12,9 @@ import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { StoredHandle } from '../interfaces/handleStore.interfaces';
 import { isEmpty } from '../utils/util';
-import { IRegistry } from '../interfaces/registry.interface';;
+import { IRegistry } from '../interfaces/registry.interface';
+import { bech32FromHex } from '../utils/serialization';
+;
 
 class HandlesController {
     private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
@@ -129,18 +131,34 @@ class HandlesController {
 
     public list = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const handles = !isEmpty(req.body) ? req.body : undefined;
-            await this._searchFromList(req, res, next, handles);
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    public listFromHashes = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const hashes = !isEmpty(req.body) ? req.body as string[] : undefined;
             const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            const handles = handleRepo.getHandlesByPaymentKeyHashes(hashes!);
+            let handles: string[] = !isEmpty(req.body) ? req.body as string[] : [];
+            switch (req.query.type) {
+                case 'bech32stake':
+                case 'holder':
+                    handles = handleRepo.getHandlesByHolderAddresses(handles)
+                    break;
+                case 'stakekeyhash':
+                    handles = handleRepo.getHandlesByHolderAddresses(handles.map(hash => bech32FromHex(hash, !IS_PRODUCTION , 'stake')))
+                    break;
+                case 'assetname':
+                    handles = handles.map(name => Buffer.from(parseAssetNameLabel(name) ? name.slice(8) : name).toString('utf8'));
+                    break;
+                case 'handlehex':
+                    handles = handles.map(hex => Buffer.from(hex).toString('utf8'));
+                    break;
+                case 'paymentkeyhash':
+                    handles = handleRepo.getHandlesByPaymentKeyHashes(handles)
+                    break;
+                case 'bech32address':
+                    handles = handleRepo.getHandlesByAddresses(handles)
+                    break;
+                case 'hexaddress':
+                    handles = handleRepo.getHandlesByAddresses(handles.map(hex => bech32FromHex(hex)))
+                    break;
+                default:
+                    break;
+            }
             await this._searchFromList(req, res, next, handles);
         } catch (error) {
             next(error);
