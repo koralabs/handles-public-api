@@ -45,7 +45,7 @@ class OgmiosService {
     private handlesRepo: IHandlesRepository;
 
     constructor(handlesRepo: IHandlesRepository, loadS3 = true) {
-        this.handlesRepo = new handlesRepo();
+        this.handlesRepo = new (handlesRepo as any)();
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.loadS3 = loadS3;
