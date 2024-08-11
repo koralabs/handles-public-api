@@ -8,7 +8,6 @@ import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } fro
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
-import { getScript } from '../config/scripts';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { StoredHandle } from '../interfaces/handleStore.interfaces';
 import { isEmpty } from '../utils/util';
@@ -142,10 +141,10 @@ class HandlesController {
                     handles = handleRepo.getHandlesByHolderAddresses(handles.map(hash => bech32FromHex(hash, !IS_PRODUCTION , 'stake')))
                     break;
                 case 'assetname':
-                    handles = handles.map(name => Buffer.from(parseAssetNameLabel(name) ? name.slice(8) : name).toString('utf8'));
+                    handles = handles.map(name => Buffer.from(parseAssetNameLabel(name) ? name.slice(8) : name, 'hex').toString('utf8'));
                     break;
                 case 'handlehex':
-                    handles = handles.map(hex => Buffer.from(hex).toString('utf8'));
+                    handles = handles.map(hex => Buffer.from(hex, 'hex').toString('utf8'));
                     break;
                 case 'paymentkeyhash':
                     handles = handleRepo.getHandlesByPaymentKeyHashes(handles)
@@ -170,7 +169,6 @@ class HandlesController {
             const handleData = await HandlesController.getHandleFromRepo(req);
             res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message });
         } catch (error) {
-            //console.log(error);
             next(error);
         }
     };
@@ -203,12 +201,6 @@ class HandlesController {
 
         if (!reference_token) {
             return { code: handleData.code };
-        }
-
-        const scriptData = getScript(reference_token.address);
-        if (scriptData) {
-            // add to the reference_token the script data
-            reference_token.script = scriptData;
         }
 
         return { reference_token, code: handleData.code };

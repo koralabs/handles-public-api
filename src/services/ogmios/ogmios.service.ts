@@ -45,7 +45,7 @@ class OgmiosService {
     private handlesRepo: IHandlesRepository;
 
     constructor(handlesRepo: IHandlesRepository, loadS3 = true) {
-        this.handlesRepo = handlesRepo;
+        this.handlesRepo = new handlesRepo();
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.loadS3 = loadS3;
@@ -60,7 +60,6 @@ class OgmiosService {
     ) {
         // finish timer for ogmios rollForward
         const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-
         const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
         this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
@@ -77,7 +76,8 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin }, requestNext: () => void): Promise<void> {
+    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin; }, requestNext: () => void): Promise<void> {
+        //const handlesRepo = new this.handlesRepo();
         const { current_slot } = this.handlesRepo.getMetrics();
         Logger.log({
             message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
@@ -133,9 +133,10 @@ class OgmiosService {
                 }
             }
         );
+        (context as any)['handlesRepo'] = this.handlesRepo
         const client = await this.createLocalChainSyncClient(context, {
-            rollForward: this.rollForward,
-            rollBackward: this.rollBackward
+            rollForward: this.rollForward.bind(this),
+            rollBackward: this.rollBackward.bind(this)
         });
 
         const startingPoint = await this.getStartingPoint();
@@ -237,13 +238,6 @@ class OgmiosService {
                         handleMetadata,
                         isMintTx
                     };
-
-                    // if (assetName.includes('0000000076324073685f73657474696e67735f303131')) {
-                    //     console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                    // }
-
-                    // console.log('IM_GOING_TO_PROCESS_ASSET_TOKEN', input);
-                    // Logger.log({ message: `Process ${stringifyBlock(input)} | ASSET_NAME_LABEL ${Object.values(AssetNameLabel).some((v) => assetName.startsWith(`${policyId}.${v}`))} | ASSET_NAME_LABELS ${Object.values(AssetNameLabel).join(',')} | AssetNameLabel.LBL_001 ${AssetNameLabel.LBL_001}`, category: LogCategory.INFO, event: 'processAssetToken.input' });
 
                     if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(v))) {
                         await this.processAssetClassToken(input);
@@ -655,7 +649,6 @@ class OgmiosService {
                 if (message.indexOf('"result":{"direction":"backward"') >= 0) {
                     processTheBlock = true;
                 } else {
-                    //console.log('MESSAGE', message);
                     processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
                     const ogmiosStatus = await fetchHealth();
                     // SEE ./docs/ogmios-block.json

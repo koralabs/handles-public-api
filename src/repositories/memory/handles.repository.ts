@@ -13,7 +13,9 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public EMPTY = '|empty|';
     private intervals: NodeJS.Timeout[] = [];
 
-    public async initialize(): Promise<void> {
+    constructor() {}
+
+    public async initialize(): Promise<IHandlesRepository> {
         // const metricsInterval = setInterval(() => {
         //     if (process.env.CONSOLE_STATUS === 'true') {
         //         const metrics = HandleStore.getMetrics();
@@ -63,7 +65,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
-        
+        return this;
     };
 
     public destroy(): void {

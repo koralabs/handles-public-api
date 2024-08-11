@@ -6,7 +6,7 @@ import { HolderPaginationModel } from '../models/holderPagination.model';
 import { IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle } from '../interfaces/handleStore.interfaces';
 
 interface IHandlesRepository {
-    initialize: () => Promise<void>;
+    initialize: () => Promise<IHandlesRepository>;
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel }) => Promise<{ searchTotal: number; handles: StoredHandle[] }>;
     getHandlesByPaymentKeyHashes: (hashes: string[]) => string[];
     getHandlesByAddresses: (addresses: string[]) => string[];

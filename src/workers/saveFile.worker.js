@@ -3,7 +3,6 @@ const lockfile = require('proper-lockfile');
 const { parentPort, workerData } = require('worker_threads');
 
 (async () => {
-    try {
         const isLocked = await lockfile.check(workerData.storagePath);
         if (isLocked) {
             return false;
@@ -33,12 +32,5 @@ const { parentPort, workerData } = require('worker_threads');
             await Promise((resolve) => setTimeout(resolve, 1000));
         }
         await release();
-    } catch (error) {
-        Logger.log({
-            message: `Error writing file: ${error.message}`,
-            event: 'saveFileContents.errorSavingFile',
-            category: LogCategory.INFO 
-        });
-    }
     parentPort?.postMessage(true);
 })()

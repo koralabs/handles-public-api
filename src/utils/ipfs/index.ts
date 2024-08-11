@@ -38,7 +38,6 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
             }
         }
     } catch (error: any) {
-        //console.log('ERROR', error);
         Logger.log({
             message: `Error getting data from ${ipfsGateway}${cid} data with error ${error.message}`,
             category: LogCategory.ERROR,

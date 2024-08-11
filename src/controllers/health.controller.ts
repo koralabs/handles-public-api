@@ -15,8 +15,6 @@ class HealthController {
         try {
             const ogmiosResults = await fetchHealth();
             const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            console.log(handleRepo);
-            console.log(JSON.stringify(handleRepo));
             const stats = handleRepo.getHandleStats();
 
             if (!ogmiosResults) {

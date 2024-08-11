@@ -12,6 +12,7 @@ import { delay, dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
 import { IRegistry } from './interfaces/registry.interface';
+import MemoryHandlesRepository from './repositories/memory/handles.repository';
 
 class App {
     public app: express.Application;
@@ -104,7 +105,7 @@ class App {
             let loadS3 = true;
             while (!ogmiosStarted) {
                 try {
-                    const ogmiosService = new OgmiosService(this.registry.handlesRepo(), loadS3);
+                    const ogmiosService = new OgmiosService(this.registry.handlesRepo, loadS3);
                     await ogmiosService.startSync();
                     ogmiosStarted = true;
                 } catch (error: any) {
