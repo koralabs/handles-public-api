@@ -133,7 +133,6 @@ class OgmiosService {
                 }
             }
         );
-        (context as any)['handlesRepo'] = this.handlesRepo
         const client = await this.createLocalChainSyncClient(context, {
             rollForward: this.rollForward.bind(this),
             rollBackward: this.rollBackward.bind(this)

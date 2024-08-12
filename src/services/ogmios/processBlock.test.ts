@@ -6,10 +6,11 @@ import * as ipfs from '../../utils/ipfs';
 import { Block, BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
 import { StoredHandle } from '../../interfaces/handleStore.interfaces';
+import IHandlesRepository from '../../repositories/handles.repository';
 
 jest.mock('../../repositories/memory/HandleStore');
 
-const ogmios = new OgmiosService(new MemoryHandlesRepository());
+const ogmios = new OgmiosService(MemoryHandlesRepository as unknown as IHandlesRepository);
 
 describe('processBlock Tests', () => {
     afterEach(() => {
@@ -154,6 +155,7 @@ describe('processBlock Tests', () => {
         name,
         image: 'some_hash_test1234',
         utxo: 'utxo1#0',
+        lovelace: 0,
         numeric_modifiers: '',
         og_number: 1,
         standard_image: 'some_hash_test1234',
@@ -192,7 +194,12 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -223,7 +230,12 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             datum,
             version: 0,
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
         });
     });
 
@@ -248,7 +260,13 @@ describe('processBlock Tests', () => {
                 cbor: 'a2some_cbor'
             },
             version: 0,
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            datum: undefined
         });
     });
 
@@ -267,7 +285,10 @@ describe('processBlock Tests', () => {
             name,
             slotNumber: 0,
             utxo: 'some_id#0',
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            datum: undefined,
+            lovelace: 1,
+            script: undefined
         });
     });
 
@@ -303,7 +324,12 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             utxo: 'some_id#0',
             version: 0,
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
         });
     });
 
@@ -326,7 +352,9 @@ describe('processBlock Tests', () => {
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0',
-            handle_type: HandleType.HANDLE
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            script: undefined
         });
     });
 
@@ -463,7 +491,12 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             handle_type: HandleType.NFT_SUBHANDLE,
             utxo: 'some_id#0',
-            version: 0
+            version: 0,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
         });
     });
 

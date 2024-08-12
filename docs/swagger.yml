@@ -625,7 +625,7 @@ paths:
           type: string
       - name: numeric_keys
         in: query
-        description: If JSON keys can be converted to CBOR integers, then do so
+        description: JavaScript doesn't support numeric object keys. CBOR does. If JSON keys can be converted to CBOR integers, then do so
         required: false
         schema:
           type: boolean
@@ -827,10 +827,35 @@ paths:
           $ref: "#/components/schemas/DatumType"
       - name: numeric_keys
         in: query
-        description: If JSON keys can be converted to CBOR integers, then do so
+        description: JavaScript doesn't support numeric object keys. CBOR does. If JSON keys can be converted to CBOR integers, then do so
         required: false
         schema:
           type: boolean
+      - name: indefinite_arrays
+        in: query
+        description: |
+          Whether to use CBOR "definite" or "indefinite" arrays. Defaults to `true`
+          <br />`true` will wrap arrays in the `9f[...]ff` CBOR Indefinite Major Type
+          <br />`false` will preceed the array with the CBOR Major Type `8n[...]` (where `n` is the length of the array)
+        required: false
+        schema:
+          type: boolean
+      - name: default_to_text
+        in: query
+        description: Whether strings should all be converted to CBOR byte strings or text strings. Defaults to `false`
+          <br />`false` will preceed the bytes with the CBOR Major Type `4n[...]` (bytes)
+          <br />`true` will preceed the bytes with the CBOR Major Type `6n[...]` (text)
+        required: false
+        schema:
+          type: boolean
+      - name: chunk_size
+        in: query
+        description: Strings or Buffers larger than `chunk_size` are broken into an array of strings or Buffers. 
+          Defaults to `64`. As an example, "01234567890123456789" with a `chunk _size` of 10 will convert to the CBOR equivalent of
+          ['0123456789', '0123456789']
+        required: false
+        schema:
+          type: integer
       requestBody:
         description: |
           The CBOR or JSON to encode/decode.

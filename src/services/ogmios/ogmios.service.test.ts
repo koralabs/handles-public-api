@@ -3,10 +3,11 @@ import { HandleStore } from '../../repositories/memory/HandleStore';
 import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
+import IHandlesRepository from '../../repositories/handles.repository';
 
 jest.mock('@cardano-ogmios/client');
 jest.mock('../../repositories/memory/HandleStore');
-const handlesRepo = new MemoryHandlesRepository();
+const handlesRepo = MemoryHandlesRepository as unknown as IHandlesRepository
 const ogmios = new OgmiosService(handlesRepo);
 //(someInstance as unknown) as { privateMethod: SomeClass['privateMethod'] }
 

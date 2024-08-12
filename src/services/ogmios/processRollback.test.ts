@@ -1,10 +1,11 @@
 import OgmiosService from './ogmios.service';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
+import IHandlesRepository from '../../repositories/handles.repository';
 
 jest.mock('../../repositories/memory/HandleStore');
 
-const ogmios = new OgmiosService(new MemoryHandlesRepository());
+const ogmios = new OgmiosService(MemoryHandlesRepository as unknown as IHandlesRepository);
 
 describe('processRollback', () => {
     it('should apply previous changes to handle', () => {

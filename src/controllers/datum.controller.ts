@@ -5,7 +5,12 @@ class DatumController {
     public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             if (req.query.from === 'json' && req.query.to === 'plutus_data_cbor') {
-                const encoded = await encodeJsonToDatum(req.body, { numericKeys: req.query.numeric_keys == 'true' });
+                const encoded = await encodeJsonToDatum(req.body, { 
+                    numericKeys: req.query.numeric_keys == 'true',
+                    chunkSize: req.query.chunk_size ? parseInt(req.query.chunk_size.toString()) : 64,
+                    indefiniteArrays: req.query.indefinite_arrays ? req.query.indefinite_arrays == 'true' : true,
+                    defaultToText: req.query.default_to_text ? req.query.default_to_text == 'true' : false
+                });
                 res.status(200).contentType('text/plain; charset=utf-8').send(encoded);
                 return;
             }

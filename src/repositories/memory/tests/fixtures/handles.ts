@@ -13,6 +13,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 8,
         og_number: 0,
         utxo: 'utxo1#0',
+        lovelace: 0,
         rarity: Rarity.basic,
         characters: 'letters',
         numeric_modifiers: '',
@@ -44,6 +45,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 7,
         og_number: 0,
         utxo: 'utxo2#0',
+        lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
         numeric_modifiers: '',
@@ -75,6 +77,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 4,
         og_number: 0,
         utxo: 'utxo3#0',
+        lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
         numeric_modifiers: '',
@@ -165,7 +168,8 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 og_number: Math.floor(Math.random() * 2438),
                 slotNumber: i,
                 handle_type: HandleType.HANDLE,
-                utxo: createRandomUtxo()
+                utxo: createRandomUtxo(),
+                lovelace: 0
             });
             if (saveToHandleStore) {
                 await HandleStore.save({ handle });
@@ -216,7 +220,8 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         og_number: Math.floor(Math.random() * 2438),
                         slotNumber: beginningSlot + i,
                         handle_type: HandleType.HANDLE,
-                        utxo: createRandomUtxo()
+                        utxo: createRandomUtxo(),
+                        lovelace: 0
                     });
                     await HandleStore.save({ handle: newHandle });
                 }
