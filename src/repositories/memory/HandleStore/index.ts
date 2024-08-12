@@ -245,7 +245,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -253,6 +253,7 @@ export class HandleStore {
             holder_type: '', // Populate on save
             length: name.length,
             utxo,
+            lovelace,
             rarity: getRarity(name),
             characters: buildCharacters(name),
             numeric_modifiers: buildNumericModifiers(name),
@@ -435,7 +436,8 @@ export class HandleStore {
                 sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
                 virtual,
                 last_update_address: personalizationDatum?.last_update_address,
-                original_address: personalizationDatum?.original_address
+                original_address: personalizationDatum?.original_address,
+                lovelace: 0
             };
             const handle = await HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });

@@ -67,6 +67,7 @@ export interface SaveMintingTxInput {
     image_hash?: string;
     slotNumber: number;
     utxo: string;
+    lovelace: number;
     svg_version?: string;
     bg_image?: string;
     pfp_image?: string;

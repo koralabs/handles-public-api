@@ -532,7 +532,7 @@ class OgmiosService {
         });
     };
 
-    private processAssetToken = async ({ assetName, slotNumber, address, utxo, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
+    private processAssetToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
 
         const input = {
@@ -541,6 +541,7 @@ class OgmiosService {
             adaAddress: address,
             slotNumber,
             utxo,
+            lovelace,
             datum,
             script,
             handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE

@@ -203,7 +203,7 @@ class HandlesController {
         return { reference_token, code: handleData.code };
     }
 
-    public async getHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+    public async getPersonalizationUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
             const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req);
 
@@ -218,16 +218,42 @@ class HandlesController {
         }
     }
 
-    public async getHandleReferenceUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
+    public async getHandleUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const { reference_token, code } = await HandlesController.buildHandleReferenceToken(req);
+            const handleData = await HandlesController.getHandleFromRepo(req);
 
-            if (!reference_token) {
-                res.status(code).json({});
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+
+            if (!handleData.handle) {
+                res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            res.status(code).json(reference_token);
+            if (!handleData.handle.script) {
+                res.status(404).send({ message: 'Script not found' });
+                return;
+            }
+
+            const reference_script = handleData.handle.script.cbor;
+            
+            let datum = await handleRepo.getHandleDatumByName(handleData.handle.name);
+
+            if (datum && req.headers?.accept?.startsWith('application/json')) {
+                try {
+                    datum = await decodeCborToJson({ cborString: datum, schema: {}, defaultKeyType: req.query.default_key_type as DefaultTextFormat });
+                } catch (error) {
+                    res.status(400).send({ message: 'Unable to decode datum to json' });
+                }
+            }
+
+            res.status(handleRepo.currentHttpStatus()).json({
+                tx_id: handleData.handle.utxo.split('#')[0],
+                index: parseInt(handleData.handle.utxo.split('#')[0]),
+                lovelace: handleData.handle.lovelace,
+                address: handleData.handle.resolved_addresses.ada,
+                datum,
+                reference_script,
+            });
         } catch (error) {
             next(error);
         }

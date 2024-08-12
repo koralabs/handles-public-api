@@ -299,13 +299,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReferenceToken"
+                $ref: "#/components/schemas/UTxO"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReferenceToken"
+                $ref: "#/components/schemas/UTxO"
         '400':
           description: Invalid Handle format
         '404':
@@ -592,13 +592,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReferenceToken"
+                $ref: "#/components/schemas/UTxO"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReferenceToken"
+                $ref: "#/components/schemas/UTxO"
         '400':
           description: Invalid Handle format
         '404':
@@ -989,10 +989,10 @@ components:
         <br />`handlehex` (without CIP-67 label), 
         <br />`assetname` (with CIP-67 label), 
         <br />`holder` (same as bech32stake), 
-        <br />`bech32stake` (same as holder)`, 
+        <br />`bech32stake` (same as holder), 
         <br />`bech32address`,
         <br />`hexaddress`,
-        <br />`paymentkeyhash` or
+        <br />`paymentkeyhash`, or
         <br />`stakekeyhash`
       enum:
       - handle
@@ -1227,28 +1227,6 @@ components:
         display:
           type: string
           description: The display text to show either on the Handle if selected or on the Portal if selected.
-    ReferenceToken:
-      deprecated: true
-      type: object
-      properties:
-        tx_id:
-          type: string
-          description: The current UTxO transaction ID that the reference token is in
-        index:
-          type: integer
-          description: The current UTxO index that the reference token is in
-        lovelace:
-          type: integer
-          description: The lovelace in the UTxO that the reference token is in
-        datum:
-          type: string
-          description: The datum CBOR in the UTxO that the reference token is in
-        address:
-          type: string
-          description: The address of the UTxO that the reference token is in
-        script:
-          type: string
-          description: The script/contract that the reference token is locked to
     SubHandleSettings:
       type: object
       properties:        
@@ -1288,10 +1266,10 @@ components:
           description: The address of the UTxO 
         script:
           type: string
-          description: The script/contract (as CBOR) that the UTxO is locked to if there is one
+          description: If known, the script/contract (as CBOR) that the UTxO is locked to, if there is one
         reference_script:
           type: string
-          description: The reference script (as CBOR) that is saved in this UTxO if there is one
+          description: The reference script (as CBOR) that is saved in this UTxO, if there is one
   requestBodies:
     Handle:
       content:
