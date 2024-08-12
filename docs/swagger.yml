@@ -1203,7 +1203,8 @@ components:
         total_holders:
           type: integer
           example: 52167
-          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses 
+          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses
+        # We can add `total_subhandles`, `total_<per_rarity>`, `top_holders`
     PortalSettings:
       type: object
       properties:
