@@ -1105,11 +1105,11 @@ components:
           $ref: "#/components/schemas/Characters"
         numeric_modifiers:
           $ref: "#/components/schemas/NumericModifiers"
-        sub_rarity:
-          $ref: "#/components/schemas/Rarity"
         sub_length:
           type: number
           description: Total length of the SubHandle, including `@` and root Handle
+        sub_rarity:
+          $ref: "#/components/schemas/Rarity"
         sub_characters:
           $ref: "#/components/schemas/Characters"
         sub_numeric_modifiers:
