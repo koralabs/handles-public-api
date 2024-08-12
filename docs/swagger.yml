@@ -253,7 +253,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -289,7 +289,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -325,7 +325,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -361,7 +361,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -397,7 +397,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -433,7 +433,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -469,7 +469,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -505,7 +505,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -541,7 +541,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -582,7 +582,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -631,7 +631,7 @@ paths:
           type: boolean
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -683,7 +683,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -926,6 +926,9 @@ components:
           $ref: "#/components/schemas/HexString" 
         font_shadow_size:
           type: array
+          items:
+            type: integer
+          example: [12, 12, 10]
           description: An array of three numbers representing vertical offset, horizontal offset, and blur radius
         pfp_image:
           type: string
@@ -943,14 +946,12 @@ components:
           type: string
           description: Hex string of policy id and asset name of the bg_image on chain asset
           example: b8842fe3a0eae5011252c16566995d2c8f1bae85d380410cd21ea91f000de140556e646572776f726c645f48616e646c65735f6267
-        text_ribbon_gradient:
-          type: string
-          description: Either 'radial' or 'linear-XX' where XX is an angle for the linear gradient
         text_ribbon_colors:
           type: array
           description: The color used for the ribbon or the colors used for the gradient on the ribbon.
           items:
             $ref: "#/components/schemas/HexString" 
+          example: [0a1fd3ff, 22d1af88, 31bc2399]
         qr_bg_color:
           $ref: "#/components/schemas/HexString" 
         qr_inner_eye:
@@ -968,8 +969,15 @@ components:
           description: Two values separated by a comma. The first is the dots style ('dot', 'square', 'rounded').
             The second is the dots color as an hex RGBA value preceded by a hash symbol
           example: "square,#FFFFFF"
+        qr_image:
+          type: string
+          description: Either the URL or the `data:image;base64` data in the center of the QR code
+          example: "ipfs://Q2de4Fg56tNHy82300000001"
         font_color:
+          type: string
           $ref: "#/components/schemas/HexString" 
+          description: The color of the font in hex including alpha transparency
+          example: 0a1fd3ff
         font:
           type: string
           example: "ShortStackMod,https://claynation.nyc3.cdn.digitaloceanspaces.com/ada_handles/ShortStackNew.ttf"
@@ -980,6 +988,35 @@ components:
           description: The url and display text of the social entries selected from Personalization
           items:
             $ref: "#/components/schemas/SocialEntry"
+        pfp_zoom:
+          type: number
+          description: The percentage that the PFP can be zoomed in as an integer greater than 100 
+          example: 125
+        pfp_offset:
+          type: array
+          items:
+            type: integer
+          description: The [x,y] offset in pixels from the center of the PFP circle
+          example: [-10, 25]
+        text_ribbon_gradient:
+          type: string
+          enum:
+          - none
+          - linear-XX
+          - radial
+          description: The gradient of the ribbon colors.
+            <br />`none` - no gradient
+            <br />`linear-XX` - Linear gradient where `XX` is the degrees offset of the starting point - ex `linear-45`
+            <br />`radial` - Radial gradient from the center of the ribbon
+          example:
+        socials_color:
+          type: string
+          description: ""
+          example:
+        circuit_color:
+          type: string
+          description: ""
+          example:
     FilterType:
       type: string
       example: ultra_rare
@@ -988,8 +1025,8 @@ components:
         <br />`handle`, 
         <br />`handlehex` (without CIP-67 label), 
         <br />`assetname` (with CIP-67 label), 
-        <br />`holder` (same as bech32stake), 
-        <br />`bech32stake` (same as holder), 
+        <br />`holder` (bech32 stake address, bech32 script address, or bech32 "enterprise" address),
+        <br />`bech32stake`, 
         <br />`bech32address`,
         <br />`hexaddress`,
         <br />`paymentkeyhash`, or
@@ -1014,6 +1051,20 @@ components:
         name:
           type: string
           example: my.handle
+        handle_type:
+          type: string
+          $ref: "#/components/schemas/Handle"
+          description: Handle, NFT SubHandle, or Virtual SubHandle
+        virtual:
+          type: object
+          description: Additional information only available on Virtual SubHandles
+          properties:
+            expires_time: 
+              type: number
+              description: The POSIX time the Virtual SubHandle expires
+            public_mint: 
+              type: boolean
+              description: True if this Virtual SubHandle was publically minted
         holder:
           type: string
           description: Current Holder of the Handle (see the Holder endpoints for more information)
@@ -1039,6 +1090,7 @@ components:
         length:
           type: integer
           example: 9
+          description: Length of the root Handle
         og:
           type: boolean
           description: OG status
@@ -1052,6 +1104,15 @@ components:
         characters:
           $ref: "#/components/schemas/Characters"
         numeric_modifiers:
+          $ref: "#/components/schemas/NumericModifiers"
+        sub_rarity:
+          $ref: "#/components/schemas/Rarity"
+        sub_length:
+          type: number
+          description: Total length of the SubHandle, including `@` and root Handle
+        sub_characters:
+          $ref: "#/components/schemas/Characters"
+        sub_numeric_modifiers:
           $ref: "#/components/schemas/NumericModifiers"
         default_in_wallet:
           type: string
@@ -1085,6 +1146,10 @@ components:
             btc:
               type: string
               example: addr1e00000000000000000000000000000000000003
+        original_address:
+              type: string
+              example: addr1e00000000000000000000000000000000000001
+              description: If enabled by the root Handle owner, this will show the address that the SubHandles was originally sent to on mint
         version:
           type: string
           description: The version of the Handle
@@ -1097,6 +1162,9 @@ components:
           type: string
           description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
           example: 8f1d7ec063ce83d93d1bad658886e81568d19ca9bd8dd0e6e268d7be3e33c653#1
+        lovelace:
+          type: integer
+          description: The lovelace amount in the UTxO the Handle is in
         has_datum:
           type: boolean
           description: "`true` if the UTxO that the Handle is in also has a datum value"
@@ -1222,7 +1290,7 @@ components:
       properties:
         url:
           type: string
-          description: Valid URL. Supported schemas - `http://``, `https://``, `mailto:``, `tel:`, `ipfs://`
+          description: Valid URL. Supported schemas - `http://`, `https://`, `mailto:`, `tel:`, `ipfs://`
             Social websites with known host names will be authenticated to reduce fraud/phishing
         display:
           type: string
