@@ -47,7 +47,7 @@ class HandlesController {
 
     public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
+            const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
 
             const search = new HandleSearchModel({
                 characters,
@@ -90,7 +90,7 @@ class HandlesController {
     };
 
     private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
-        const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og } = req.query;
+        const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
 
         const search = new HandleSearchModel({
             characters,
@@ -101,6 +101,7 @@ class HandlesController {
             holder_address,
             personalized,
             og,
+            handle_type,
             handles
         });
 
@@ -191,10 +192,6 @@ class HandlesController {
     }
 
     private static async buildHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>): Promise<{ reference_token?: IReferenceToken; code: number }> {
-        const handleName = req.params.handle;
-        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-        const asHex = req.query.hex == 'true';
-
         const handleData = await HandlesController.getHandleFromRepo(req);
 
         const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
@@ -242,7 +239,6 @@ class HandlesController {
                 res.status(400).send({ message: 'Datum endpoint is disabled' });
                 return;
             }
-            const handleName = req.params.handle;
             const handleData = await HandlesController.getHandleFromRepo(req);
 
             if (!handleData.handle) {
