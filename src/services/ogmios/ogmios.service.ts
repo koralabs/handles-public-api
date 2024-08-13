@@ -7,7 +7,7 @@ import * as url from 'url';
 import IHandlesRepository from '../../repositories/handles.repository';
 import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
-import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata } from '../../interfaces/ogmios.interfaces';
+import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor } from '../../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { checkNameLabel } from '../../utils/util';import fastq from 'fastq';
@@ -43,12 +43,14 @@ class OgmiosService {
     private firstMemoryUsage: number;
     private loadS3 = true;
     private handlesRepo: IHandlesRepository;
+    private blockProcessors: IBlockProcessor[];
 
-    constructor(handlesRepo: IHandlesRepository, loadS3 = true) {
+    constructor(handlesRepo: IHandlesRepository, loadS3 = true, blockProcessors: IBlockProcessor[] = []) {
         this.handlesRepo = new (handlesRepo as any)();
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.loadS3 = loadS3;
+        this.blockProcessors = blockProcessors;
     }
 
     private async rollForward (
@@ -69,7 +71,15 @@ class OgmiosService {
             throw new Error(`Block type ${response.block.type} is not supported`);
         }
 
-        await this.processBlock({ policyId, txBlock: response.block as BlockPraos, tip: response.tip as Tip });
+        const block = { policyId, txBlock: response.block as BlockPraos, tip: response.tip as Tip };
+
+        await this.processBlock(block);
+
+        if (this.blockProcessors.length > 0) {
+            for (let i=0; i<this.blockProcessors.length; i++) {
+                await this.blockProcessors[i].processBlock(block);
+            }
+        }
 
         // start timer for ogmios rollForward
         startOgmiosExec = Date.now();
@@ -77,7 +87,6 @@ class OgmiosService {
     }
 
     private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin; }, requestNext: () => void): Promise<void> {
-        //const handlesRepo = new this.handlesRepo();
         const { current_slot } = this.handlesRepo.getMetrics();
         Logger.log({
             message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
@@ -87,6 +96,13 @@ class OgmiosService {
 
         const { point, tip } = response;
         await this.processRollback(point, tip);
+        
+        if (this.blockProcessors.length > 0) {
+            for (let i=0; i<this.blockProcessors.length; i++) {
+                await this.blockProcessors[i].processRollback(point, tip);
+            }
+        }
+
         requestNext();
     }
 

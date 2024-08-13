@@ -5,14 +5,13 @@ import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yamljs';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
-import { Routes } from './interfaces/routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { delay, dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
 import { IRegistry } from './interfaces/registry.interface';
-import MemoryHandlesRepository from './repositories/memory/handles.repository';
+import { IBlockProcessor } from './interfaces/ogmios.interfaces';
 
 class App {
     public app: express.Application;
@@ -20,6 +19,7 @@ class App {
     public port: string | number;
     public startTimer: number;
     public registry: IRegistry;
+    public blockProcessors: IBlockProcessor[] = [];
 
     constructor() {
         this.app = express();
@@ -85,6 +85,11 @@ class App {
                     this.registry[key] = value;
                 }
             });
+
+            const processors = await dynamicallyLoad(path.resolve(`${dir}/block_processors`), DynamicLoadType.BLOCK_PROCESSOR);
+            processors.forEach((processor: IBlockProcessor) => {
+                this.blockProcessors.push(processor);
+            });
         }
         this.app.set("registry", this.registry);
     }
@@ -105,7 +110,7 @@ class App {
             let loadS3 = true;
             while (!ogmiosStarted) {
                 try {
-                    const ogmiosService = new OgmiosService(this.registry.handlesRepo, loadS3);
+                    const ogmiosService = new OgmiosService(this.registry.handlesRepo, loadS3, this.blockProcessors);
                     await ogmiosService.startSync();
                     ogmiosStarted = true;
                 } catch (error: any) {

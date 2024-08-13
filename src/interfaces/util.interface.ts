@@ -1,5 +1,6 @@
 export enum DynamicLoadType {
     ROUTE = 'route',
     MIDDLEWARE = 'middleware',
-    REGISTRY = 'registry'
+    REGISTRY = 'registry',
+    BLOCK_PROCESSOR = 'processor'
 }
