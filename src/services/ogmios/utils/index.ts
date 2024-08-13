@@ -5,7 +5,6 @@ import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
 import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
-import { bech32 } from 'bech32';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();

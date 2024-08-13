@@ -25,11 +25,12 @@ describe('rewindChangesToSlot', () => {
                 og_number,
                 updated_slot_number: slotNumber,
                 utxo,
+                lovelace,
                 resolved_addresses: { ada: adaAddress },
                 handle_type,
                 last_update_address
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
+            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
         }
 
         // set the slotHistoryIndex
@@ -80,8 +81,8 @@ describe('rewindChangesToSlot', () => {
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('123');
-        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('456');
+        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
+        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });

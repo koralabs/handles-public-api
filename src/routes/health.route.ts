@@ -13,7 +13,7 @@ class HealthRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.injectRegistryMiddleware, this.healthController.index);
+        this.router.get(`${this.path}`, this.healthController.index);
     }
 }
 

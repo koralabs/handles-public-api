@@ -1,6 +1,6 @@
+import { HolderAddressIndex } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from './HandleStore';
 import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
-import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 
 describe('holder index integrity', () => {
     it('holder index should be accurate', async () => {

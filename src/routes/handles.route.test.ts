@@ -1,16 +1,15 @@
 import request from 'supertest';
 import App from '../app';
+import registry from '../ioc/main.registry';
 import * as config from '../config';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
-import * as scripts from '../config/scripts';
 import { HandleType, ScriptDetails, ScriptType } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
                 if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
@@ -139,7 +138,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -148,8 +146,8 @@ afterAll(async () => {
 
 describe('Testing Handles Routes', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App();
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
 
     afterEach(() => {
@@ -375,13 +373,13 @@ describe('Testing Handles Routes', () => {
         });
 
         it('should return valid handle', async () => {
-            const scriptDetails: ScriptDetails = {
-                handle: 'pz_script_01',
-                handleHex: 'hex',
-                validatorHash: 'abc',
-                type: ScriptType.PZ_CONTRACT
-            };
-            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            // const scriptDetails: ScriptDetails = {
+            //     handle: 'pz_script_01',
+            //     handleHex: 'hex',
+            //     validatorHash: 'abc',
+            //     type: ScriptType.PZ_CONTRACT
+            // };
+            // jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/personalized');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
@@ -502,16 +500,16 @@ describe('Testing Handles Routes', () => {
 
     describe('[GET] /handles/:handle/reference_token', () => {
         it('should get reference token datum for a handle', async () => {
-            const scriptDetails: ScriptDetails = {
-                handle: 'pz_script_01',
-                handleHex: 'hex',
-                validatorHash: 'abc',
-                type: ScriptType.PZ_CONTRACT
-            };
-            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            // const scriptDetails: ScriptDetails = {
+            //     handle: 'pz_script_01',
+            //     handleHex: 'hex',
+            //     validatorHash: 'abc',
+            //     type: ScriptType.PZ_CONTRACT
+            // };
+            // jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/reference_token');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: scriptDetails, tx_id: 'tx_id' });
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ "cbor": "a247", type: "plutus_v2" }});
         });
 
         it('should return empty object when reference token cannot be found', async () => {
@@ -523,16 +521,16 @@ describe('Testing Handles Routes', () => {
 
     describe('[GET] /handles/:handle/utxo', () => {
         it('should get reference token datum for a handle', async () => {
-            const scriptDetails: ScriptDetails = {
-                handle: 'pz_script_01',
-                handleHex: 'hex',
-                validatorHash: 'abc',
-                type: ScriptType.PZ_CONTRACT
-            };
-            jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
-            const response = await request(app?.getServer()).get('/handles/burritos/utxo');
+            // const scriptDetails: ScriptDetails = {
+            //     handle: 'pz_script_01',
+            //     handleHex: 'hex',
+            //     validatorHash: 'abc',
+            //     type: ScriptType.PZ_CONTRACT
+            // };
+            //jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
+            const response = await request(app?.getServer()).get('/handles/burritos/personalized/utxo');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: scriptDetails, tx_id: 'tx_id' });
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ "cbor": "a247", type: "plutus_v2" } });
         });
 
         it('should return empty object when reference token cannot be found', async () => {

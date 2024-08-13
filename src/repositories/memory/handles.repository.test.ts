@@ -4,10 +4,10 @@ import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
 import * as addresses from '../../utils/addresses';
-import { HolderAddressIndex, SaveMintingTxInput } from './interfaces/handleStore.interfaces';
 import * as config from '../../config';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import { AssetNameLabel, HandleType, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
+import { HolderAddressIndex, SaveMintingTxInput } from '../../interfaces/handleStore.interfaces';
 
 describe('MemoryHandlesRepository Tests', () => {
     const expectedVirtualHandle = {
@@ -51,6 +51,7 @@ describe('MemoryHandlesRepository Tests', () => {
         updated_slot_number: 8,
         last_update_address: '',
         utxo: '#0',
+        lovelace: 0,
         version: 0
     };
 
@@ -69,6 +70,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 name,
                 og_number,
                 utxo,
+                lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
                 datum,
@@ -85,6 +87,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
+                lovelace,
                 datum,
                 image_hash,
                 svg_version,
@@ -284,6 +287,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 name: 'new-handle',
                 adaAddress: '',
                 utxo: '',
+                lovelace: 0,
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
@@ -385,6 +389,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
+                lovelace: 0,
                 datum,
                 image_hash: '',
                 svg_version: '',
@@ -437,6 +442,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
+                lovelace: 0,
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',
@@ -488,6 +494,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
+                lovelace: 0,
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',

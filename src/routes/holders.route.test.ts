@@ -1,12 +1,12 @@
 import request from 'supertest';
 import App from '../app';
+import registry from '../ioc/main.registry';
 import { HttpException } from '../exceptions/HttpException';
 import { ERROR_TEXT } from '../services/ogmios/constants';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHolderAddressDetails: (key: string) => {
                 if (key === 'nope') {
@@ -38,7 +38,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -47,8 +46,8 @@ afterAll(async () => {
 
 describe('Testing Holders Routes', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App();
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
 
     afterEach(() => {

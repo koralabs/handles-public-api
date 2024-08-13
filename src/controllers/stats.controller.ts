@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
-import { RequestWithRegistry } from '../interfaces/auth.interface';
+import { IRegistry } from '../interfaces/registry.interface';;
 
 class StatsController {
-    public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
+    public index = async (req: Request<Request>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             res.status(handleRepo.currentHttpStatus()).json(handleRepo.getTotalHandlesStats());
         } catch (error) {
             next(error);

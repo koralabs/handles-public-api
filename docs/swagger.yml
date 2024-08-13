@@ -69,6 +69,25 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: sort
+        in: query
+        description: Sort results ascending or descending on Handle name
+        required: false
+        schema:
+          type: string
+          enum:
+            - asc
+            - desc
+      - name: handle_type
+        in: query
+        description: Filter for specific Handle types
+        required: false
+        schema:
+          type: string
+          enum:
+            - virtual_subhandle
+            - nft_subhandle
+            - handle
       - name: records_per_page
         in: query
         description: Number of Handles to return per page in paginated results. Maximum of 1000.
@@ -147,6 +166,80 @@ paths:
           description: Invalid filter
       security:
       - api-key: []
+  "/handles/list":
+    post:
+      tags:
+        - handles
+      parameters:
+      - name: type
+        in: query
+        description: 
+          POST an array to match or reverse-lookup minted Handles. 
+          This may be combined with the all of the search and filtering
+          parameters of the `/handles` endpoint 
+          (see [/handles](#/handles/get_handles) for more information).
+        schema:
+                $ref: "#/components/schemas/FilterType"
+      requestBody:
+        description: |
+          An array of strings that can be any one type of FilterType.
+        required: true
+        content:
+          application/json:
+            schema:
+                type: array
+            examples:
+              handle: 
+                value: [ "handle_1", "my_handle_2", "other_handle", "etc..."]
+              paymentkeyhash: 
+                value: [ "120e95a22031d2cc21d6716788f709074fb89e9b8fbad6284eb8a074", "1771c13e355e10a4203d8948af58d16bce2b28d5f8a02835b0b21811", "b99182d0aba4003c6a80c98c58e24a91ca2ce50d04ea72361c9b9815", "etc..."]
+      responses:
+        '200':
+          description: Successful and up to date
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+                description: Number of total search results, regardless of pagination
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: |-
+                  handle123
+                  my.handle
+                  i-always-hodl
+                  ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Handle"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+                description: Number of total search results, regardless of pagination
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: |-
+                  handle123
+                  my.handle
+                  i-always-hodl
+                  ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Handle"
+        '400':
+          description: Invalid filter
+      security:
+      - api-key: []
   "/handles/{handle}":
     get:
       tags:
@@ -160,7 +253,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -183,8 +276,338 @@ paths:
           description: Handle not found
       security:
       - api-key: []
+  "/handles/{handle}/utxo":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/personalized":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Personalization"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Personalization"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/personalized/utxo":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/subhandle_settings":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubHandleSettings"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubHandleSettings"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/subhandle_settings/utxo":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/public_datum":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubHandleSettings"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubHandleSettings"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/public_datum/utxo":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  "/handles/{handle}/subhandles":
+    get:
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                $ref: "#/components/schemas/Handle"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                type: array
+                $ref: "#/components/schemas/Handle"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
+  # *** OBSOLETE `/handles` endpoint *** #
+  "/handles/{handle}/reference_token":
+    get:
+      deprecated: true
+      description: Use `/handles/{handle}/personalized/utxo` instead.
+      tags:
+      - handles
+      parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UTxO"
+        '400':
+          description: Invalid Handle format
+        '404':
+          description: Handle not found
+      security:
+      - api-key: []
   "/handles/{handle}/datum":
     get:
+      deprecated: true
       tags:
       - handles
       description: Get the datum in the same UTxO as the Handle, if present.
@@ -202,13 +625,13 @@ paths:
           type: string
       - name: numeric_keys
         in: query
-        description: If JSON keys can be converted to CBOR integers, then do so
+        description: JavaScript doesn't support numeric object keys. CBOR does. If JSON keys can be converted to CBOR integers, then do so
         required: false
         schema:
           type: boolean
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -247,6 +670,7 @@ paths:
       - api-key: []
   "/handles/{handle}/script":
     get:
+      deprecated: true
       tags:
       - handles
       description: Get the reference script in the same UTxO as the Handle, if present.
@@ -259,7 +683,7 @@ paths:
           type: string
       - name: hex
         in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
+        description: Set to `true` if the `{handle}` is in hex form (full asset name hex, including asset label)
         required: false
         schema:
           type: boolean
@@ -284,78 +708,6 @@ paths:
           description: If Handle is an invalid format
         '404':
           description: Script not found
-      security:
-      - api-key: []
-  "/handles/{handle}/personalized":
-    get:
-      tags:
-      - handles
-      parameters:
-      - name: handle
-        in: path
-        description: The Handle name
-        required: true
-        schema:
-          type: string
-      - name: hex
-        in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
-        required: false
-        schema:
-          type: boolean
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Personalization"
-        '202':
-          description: Successful, but scanning is still catching up to the tip of the blockchain
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Personalization"
-        '400':
-          description: Invalid Handle format
-        '404':
-          description: Handle not found
-      security:
-      - api-key: []
-  "/handles/{handle}/reference_token":
-    get:
-      tags:
-      - handles
-      parameters:
-      - name: handle
-        in: path
-        description: The Handle name
-        required: true
-        schema:
-          type: string
-      - name: hex
-        in: query
-        description: Set to `true` if the `{handle}`` is in hex form (full asset name hex, including asset label)
-        required: false
-        schema:
-          type: boolean
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ReferenceToken"
-        '202':
-          description: Successful, but scanning is still catching up to the tip of the blockchain
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ReferenceToken"
-        '400':
-          description: Invalid Handle format
-        '404':
-          description: Handle not found
       security:
       - api-key: []
   "/holders":
@@ -475,10 +827,35 @@ paths:
           $ref: "#/components/schemas/DatumType"
       - name: numeric_keys
         in: query
-        description: If JSON keys can be converted to CBOR integers, then do so
+        description: JavaScript doesn't support numeric object keys. CBOR does. If JSON keys can be converted to CBOR integers, then do so
         required: false
         schema:
           type: boolean
+      - name: indefinite_arrays
+        in: query
+        description: |
+          Whether to use CBOR "definite" or "indefinite" arrays. Defaults to `true`
+          <br />`true` will wrap arrays in the `9f[...]ff` CBOR Indefinite Major Type
+          <br />`false` will preceed the array with the CBOR Major Type `8n[...]` (where `n` is the length of the array)
+        required: false
+        schema:
+          type: boolean
+      - name: default_to_text
+        in: query
+        description: Whether strings should all be converted to CBOR byte strings or text strings. Defaults to `false`
+          <br />`false` will preceed the bytes with the CBOR Major Type `4n[...]` (bytes)
+          <br />`true` will preceed the bytes with the CBOR Major Type `6n[...]` (text)
+        required: false
+        schema:
+          type: boolean
+      - name: chunk_size
+        in: query
+        description: Strings or Buffers larger than `chunk_size` are broken into an array of strings or Buffers. 
+          Defaults to `64`. As an example, "01234567890123456789" with a `chunk _size` of 10 will convert to the CBOR equivalent of
+          ['0123456789', '0123456789']
+        required: false
+        schema:
+          type: integer
       requestBody:
         description: |
           The CBOR or JSON to encode/decode.
@@ -574,6 +951,9 @@ components:
           $ref: "#/components/schemas/HexString" 
         font_shadow_size:
           type: array
+          items:
+            type: integer
+          example: [12, 12, 10]
           description: An array of three numbers representing vertical offset, horizontal offset, and blur radius
         pfp_image:
           type: string
@@ -591,14 +971,12 @@ components:
           type: string
           description: Hex string of policy id and asset name of the bg_image on chain asset
           example: b8842fe3a0eae5011252c16566995d2c8f1bae85d380410cd21ea91f000de140556e646572776f726c645f48616e646c65735f6267
-        text_ribbon_gradient:
-          type: string
-          description: Either 'radial' or 'linear-XX' where XX is an angle for the linear gradient
         text_ribbon_colors:
           type: array
           description: The color used for the ribbon or the colors used for the gradient on the ribbon.
           items:
             $ref: "#/components/schemas/HexString" 
+          example: [0a1fd3ff, 22d1af88, 31bc2399]
         qr_bg_color:
           $ref: "#/components/schemas/HexString" 
         qr_inner_eye:
@@ -616,8 +994,15 @@ components:
           description: Two values separated by a comma. The first is the dots style ('dot', 'square', 'rounded').
             The second is the dots color as an hex RGBA value preceded by a hash symbol
           example: "square,#FFFFFF"
+        qr_image:
+          type: string
+          description: Either the URL or the `data:image;base64` data in the center of the QR code
+          example: "ipfs://Q2de4Fg56tNHy82300000001"
         font_color:
+          type: string
           $ref: "#/components/schemas/HexString" 
+          description: The color of the font in hex including alpha transparency
+          example: 0a1fd3ff
         font:
           type: string
           example: "ShortStackMod,https://claynation.nyc3.cdn.digitaloceanspaces.com/ada_handles/ShortStackNew.ttf"
@@ -628,6 +1013,59 @@ components:
           description: The url and display text of the social entries selected from Personalization
           items:
             $ref: "#/components/schemas/SocialEntry"
+        pfp_zoom:
+          type: number
+          description: The percentage that the PFP can be zoomed in as an integer greater than 100 
+          example: 125
+        pfp_offset:
+          type: array
+          items:
+            type: integer
+          description: The [x,y] offset in pixels from the center of the PFP circle
+          example: [-10, 25]
+        text_ribbon_gradient:
+          type: string
+          enum:
+          - none
+          - linear-XX
+          - radial
+          description: The gradient of the ribbon colors.
+            <br />`none` - no gradient
+            <br />`linear-XX` - Linear gradient where `XX` is the degrees offset of the starting point - ex `linear-45`
+            <br />`radial` - Radial gradient from the center of the ribbon
+          example:
+        socials_color:
+          type: string
+          description: ""
+          example:
+        circuit_color:
+          type: string
+          description: ""
+          example:
+    FilterType:
+      type: string
+      example: ultra_rare
+      description: |-
+        Filter Types:
+        <br />`handle`, 
+        <br />`handlehex` (without CIP-67 label), 
+        <br />`assetname` (with CIP-67 label), 
+        <br />`holder` (bech32 stake address, bech32 script address, or bech32 "enterprise" address),
+        <br />`bech32stake`, 
+        <br />`bech32address`,
+        <br />`hexaddress`,
+        <br />`paymentkeyhash`, or
+        <br />`stakekeyhash`
+      enum:
+      - handle
+      - handlehex
+      - assetname
+      - holder
+      - bech32stake
+      - bech32address
+      - hexaddress
+      - paymentkeyhash
+      - stakekeyhash
     Handle:
       required:
       - name
@@ -638,6 +1076,20 @@ components:
         name:
           type: string
           example: my.handle
+        handle_type:
+          type: string
+          $ref: "#/components/schemas/Handle"
+          description: Handle, NFT SubHandle, or Virtual SubHandle
+        virtual:
+          type: object
+          description: Additional information only available on Virtual SubHandles
+          properties:
+            expires_time: 
+              type: number
+              description: The POSIX time the Virtual SubHandle expires
+            public_mint: 
+              type: boolean
+              description: True if this Virtual SubHandle was publically minted
         holder:
           type: string
           description: Current Holder of the Handle (see the Holder endpoints for more information)
@@ -663,6 +1115,7 @@ components:
         length:
           type: integer
           example: 9
+          description: Length of the root Handle
         og:
           type: boolean
           description: OG status
@@ -676,6 +1129,15 @@ components:
         characters:
           $ref: "#/components/schemas/Characters"
         numeric_modifiers:
+          $ref: "#/components/schemas/NumericModifiers"
+        sub_length:
+          type: number
+          description: Total length of the SubHandle, including `@` and root Handle
+        sub_rarity:
+          $ref: "#/components/schemas/Rarity"
+        sub_characters:
+          $ref: "#/components/schemas/Characters"
+        sub_numeric_modifiers:
           $ref: "#/components/schemas/NumericModifiers"
         default_in_wallet:
           type: string
@@ -709,6 +1171,10 @@ components:
             btc:
               type: string
               example: addr1e00000000000000000000000000000000000003
+        original_address:
+              type: string
+              example: addr1e00000000000000000000000000000000000001
+              description: If enabled by the root Handle owner, this will show the address that the SubHandles was originally sent to on mint
         version:
           type: string
           description: The version of the Handle
@@ -721,6 +1187,9 @@ components:
           type: string
           description: The transaction hash and index number (UTxO) that the Handle is in. In the format of `txhash#index`
           example: 8f1d7ec063ce83d93d1bad658886e81568d19ca9bd8dd0e6e268d7be3e33c653#1
+        lovelace:
+          type: integer
+          description: The lovelace amount in the UTxO the Handle is in
         has_datum:
           type: boolean
           description: "`true` if the UTxO that the Handle is in also has a datum value"
@@ -827,7 +1296,8 @@ components:
         total_holders:
           type: integer
           example: 52167
-          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses 
+          description: Total number of Handle Holders including wallets/scripts/enterprise/other addresses
+        # We can add `total_subhandles`, `total_<per_rarity>`, `top_holders`
     PortalSettings:
       type: object
       properties:
@@ -845,32 +1315,54 @@ components:
       properties:
         url:
           type: string
-          description: Valid URL. Supported schemas - `http://``, `https://``, `mailto:``, `tel:`, `ipfs://`
+          description: Valid URL. Supported schemas - `http://`, `https://`, `mailto:`, `tel:`, `ipfs://`
             Social websites with known host names will be authenticated to reduce fraud/phishing
         display:
           type: string
           description: The display text to show either on the Handle if selected or on the Portal if selected.
-    ReferenceToken:
+    SubHandleSettings:
+      type: object
+      properties:        
+        nft:
+          type: object
+        virtual:
+          type: object
+        buy_down_paid:
+          type: number
+        buy_down_price:
+          type: number
+        buy_down_percent:
+          type: number
+        agreed_terms:
+          type: string
+        payment_address:
+          type: string
+        migrate_sig_required:
+          type: boolean
+    UTxO:
       type: object
       properties:
         tx_id:
           type: string
-          description: The current UTxO transaction ID that the reference token is in
+          description: The current UTxO transaction ID 
         index:
           type: integer
-          description: The current UTxO index that the reference token is in
+          description: The current UTxO index 
         lovelace:
           type: integer
-          description: The lovelace in the UTxO that the reference token is in
+          description: The lovelace in the UTxO 
         datum:
           type: string
-          description: The datum CBOR in the UTxO that the reference token is in
+          description: The datum CBOR in the UTxO if there is any
         address:
           type: string
-          description: The address of the UTxO that the reference token is in
+          description: The address of the UTxO 
         script:
           type: string
-          description: The script/contract that the reference token is locked to
+          description: If known, the script/contract (as CBOR) that the UTxO is locked to, if there is one
+        reference_script:
+          type: string
+          description: The reference script (as CBOR) that is saved in this UTxO, if there is one
   requestBodies:
     Handle:
       content:

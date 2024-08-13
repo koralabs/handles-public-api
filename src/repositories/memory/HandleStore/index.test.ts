@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
+import { HandleType, IHandleMetadata, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -26,7 +26,6 @@ jest.mock('fs', () => ({
 
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
-jest.mock('../../../utils/serialization');
 jest.mock('../../../utils/addresses');
 
 describe('HandleStore tests', () => {
@@ -55,6 +54,7 @@ describe('HandleStore tests', () => {
                 name,
                 og_number,
                 utxo,
+                lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
                 image_hash,
@@ -71,6 +71,7 @@ describe('HandleStore tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
+                lovelace, 
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
                 svg_version,
@@ -126,7 +127,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'basic',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo1#0'
                             }),
@@ -147,7 +148,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo2#0'
                             }),
@@ -168,7 +169,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: '123' },
+                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo3#0'
                             })
@@ -237,13 +238,15 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 pfp_image: '',
                 rarity: 'basic',
-                resolved_addresses: { ada: '123' },
+                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
+                lovelace: 0,
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                payment_key_hash: "73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272",
             });
         });
     });
@@ -272,6 +275,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'datum123',
@@ -304,12 +308,14 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr123' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 has_datum: true,
                 datum: 'datum123',
                 amount: 1,
                 holder_type: '',
                 version: 0,
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                payment_key_hash: null
             });
 
             // expect to get the correct slot history with all new handles
@@ -380,6 +386,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 image_hash: '0xtodo',
@@ -436,6 +443,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'datum123',
@@ -450,6 +458,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr1234',
                 og_number: 0,
                 utxo: 'utxo124#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'datum123',
@@ -479,6 +488,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'datum123',
@@ -522,6 +532,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'datum123',
@@ -555,6 +566,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -779,10 +791,18 @@ describe('HandleStore tests', () => {
                     resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
                     updated_slot_number: 200,
                     utxo: '',
+                    lovelace: 0,
                     amount: 1,
                     holder_type: '',
                     version: 0,
-                    handle_type: HandleType.HANDLE
+                    handle_type: HandleType.HANDLE,
+                    payment_key_hash: null,
+                    sub_characters: undefined,
+                    sub_length: undefined,
+                    sub_numeric_modifiers: undefined,
+                    sub_rarity: undefined,
+                    virtual: undefined,
+                    original_address: undefined
                 }
             });
         });
@@ -796,6 +816,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -886,6 +907,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -1406,6 +1428,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -1489,15 +1512,37 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            const metadata: IHandleMetadata = {
+                name: handleHex,
+                image: 'ipfs://123',
+                mediaType: 'image/jpeg',
+                og_number: 0,
+                rarity: 'todo',
+                length: 2,
+                characters: 'todo',
+                numeric_modifiers: 'todo',
+                version: 0,
+                og: 0,
+                handle_type: HandleType.VIRTUAL_SUBHANDLE,
+                sub_rarity: 'rare',
+                sub_length: 10,
+                sub_characters: 'letters',
+                sub_numeric_modifiers: 'numbers'
+            };
+
             const personalizationDatum: IPzDatum = {
+                virtual: {
+                    expires_time: 1,
+                    public_mint: 0
+                },
+                resolved_addresses: {
+                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
+                },
                 default: 0,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
                 standard_image_hash: '0x123',
-                resolved_addresses: {
-                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
-                },
                 svg_version: '1.0.0',
                 standard_image: '',
                 portal: '',
@@ -1518,25 +1563,8 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-
                 slotNumber: 300,
-                metadata: {
-                    name: handleHex,
-                    image: 'ipfs://123',
-                    mediaType: 'image/jpeg',
-                    og_number: 0,
-                    rarity: 'todo',
-                    length: 2,
-                    characters: 'todo',
-                    numeric_modifiers: 'todo',
-                    version: 0,
-                    og: 0,
-                    handle_type: HandleType.VIRTUAL_SUBHANDLE,
-                    sub_rarity: 'rare',
-                    sub_length: 10,
-                    sub_characters: 'letters',
-                    sub_numeric_modifiers: 'numbers'
-                }
+                metadata
             });
 
             const virtualSubHandle = HandleStore.get(handleName);
@@ -1549,6 +1577,36 @@ describe('HandleStore tests', () => {
             expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
 
             expect(virtualSubHandle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
+
+            expect(virtualSubHandle?.virtual).toEqual({ expires_time: 1, public_mint: false });
+
+            const newPzDatum: IPzDatum = {
+                ...personalizationDatum,
+                virtual: {
+                    expires_time: 2,
+                    public_mint: 0
+                }
+            };
+
+            const newReferenceToken: IReferenceToken = {
+                ...defaultReferenceToken,
+                tx_id: 'abc123',
+                index: 1
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: handleHex,
+                name: handleName,
+                personalization: personalizationUpdates,
+                reference_token: newReferenceToken,
+                personalizationDatum: newPzDatum,
+                slotNumber: 400,
+                metadata
+            });
+
+            const updatedVirtualSubHandle = HandleStore.get(handleName);
+            expect(updatedVirtualSubHandle?.virtual).toEqual({ expires_time: 2, public_mint: false });
+            expect(updatedVirtualSubHandle?.utxo).toEqual(`${newReferenceToken.tx_id}#${newReferenceToken.index}`);
         });
     });
 
@@ -1560,6 +1618,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -1617,6 +1676,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr123',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                lovelace: 0,
                 image: '',
                 slotNumber: 100,
                 image_hash: '0x123',
@@ -1755,6 +1815,7 @@ describe('HandleStore tests', () => {
                 adaAddress: address,
                 og_number: 0,
                 utxo: 'utxo_salsa1#0',
+                lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
                 datum: 'a2datum_salsa',
@@ -1786,6 +1847,7 @@ describe('HandleStore tests', () => {
                 characters: 'letters',
                 hex: handleHex,
                 utxo: 'utxo_salsa2#0',
+                lovelace: 0,
                 length: 5,
                 name: 'salsa',
                 image: 'ipfs://123',
@@ -1804,7 +1866,8 @@ describe('HandleStore tests', () => {
                 holder_type: '',
                 version: 0,
                 handle_type: HandleType.HANDLE,
-                default_in_wallet: 'salsa'
+                default_in_wallet: 'salsa',
+                payment_key_hash: null
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);

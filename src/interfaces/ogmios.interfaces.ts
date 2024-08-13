@@ -1,3 +1,4 @@
+import { BlockPraos, PointOrOrigin, Tip, TipOrOrigin } from '@cardano-ogmios/schema';
 import { IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
 
 export enum MetadataLabel {
@@ -165,4 +166,9 @@ export interface ProcessAssetTokenInput {
     script?: { type: string; cbor: string };
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
+}
+
+export interface IBlockProcessor {
+    processBlock: ({ policyId, txBlock, tip }: { policyId: string; txBlock: BlockPraos; tip: Tip }) => Promise<void>;
+    processRollback: (point: PointOrOrigin, tip: TipOrOrigin) => Promise<void>;
 }

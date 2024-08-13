@@ -13,7 +13,7 @@ class StatsRoute extends BaseRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(`${this.path}`, this.injectRegistryMiddleware, this.statsController.index);
+        this.router.get(`${this.path}`, this.statsController.index);
     }
 }
 

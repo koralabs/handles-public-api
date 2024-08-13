@@ -1,7 +1,7 @@
 import { HandleType, Rarity } from '@koralabs/kora-labs-common';
-import { ISlotHistoryIndex, HolderAddressIndex, StoredHandle } from '../../interfaces/handleStore.interfaces';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';
+import { HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '../../../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: StoredHandle[] = [
     {
@@ -13,11 +13,12 @@ export const handlesFixture: StoredHandle[] = [
         length: 8,
         og_number: 0,
         utxo: 'utxo1#0',
+        lovelace: 0,
         rarity: Rarity.basic,
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -32,7 +33,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     },
     {
         hex: 'burrito-hex',
@@ -43,11 +45,12 @@ export const handlesFixture: StoredHandle[] = [
         length: 7,
         og_number: 0,
         utxo: 'utxo2#0',
+        lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -62,7 +65,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     },
     {
         hex: 'taco-hex',
@@ -73,11 +77,12 @@ export const handlesFixture: StoredHandle[] = [
         length: 4,
         og_number: 0,
         utxo: 'utxo3#0',
+        lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: '123'
+            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -92,7 +97,8 @@ export const handlesFixture: StoredHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         version: 0,
-        handle_type: HandleType.HANDLE
+        handle_type: HandleType.HANDLE,
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
     }
 ];
 
@@ -111,17 +117,17 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     },
     2: {
         barbacoa: {
-            old: { resolved_addresses: { ada: '123' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     },
     3: {
         burrito: {
-            old: { resolved_addresses: { ada: '123' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     },
     4: {
         barbacoa: {
-            old: { resolved_addresses: { ada: '456' } }
+            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
         }
     }
 };
@@ -162,7 +168,8 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 og_number: Math.floor(Math.random() * 2438),
                 slotNumber: i,
                 handle_type: HandleType.HANDLE,
-                utxo: createRandomUtxo()
+                utxo: createRandomUtxo(),
+                lovelace: 0
             });
             if (saveToHandleStore) {
                 await HandleStore.save({ handle });
@@ -213,7 +220,8 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         og_number: Math.floor(Math.random() * 2438),
                         slotNumber: beginningSlot + i,
                         handle_type: HandleType.HANDLE,
-                        utxo: createRandomUtxo()
+                        utxo: createRandomUtxo(),
+                        lovelace: 0
                     });
                     await HandleStore.save({ handle: newHandle });
                 }

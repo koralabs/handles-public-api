@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import IHandlesRepository from '../repositories/handles.repository';
-import { RequestWithRegistry } from '../interfaces/auth.interface';
 import { fetchHealth } from '../services/ogmios/utils';
-import { HandleStore } from '../repositories/memory/HandleStore';
+import { IRegistry } from '../interfaces/registry.interface';;
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -12,10 +11,10 @@ enum HealthStatus {
 }
 
 class HealthController {
-    public index = async (req: Request<RequestWithRegistry>, res: Response, next: NextFunction): Promise<void> => {
+    public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const ogmiosResults = await fetchHealth();
-            const handleRepo: IHandlesRepository = new req.params.registry.handlesRepo();
+            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             const stats = handleRepo.getHandleStats();
 
             if (!ogmiosResults) {
@@ -27,7 +26,7 @@ class HealthController {
             }
 
             let status = HealthStatus.CURRENT;
-            if (!HandleStore.isCaughtUp()) {
+            if (!handleRepo.isCaughtUp()) {
                 status = HealthStatus.STORAGE_BEHIND;
             }
             if (ogmiosResults.networkSynchronization < 1) {

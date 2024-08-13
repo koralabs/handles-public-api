@@ -1,6 +1,6 @@
 import { Rarity } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
-import { StoredHandle } from '../../repositories/memory/interfaces/handleStore.interfaces';
+import { StoredHandle } from '../../interfaces/handleStore.interfaces';
 
 export class HandleViewModel {
     hex: string;

@@ -1,0 +1,1 @@
+export interface IRegistry extends Record<string, any> {}

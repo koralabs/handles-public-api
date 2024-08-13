@@ -1,12 +1,11 @@
 import { IHandleStats } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
-import { HttpException } from '../exceptions/HttpException';
+import registry from '../ioc/main.registry';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc', () => ({
-    registry: {
+jest.mock('../ioc/main.registry', () => ({
         ['handlesRepo']: jest.fn().mockReturnValue({
             getHandleByName: (handleName: string) => {
                 if (['nope'].includes(handleName)) return null;
@@ -44,7 +43,6 @@ jest.mock('../ioc', () => ({
         ['apiKeysRepo']: jest.fn().mockReturnValue({
             get: (key: string) => key === 'valid-key'
         })
-    }
 }));
 
 afterAll(async () => {
@@ -53,10 +51,9 @@ afterAll(async () => {
 
 describe('Home Routes Test', () => {
     let app: App | null;
-    beforeEach(() => {
-        app = new App();
+    beforeEach(async () => {
+        app = await new App().initialize();
     });
-
     afterEach(() => {
         jest.clearAllMocks();
     });

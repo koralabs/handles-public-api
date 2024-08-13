@@ -1,4 +1,4 @@
-import { IHandleStats, IUTxO } from '@koralabs/kora-labs-common';
+import { IHandleStats, IUTxO, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
 import { HandlePaginationModel } from '../../models/handlePagination.model';
@@ -6,10 +6,120 @@ import { HandleSearchModel } from '../../models/HandleSearch.model';
 import { HolderPaginationModel } from '../../models/holderPagination.model';
 import IHandlesRepository from '../handles.repository';
 import { HandleStore } from './HandleStore';
-import { StoredHandle } from './interfaces/handleStore.interfaces';
+import { HolderAddressIndex, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle } from '../../interfaces/handleStore.interfaces';
+import { memoryWatcher } from '../../services/ogmios/utils';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     public EMPTY = '|empty|';
+    private intervals: NodeJS.Timeout[] = [];
+
+    constructor() {}
+
+    public async initialize(): Promise<IHandlesRepository> {
+        // const metricsInterval = setInterval(() => {
+        //     if (process.env.CONSOLE_STATUS === 'true') {
+        //         const metrics = HandleStore.getMetrics();
+        //         if (!metrics) return;
+
+        //         const {
+        //             percentageComplete,
+        //             currentMemoryUsed,
+        //             buildingElapsed,
+        //             memorySize,
+        //             handleCount,
+        //             ogmiosElapsed,
+        //             slotDate
+        //         } = metrics;
+
+        //         writeConsoleLine(
+        //             this.startTime,
+        //             `${percentageComplete}% Completed | ${currentMemoryUsed}MB Used | ${handleCount} Total Handles | ${memorySize} Object Size | ${ogmiosElapsed} Ogmios Elapsed | ${buildingElapsed} Building Elapsed | ${slotDate.toISOString()} Slot Date`
+        //         );
+        //     }
+        // }, 1000);
+
+        if (this.intervals.length === 0) {
+            const saveFilesInterval = setInterval(async () => {
+                const { current_slot, current_block_hash } = HandleStore.getMetrics();
+
+                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+                // Once restarted, we should have a valid file to read from.
+                if (current_slot === 0) {
+                    Logger.log({
+                        message: 'Slot is zero. Exiting process.',
+                        category: LogCategory.NOTIFY,
+                        event: 'OgmiosService.saveFilesInterval'
+                    });
+                    process.exit(2);
+                }
+
+                await HandleStore.saveHandlesFile(current_slot, current_block_hash);
+
+                memoryWatcher();
+            }, 10 * 60 * 1000);
+
+            const setMemoryInterval = setInterval(() => {
+                const memorySize = HandleStore.memorySize();
+                HandleStore.setMetrics({ memorySize });
+            }, 60000);
+
+            this.intervals = [saveFilesInterval, setMemoryInterval];
+        }
+        return this;
+    };
+
+    public destroy(): void {
+        this.intervals.map((i) => clearInterval(i));
+    };
+
+    public isCaughtUp(): boolean {
+        return HandleStore.isCaughtUp();
+    }
+
+    public getTimeMetrics() {
+         return HandleStore.getTimeMetrics();
+    };
+    
+    public setMetrics(metrics: IHandleStoreMetrics){
+        HandleStore.setMetrics(metrics);
+    };
+    
+    public getMetrics(): IHandleStats {
+        return HandleStore.getMetrics();
+    }
+
+    public async prepareHandlesStorage(loadS3: boolean = true): Promise<{ slot: number; hash: string; } | null> {
+        return await HandleStore.prepareHandlesStorage(loadS3);
+    }
+
+    public async rollBackToGenesis(): Promise<void> {
+        return await HandleStore.rollBackToGenesis();
+    }
+
+    public async burnHandle(handleName: string, slotNumber: number): Promise<void> {
+        return await HandleStore.burnHandle(handleName, slotNumber);
+    };
+
+    public async rewindChangesToSlot(slot: { slot: number; hash: string; lastSlot: number; }): Promise<{ name: string; action: string; handle: Partial<StoredHandle> | undefined; }[]> {
+        return await HandleStore.rewindChangesToSlot(slot);
+    };
+
+    public async savePersonalizationChange(change: SavePersonalizationInput): Promise<void> {
+        return await HandleStore.savePersonalizationChange(change);
+    };
+
+    public async saveSubHandleSettingsChange(change: SaveSubHandleSettingsInput): Promise<void> {
+        return await HandleStore.saveSubHandleSettingsChange(change);
+    };
+
+    public async saveMintedHandle(input: SaveMintingTxInput): Promise<void> {
+        return await HandleStore.saveMintedHandle(input);
+    };
+
+    public async saveHandleUpdate(update: SaveWalletAddressMoveInput): Promise<void> {
+        return await HandleStore.saveHandleUpdate(update);
+    };
+    
     private search(searchModel: HandleSearchModel) {
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
@@ -153,9 +263,25 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return filteredHandles.map((handle) => handle.name);
     }
 
-    public getHandlesByPaymentKeyHashes = (hashes:string[]): string[]  => {
+    public getHandlesByPaymentKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
-                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? [], (value) => value);
+                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? []);
+                return array.length === 0 ? [this.EMPTY] : array;
+            }
+        ).flat();
+    }
+
+    public getHandlesByHolderAddresses = (addresses: string[]): string[]  => {
+        return addresses.map((h) => {
+                const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
+                return array.length === 0 ? [this.EMPTY] : array;
+            }
+        ).flat();
+    }
+
+    public getHandlesByAddresses = (addresses: string[]): string[]  => {
+        return addresses.map((h) => {
+            const array = Array.from(HandleStore.addressesIndex.get(h) ?? []);
                 return array.length === 0 ? [this.EMPTY] : array;
             }
         ).flat();

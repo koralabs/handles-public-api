@@ -11,7 +11,7 @@ import { buildCharacters, buildNumericModifiers, getRarity } from '../../../serv
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
 import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../interfaces/handleStore.interfaces';
+import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../../../interfaces/handleStore.interfaces';
 import { bech32FromHex, getPaymentKeyHash } from '../../../utils/serialization';
 
 export class HandleStore {
@@ -24,12 +24,13 @@ export class HandleStore {
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    static addressesIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 35;
+    static storageSchemaVersion = 37;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -110,7 +111,7 @@ export class HandleStore {
         const holder = getAddressHolderDetails(ada);
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
-        const payment_key_hash = (await getPaymentKeyHash(ada)) ?? undefined;
+        const payment_key_hash = (await getPaymentKeyHash(ada))!;
         updatedHandle.payment_key_hash = payment_key_hash;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
@@ -127,7 +128,8 @@ export class HandleStore {
         const ogFlag = og_number === 0 ? 0 : 1;
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
-        if (payment_key_hash) this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
+        this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
+        this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
@@ -174,8 +176,9 @@ export class HandleStore {
         this.rarityIndex.get(rarity)?.delete(handleName);
         this.ogIndex.get(`${ogFlag}`)?.delete(handleName);
         this.charactersIndex.get(characters)?.delete(handleName);
-        const payment_key_hash = await getPaymentKeyHash(ada);
-        if (payment_key_hash) this.paymentKeyHashesIndex.get(payment_key_hash)?.delete(handleName);
+        const payment_key_hash = (await getPaymentKeyHash(ada))!;
+        this.paymentKeyHashesIndex.get(payment_key_hash)?.delete(handleName);
+        this.addressesIndex.get(ada)?.delete(handleName);
         this.numericModifiersIndex.get(numeric_modifiers)?.delete(handleName);
         this.lengthIndex.get(`${length}`)?.delete(handleName);
 
@@ -242,7 +245,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -250,6 +253,7 @@ export class HandleStore {
             holder_type: '', // Populate on save
             length: name.length,
             utxo,
+            lovelace,
             rarity: getRarity(name),
             characters: buildCharacters(name),
             numeric_modifiers: buildNumericModifiers(name),
@@ -283,7 +287,7 @@ export class HandleStore {
             sub_rarity,
             virtual,
             original_address,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined
+            payment_key_hash: (await getPaymentKeyHash(adaAddress))!
         };
 
         return newHandle;
@@ -432,7 +436,8 @@ export class HandleStore {
                 sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
                 virtual,
                 last_update_address: personalizationDatum?.last_update_address,
-                original_address: personalizationDatum?.original_address
+                original_address: personalizationDatum?.original_address,
+                lovelace: 0
             };
             const handle = await HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -463,7 +468,9 @@ export class HandleStore {
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress)) ?? undefined
+            payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
+            // set the utxo to incoming reference_token for virtual subhandles
+            ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
         };
 
         await HandleStore.save({
@@ -545,7 +552,8 @@ export class HandleStore {
             ...this.convertMapsToObjects(this.lengthIndex),
             ...this.convertMapsToObjects(this.charactersIndex),
             ...this.convertMapsToObjects(this.paymentKeyHashesIndex),
-            ...this.convertMapsToObjects(this.numericModifiersIndex)
+            ...this.convertMapsToObjects(this.numericModifiersIndex),
+            ...this.convertMapsToObjects(this.addressesIndex)
         };
 
         return Buffer.byteLength(JSON.stringify(object));
@@ -830,6 +838,7 @@ export class HandleStore {
         this.subHandlesIndex = new Map<string, Set<string>>();
         this.charactersIndex = new Map<string, Set<string>>();
         this.paymentKeyHashesIndex = new Map<string, Set<string>>();
+        this.addressesIndex = new Map<string, Set<string>>();
         this.numericModifiersIndex = new Map<string, Set<string>>();
         this.lengthIndex = new Map<string, Set<string>>();
     }

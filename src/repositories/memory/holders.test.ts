@@ -1,5 +1,5 @@
+import { HolderAddressIndex } from "../../interfaces/handleStore.interfaces";
 import { HandleStore } from "./HandleStore";
-import { HolderAddressIndex } from "./interfaces/handleStore.interfaces";
 import { createRandomHandles, performRandomHandleUpdates } from "./tests/fixtures/handles";
 
 describe('holder index integrity', () => {
