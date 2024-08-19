@@ -1078,7 +1078,7 @@ components:
           example: my.handle
         handle_type:
           type: string
-          $ref: "#/components/schemas/Handle"
+          $ref: "#/components/schemas/HandleType"
           description: Handle, NFT SubHandle, or Virtual SubHandle
         virtual:
           type: object
@@ -1199,6 +1199,17 @@ components:
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    HandleType:
+      type: string
+      description: |-
+        Handle Types:
+        <br />`Handle`
+        <br />`NFT SubHandle` 
+        <br />`Virtual SubHandle`
+      enum:
+      - handle
+      - nft_subhandle
+      - virtual_subhandle
     HexString:
       type: string
       example: "0x1a3dfb"
@@ -1310,6 +1321,28 @@ components:
           $ref: "#/components/schemas/HexString"
         default:
           type: boolean
+    Script:
+      type: object
+      properties:
+        handle:
+          type: string
+        handleHex: 
+          type: string
+        refScriptUtxo:
+          type: string
+        refScriptAddress:
+          type: string
+        validatorHash:
+          type: string
+        type:
+          type: string
+          $ref: "#/components/schemas/HandleType"
+        cbor:
+          type: string
+        unoptimizedCbor:
+          type: string
+        datum:
+          type: string
     SocialEntry:
       type: object
       properties:
@@ -1358,8 +1391,8 @@ components:
           type: string
           description: The address of the UTxO 
         script:
-          type: string
-          description: If known, the script/contract (as CBOR) that the UTxO is locked to, if there is one
+          $ref: "#/components/schemas/Script"
+          description: If known, the script/contract details that the UTxO is locked to, if there is one
         reference_script:
           type: string
           description: The reference script (as CBOR) that is saved in this UTxO, if there is one
