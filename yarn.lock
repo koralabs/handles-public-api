@@ -656,10 +656,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@4.3.8":
-  version "4.3.8"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-4.3.8.tgz#baa656855841aec0a2bb24be65408adf66ab489f"
-  integrity sha512-rKyyxrXITJ5LTPp+sgFXanqHaqWX5ycogNbPDkYdZ71WV3B+IcDmLC0MczcMCVaV6bgnnk34IziJkWxdU82IzQ==
+"@koralabs/kora-labs-common@4.3.9":
+  version "4.3.9"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-4.3.9.tgz#013335bff84df1007dbdec8434171b443870153b"
+  integrity sha512-uSZsIAz8TSKeIT77rpCrMYT3JgFRKJoqvQfdGDE0QIk/wO4b/pPmTA17HVpMUKUfo4U3Y9RjN28uVHitUuKe1Q==
   dependencies:
     bech32 "^2.0.0"
     boolean "^3.2.0"
@@ -1963,13 +1963,6 @@ create-require@^1.1.0:
   resolved "https://registry.yarnpkg.com/create-require/-/create-require-1.1.1.tgz#c1d7e8f1e5f6cfc9ff65f9cd352d37348756c333"
   integrity sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==
 
-cross-env@^7.0.3:
-  version "7.0.3"
-  resolved "https://registry.yarnpkg.com/cross-env/-/cross-env-7.0.3.tgz#865264b29677dc015ba8418918965dd232fc54cf"
-  integrity sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==
-  dependencies:
-    cross-spawn "^7.0.1"
-
 cross-fetch@^3.1.4, cross-fetch@^3.1.5:
   version "3.1.8"
   resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.1.8.tgz#0327eba65fd68a7d119f8fb2bf9334a1a7956f82"
@@ -1977,7 +1970,7 @@ cross-fetch@^3.1.4, cross-fetch@^3.1.5:
   dependencies:
     node-fetch "^2.6.12"
 
-cross-spawn@^7.0.1, cross-spawn@^7.0.2, cross-spawn@^7.0.3:
+cross-spawn@^7.0.2, cross-spawn@^7.0.3:
   version "7.0.3"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-7.0.3.tgz#f73a85b9d5d41d045551c177e2882d4ac85728a6"
   integrity sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==
