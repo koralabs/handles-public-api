@@ -170,14 +170,14 @@ paths:
     post:
       tags:
         - handles
+      description: |
+        POST an array to match or reverse-lookup minted Handles. 
+        This may be combined with the all of the search and filtering
+        parameters of the `/handles` endpoint 
+        (see [/handles](#/handles/get_handles) for more information).
       parameters:
       - name: type
         in: query
-        description: 
-          POST an array to match or reverse-lookup minted Handles. 
-          This may be combined with the all of the search and filtering
-          parameters of the `/handles` endpoint 
-          (see [/handles](#/handles/get_handles) for more information).
         schema:
                 $ref: "#/components/schemas/FilterType"
       requestBody:
@@ -188,6 +188,8 @@ paths:
           application/json:
             schema:
                 type: array
+                items:
+                  type: string
             examples:
               handle: 
                 value: [ "handle_1", "my_handle_2", "other_handle", "etc..."]
@@ -552,14 +554,16 @@ paths:
             application/json:
               schema:
                 type: array
-                $ref: "#/components/schemas/Handle"
+                items: 
+                  $ref: "#/components/schemas/Handle"
         '202':
           description: Successful, but scanning is still catching up to the tip of the blockchain
           content:
             application/json:
               schema:
                 type: array
-                $ref: "#/components/schemas/Handle"
+                items: 
+                  $ref: "#/components/schemas/Handle"
         '400':
           description: Invalid Handle format
         '404':
@@ -616,6 +620,12 @@ paths:
         the API will attempt to convert the Cbor to JSON, but may fail of the object 
         isn't actually JSON.
       parameters:
+      - name: handle
+        in: path
+        description: The Handle name
+        required: true
+        schema:
+          type: string
       - name: default_key_type
         in: query
         description: Keys in CBOR maps default to 'utf8' encoding when converting to JSON. 
@@ -814,13 +824,13 @@ paths:
       - utils
       parameters:
       - name: from
-        in: path
+        in: query
         description: The format of the datum being passed in
         required: true
         schema:
           $ref: "#/components/schemas/DatumType"
       - name: to
-        in: path
+        in: query
         description: The format of the datum to encode/decode to
         required: true
         schema:
@@ -1078,7 +1088,7 @@ components:
           example: my.handle
         handle_type:
           type: string
-          $ref: "#/components/schemas/Handle"
+          $ref: "#/components/schemas/HandleType"
           description: Handle, NFT SubHandle, or Virtual SubHandle
         virtual:
           type: object
@@ -1199,6 +1209,17 @@ components:
         updated_slot_number:
           type: integer
           description: The slot number this Handle was updated
+    HandleType:
+      type: string
+      description: |-
+        Handle Types:
+        <br />`Handle`
+        <br />`NFT SubHandle` 
+        <br />`Virtual SubHandle`
+      enum:
+      - handle
+      - nft_subhandle
+      - virtual_subhandle
     HexString:
       type: string
       example: "0x1a3dfb"
@@ -1310,6 +1331,29 @@ components:
           $ref: "#/components/schemas/HexString"
         default:
           type: boolean
+    Script:
+      type: object
+      description: If known, the script/contract details that the UTxO is locked to, if there is one
+      properties:
+        handle:
+          type: string
+        handleHex: 
+          type: string
+        refScriptUtxo:
+          type: string
+        refScriptAddress:
+          type: string
+        validatorHash:
+          type: string
+        type:
+          type: string
+          $ref: "#/components/schemas/HandleType"
+        cbor:
+          type: string
+        unoptimizedCbor:
+          type: string
+        datum:
+          type: string
     SocialEntry:
       type: object
       properties:
@@ -1358,8 +1402,9 @@ components:
           type: string
           description: The address of the UTxO 
         script:
-          type: string
-          description: If known, the script/contract (as CBOR) that the UTxO is locked to, if there is one
+          description: If known, the script/contract details that the UTxO is locked to, if there is one
+          type: object
+          $ref: "#/components/schemas/Script"
         reference_script:
           type: string
           description: The reference script (as CBOR) that is saved in this UTxO, if there is one

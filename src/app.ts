@@ -146,7 +146,7 @@ class App {
             const swaggerDoc = yaml.load(`${__dirname}/swagger.yml`);
             this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
         } catch (error: any) {
-            Logger.log(`Unable to load swagger with error ${error.message}`);
+            Logger.log(`Unable to load swagger with error:\n${error}`);
         }
     }
 }
