@@ -1,8 +1,11 @@
 #!/bin/bash
 set -eu
 
-if ! [ -x "$(command -v docker)" ]; then
-    echo 'Remember to start Docker Desktop!'
+if [ ! -x "$(command -v docker)" ] || [[ ! "$(docker --version)" == "Docker version"* ]]; then
+    echo -en "\033[31m"
+    echo '******** Remember to start Docker Desktop! ***********';
+    echo -en "\033[0m"
+    exit 1
 fi
 
 if [ "$( docker container inspect -f '{{.State.Pid}}' local-ogmios )" = "0" ]; then
