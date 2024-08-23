@@ -2,7 +2,7 @@ import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
 import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IHandleMetadata, IPersonalization, IPzDatum, IReferenceToken } from '@koralabs/kora-labs-common';
+import { HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, IReferenceToken } from '@koralabs/kora-labs-common';
 import { Logger } from '@koralabs/kora-labs-common';
 import * as addresses from '../../../utils/addresses';
 import * as config from '../../../config';
@@ -71,7 +71,7 @@ describe('HandleStore tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
-                lovelace, 
+                lovelace,
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
                 svg_version,
@@ -246,7 +246,7 @@ describe('HandleStore tests', () => {
                 holder_type: '',
                 version: 0,
                 handle_type: HandleType.HANDLE,
-                payment_key_hash: "73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272",
+                payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
             });
         });
     });
@@ -337,8 +337,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 0,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -352,10 +352,10 @@ describe('HandleStore tests', () => {
                 last_update_address: '',
                 validated_by: '',
                 resolved_addresses: { ada: '0x123', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -589,8 +589,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 0,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -604,10 +604,10 @@ describe('HandleStore tests', () => {
                 last_update_address: '0x444',
                 validated_by: '',
                 resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -720,8 +720,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 0,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -735,10 +735,10 @@ describe('HandleStore tests', () => {
                 last_update_address: '',
                 validated_by: '',
                 resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -834,8 +834,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 1,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: true,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -848,10 +848,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -931,8 +931,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 1,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: true,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -945,10 +945,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '0x222',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -987,8 +987,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const newPersonalizationDatum: IPzDatum = {
-                default: 1,
+            const newPersonalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: true,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1001,10 +1001,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '0x333',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1051,8 +1051,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const finalPersonalizationDatum: IPzDatum = {
-                default: 0,
+            const finalPersonalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1065,10 +1065,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '0x444',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1210,8 +1210,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const tacoPersonalizationDatum: IPzDatum = {
-                default: 0,
+            const tacoPersonalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1224,10 +1224,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1264,8 +1264,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const burritoPersonalizationDatum: IPzDatum = {
-                default: 0,
+            const burritoPersonalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1278,10 +1278,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1318,8 +1318,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const barbacoaPersonalizationDatum: IPzDatum = {
-                default: 1,
+            const barbacoaPersonalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: true,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1332,10 +1332,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1372,8 +1372,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const tacoPersonalizationDatumUpdate2: IPzDatum = {
-                default: 0,
+            const tacoPersonalizationDatumUpdate2: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1386,10 +1386,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1449,8 +1449,8 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            const personalizationDatum: IPzDatum = {
-                default: 0,
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1463,10 +1463,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1530,15 +1530,15 @@ describe('HandleStore tests', () => {
                 sub_numeric_modifiers: 'numbers'
             };
 
-            const personalizationDatum: IPzDatum = {
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
                 virtual: {
                     expires_time: 1,
-                    public_mint: 0
+                    public_mint: false
                 },
                 resolved_addresses: {
                     ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
                 },
-                default: 0,
+                default: false,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
@@ -1551,10 +1551,10 @@ describe('HandleStore tests', () => {
                 vendor: '',
                 last_update_address: '',
                 validated_by: '',
-                trial: 0,
-                nsfw: 0,
+                trial: false,
+                nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: 0
+                migrate_sig_required: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1580,11 +1580,11 @@ describe('HandleStore tests', () => {
 
             expect(virtualSubHandle?.virtual).toEqual({ expires_time: 1, public_mint: false });
 
-            const newPzDatum: IPzDatum = {
+            const newPzDatum: IPzDatumConvertedUsingSchema = {
                 ...personalizationDatum,
                 virtual: {
                     expires_time: 2,
-                    public_mint: 0
+                    public_mint: false
                 }
             };
 

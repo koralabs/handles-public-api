@@ -248,7 +248,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, pz_enabled }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -290,6 +290,7 @@ export class HandleStore {
             sub_rarity,
             virtual,
             original_address,
+            pz_enabled,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!
         };
 
@@ -440,7 +441,8 @@ export class HandleStore {
                 virtual,
                 last_update_address: personalizationDatum?.last_update_address,
                 original_address: personalizationDatum?.original_address,
-                lovelace: 0
+                lovelace: 0,
+                pz_enabled: personalizationDatum?.pz_enabled ?? false
             };
             const handle = await HandleStore.buildHandle(buildHandleInput);
             await HandleStore.save({ handle });
@@ -467,10 +469,11 @@ export class HandleStore {
             personalization,
             reference_token,
             svg_version: personalizationDatum?.svg_version ?? '',
-            default: personalizationDatum?.default == 1 ?? false,
+            default: personalizationDatum?.default ?? false,
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
+            pz_enabled: personalizationDatum?.pz_enabled ?? false,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
             // set the utxo to incoming reference_token for virtual subhandles
             ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
