@@ -13,6 +13,9 @@ import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresse
 import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
 import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../../../interfaces/handleStore.interfaces';
 import { bech32FromHex, getPaymentKeyHash } from '../../../utils/serialization';
+import { fileURLToPath } from 'url';
+export const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+export const __dirname = path.dirname(__filename); // get the name of the directory
 
 export class HandleStore {
     // Indexes

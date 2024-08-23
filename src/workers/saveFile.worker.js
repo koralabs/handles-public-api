@@ -1,6 +1,6 @@
-const fs = require('fs');
-const lockfile = require('proper-lockfile');
-const { parentPort, workerData } = require('worker_threads');
+import fs from 'fs';
+import * as lockfile from 'proper-lockfile';
+import { parentPort, workerData } from 'worker_threads';
 
 (async () => {
         const isLocked = await lockfile.check(workerData.storagePath);

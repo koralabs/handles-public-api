@@ -9,5 +9,5 @@
         "src/logs/*",
         "src/**/*.{spec,test}.ts"
     ],
-    "exec": "chmod +x setup_env.sh && ./setup_env.sh && ts-node -r tsconfig-paths/register -r dotenv/config --transpile-only src/express.ts"
+    "exec": "chmod +x setup_env.sh && ./setup_env.sh && tsx -r tsconfig-paths/register -r dotenv/config src/express.ts"
 }

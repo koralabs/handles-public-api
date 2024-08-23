@@ -1,13 +1,19 @@
 {
     "compilerOptions": {
-        "target": "ES2019",
-        "module": "commonjs",
+        "target": "ESNext",
+        "module": "ESNext",
         "outDir": "./dist",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
+        "moduleResolution": "Node",
         "strict": true,
         "skipLibCheck": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "allowJs": true
     },
+    "ts-node": {
+        "esm": true
+    },
+    "lib": ["esnext"],
     "exclude": ["node_modules", "**/fixtures", "scripts", "**/*.test.ts", "**/*.tests.ts"]
 }

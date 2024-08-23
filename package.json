@@ -6,6 +6,7 @@
   "repository": "https://github.com/koralabs/handles-public-api.git",
   "author": "Papa Goose <papa.goose@koralabs.io>",
   "license": "Mozilla Public License 2.0",
+  "type": "module",
   "scripts": {
     "setup_env": "chmod +x setup_env.sh && ./setup_env.sh",
     "start": "yarn setup_env && node express.js",
@@ -66,6 +67,7 @@
     "ts-jest": "^29.0.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.1.0",
+    "tsx": "^4.17.0",
     "typescript": "^4.8.3"
   }
 }
