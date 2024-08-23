@@ -13,9 +13,6 @@ import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresse
 import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
 import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../../../interfaces/handleStore.interfaces';
 import { bech32FromHex, getPaymentKeyHash } from '../../../utils/serialization';
-import { fileURLToPath } from 'url';
-export const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-export const __dirname = path.dirname(__filename); // get the name of the directory
 
 export class HandleStore {
     // Indexes
@@ -634,7 +631,7 @@ export class HandleStore {
 
     static async saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): Promise<boolean> {
         try {
-            const worker = new Worker(path.resolve(__dirname, '../../../workers/saveFile.worker.js'), {
+            const worker = new Worker('./workers/saveFile.worker.js', {
                 workerData: {
                     content,
                     storagePath,

@@ -12,10 +12,6 @@ import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
 import { IRegistry } from './interfaces/registry.interface';
 import { IBlockProcessor } from './interfaces/ogmios.interfaces';
-import { fileURLToPath } from 'url';
-export const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-export const __dirname = path.dirname(__filename); // get the name of the directory
-
 
 class App {
     public app: express.Application;
@@ -35,9 +31,9 @@ class App {
 
     private _getDynamicLoadDirectories(): string[] {
         if ((this.env == 'development' || this.env == 'test') && process.env.DYNAMIC_LOAD_DIR) {
-            return [__dirname, ...process.env.DYNAMIC_LOAD_DIR.split(';')];
+            return ['./', ...process.env.DYNAMIC_LOAD_DIR.split(';')];
         }
-        return [__dirname]; 
+        return ['./']; 
     }
 
     public async listen() {
@@ -147,7 +143,7 @@ class App {
         };
 
         try {
-            const swaggerDoc = yaml.load(`${__dirname}/swagger.yml`);
+            const swaggerDoc = yaml.load(`./swagger.yml`);
             this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
         } catch (error: any) {
             Logger.log(`Unable to load swagger with error:\n${error}`);
