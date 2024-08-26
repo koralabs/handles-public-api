@@ -355,7 +355,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: false
+                migrate_sig_required: false,
+                pz_enabled: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -571,7 +572,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                pz_enabled: false
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -607,7 +609,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: false
+                migrate_sig_required: false,
+                pz_enabled: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -802,7 +805,8 @@ describe('HandleStore tests', () => {
                     sub_numeric_modifiers: undefined,
                     sub_rarity: undefined,
                     virtual: undefined,
-                    original_address: undefined
+                    original_address: undefined,
+                    pz_enabled: false
                 }
             });
         });
@@ -912,7 +916,8 @@ describe('HandleStore tests', () => {
                 slotNumber: 100,
                 image_hash: '0x123',
                 svg_version: '1.0.0',
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                pz_enabled: false
             });
 
             const personalizationUpdates: IPersonalization = {
@@ -948,7 +953,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: false
+                migrate_sig_required: false,
+                pz_enabled: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1004,7 +1010,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: false
+                migrate_sig_required: false,
+                pz_enabled: false
             };
 
             await HandleStore.savePersonalizationChange({
@@ -1068,7 +1075,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false,
                 agreed_terms: '',
-                migrate_sig_required: false
+                migrate_sig_required: false,
+                pz_enabled: false
             };
 
             await HandleStore.savePersonalizationChange({

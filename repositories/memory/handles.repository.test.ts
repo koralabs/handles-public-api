@@ -52,7 +52,8 @@ describe('MemoryHandlesRepository Tests', () => {
         last_update_address: '',
         utxo: '#0',
         lovelace: 0,
-        version: 0
+        version: 0,
+        pz_enabled: false
     };
 
     jest.mock('../../utils/addresses');
