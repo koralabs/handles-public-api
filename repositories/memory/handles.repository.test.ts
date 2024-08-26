@@ -26,7 +26,7 @@ describe('MemoryHandlesRepository Tests', () => {
         name: 'v@taco',
         numeric_modifiers: '',
         og_number: 0,
-        payment_key_hash: "73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272",
+        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272',
         personalization: {
             nsfw: false,
             trial: false,
@@ -52,7 +52,8 @@ describe('MemoryHandlesRepository Tests', () => {
         last_update_address: '',
         utxo: '#0',
         lovelace: 0,
-        version: 0
+        version: 0,
+        pz_enabled: false
     };
 
     jest.mock('../../utils/addresses');
@@ -116,14 +117,14 @@ describe('MemoryHandlesRepository Tests', () => {
                     standard_image: '',
                     image_hash: '',
                     standard_image_hash: '',
-                    default: 0,
+                    default: false,
                     validated_by: '',
-                    trial: 0,
-                    nsfw: 0,
+                    trial: false,
+                    nsfw: false,
                     last_update_address: '',
                     svg_version: '',
                     agreed_terms: '',
-                    migrate_sig_required: 0,
+                    migrate_sig_required: false,
                     resolved_addresses: {
                         ada: '0x6073528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
                     }

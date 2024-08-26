@@ -1,4 +1,4 @@
-import { Rarity } from '@koralabs/kora-labs-common';
+import { HandleType, Rarity } from '@koralabs/kora-labs-common';
 import { HttpException } from '../../exceptions/HttpException';
 import { StoredHandle } from '../../interfaces/handleStore.interfaces';
 
@@ -34,6 +34,7 @@ export class HandleViewModel {
     version: number;
     handle_type: string;
     payment_key_hash?: string;
+    pz_enabled?: boolean;
 
     sub_rarity?: string;
     sub_length?: number;
@@ -79,6 +80,7 @@ export class HandleViewModel {
         this.version = handle.version;
         this.handle_type = handle.handle_type;
         this.payment_key_hash = handle.payment_key_hash;
+        this.pz_enabled = handle.pz_enabled ?? handle.handle_type === HandleType.HANDLE ? true : undefined;
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;

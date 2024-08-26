@@ -1,5 +1,5 @@
 import { BlockPraos, PointOrOrigin, Tip, TipOrOrigin } from '@cardano-ogmios/schema';
-import { IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 
 export enum MetadataLabel {
     'NFT' = 721,
@@ -19,7 +19,7 @@ export interface PersonalizationOnChainData {
 }
 
 export interface BuildPersonalizationInput {
-    personalizationDatum: IPzDatum;
+    personalizationDatum: IPzDatumConvertedUsingSchema;
     personalization: IPersonalization;
 }
 
