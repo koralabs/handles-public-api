@@ -105,7 +105,7 @@ class App {
             return;
         }
 
-        const startOgmios = async () => {
+        const connectOgmiosService = async () => {
             let ogmiosStarted = false;
             let loadS3 = true;
             while (!ogmiosStarted) {
@@ -118,21 +118,21 @@ class App {
                         loadS3 = false;
                     }
                     Logger.log({
-                        message: `Unable to start Ogmios: ${error.message}`,
+                        message: `Unable to connect Ogmios: ${error.message}`,
                         category: LogCategory.ERROR,
-                        event: 'startOgmios.failed.errorMessage'
+                        event: 'connectOgmiosService.failed.errorMessage'
                     });
                     // Logger.log({
                     //     message: `Error: ${JSON.stringify(error)}`,
                     //     category: LogCategory.INFO,
-                    //     event: 'startOgmios.failed.error'
+                    //     event: 'connectOgmiosService.failed.error'
                     // });
                     await delay(30 * 1000);
                 }
             }
         };
 
-        await startOgmios();
+        await connectOgmiosService();
     }
 
     private async initializeSwagger() {

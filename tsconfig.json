@@ -15,5 +15,12 @@
         "esm": true
     },
     "lib": ["esnext"],
-    "exclude": ["node_modules", "**/fixtures", "scripts", "**/*.test.ts", "**/*.tests.ts"]
+    "exclude": [
+        "node_modules",
+        "**/fixtures",
+        "**/*.test.ts",
+        "dist",
+        "scripts",
+        "coverage"
+    ]
 }
