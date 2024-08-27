@@ -1,9 +1,10 @@
 import path from 'path';
 import cors from 'cors';
+import fs from 'fs';
 import { Logger, LogCategory } from '@koralabs/kora-labs-common';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import yaml from 'yamljs';
+import { parse } from 'yaml';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import errorMiddleware from './middlewares/error.middleware';
 import OgmiosService from './services/ogmios/ogmios.service';
@@ -143,10 +144,10 @@ class App {
         };
 
         try {
-            const swaggerDoc = yaml.load(`./swagger.yml`);
+            const swaggerDoc = parse(fs.readFileSync('./swagger.yml').toString());
             this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
         } catch (error: any) {
-            Logger.log(`Unable to load swagger with error:\n${error}`);
+            Logger.log(`Unable to load swagger with error: ${error}`);
         }
     }
 }
