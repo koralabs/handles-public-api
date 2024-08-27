@@ -5,12 +5,13 @@ import { handleEraBoundaries, POLICY_IDS } from './constants';
 import { OGMIOS_HOST } from '../../config';
 import * as url from 'url';
 import IHandlesRepository from '../../repositories/handles.repository';
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor } from '../../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import { checkNameLabel } from '../../utils/util';import fastq from 'fastq';
+import { checkNameLabel } from '../../utils/util';
+import fastq from 'fastq';
 import { ensureSocketIsOpen, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
 import { fetchHealth } from './utils';
@@ -53,7 +54,7 @@ class OgmiosService {
         this.blockProcessors = blockProcessors;
     }
 
-    private async rollForward (
+    private async rollForward(
         response: {
             block: Block;
             tip: unknown;
@@ -76,7 +77,7 @@ class OgmiosService {
         await this.processBlock(block);
 
         if (this.blockProcessors.length > 0) {
-            for (let i=0; i<this.blockProcessors.length; i++) {
+            for (let i = 0; i < this.blockProcessors.length; i++) {
                 await this.blockProcessors[i].processBlock(block);
             }
         }
@@ -86,7 +87,7 @@ class OgmiosService {
         requestNext();
     }
 
-    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin; }, requestNext: () => void): Promise<void> {
+    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin }, requestNext: () => void): Promise<void> {
         const { current_slot } = this.handlesRepo.getMetrics();
         Logger.log({
             message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
@@ -96,9 +97,9 @@ class OgmiosService {
 
         const { point, tip } = response;
         await this.processRollback(point, tip);
-        
+
         if (this.blockProcessors.length > 0) {
-            for (let i=0; i<this.blockProcessors.length; i++) {
+            for (let i = 0; i < this.blockProcessors.length; i++) {
                 await this.blockProcessors[i].processRollback(point, tip);
             }
         }
@@ -169,7 +170,7 @@ class OgmiosService {
             throw err;
         }
     }
-    
+
     private processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: BlockPraos; tip: Tip }) => {
         const startBuildingExec = Date.now();
 
@@ -282,7 +283,7 @@ class OgmiosService {
             if (tip !== 'origin') {
                 lastSlot = tip.slot;
             }
-    
+
             // The idea here is we need to rollback all changes from a given slot
             await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
@@ -314,8 +315,8 @@ class OgmiosService {
         const updatedPersonalization: IPersonalization = {
             ...personalization,
             validated_by,
-            trial: trial === 1,
-            nsfw: nsfw === 1
+            trial,
+            nsfw
         };
 
         if (ipfsDesigner) {
@@ -338,7 +339,7 @@ class OgmiosService {
         return updatedPersonalization;
     };
 
-    private buildValidDatum = (handle: string, hex: string, datumObject: any): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatum | null } => {
+    private buildValidDatum = (handle: string, hex: string, datumObject: any): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatumConvertedUsingSchema | null } => {
         const result = {
             metadata: null,
             personalizationDatum: null
@@ -625,7 +626,7 @@ class OgmiosService {
      *
      * @category ChainSync
      */
-    
+
     /** @category Constructor */
     private createLocalChainSyncClient = async (context: InteractionContext, messageHandlers: ChainSyncMessageHandlers, options?: { sequential?: boolean }): Promise<ChainSynchronizationClient> => {
         const { socket } = context;
@@ -654,13 +655,13 @@ class OgmiosService {
                     }
                 }
             };
-    
+
             const responseHandler = fastq.promise(messageHandler, 1).push;
-    
+
             const processMessage = async (message: string) => {
                 const policyIds = POLICY_IDS[process.env.NETWORK ?? 'preview'];
                 let processTheBlock = false;
-    
+
                 // check if the message contains the Handle policy ID or is a RollBackward
                 if (message.indexOf('"result":{"direction":"backward"') >= 0) {
                     processTheBlock = true;
@@ -682,7 +683,7 @@ class OgmiosService {
                     });
                     slotMatch = blockMatch = tipSlotMatch = null;
                 }
-    
+
                 if (processTheBlock) {
                     const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
                     if (response.method === 'nextBlock') {
@@ -694,10 +695,10 @@ class OgmiosService {
                         }
                     }
                 }
-    
+
                 nextBlock(socket);
             };
-    
+
             return resolve({
                 context,
                 shutdown: async () => {
@@ -719,8 +720,7 @@ class OgmiosService {
             });
         });
     };
-    
-    
+
     private async createPointFromCurrentTip(context: InteractionContext): Promise<Point> {
         const { tip } = await findIntersection(context, ['origin']);
         if (tip === 'origin') {
@@ -731,12 +731,11 @@ class OgmiosService {
             slot: tip.slot
         } as Point;
     }
-    
+
     /** @internal */
     private isNextBlockResponse(response: any): response is Ogmios['NextBlockResponse'] {
         return typeof (response as Ogmios['NextBlockResponse'])?.result?.direction !== 'undefined';
     }
-
 }
 
 /** @category ChainSynchronization */

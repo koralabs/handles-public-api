@@ -1,4 +1,4 @@
-import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IUTxO, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct, BoolInt } from '@koralabs/kora-labs-common';
+import { IPersonalization, IPersonalizedHandle, IHandleMetadata, IUTxO, IPzDatum, IReferenceToken, HandleType, ISubHandleSettings, ISubHandleSettingsDatumStruct, BoolInt, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 
 export interface SubHandleSettings {
     settings: ISubHandleSettings;
@@ -8,6 +8,7 @@ export interface SubHandleSettings {
 export interface StoredHandle extends IPersonalizedHandle {
     amount: number;
     default?: boolean;
+    pz_enabled?: boolean;
     resolved_addresses: {
         ada: string;
         [key: string]: string;
@@ -89,6 +90,7 @@ export interface SaveMintingTxInput {
         public_mint: boolean;
     };
     original_address?: string;
+    pz_enabled?: boolean;
 }
 
 export interface SaveWalletAddressMoveInput {
@@ -106,7 +108,7 @@ export interface SavePersonalizationInput {
     name: string;
     personalization: IPersonalization;
     reference_token: IReferenceToken;
-    personalizationDatum: IPzDatum | null;
+    personalizationDatum: IPzDatumConvertedUsingSchema | null;
     metadata: IHandleMetadata | null;
 }
 
