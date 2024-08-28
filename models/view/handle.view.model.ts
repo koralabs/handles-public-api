@@ -40,6 +40,7 @@ export class HandleViewModel {
     sub_length?: number;
     sub_characters?: string;
     sub_numeric_modifiers?: string;
+    last_edited_time?: number;
 
     original_address?: string;
     virtual?: {
@@ -98,5 +99,6 @@ export class HandleViewModel {
 
         this.virtual = handle.virtual;
         this.original_address = handle.original_address;
+        this.last_edited_time = handle.last_edited_time;
     }
 }
