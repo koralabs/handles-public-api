@@ -771,10 +771,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@4.4.7":
-  version "4.4.7"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-4.4.7.tgz#9f0004698cd35c1c1743dc6a9d1e02417ec1ad60"
-  integrity sha512-AKs1GPDUrr3tsp6xXDmkSnweUyffs3QCzjCTelR/kwMC4FYeUX4QxQx4S8ZKzEjd+cdQzMK7bb6dnx6IARLr6w==
+"@koralabs/kora-labs-common@4.4.9":
+  version "4.4.9"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-4.4.9.tgz#4ad4f34f1be2d166724a529dc10794bfc3baced3"
+  integrity sha512-fkkxGr0L12c4CcW0waVhL2l6lYrITc6J7u38F8ncXi6zQuVFGfNxiFoVAa4cZz2s58JXRo0Rl6VpPQb1aU1E3Q==
   dependencies:
     bech32 "^2.0.0"
     boolean "^3.2.0"

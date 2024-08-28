@@ -610,7 +610,8 @@ describe('HandleStore tests', () => {
                 nsfw: false,
                 agreed_terms: '',
                 migrate_sig_required: false,
-                pz_enabled: false
+                pz_enabled: false,
+                last_edited_time: 123
             };
 
             await HandleStore.savePersonalizationChange({
@@ -688,7 +689,8 @@ describe('HandleStore tests', () => {
                                     btc: '2213kjsjkn',
                                     eth: 'sad2wsad'
                                 },
-                                updated_slot_number: 200
+                                updated_slot_number: 200,
+                                last_edited_time: 123
                             },
                             old: {
                                 bg_image: '',

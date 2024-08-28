@@ -91,6 +91,7 @@ export interface SaveMintingTxInput {
     };
     original_address?: string;
     pz_enabled?: boolean;
+    last_edited_time?: number;
 }
 
 export interface SaveWalletAddressMoveInput {
