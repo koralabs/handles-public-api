@@ -47,6 +47,14 @@ export class HandleViewModel {
         public_mint: boolean;
     };
 
+    getPzEnabled(handleType: HandleType, pz_enabled?: boolean): boolean | undefined {
+        if (pz_enabled !== undefined) {
+            return pz_enabled;
+        }
+
+        return handleType === HandleType.HANDLE ? true : undefined;
+    }
+
     constructor(handle: StoredHandle) {
         if (!handle.utxo) {
             throw new HttpException(404, 'Handle not found');
@@ -80,7 +88,7 @@ export class HandleViewModel {
         this.version = handle.version;
         this.handle_type = handle.handle_type;
         this.payment_key_hash = handle.payment_key_hash;
-        this.pz_enabled = handle.pz_enabled ?? handle.handle_type === HandleType.HANDLE ? true : undefined;
+        this.pz_enabled = this.getPzEnabled(handle.handle_type, handle.pz_enabled);
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;
