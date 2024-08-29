@@ -1,12 +1,12 @@
 {
     "watch": [
-        "src",
-        ".env"
+        ".env",
+        "../api.handle.me/src"
     ],
     "ext": "js,ts,json",
     "ignore": [
-        "src/logs/*",
-        "src/**/*.{spec,test}.ts"
+        "logs/*",
+        "**/*.{spec,test}.ts"
     ],
-    "exec": "mkdir -p handles && ts-node -r tsconfig-paths/register --transpile-only src/express.ts"
+    "exec": "chmod +x setup_env.sh && ./setup_env.sh && tsx -r tsconfig-paths/register -r dotenv/config express.ts"
 }

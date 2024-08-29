@@ -1,0 +1,47 @@
+{
+    "jsonrpc": "2.0",
+    "method": "nextBlock",
+    "result": {
+        "direction": "forward",
+        "block": {
+            "type": "praos",
+            "era": "babbage",
+            "id": "a85409275f397d9a5fb277a32b2f7dfb2ea76cf4eb6873adfb688bfec7dd29b1",
+            "size": {
+                "bytes": 4
+            },
+            "height": 2344015,
+            "slot": 55814583,
+            "ancestor": "dd6fde87b03e7730dc9b108fea2a358c82b52541d95e4bdbcb33e39bdf5c7f0d",
+            "issuer": {
+                "verificationKey": "2b5799f2e36145b31b28bfa371fc90fc865f2bf5340f0894f3e3ebfc12974af5",
+                "vrfVerificationKey": "71aec68fd9fa8e2c2332a5ae0dbace57cf317f474a64d5f3264dbf0bff651658",
+                "operationalCertificate": {
+                    "count": 7,
+                    "sigma": "91792fffe4985cf290a2140b16450c9e6538ea233c9ad2124b12f10b28474ad05cc3d6609b0d81337f8981bd51374dadde66082c5c3a496bc6bbf11ae527c005",
+                    "kes": {
+                        "period": 412,
+                        "verificationKey": "51e77108be6ddcae7473c4ab81a6a25e95588fe13cf9c29d328b1ba3e28f1ada"
+                    }
+                },
+                "leaderValue": {
+                    "output": "7d78ee31747203161f4ef01ec993e117d20c1c92b0604dbbcce57fc4131b591aa9efd3cc95980a343b5dc95a71aa2179f0a48712a7e60fe3b85eb904514138c7",
+                    "proof": "d9ecef745be0f73319e76f04ca55608df69d4592fb99f8c9150705bc3c830f5dc0ba08d6bf9b8e59086488e97443ad89b09dfb081f1aaf856414f9100cd85c6521428e1eeb8124999af779c6bd05540a"
+                }
+            },
+            "protocol": {
+                "version": {
+                    "major": 9,
+                    "minor": 1
+                }
+            },
+            "transactions": []
+        },
+        "tip": {
+            "slot": 55888928,
+            "id": "d15ee96558147556e206eac95b418fcfe912809812c703152078a2178721612a",
+            "height": 2346240
+        }
+    },
+    "id": null
+}

@@ -5,7 +5,12 @@ export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}
 DISABLE_NODE_SNAPSHOT=${DISABLE_NODE_SNAPSHOT:-false}
-MODE=${MODE:-both}
+# api-only
+# ogmios
+# cardano-node
+# both (cardano-node + ogmios)
+# all [default] (cardano-node + ogmios + api)
+MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 
@@ -19,7 +24,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./cardano-world/docs/environments/${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
@@ -27,6 +32,7 @@ then
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
+    # --include-transaction-cbor
     ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
 
@@ -37,7 +43,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
     sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 fi
 
-if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "api-only" ]]; then
+if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
 fi
@@ -58,13 +64,13 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         if [ ! -f "$DB_FILE" ]; then
             mkdir -p ${NODE_DB}
             echo "No cardano-node db detected. Grabbing latest snapshot with Mithril."
-            MITHRIL_VERSION=2412.0
+            MITHRIL_VERSION=2430.0
             curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
             export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
             export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
             export SNAPSHOT_DIGEST=latest
             chmod +x ./mithril-client
-            curl -o - $(./mithril-client snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
+            curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
             #./mithril-client snapshot download $SNAPSHOT_DIGEST
             echo "Mithril snapshot downloaded and validated."
         fi

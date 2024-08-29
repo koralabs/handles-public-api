@@ -1,0 +1,146 @@
+{
+  "id": "10514977f67b5bbd07062abd56ac69308764e77f1eabce4b5447febb2f9c059d",
+  "spends": "inputs",
+  "inputs": [
+    {
+      "transaction": {
+        "id": "6eff6085ab9584a3d627a7247a7f1f1507b937c1124c2a0e89c2300c0871e618"
+      },
+      "index": 0
+    }
+  ],
+  "outputs": [
+    {
+      "address": "addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g",
+      "value": {
+        "ada": {
+          "lovelace": 1444443
+        },
+        "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+          "6c7576616c6f6861": 1
+        }
+      }
+    },
+    {
+      "address": "addr_test1qrt86eyjn92jdg50sfwp9a8cuqzeaea0jdveuqgh2lf0dh834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qn643ck",
+      "value": {
+        "ada": {
+          "lovelace": 1481480
+        },
+        "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+          "696c757668617665616c6f6861": 1
+        }
+      }
+    },
+    {
+      "address": "addr_test1qrdu0apenq42y5yf2jwsrjdr9tvply7s8kvas640r7v97k8an4acsu62leue4yrwmt6spxr8qzpkmw2vw59mlgr2jags2jj0v2",
+      "value": {
+        "ada": {
+          "lovelace": 1444443
+        },
+        "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+          "6a616d6573": 1
+        }
+      }
+    },
+    {
+      "address": "addr_test1qp7a3wezqmawlmazdznkxzcd8hrafl8erav7yzjnszxdg698hqtvlesvrpvln3srklcvhu2r9z22fdhaxvh2m2pg3nuqpk9zm7",
+      "value": {
+        "ada": {
+          "lovelace": 9993709312
+        }
+      }
+    }
+  ],
+  "mint": {
+    "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+      "696c757668617665616c6f6861": 1,
+      "6a616d6573": 1,
+      "6c7576616c6f6861": 1
+    }
+  },
+  "fee": {
+    "ada": {
+      "lovelace": 237837
+    }
+  },
+  "validityInterval": {
+    "invalidBefore": 0,
+    "invalidAfter": 1482343
+  },
+  "metadata": {
+    "hash": "90e42d6ed314b69bff58ac52f7623ac3f3117164dbee6c09cf9ae82d7b4f2ce7",
+    "labels": {
+      "721": {
+        "json": {
+          "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+            "luvaloha": {
+              "name": "$luvaloha",
+              "description": "The Handle Standard",
+              "website": "https://adahandle.com",
+              "image": "ipfs://QmfQ15LZXvpBevc4WWsJ7DJvC4pzQDgHaaZ2mNCAWVmU6y",
+              "core": {
+                "og": 0,
+                "termsofuse": "https://adahandle.com/tou",
+                "handleEncoding": "utf-8",
+                "prefix": "$",
+                "version": 0
+              },
+              "augmentations": [
+              ]
+            },
+            "iluvhavealoha": {
+              "name": "$iluvhavealoha",
+              "description": "The Handle Standard",
+              "website": "https://adahandle.com",
+              "image": "ipfs://QmXGBY2TzonXk1PEsfJ4BHEMdLBbtHVb8e5cTj2mcjXrzu",
+              "core": {
+                "og": 0,
+                "termsofuse": "https://adahandle.com/tou",
+                "handleEncoding": "utf-8",
+                "prefix": "$",
+                "version": 0
+              },
+              "augmentations": [
+              ]
+            },
+            "james": {
+              "name": "$james",
+              "description": "The Handle Standard",
+              "website": "https://adahandle.com",
+              "image": "ipfs://QmVGYrE4NTqsGmkMNxEG1mQio1hhBj4oBZMCEbM1VQxHQk",
+              "core": {
+                "og": 0,
+                "termsofuse": "https://adahandle.com/tou",
+                "handleEncoding": "utf-8",
+                "prefix": "$",
+                "version": 0
+              },
+              "augmentations": [
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "signatories": [
+    {
+      "key": "265b5be30cf2e917b124b60ef5b8ec85fe0bed6956f7b171f3585c745d9d487e",
+      "signature": "48c82310ef2f96a4e9f1e6dfc5bde63d4ac783695ba84fc58c3ff5ea31dcffb91a52f13d1a085d8b97e5830a5919040a0705f575f5d51fbc7387e2d1a2a4fd0d"
+    },
+    {
+      "key": "b62a7193927f47ef703ba99a06add1ee2d4d94853a16dcd68ad0f5d9baa18530",
+      "signature": "c4d75d0e86b0832088ee4a84c06440a9c9ea3b396e1bbcf16f699a916540443cb1ab33b3b08a6766a6c8e0524326c708261fdaa0d183253f06763a70d6d7380c"
+    }
+  ],
+  "scripts": {
+    "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+      "language": "native",
+      "json": {
+        "clause": "signature",
+        "from": "4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1"
+      }
+    }
+  }
+}
