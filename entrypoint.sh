@@ -31,7 +31,7 @@ then
     NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
-if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" ]]; then
+if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
     # --include-transaction-cbor
     ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
@@ -46,6 +46,7 @@ fi
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
+    tail -f ./forever/**.log
 fi
 
 release_host() {
@@ -58,7 +59,7 @@ release_host() {
 }
 export RELEASE_HOST=$(release_host)
 
-if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
+if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
     DB_FILE=${NODE_DB}/protocolMagicId
     if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
         if [ ! -f "$DB_FILE" ]; then
@@ -88,6 +89,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         --socket-path ${SOCKET_PATH} &
 
     if [[ "${ENABLE_SOCKET_REDIRECT}" == "true" ]]; then
+        # CHANGE THIS TO S3
         curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
         until [ -S ${SOCKET_PATH} ]
         do
@@ -97,5 +99,4 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" ]]; then
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
     fi
 fi
-tail -f ./forever/**.log
 wait
