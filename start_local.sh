@@ -16,8 +16,8 @@ else
         echo 'starting local-ogmios...'
         docker run -d \
             --name local-ogmios \
-            -v ~/shared-docker/preview/ipc:/ipc \
-            -v ~/shared-docker/preview/db:/db \
+            -v ~/shared-docker/${NETWORK}/ipc:/ipc \
+            -v ~/shared-docker/${NETWORK}/db:/db \
             -p 1337:1337 \
             -e MODE=both \
             -e NETWORK=${NETWORK} \
