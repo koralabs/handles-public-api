@@ -190,10 +190,11 @@ class OgmiosService {
             for (let i = 0; i < mintAssets.length; i++) {
                 const [policy, assetInfo] = mintAssets[i];
                 if (policy === policyId) {
-                    const [assetName, quantity] = Object.entries(assetInfo)[0];
-                    if (quantity === BigInt(-1)) {
-                        const { name } = getHandleNameFromAssetName(assetName);
-                        await this.handlesRepo.burnHandle(name, currentSlot);
+                    for (const [assetName, quantity] of Object.entries(assetInfo)) {
+                        if (quantity === BigInt(-1)) {
+                            const { name } = getHandleNameFromAssetName(assetName);
+                            await this.handlesRepo.burnHandle(name, currentSlot);
+                        }
                     }
                 }
             }
