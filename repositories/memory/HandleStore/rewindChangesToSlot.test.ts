@@ -1,17 +1,10 @@
 import { Logger } from '@koralabs/kora-labs-common';
 import { HandleStore } from '.';
 import { handlesFixture, slotHistoryFixture } from '../tests/fixtures/handles';
-import * as addresses from '../../../utils/addresses';
 
-jest.mock('../../../utils/addresses');
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-            address: 'stake123',
-            type: '',
-            knownOwnerName: 'unknown'
-        });
         // populate storage
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
@@ -81,8 +74,8 @@ describe('rewindChangesToSlot', () => {
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
-        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w');
+        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
+        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -98,6 +91,6 @@ describe('rewindChangesToSlot', () => {
         await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // should pull back the entire handle
-        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake123' });
+        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
     });
 });

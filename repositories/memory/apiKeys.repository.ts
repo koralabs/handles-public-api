@@ -1,4 +1,4 @@
-import { HttpException } from '../../exceptions/HttpException';
+import { HttpException } from '@koralabs/kora-labs-common';
 
 import IApiKey from '../../interfaces/apiKey.interface';
 import IApiKeysRepository from '../apiKeys.repository';

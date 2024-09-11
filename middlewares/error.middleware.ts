@@ -1,7 +1,6 @@
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
-import { HttpException } from '../exceptions/HttpException';
-import { ModelException } from '../exceptions/ModelException';
+import { HttpException, ModelException } from '@koralabs/kora-labs-common';
 
 const errorMiddleware = (error: HttpException, req: Request, res: Response, next: NextFunction) => {
     try {

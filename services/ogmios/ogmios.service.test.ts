@@ -3,7 +3,7 @@ import { HandleStore } from '../../repositories/memory/HandleStore';
 import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
-import IHandlesRepository from '../../repositories/handles.repository';
+import { IHandlesRepository } from '@koralabs/kora-labs-common';
 
 jest.mock('@cardano-ogmios/client');
 jest.mock('../../repositories/memory/HandleStore');

@@ -1,8 +1,6 @@
 import request from 'supertest';
 import App from '../app';
-import registry from '../ioc/main.registry';
-import { HttpException } from '../exceptions/HttpException';
-import { ERROR_TEXT } from '../services/ogmios/constants';
+import { ERROR_TEXT, HttpException } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 

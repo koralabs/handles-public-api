@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import IHandlesRepository from '../repositories/handles.repository';
+import { IHandlesRepository } from '@koralabs/kora-labs-common';
 import { fetchHealth } from '../services/ogmios/utils';
 import { IRegistry } from '../interfaces/registry.interface';;
 

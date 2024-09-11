@@ -1,18 +1,17 @@
-import { AssetNameLabel, HandleType, IHandleStats } from '@koralabs/kora-labs-common';
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, IHandleStats, diff, getDateStringFromSlot, getElapsedTime, 
+    LogCategory, Logger, AddressDetails, getAddressHolderDetails, bech32FromHex, getPaymentKeyHash,
+    IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, 
+    SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, 
+    SaveSubHandleSettingsInput, 
+    IPersonalizedHandle} from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import { inflate } from 'zlib';
 import { promisify } from 'util';
 import fs from 'fs';
-import path from 'path';
 import { Worker } from 'worker_threads';
 import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
-import { AddressDetails, getAddressHolderDetails } from '../../../utils/addresses';
-import { diff, getDateStringFromSlot, getElapsedTime } from '../../../utils/util';
-import { IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, SaveSubHandleSettingsInput } from '../../../interfaces/handleStore.interfaces';
-import { bech32FromHex, getPaymentKeyHash } from '../../../utils/serialization';
 
 export class HandleStore {
     // Indexes
@@ -206,7 +205,7 @@ export class HandleStore {
 
         const getHandlesFromNames = (holder: HolderAddressIndex) => {
             const handles: StoredHandle[] = [];
-            holder.handles.forEach((h) => {
+            holder.handles.forEach((h: string) => {
                 const handle = this.handles.get(h);
                 if (handle) handles.push(handle);
                 else holder.handles.delete(h);
@@ -409,7 +408,7 @@ export class HandleStore {
         const addresses = personalizationDatum?.resolved_addresses
             ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
                   if (key !== 'ada') {
-                      acc[key] = value;
+                      acc[key] = value as string;
                   }
                   return acc;
               }, {})

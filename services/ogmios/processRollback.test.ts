@@ -1,7 +1,7 @@
 import OgmiosService from './ogmios.service';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
-import IHandlesRepository from '../../repositories/handles.repository';
+import { IHandlesRepository } from '@koralabs/kora-labs-common';
 
 jest.mock('../../repositories/memory/HandleStore');
 

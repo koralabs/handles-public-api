@@ -1,12 +1,9 @@
-import { AssetNameLabel, HandleType, Rarity } from '@koralabs/kora-labs-common';
-import { Logger } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, Rarity, StoredHandle, IHandlesRepository, Logger } from '@koralabs/kora-labs-common';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 import OgmiosService from './ogmios.service';
 import * as ipfs from '../../utils/ipfs';
 import { Block, BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
-import { StoredHandle } from '../../interfaces/handleStore.interfaces';
-import IHandlesRepository from '../../repositories/handles.repository';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -23,7 +20,7 @@ describe('processBlock Tests', () => {
         height: 0
     };
 
-    const policyId = 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w';
+    const policyId = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q';
     const hexName = '7465737431323334';
     const name = 'test1234';
 
@@ -171,7 +168,7 @@ describe('processBlock Tests', () => {
         image_hash: '',
         standard_image_hash: '',
         svg_version: '',
-        holder_type: '',
+        holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
         default: false,

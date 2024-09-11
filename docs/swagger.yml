@@ -126,7 +126,7 @@ paths:
             x-handles-search-total:
               schema:
                 type: integer
-                description: Number of total search results, regardless of pagination
+              description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:
@@ -147,7 +147,7 @@ paths:
             x-handles-search-total:
               schema:
                 type: integer
-                description: Number of total search results, regardless of pagination
+              description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:
@@ -202,7 +202,7 @@ paths:
             x-handles-search-total:
               schema:
                 type: integer
-                description: Number of total search results, regardless of pagination
+              description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:
@@ -223,7 +223,7 @@ paths:
             x-handles-search-total:
               schema:
                 type: integer
-                description: Number of total search results, regardless of pagination
+              description: Number of total search results, regardless of pagination
           content:
             text/plain; charset=utf-8:
               schema:

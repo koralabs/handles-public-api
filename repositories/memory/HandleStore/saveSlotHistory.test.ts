@@ -1,5 +1,5 @@
 import { HandleStore } from '.';
-import { HandleHistory } from '../../../interfaces/handleStore.interfaces';
+import { HandleHistory } from '@koralabs/kora-labs-common';
 import { slotHistoryFixture } from '../tests/fixtures/handles';
 
 describe('saveSlotHistory', () => {
@@ -37,7 +37,7 @@ describe('saveSlotHistory', () => {
                 2,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+                        old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
                     }
                 }
             ],
@@ -45,7 +45,7 @@ describe('saveSlotHistory', () => {
                 3,
                 {
                     burrito: {
-                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+                        old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
                     }
                 }
             ],
@@ -53,7 +53,7 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+                        old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
                     }
                 }
             ],
@@ -99,7 +99,7 @@ describe('saveSlotHistory', () => {
                 4,
                 {
                     barbacoa: {
-                        old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+                        old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
                     },
                     nacho: { old: null }
                 }

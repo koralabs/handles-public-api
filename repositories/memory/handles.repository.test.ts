@@ -1,13 +1,8 @@
-import { HandlePaginationModel } from '../../models/handlePagination.model';
-import { HandleSearchModel } from '../../models/HandleSearch.model';
+import { HandlePaginationModel, HandleSearchModel, HolderPaginationModel, HolderAddressIndex, SaveMintingTxInput, AssetNameLabel, HandleType } from '@koralabs/kora-labs-common';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
-import * as addresses from '../../utils/addresses';
 import * as config from '../../config';
-import { HolderPaginationModel } from '../../models/holderPagination.model';
-import { AssetNameLabel, HandleType, ISubHandleSettingsDatumStruct } from '@koralabs/kora-labs-common';
-import { HolderAddressIndex, SaveMintingTxInput } from '../../interfaces/handleStore.interfaces';
 
 describe('MemoryHandlesRepository Tests', () => {
     const expectedVirtualHandle = {
@@ -18,15 +13,15 @@ describe('MemoryHandlesRepository Tests', () => {
         default_in_wallet: 'taco',
         has_datum: false,
         hex: '0000000076407461636f',
-        holder: 'stake-key1',
-        holder_type: '',
+        holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+        holder_type: 'wallet',
         image: '',
         image_hash: '',
         length: 6,
         name: 'v@taco',
         numeric_modifiers: '',
         og_number: 0,
-        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272',
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
         personalization: {
             nsfw: false,
             trial: false,
@@ -42,7 +37,7 @@ describe('MemoryHandlesRepository Tests', () => {
             tx_id: ''
         },
         resolved_addresses: {
-            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
+            ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
         },
         standard_image: '',
         standard_image_hash: '',
@@ -56,14 +51,7 @@ describe('MemoryHandlesRepository Tests', () => {
         pz_enabled: false
     };
 
-    jest.mock('../../utils/addresses');
     beforeAll(async () => {
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-            address: 'stake-key1',
-            type: '',
-            knownOwnerName: 'unknown'
-        });
-
         const saves = handlesFixture.map(async (handle) => {
             const {
                 hex,
@@ -126,7 +114,7 @@ describe('MemoryHandlesRepository Tests', () => {
                     agreed_terms: '',
                     migrate_sig_required: false,
                     resolved_addresses: {
-                        ada: '0x6073528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
+                        ada: '0x009a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca'
                     }
                 },
                 slotNumber: 8,
@@ -160,7 +148,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should no handles with compounded searches', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ rarity: 'rare', length: '7', holder_address: 'stake-key1' });
+            const search = new HandleSearchModel({ rarity: 'rare', length: '7', holder_address: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual({ searchTotal: 0, handles: [] });
         });
@@ -176,7 +164,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should find handles using holder_address parameter', async () => {
             const repo = new MemoryHandlesRepository();
             const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ holder_address: 'stake-key1' });
+            const search = new HandleSearchModel({ holder_address: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual({ searchTotal: handlesFixture.length + 1, handles: [...handlesFixture, expectedVirtualHandle] });
         });
@@ -317,14 +305,14 @@ describe('MemoryHandlesRepository Tests', () => {
     describe('getHolderAddressDetails', () => {
         it('should get holderAddress details', async () => {
             const repo = new MemoryHandlesRepository();
-            const result = await repo.getHolderAddressDetails('stake-key1');
+            const result = await repo.getHolderAddressDetails('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70');
             expect(result).toEqual({
-                address: 'stake-key1',
+                address: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                 default_handle: 'taco',
-                known_owner_name: 'unknown',
+                known_owner_name: '',
                 manually_set: false,
                 total_handles: 4,
-                type: ''
+                type: 'wallet'
             });
         });
     });

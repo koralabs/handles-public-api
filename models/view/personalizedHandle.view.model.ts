@@ -1,6 +1,4 @@
-import { IPersonalization } from '@koralabs/kora-labs-common';
-import { HttpException } from '../../exceptions/HttpException';
-import { StoredHandle } from '../../interfaces/handleStore.interfaces';
+import { IPersonalization, HttpException, StoredHandle } from '@koralabs/kora-labs-common';
 
 export class PersonalizedHandleViewModel {
     personalization?: IPersonalization;

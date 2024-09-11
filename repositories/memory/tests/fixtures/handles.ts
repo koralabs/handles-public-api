@@ -1,13 +1,12 @@
-import { HandleType, Rarity } from '@koralabs/kora-labs-common';
+import { HandleType, Rarity, HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '@koralabs/kora-labs-common';
 import { HandleStore } from '../../HandleStore';
 import { bech32 } from 'bech32';
-import { HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '../../../../interfaces/handleStore.interfaces';
 
 export const handlesFixture: StoredHandle[] = [
     {
         hex: 'barbacoa-hex',
         name: 'barbacoa',
-        holder: 'stake-key1',
+        holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
         standard_image: '',
         length: 8,
@@ -18,7 +17,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
+            ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -31,15 +30,15 @@ export const handlesFixture: StoredHandle[] = [
         last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
-        holder_type: '',
+        holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
         hex: 'burrito-hex',
         name: 'burrito',
-        holder: 'stake-key1',
+        holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
         standard_image: '',
         length: 7,
@@ -50,7 +49,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
+            ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -63,15 +62,15 @@ export const handlesFixture: StoredHandle[] = [
         last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
-        holder_type: '',
+        holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
         hex: 'taco-hex',
         name: 'taco',
-        holder: 'stake-key1',
+        holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
         standard_image: '',
         length: 4,
@@ -82,7 +81,7 @@ export const handlesFixture: StoredHandle[] = [
         characters: 'letters',
         numeric_modifiers: '',
         resolved_addresses: {
-            ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w'
+            ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
         },
         default_in_wallet: 'taco',
         pfp_image: '',
@@ -95,10 +94,10 @@ export const handlesFixture: StoredHandle[] = [
         last_update_address: '',
         standard_image_hash: '',
         svg_version: '1.0.0',
-        holder_type: '',
+        holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     }
 ];
 
@@ -117,17 +116,17 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
     },
     2: {
         barbacoa: {
-            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+            old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
     },
     3: {
         burrito: {
-            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+            old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
     },
     4: {
         barbacoa: {
-            old: { resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' } }
+            old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
     }
 };

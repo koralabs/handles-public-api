@@ -1,4 +1,4 @@
-import { HolderAddressIndex } from '../../interfaces/handleStore.interfaces';
+import { HolderAddressIndex } from '@koralabs/kora-labs-common';
 import { HandleStore } from './HandleStore';
 import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
 

@@ -1,14 +1,14 @@
 import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
-import { Logger, LogCategory } from '@koralabs/kora-labs-common';
+import { Logger, LogCategory, delay } from '@koralabs/kora-labs-common';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { parse } from 'yaml';
 import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
 import errorMiddleware from './middlewares/error.middleware';
 import OgmiosService from './services/ogmios/ogmios.service';
-import { delay, dynamicallyLoad } from './utils/util';
+import { dynamicallyLoad } from './utils/util';
 import { DynamicLoadType } from './interfaces/util.interface';
 import { LocalService } from './services/local/local.service';
 import { IRegistry } from './interfaces/registry.interface';
