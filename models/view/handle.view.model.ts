@@ -39,12 +39,21 @@ export class HandleViewModel {
     sub_length?: number;
     sub_characters?: string;
     sub_numeric_modifiers?: string;
+    last_edited_time?: number;
 
     original_address?: string;
     virtual?: {
         expires_time: number;
         public_mint: boolean;
     };
+
+    getPzEnabled(handleType: HandleType, pz_enabled?: boolean): boolean | undefined {
+        if (pz_enabled !== undefined) {
+            return pz_enabled;
+        }
+
+        return handleType === HandleType.HANDLE ? true : undefined;
+    }
 
     constructor(handle: StoredHandle) {
         if (!handle.utxo) {
@@ -79,7 +88,7 @@ export class HandleViewModel {
         this.version = handle.version;
         this.handle_type = handle.handle_type;
         this.payment_key_hash = handle.payment_key_hash;
-        this.pz_enabled = handle.pz_enabled ?? handle.handle_type === HandleType.HANDLE ? true : undefined;
+        this.pz_enabled = this.getPzEnabled(handle.handle_type, handle.pz_enabled);
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;
@@ -89,5 +98,6 @@ export class HandleViewModel {
 
         this.virtual = handle.virtual;
         this.original_address = handle.original_address;
+        this.last_edited_time = handle.last_edited_time;
     }
 }
