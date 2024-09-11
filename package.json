@@ -27,11 +27,9 @@
   "dependencies": {
     "@cardano-ogmios/client": "^6.5.0",
     "@cardano-ogmios/schema": "^6.5.0",
-    "@koralabs/kora-labs-common": "4.4.9",
+    "@koralabs/kora-labs-common": "5.0.1",
     "bech32": "^2.0.0",
-    "bs58": "^6.0.0",
     "cors": "^2.8.5",
-    "crc": "^4.3.2",
     "cross-fetch": "^3.1.5",
     "express": "^4.18.1",
     "fastq": "^1.14.0",

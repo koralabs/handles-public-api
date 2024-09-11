@@ -1,19 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
-import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/handle.interface';
-import { HandlePaginationModel } from '../models/handlePagination.model';
-import { HandleSearchModel } from '../models/HandleSearch.model';
-import IHandlesRepository from '../repositories/handles.repository';
-import { ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, ISubHandleTypeSettings, IReferenceToken, parseAssetNameLabel, IS_PRODUCTION } from '@koralabs/kora-labs-common';
+import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/request.interface';
+import { HandlePaginationModel, HandleSearchModel, StoredHandle, IHandlesRepository, isEmpty, bech32FromHex,
+    ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, 
+    ISubHandleTypeSettings, IReferenceToken, parseAssetNameLabel, IS_PRODUCTION } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import { isDatumEndpointEnabled } from '../config';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
-import { StoredHandle } from '../interfaces/handleStore.interfaces';
-import { isEmpty } from '../utils/util';
 import { IRegistry } from '../interfaces/registry.interface';
-import { bech32FromHex } from '../utils/serialization';
-;
 
 class HandlesController {
     private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {

@@ -16,7 +16,7 @@ export default (async () => ({
 	plugins: [
 		typescript(),
 		commonjs({ignoreDynamicRequires: true}),
-		nodeResolve(),
+		nodeResolve({dedupe: ['@koralabs/kora-labs-common']}),
 		json(),
 		multiInput()
 	],

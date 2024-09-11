@@ -1,5 +1,4 @@
 import MemoryApiKeysRepository from './apiKeys.repository';
-import { HttpException } from '../../exceptions/HttpException';
 
 describe('MemoryApiKeysRepository Tests', () => {
     describe('get function tests', () => {

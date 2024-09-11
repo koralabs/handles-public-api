@@ -1,7 +1,6 @@
-import { IHandle, IPersonalization } from '@koralabs/kora-labs-common';
+import { IHandle, IPersonalization, IHandleFileContent } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { HandleStore } from '../../repositories/memory/HandleStore';
-import { IHandleFileContent } from '../../interfaces/handleStore.interfaces';
 
 interface PersonalizationUpdates extends IHandle {
     personalization: IPersonalization;

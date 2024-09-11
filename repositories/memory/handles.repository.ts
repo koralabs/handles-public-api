@@ -1,12 +1,8 @@
-import { IHandleStats, IUTxO, LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { HttpException } from '../../exceptions/HttpException';
-import { HolderAddressDetailsResponse } from '../../interfaces/handle.interface';
-import { HandlePaginationModel } from '../../models/handlePagination.model';
-import { HandleSearchModel } from '../../models/HandleSearch.model';
-import { HolderPaginationModel } from '../../models/holderPagination.model';
-import IHandlesRepository from '../handles.repository';
+import { HandlePaginationModel, HandleSearchModel, HolderPaginationModel, IHandleStats, IUTxO, 
+    LogCategory, Logger, HolderAddressDetails, HttpException, HolderAddressIndex, IHandleStoreMetrics, 
+    SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, 
+    StoredHandle, IHandlesRepository } from '@koralabs/kora-labs-common';
 import { HandleStore } from './HandleStore';
-import { HolderAddressIndex, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle } from '../../interfaces/handleStore.interfaces';
 import { memoryWatcher } from '../../services/ogmios/utils';
 
 class MemoryHandlesRepository implements IHandlesRepository {
@@ -169,7 +165,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
                 ? nonEmptyHandles.reduce<StoredHandle[]>((agg, name) => {
-                      const handle = HandleStore.get(name);
+                      const handle = HandleStore.get(name as string);
                       if (handle) {
                           if (search && !handle.name.includes(search)) return agg;
                           if (handle_type && handle.handle_type !== handle_type) return agg;
@@ -223,10 +219,10 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return { searchTotal: handles.length, handles };
     }
 
-    public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetailsResponse[]> {
+    public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetails[]> {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items: HolderAddressDetailsResponse[] = new Array();
+        const items: HolderAddressDetails[] = new Array();
         HandleStore.holderAddressIndex.forEach((holder, address) => {
             if (holder) {
                 const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
@@ -276,7 +272,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                 const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
                 return array.length === 0 ? [this.EMPTY] : array;
             }
-        ).flat();
+        ).flat() as string[];
     }
 
     public getHandlesByAddresses = (addresses: string[]): string[]  => {
@@ -301,7 +297,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return null;
     }
 
-    public async getHolderAddressDetails(key: string): Promise<HolderAddressDetailsResponse> {
+    public async getHolderAddressDetails(key: string): Promise<HolderAddressDetails> {
         const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
         if (!holderAddressDetails) throw new HttpException(404, 'Not found');
 

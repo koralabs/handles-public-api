@@ -4,10 +4,6 @@ export interface EraBoundaries {
     [network: string]: Point;
 }
 
-export interface PolicyIds {
-    [network: string]: string[];
-}
-
 export const handleEraBoundaries: EraBoundaries = {
     mainnet: {
         slot: 47931333,
@@ -26,21 +22,3 @@ export const handleEraBoundaries: EraBoundaries = {
         id: '' // '56ace254a1474adc08d301a23884d6b3bc670e2208859abbf7e8adc010d8f8de'
     }
 };
-
-export const POLICY_IDS: PolicyIds = {
-    mainnet: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'],
-    testnet: ['8d18d786e92776c824607fd8e193ec535c79dc61ea2405ddf3b09fe3'],
-    preprod: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'],
-    preview: ['f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a']
-};
-
-export enum ERROR_TEXT {
-    HANDLE_LIMIT_EXCEEDED = "'records_per_page' must be a number",
-    HANDLE_LIMIT_INVALID_FORMAT = "'records_per_page' can't be more than 1000",
-    HANDLE_SORT_INVALID = "'sort' must be 'desc' or 'asc'",
-    HANDLE_PAGE_INVALID = "'page' must be a number",
-    HANDLE_SLOT_NUMBER_INVALID = "'slot_number' must be a number",
-    HANDLE_PAGE_AND_SLOT_NUMBER_INVALID = "'page' and 'slot_number' can't be used together"
-}
-
-export const HANDLES_PER_PAGE_MAX = 1000;

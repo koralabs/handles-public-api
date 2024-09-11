@@ -1,12 +1,16 @@
 import { writeFileSync, unlinkSync } from 'fs';
 import { HandleStore } from '.';
-import { delay } from '../../../utils/util';
 import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, IReferenceToken } from '@koralabs/kora-labs-common';
-import { Logger } from '@koralabs/kora-labs-common';
-import * as addresses from '../../../utils/addresses';
+import { HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, delay, Logger, getAddressHolderDetails, bech32FromHex } from '@koralabs/kora-labs-common';
+import * as klc from '@koralabs/kora-labs-common'
 import * as config from '../../../config';
-import * as serialization from '../../../utils/serialization';
+
+//const klc = {getAddressHolderDetails, bech32FromHex};
+jest.mock('@koralabs/kora-labs-common', () => ({
+    __esModule: true,
+      // @ts-ignore
+      ...jest.requireActual('@koralabs/kora-labs-common'),
+}));
 
 jest.mock('fs', () => ({
     promises: {
@@ -26,7 +30,6 @@ jest.mock('fs', () => ({
 
 jest.mock('cross-fetch');
 jest.mock('proper-lockfile');
-jest.mock('../../../utils/addresses');
 
 describe('HandleStore tests', () => {
     const filePath = 'storage/handles-test.json';
@@ -40,11 +43,6 @@ describe('HandleStore tests', () => {
     beforeEach(async () => {
         HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
-        jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-            address: 'stake123',
-            type: '',
-            knownOwnerName: 'unknown'
-        });
         // populate storage
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
@@ -118,7 +116,7 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 has_datum: true,
                                 hex: 'barbacoa-hex',
-                                holder: 'stake123',
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 length: 8,
                                 name: 'barbacoa',
                                 image: '',
@@ -127,7 +125,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'basic',
-                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
+                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo1#0'
                             }),
@@ -139,7 +137,7 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 has_datum: true,
                                 hex: 'burrito-hex',
-                                holder: 'stake123',
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 length: 7,
                                 name: 'burrito',
                                 image: '',
@@ -148,7 +146,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
+                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo2#0'
                             }),
@@ -160,7 +158,7 @@ describe('HandleStore tests', () => {
                                 default_in_wallet: '',
                                 has_datum: true,
                                 hex: 'taco-hex',
-                                holder: 'stake123',
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 length: 4,
                                 name: 'taco',
                                 image: '',
@@ -169,7 +167,7 @@ describe('HandleStore tests', () => {
                                 standard_image: '',
                                 pfp_image: '',
                                 rarity: 'common',
-                                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
+                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                                 updated_slot_number: expect.any(Number),
                                 utxo: 'utxo3#0'
                             })
@@ -225,7 +223,7 @@ describe('HandleStore tests', () => {
                 default_in_wallet: 'taco',
                 has_datum: true,
                 hex: 'barbacoa-hex',
-                holder: 'stake123',
+                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                 length: 8,
                 name: 'barbacoa',
                 image: '',
@@ -238,15 +236,15 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 pfp_image: '',
                 rarity: 'basic',
-                resolved_addresses: { ada: 'addr_test1vpe49pprjs8lxwjtf8h09dklg8henc2dw3xjp9dgcxyjyusf6672w' },
+                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
                 lovelace: 0,
                 amount: 1,
-                holder_type: '',
+                holder_type: 'wallet',
                 version: 0,
                 handle_type: HandleType.HANDLE,
-                payment_key_hash: '73528423940ff33a4b49eef2b6df41ef99e14d744d2095a8c1892272'
+                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
             });
         });
     });
@@ -260,19 +258,13 @@ describe('HandleStore tests', () => {
 
     describe('saveMintedHandle tests', () => {
         it('Should save a new handle', async () => {
-            const stakeKey = 'stake123';
-            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-                address: stakeKey,
-                type: '',
-                knownOwnerName: 'unknown'
-            });
 
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await HandleStore.saveMintedHandle({
                 hex: 'nachos-hex',
                 name: 'nachos',
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -293,7 +285,7 @@ describe('HandleStore tests', () => {
                 created_slot_number: 100,
                 default_in_wallet: 'taco',
                 hex: 'nachos-hex',
-                holder: 'stake123',
+                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                 length: 6,
                 name: 'nachos',
                 image: 'ipfs://123',
@@ -305,17 +297,17 @@ describe('HandleStore tests', () => {
                 svg_version: '1.0.0',
                 pfp_image: '',
                 rarity: 'common',
-                resolved_addresses: { ada: 'addr123' },
+                resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
                 lovelace: 0,
                 has_datum: true,
                 datum: 'datum123',
                 amount: 1,
-                holder_type: '',
+                holder_type: 'wallet',
                 version: 0,
                 handle_type: HandleType.HANDLE,
-                payment_key_hash: null
+                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710'
             });
 
             // expect to get the correct slot history with all new handles
@@ -384,7 +376,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -412,22 +404,28 @@ describe('HandleStore tests', () => {
                             new: {
                                 created_slot_number: 100,
                                 default_in_wallet: '',
-                                resolved_addresses: { ada: 'addr123' },
+                                resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
                                 updated_slot_number: 100,
                                 utxo: 'utxo123#0',
                                 image_hash: '0xtodo',
                                 standard_image_hash: '0xtodo',
-                                reference_token: undefined
+                                reference_token: undefined,
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+                                holder_type: 'wallet',
+                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710'
                             },
                             old: {
                                 created_slot_number: 99,
-                                default_in_wallet: 'taco',
+                                default_in_wallet: 'chimichanga',
                                 resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
                                 updated_slot_number: 99,
                                 utxo: '',
                                 image_hash: '0x123',
                                 standard_image_hash: '0x123',
-                                reference_token: defaultReferenceToken
+                                reference_token: defaultReferenceToken,
+                                holder: '',
+                                holder_type: 'other',
+                                payment_key_hash: null
                             }
                         }
                     }
@@ -473,12 +471,6 @@ describe('HandleStore tests', () => {
         });
 
         it('Should save an NFT Sub Handle', async () => {
-            const stakeKey = 'stake123';
-            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-                address: stakeKey,
-                type: '',
-                knownOwnerName: 'unknown'
-            });
 
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
@@ -512,13 +504,6 @@ describe('HandleStore tests', () => {
         });
 
         it('Should save an Virtual Sub Handle', async () => {
-            const stakeKey = 'stake123';
-            jest.spyOn(addresses, 'getAddressHolderDetails').mockReturnValue({
-                address: stakeKey,
-                type: '',
-                knownOwnerName: 'unknown'
-            });
-
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             const handleName = 'virtual@hndl';
@@ -564,7 +549,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -640,7 +625,7 @@ describe('HandleStore tests', () => {
             expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.pfp_image).toEqual('todo');
             expect(handle?.bg_image).toEqual('todo');
-            expect(handle?.resolved_addresses).toEqual({ ada: 'addr123', btc: '2213kjsjkn', eth: 'sad2wsad' });
+            expect(handle?.resolved_addresses).toEqual({ ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g', btc: '2213kjsjkn', eth: 'sad2wsad' });
             expect(handle?.personalization).toEqual({
                 designer: {
                     bg_border_color: '0xtodo',
@@ -698,7 +683,7 @@ describe('HandleStore tests', () => {
                                 reference_token: undefined,
                                 pfp_image: '',
                                 resolved_addresses: {
-                                    ada: 'addr123'
+                                    ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
                                 },
                                 updated_slot_number: 100
                             }
@@ -819,7 +804,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -891,13 +876,13 @@ describe('HandleStore tests', () => {
             expect(handle?.personalization).toEqual(personalizationUpdates);
 
             // Expect the handles array to have the new handle with defaultHandle and manuallySet true
-            const holderAddress = HandleStore.holderAddressIndex.get('stake123');
+            const holderAddress = HandleStore.holderAddressIndex.get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70');
             expect(holderAddress).toEqual(
                 expect.objectContaining({
                     defaultHandle: 'tortilla-soup',
-                    knownOwnerName: 'unknown',
+                    knownOwnerName: '',
                     manuallySet: true,
-                    type: ''
+                    type: 'wallet'
                 })
             );
 
@@ -910,7 +895,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -1508,7 +1493,7 @@ describe('HandleStore tests', () => {
         });
 
         it('should save details for virtual handle', async () => {
-            const bech32FromHexSpy = jest.spyOn(serialization, 'bech32FromHex');
+            const bech32FromHexSpy = jest.spyOn(klc, 'bech32FromHex');
 
             const handleName = 'virtual@hndl';
             const handleHex = '000000007669727475616c40686e646c';
@@ -1801,20 +1786,20 @@ describe('HandleStore tests', () => {
         it('Should update a handle and the slot history', async () => {
             const handleHex = 'salsa-hex';
             const handleName = 'salsa';
-            const stakeKey = 'stake123';
-            const updatedStakeKey = 'stake123_new';
-            const address = 'addr123';
-            const newAddress = 'addr123_new';
-            jest.spyOn(addresses, 'getAddressHolderDetails')
+            const stakeKey = 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70';
+            const updatedStakeKey = 'stake_test1urcr464g6xz4hn2ypnd4tulcnnjq38sg5e5rmdwa6tspwuqn7lhlg';
+            const address = 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g';
+            const newAddress = 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746';
+            jest.spyOn(klc, 'getAddressHolderDetails')
                 .mockReturnValueOnce({
                     address: stakeKey,
-                    type: '',
-                    knownOwnerName: 'unknown'
+                    type: 'wallet',
+                    knownOwnerName: ''
                 })
                 .mockReturnValueOnce({
                     address: updatedStakeKey,
-                    type: '',
-                    knownOwnerName: 'unknown'
+                    type: 'wallet',
+                    knownOwnerName: ''
                 });
 
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
@@ -1873,11 +1858,11 @@ describe('HandleStore tests', () => {
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number),
                 has_datum: false,
-                holder_type: '',
+                holder_type: 'wallet',
                 version: 0,
                 handle_type: HandleType.HANDLE,
                 default_in_wallet: 'salsa',
-                payment_key_hash: null
+                payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
             });
 
             const newHolderAddress = HandleStore.holderAddressIndex.get(updatedStakeKey);
@@ -1898,14 +1883,15 @@ describe('HandleStore tests', () => {
                     {
                         [handleName]: {
                             new: {
-                                holder: 'stake123_new',
+                                holder: 'stake_test1urcr464g6xz4hn2ypnd4tulcnnjq38sg5e5rmdwa6tspwuqn7lhlg',
                                 resolved_addresses: {
-                                    ada: 'addr123_new'
+                                    ada: 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746'
                                 },
                                 has_datum: false,
                                 datum: undefined,
                                 updated_slot_number: 200,
-                                utxo: 'utxo_salsa2#0'
+                                utxo: 'utxo_salsa2#0',
+                                payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62',
                             },
                             old: {
                                 holder: stakeKey,
@@ -1913,7 +1899,8 @@ describe('HandleStore tests', () => {
                                 datum: 'a2datum_salsa',
                                 updated_slot_number: 100,
                                 utxo: 'utxo_salsa1#0',
-                                has_datum: true
+                                has_datum: true,
+                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
                             }
                         }
                     }
@@ -1949,12 +1936,12 @@ describe('HandleStore tests', () => {
             expect(handle).toEqual(null);
 
             // Once a handle is burned, expect it to be removed from the holderAddressIndex and a NEW defaultHandle set
-            expect(HandleStore.holderAddressIndex.get('stake123')).toEqual({
+            expect(HandleStore.holderAddressIndex.get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70')).toEqual({
                 defaultHandle: 'burrito',
                 handles: new Set(['barbacoa', 'burrito']),
-                knownOwnerName: 'unknown',
+                knownOwnerName: '',
                 manuallySet: false,
-                type: ''
+                type: 'wallet'
             });
 
             // expect history to include the burn details. new is null, old is the entire handle.
@@ -1971,7 +1958,7 @@ describe('HandleStore tests', () => {
                                 ...handlesFixture[2],
                                 datum: 'some_datum_2',
                                 has_datum: true,
-                                holder: 'stake123'
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70'
                             }
                         }
                     }

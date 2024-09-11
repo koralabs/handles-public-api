@@ -1,16 +1,15 @@
 import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
 import { Block, Ogmios, BlockPraos, Point, PointOrOrigin, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { handleEraBoundaries, POLICY_IDS } from './constants';
+import { LogCategory, Logger, HANDLE_POLICIES, Network, IHandlesRepository, AssetNameLabel, checkNameLabel,
+    HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
+import { handleEraBoundaries } from './constants';
 import { OGMIOS_HOST } from '../../config';
 import * as url from 'url';
-import IHandlesRepository from '../../repositories/handles.repository';
-import { AssetNameLabel, HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
 import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor } from '../../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from './utils';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import { checkNameLabel } from '../../utils/util';
+import {  } from '../../utils/util';
 import fastq from 'fastq';
 import { ensureSocketIsOpen, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
@@ -66,7 +65,7 @@ class OgmiosService {
         const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
         this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
-        const policyId = POLICY_IDS[process.env.NETWORK ?? 'preview'][0];
+        const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
 
         if (response.block.type !== 'praos') {
             throw new Error(`Block type ${response.block.type} is not supported`);
@@ -659,14 +658,14 @@ class OgmiosService {
             const responseHandler = fastq.promise(messageHandler, 1).push;
 
             const processMessage = async (message: string) => {
-                const policyIds = POLICY_IDS[process.env.NETWORK ?? 'preview'];
+                const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
                 let processTheBlock = false;
 
                 // check if the message contains the Handle policy ID or is a RollBackward
                 if (message.indexOf('"result":{"direction":"backward"') >= 0) {
                     processTheBlock = true;
                 } else {
-                    processTheBlock = policyIds.some((pId) => message.indexOf(pId) >= 0);
+                    processTheBlock = message.indexOf(policyId) >= 0;
                     const ogmiosStatus = await fetchHealth();
                     // SEE ./docs/ogmios-block.json
                     let slotMatch: string | null = (message.match(/"block":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];

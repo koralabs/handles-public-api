@@ -1,5 +1,4 @@
-import { IReferenceToken, ICip68Handle } from '@koralabs/kora-labs-common';
-import { HttpException } from '../../exceptions/HttpException';
+import { IReferenceToken, ICip68Handle, HttpException } from '@koralabs/kora-labs-common';
 
 export class HandleReferenceTokenViewModel {
     reference_token?: IReferenceToken;

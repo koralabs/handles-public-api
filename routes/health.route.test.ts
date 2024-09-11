@@ -1,10 +1,8 @@
 import request from 'supertest';
 import App from '../app';
 import * as ogmiosUtils from '../services/ogmios/utils';
-import registry from '../ioc/main.registry';
 import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
-import MemoryHandlesRepository from '../repositories/memory/handles.repository';
 
 jest.mock('../services/ogmios/ogmios.service');
 
