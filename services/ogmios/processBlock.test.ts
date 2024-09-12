@@ -1,9 +1,9 @@
-import { AssetNameLabel, HandleType, Rarity, StoredHandle, IHandlesRepository, Logger } from '@koralabs/kora-labs-common';
-import { HandleStore } from '../../repositories/memory/HandleStore';
-import OgmiosService from './ogmios.service';
-import * as ipfs from '../../utils/ipfs';
-import { Block, BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
+import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
+import { AssetNameLabel, HandleType, IHandlesRepository, Logger, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
+import { HandleStore } from '../../repositories/memory/HandleStore';
+import * as ipfs from '../../utils/ipfs';
+import OgmiosService from './ogmios.service';
 
 jest.mock('../../repositories/memory/HandleStore');
 
@@ -66,81 +66,81 @@ describe('processBlock Tests', () => {
         transactions: [
             !isBurn
                 ? {
-                      id: 'some_id',
-                      spends: 'inputs',
-                      inputs: [
-                          {
-                              index: 0,
-                              transaction: {
-                                  id: 'some_id'
-                              }
-                          }
-                      ],
-                      outputs: [
-                          {
-                              datum,
-                              script,
-                              address,
-                              value: {
-                                  ada: {
-                                      lovelace: BigInt(1)
-                                  },
-                                  [policy]: {
-                                      [handleHexName]: BigInt(1)
-                                  }
-                              }
-                          }
-                      ],
-                      mint: isMint
-                          ? {
-                                [policyId]: {
+                    id: 'some_id',
+                    spends: 'inputs',
+                    inputs: [
+                        {
+                            index: 0,
+                            transaction: {
+                                id: 'some_id'
+                            }
+                        }
+                    ],
+                    outputs: [
+                        {
+                            datum,
+                            script,
+                            address,
+                            value: {
+                                ada: {
+                                    lovelace: BigInt(1)
+                                },
+                                [policy]: {
                                     [handleHexName]: BigInt(1)
                                 }
                             }
-                          : undefined,
-                      metadata: metadata(policy, handleName),
-                      signatories: [
-                          {
-                              key: '',
-                              signature: ''
-                          }
-                      ]
-                  }
+                        }
+                    ],
+                    mint: isMint
+                        ? {
+                            [policyId]: {
+                                [handleHexName]: BigInt(1)
+                            }
+                        }
+                        : undefined,
+                    metadata: metadata(policy, handleName),
+                    signatories: [
+                        {
+                            key: '',
+                            signature: ''
+                        }
+                    ]
+                }
                 : {
-                      id: 'some_id_2',
-                      spends: 'inputs',
-                      inputs: [
-                          {
-                              index: 0,
-                              transaction: {
-                                  id: 'some_id'
-                              }
-                          }
-                      ],
-                      outputs: [
-                          {
-                              datum,
-                              address,
-                              value: {
-                                  ada: {
-                                      lovelace: BigInt(1)
-                                  }
-                              }
-                          }
-                      ],
-                      mint: {
-                          [policy]: {
-                              [handleHexName]: BigInt(-1)
-                          }
-                      },
-                      metadata: undefined,
-                      signatories: [
-                          {
-                              key: '',
-                              signature: ''
-                          }
-                      ]
-                  }
+                    id: 'some_id_2',
+                    spends: 'inputs',
+                    inputs: [
+                        {
+                            index: 0,
+                            transaction: {
+                                id: 'some_id'
+                            }
+                        }
+                    ],
+                    outputs: [
+                        {
+                            datum,
+                            address,
+                            value: {
+                                ada: {
+                                    lovelace: BigInt(1)
+                                }
+                            }
+                        }
+                    ],
+                    mint: {
+                        [policy]: {
+                            [handleHexName]: BigInt(-1)
+                        }
+                    },
+                    metadata: undefined,
+                    signatories: [
+                        {
+                            key: '',
+                            signature: ''
+                        }
+                    ]
+                }
         ]
     });
 
@@ -196,7 +196,7 @@ describe('processBlock Tests', () => {
             sub_characters: undefined,
             sub_length: undefined,
             sub_numeric_modifiers: undefined,
-            sub_rarity: undefined,
+            sub_rarity: undefined
         });
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
@@ -232,7 +232,7 @@ describe('processBlock Tests', () => {
             sub_characters: undefined,
             sub_length: undefined,
             sub_numeric_modifiers: undefined,
-            sub_rarity: undefined,
+            sub_rarity: undefined
         });
     });
 
@@ -326,7 +326,7 @@ describe('processBlock Tests', () => {
             sub_characters: undefined,
             sub_length: undefined,
             sub_numeric_modifiers: undefined,
-            sub_rarity: undefined,
+            sub_rarity: undefined
         });
     });
 
@@ -493,7 +493,7 @@ describe('processBlock Tests', () => {
             sub_characters: undefined,
             sub_length: undefined,
             sub_numeric_modifiers: undefined,
-            sub_rarity: undefined,
+            sub_rarity: undefined
         });
     });
 

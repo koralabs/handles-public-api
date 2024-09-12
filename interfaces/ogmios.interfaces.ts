@@ -102,7 +102,7 @@ export interface TxBody {
         mint?: {
             coins: number;
             assets?: {
-                [policyIdDotHex: string]: BigInt;
+                [policyIdDotHex: string]: bigint;
             };
         };
     };

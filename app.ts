@@ -92,7 +92,7 @@ class App {
                 this.blockProcessors.push(processor);
             });
         }
-        this.app.set("registry", this.registry);
+        this.app.set('registry', this.registry);
     }
 
     private async initializeStorage() {
@@ -137,7 +137,7 @@ class App {
     }
 
     private async initializeSwagger() {
-        var options = {
+        const options = {
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'Handles API',
             customfavIcon: '/assets/favicon.ico'

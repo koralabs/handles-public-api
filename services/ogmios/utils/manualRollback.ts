@@ -1,7 +1,7 @@
 import { Logger } from '@koralabs/kora-labs-common';
 
 export const manualRollback = async (
-    processMessage: Function,
+    processMessage: (text: string) => void,
     timeout = 35000,
     slot = 13631415,
     hash = 'a0177bc9ad5cc0a04ea5ccd3b5e3817ef33d885156434e4f0de34847dcfc114a'

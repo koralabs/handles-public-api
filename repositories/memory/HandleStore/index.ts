@@ -1,15 +1,30 @@
-import { AssetNameLabel, HandleType, IHandleStats, diff, getDateStringFromSlot, getElapsedTime, 
-    LogCategory, Logger, AddressDetails, getAddressHolderDetails, bech32FromHex, getPaymentKeyHash,
-    IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, 
-    SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, 
-    SaveSubHandleSettingsInput, 
-    IPersonalizedHandle} from '@koralabs/kora-labs-common';
+import {
+    AddressDetails,
+    AssetNameLabel,
+    bech32FromHex,
+    diff,
+    getAddressHolderDetails,
+    getDateStringFromSlot, getElapsedTime,
+    getPaymentKeyHash,
+    HandleHistory,
+    HandleType,
+    HolderAddressIndex,
+    IHandleFileContent,
+    IHandleStats,
+    IHandleStoreMetrics,
+    ISlotHistoryIndex,
+    LogCategory, Logger,
+    SaveMintingTxInput, SavePersonalizationInput,
+    SaveSubHandleSettingsInput,
+    SaveWalletAddressMoveInput,
+    StoredHandle
+} from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
-import { inflate } from 'zlib';
-import { promisify } from 'util';
 import fs from 'fs';
+import { promisify } from 'util';
 import { Worker } from 'worker_threads';
-import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
+import { inflate } from 'zlib';
+import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
 import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
 
@@ -52,7 +67,7 @@ export class HandleStore {
 
     static getByHex(hex: string): StoredHandle | null {
         let handle: StoredHandle | null = null;
-        for (let [key, value] of HandleStore.handles.entries()) {
+        for (const [ , value] of HandleStore.handles.entries()) {
             if (value.hex === hex) handle = value;
             break;
         }
@@ -137,8 +152,7 @@ export class HandleStore {
             this.addIndexSet(this.subHandlesIndex, rootHandle, name);
         }
 
-        const isWithinMaxSlot = true;
-        this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+        const isWithinMaxSlot = this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
         if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle);
             if (history)
@@ -341,7 +355,7 @@ export class HandleStore {
         const existingHandle = HandleStore.get(input.name);
         if (existingHandle) {
             // check if existing handle has a utxo. If it does, we may have a double mint
-            if (!!existingHandle.utxo) {
+            if (existingHandle.utxo) {
                 const updatedHandle = { ...existingHandle, amount: existingHandle.amount + 1 };
                 await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle });
                 return;
@@ -409,11 +423,11 @@ export class HandleStore {
         // but to be safe, we'll remove the ada address from the resolved addresses
         const addresses = personalizationDatum?.resolved_addresses
             ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                  if (key !== 'ada') {
-                      acc[key] = value as string;
-                  }
-                  return acc;
-              }, {})
+                if (key !== 'ada') {
+                    acc[key] = value as string;
+                }
+                return acc;
+            }, {})
             : {};
 
         const existingHandle = HandleStore.get(name);
@@ -674,7 +688,7 @@ export class HandleStore {
             }
 
             return false;
-        } catch (error) {
+        } catch {
             return false;
         }
     }
@@ -869,7 +883,7 @@ export class HandleStore {
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
         let handleDeletes = 0;
-        let rewoundHandles = [];
+        const rewoundHandles = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {

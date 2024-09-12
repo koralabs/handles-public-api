@@ -5,37 +5,37 @@ import { ERROR_TEXT, HttpException } from '@koralabs/kora-labs-common';
 jest.mock('../services/ogmios/ogmios.service');
 
 jest.mock('../ioc/main.registry', () => ({
-        ['handlesRepo']: jest.fn().mockReturnValue({
-            getHolderAddressDetails: (key: string) => {
-                if (key === 'nope') {
-                    throw new HttpException(404, 'Not found');
-                }
-
-                return {
-                    handles: ['burritos'],
-                    default_handle: 'burritos',
-                    manually_set: false
-                };
-            },
-            getAllHolders: () => {
-                return [
-                    {
-                        total_handles: 1001,
-                        default_handle: 'my_default',
-                        manually_set: false,
-                        address: 'addr1',
-                        known_owner_name: 'funnable.token',
-                        type: 'script'
-                    }
-                ];
-            },
-            currentHttpStatus: () => {
-                return 200;
+    ['handlesRepo']: jest.fn().mockReturnValue({
+        getHolderAddressDetails: (key: string) => {
+            if (key === 'nope') {
+                throw new HttpException(404, 'Not found');
             }
-        }),
-        ['apiKeysRepo']: jest.fn().mockReturnValue({
-            get: (key: string) => key === 'valid-key'
-        })
+
+            return {
+                handles: ['burritos'],
+                default_handle: 'burritos',
+                manually_set: false
+            };
+        },
+        getAllHolders: () => {
+            return [
+                {
+                    total_handles: 1001,
+                    default_handle: 'my_default',
+                    manually_set: false,
+                    address: 'addr1',
+                    known_owner_name: 'funnable.token',
+                    type: 'script'
+                }
+            ];
+        },
+        currentHttpStatus: () => {
+            return 200;
+        }
+    }),
+    ['apiKeysRepo']: jest.fn().mockReturnValue({
+        get: (key: string) => key === 'valid-key'
+    })
 }));
 
 afterAll(async () => {

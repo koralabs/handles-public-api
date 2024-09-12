@@ -1,10 +1,9 @@
-import fetch from 'cross-fetch';
+import { AssetNameLabel, LogCategory, Logger, Rarity } from '@koralabs/kora-labs-common';
 import { Buffer } from 'buffer';
-import { AssetNameLabel, Rarity } from '@koralabs/kora-labs-common';
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import fetch from 'cross-fetch';
 import v8 from 'v8';
-import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
+import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -93,7 +92,7 @@ export const buildCharacters = (name: string): string => {
         characters.push('numbers');
     }
 
-    if (/[_\-\.]+/.test(name)) {
+    if (/[_.-]+/.test(name)) {
         characters.push('special');
     }
 

@@ -1,15 +1,15 @@
-import { writeFileSync, unlinkSync } from 'fs';
+import * as klc from '@koralabs/kora-labs-common';
+import { delay, HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
+import { unlinkSync, writeFileSync } from 'fs';
 import { HandleStore } from '.';
-import { handlesFixture } from '../tests/fixtures/handles';
-import { HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, delay, Logger, getAddressHolderDetails, bech32FromHex } from '@koralabs/kora-labs-common';
-import * as klc from '@koralabs/kora-labs-common'
 import * as config from '../../../config';
+import { handlesFixture } from '../tests/fixtures/handles';
 
 //const klc = {getAddressHolderDetails, bech32FromHex};
 jest.mock('@koralabs/kora-labs-common', () => ({
     __esModule: true,
-      // @ts-ignore
-      ...jest.requireActual('@koralabs/kora-labs-common'),
+    // @ts-ignore
+    ...jest.requireActual('@koralabs/kora-labs-common')
 }));
 
 jest.mock('fs', () => ({
@@ -55,7 +55,6 @@ describe('HandleStore tests', () => {
                 lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
-                image_hash,
                 standard_image_hash,
                 svg_version,
                 handle_type,
@@ -1029,13 +1028,6 @@ describe('HandleStore tests', () => {
 
             // Default in wallet should not change because it was not updated or removed.
             expect(updatedHandle?.default_in_wallet).toEqual(handleName);
-            const referenceUpdatesWithDefaultWalletChange: IReferenceToken = {
-                tx_id: '',
-                index: 0,
-                lovelace: 0,
-                datum: '',
-                address: ''
-            };
             const personalizationUpdatesWithDefaultWalletChange: IPersonalization = {
                 designer: {
                     font_shadow_color: '0x111'
@@ -1891,7 +1883,7 @@ describe('HandleStore tests', () => {
                                 datum: undefined,
                                 updated_slot_number: 200,
                                 utxo: 'utxo_salsa2#0',
-                                payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62',
+                                payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                             },
                             old: {
                                 holder: stakeKey,
@@ -1900,7 +1892,7 @@ describe('HandleStore tests', () => {
                                 updated_slot_number: 100,
                                 utxo: 'utxo_salsa1#0',
                                 has_datum: true,
-                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
+                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710'
                             }
                         }
                     }

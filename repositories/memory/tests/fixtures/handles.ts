@@ -1,6 +1,6 @@
-import { HandleType, Rarity, HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '@koralabs/kora-labs-common';
-import { HandleStore } from '../../HandleStore';
+import { HandleType, HolderAddressIndex, ISlotHistoryIndex, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
+import { HandleStore } from '../../HandleStore';
 
 export const handlesFixture: StoredHandle[] = [
     {
@@ -155,7 +155,7 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
 ]);
 
 export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
-    let handles: StoredHandle[] = [];
+    const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
         if (!HandleStore.get(handleName)) {
@@ -208,7 +208,7 @@ export const createRandomHandleName = (): string => {
 export const performRandomHandleUpdates = async (count: number, beginningSlot = 0) => {
     for (let i = 0; i < count; i++) {
         switch (i % 3) {
-            case 0: // add
+            case 0: { // add
                 const handleName = createRandomHandleName();
                 if (!HandleStore.get(handleName)) {
                     const newHandle = await HandleStore.buildHandle({
@@ -225,8 +225,9 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                     await HandleStore.save({ handle: newHandle });
                 }
                 break;
-            case 1: // update
-                let oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)];
+            }
+            case 1: { // update
+                const oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)];
                 const handle = {
                     ...oldHandle,
                     utxo: createRandomUtxo(),
@@ -235,6 +236,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                 };
                 await HandleStore.save({ handle, oldHandle });
                 break;
+            }
             case 2: // remove
                 await HandleStore.burnHandle(HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)].name, beginningSlot + i);
                 break;

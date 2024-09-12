@@ -1,19 +1,24 @@
-import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { Block, Ogmios, BlockPraos, Point, PointOrOrigin, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { LogCategory, Logger, HANDLE_POLICIES, Network, IHandlesRepository, AssetNameLabel, checkNameLabel,
-    HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
-import { handleEraBoundaries } from './constants';
-import { OGMIOS_HOST } from '../../config';
-import * as url from 'url';
-import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
-import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor } from '../../interfaces/ogmios.interfaces';
-import { getHandleNameFromAssetName } from './utils';
-import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import {  } from '../../utils/util';
-import fastq from 'fastq';
-import { ensureSocketIsOpen, safeJSON } from '@cardano-ogmios/client';
+import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
-import { fetchHealth } from './utils';
+import { Block, BlockPraos, Ogmios, Point, PointOrOrigin, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
+import {
+    AssetNameLabel, checkNameLabel,
+    HANDLE_POLICIES,
+    HandleType, IHandleMetadata,
+    IHandlesRepository,
+    IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
+    LogCategory, Logger,
+    Network
+} from '@koralabs/kora-labs-common';
+import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import fastq from 'fastq';
+import * as url from 'url';
+import { OGMIOS_HOST } from '../../config';
+import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessAssetTokenInput } from '../../interfaces/ogmios.interfaces';
+import { decodeCborFromIPFSFile } from '../../utils/ipfs';
+import { } from '../../utils/util';
+import { handleEraBoundaries } from './constants';
+import { fetchHealth, getHandleNameFromAssetName } from './utils';
 
 let startOgmiosExec = 0;
 
@@ -212,7 +217,7 @@ class OgmiosService {
                     let datumString;
                     try {
                         datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                    } catch (error) {
+                    } catch {
                         Logger.log({
                             message: `Error decoding datum for ${txId}`,
                             category: LogCategory.ERROR,
@@ -233,7 +238,7 @@ class OgmiosService {
                                 type: outputScript.language.replace(':', '_'),
                                 cbor: outputScript.cbor ?? ''
                             };
-                        } catch (error) {
+                        } catch {
                             Logger.log({
                                 message: `Error error getting script for ${txId}`,
                                 category: LogCategory.ERROR,
@@ -301,7 +306,7 @@ class OgmiosService {
         // start timer for ipfs calls
         const ipfsTimer = Date.now();
 
-        const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this.getDataFromIPFSLink));
+        const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this.getDataFromIPFSLink));
 
         // stop timer for ipfs calls
         const endIpfsTimer = Date.now() - ipfsTimer;
@@ -451,7 +456,7 @@ class OgmiosService {
 
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
-        let reference_token = {
+        const reference_token = {
             tx_id: txId,
             index,
             lovelace,
@@ -671,7 +676,7 @@ class OgmiosService {
                     let slotMatch: string | null = (message.match(/"block":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
                     let blockMatch: string | null = (message.match(/"block":{(?:(?!"id").)*"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                     let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
-                    let tipHashMatch: string | null = (message.match(/"tip":.*?"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
+                    const tipHashMatch: string | null = (message.match(/"tip":.*?"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
                     //console.log({slotMatch, blockMatch, tipSlotMatch});
                     this.handlesRepo.setMetrics({
                         currentSlot: parseInt(slotMatch),

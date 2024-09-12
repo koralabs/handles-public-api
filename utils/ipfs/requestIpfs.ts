@@ -7,7 +7,7 @@ export const requestIpfs = (
     cbor: string;
 }> => {
     return new Promise((resolve, reject) => {
-        var options: https.RequestOptions = {
+        const options: https.RequestOptions = {
             method: 'GET',
             headers: {
                 Accept: 'application/octet-stream'
@@ -15,8 +15,7 @@ export const requestIpfs = (
         };
 
         const body: any = [];
-        let post_req = https.request(url, options, (res) => {
-            res.statusCode;
+        const post_req = https.request(url, options, (res) => {
             res.on('data', (chunk) => {
                 body.push(chunk);
             });

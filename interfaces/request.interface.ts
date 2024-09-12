@@ -1,4 +1,4 @@
-import { Sort } from "@koralabs/kora-labs-common";
+import { Sort } from '@koralabs/kora-labs-common';
 
 export interface IGetAllQueryParams {
     records_per_page?: string;

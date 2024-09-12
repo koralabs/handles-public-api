@@ -11,7 +11,6 @@ describe('rewindChangesToSlot', () => {
             const {
                 hex,
                 standard_image: image,
-                image_hash,
                 standard_image_hash,
                 svg_version,
                 name,
@@ -47,7 +46,7 @@ describe('rewindChangesToSlot', () => {
     });
 
     it('Should rewind to the slot 0 and remove all handle', async () => {
-        const loggerSpy = jest.spyOn(Logger, 'log');
+        jest.spyOn(Logger, 'log');
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
 
         // We should have 3 handles before the rollback

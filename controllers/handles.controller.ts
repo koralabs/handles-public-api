@@ -1,21 +1,34 @@
-import { NextFunction, Request, Response } from 'express';
-import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/request.interface';
-import { HandlePaginationModel, HandleSearchModel, StoredHandle, IHandlesRepository, isEmpty, bech32FromHex,
-    ProtectedWords, AvailabilityResponseCode, checkHandlePattern, HandleType, ISubHandleSettings, 
-    ISubHandleTypeSettings, IReferenceToken, parseAssetNameLabel, IS_PRODUCTION } from '@koralabs/kora-labs-common';
+import {
+    AvailabilityResponseCode,
+    bech32FromHex,
+    checkHandlePattern,
+    HandlePaginationModel, HandleSearchModel,
+    HandleType,
+    IHandlesRepository,
+    IReferenceToken,
+    IS_PRODUCTION,
+    isEmpty,
+    ISubHandleSettings,
+    ISubHandleTypeSettings,
+    parseAssetNameLabel,
+    ProtectedWords,
+    StoredHandle
+} from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import { NextFunction, Request, Response } from 'express';
 import { isDatumEndpointEnabled } from '../config';
-import { HandleViewModel } from '../models/view/handle.view.model';
-import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
-import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { IRegistry } from '../interfaces/registry.interface';
+import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/request.interface';
+import { HandleViewModel } from '../models/view/handle.view.model';
+import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
+import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 
 class HandlesController {
     private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
         const handleName = req.params.handle;
         const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
         const asHex = req.query.hex == 'true';
-        let handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
+        const handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
 
         if (!handle) {
             const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);
@@ -74,7 +87,7 @@ class HandlesController {
                 return;
             }
 
-            let result = await handleRepo.getAll({ pagination, search });
+            const result = await handleRepo.getAll({ pagination, search });
 
             res.set('x-handles-search-total', result.searchTotal.toString())
                 .status(handleRepo.currentHttpStatus())
@@ -118,7 +131,7 @@ class HandlesController {
             return;
         }
 
-        let result = await handleRepo.getAll({ pagination, search });
+        const result = await handleRepo.getAll({ pagination, search });
         const handlesViewModel = result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle));
 
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
@@ -236,7 +249,7 @@ class HandlesController {
             if (datum && req.headers?.accept?.startsWith('application/json')) {
                 try {
                     datum = await decodeCborToJson({ cborString: datum, schema: {}, defaultKeyType: req.query.default_key_type as DefaultTextFormat });
-                } catch (error) {
+                } catch {
                     res.status(400).send({ message: 'Unable to decode datum to json' });
                 }
             }
@@ -247,7 +260,7 @@ class HandlesController {
                 lovelace: handleData.handle.lovelace,
                 address: handleData.handle.resolved_addresses.ada,
                 datum,
-                reference_script,
+                reference_script
             });
         } catch (error) {
             next(error);
@@ -282,7 +295,7 @@ class HandlesController {
                     res.set('Content-Type', 'application/json');
                     res.status(handleRepo.currentHttpStatus()).json(decodedDatum);
                     return;
-                } catch (error) {
+                } catch {
                     res.status(400).send({ message: 'Unable to decode datum to json' });
                     return;
                 }

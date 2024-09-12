@@ -1,48 +1,47 @@
 import { IHandleStats } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
-import registry from '../ioc/main.registry';
 
 jest.mock('../services/ogmios/ogmios.service');
 
 jest.mock('../ioc/main.registry', () => ({
-        ['handlesRepo']: jest.fn().mockReturnValue({
-            getHandleByName: (handleName: string) => {
-                if (['nope'].includes(handleName)) return null;
+    ['handlesRepo']: jest.fn().mockReturnValue({
+        getHandleByName: (handleName: string) => {
+            if (['nope'].includes(handleName)) return null;
 
-                return {
-                    handle: handleName
-                };
-            },
-            getAll: () => {
-                return [
-                    {
-                        handle: 'burritos'
-                    }
-                ];
-            },
-            getAllHandleNames: () => {
-                return ['burritos', 'tacos', 'barbacoa'];
-            },
-            getHandleStats: () => {
-                const stats: IHandleStats = {
-                    percentage_complete: '',
-                    current_memory_used: 0,
-                    memory_size: 0,
-                    ogmios_elapsed: '',
-                    building_elapsed: '',
-                    slot_date: new Date(),
-                    handle_count: 0,
-                    current_slot: 0,
-                    current_block_hash: '',
-                    schema_version: 1
-                };
-                return stats;
-            }
-        }),
-        ['apiKeysRepo']: jest.fn().mockReturnValue({
-            get: (key: string) => key === 'valid-key'
-        })
+            return {
+                handle: handleName
+            };
+        },
+        getAll: () => {
+            return [
+                {
+                    handle: 'burritos'
+                }
+            ];
+        },
+        getAllHandleNames: () => {
+            return ['burritos', 'tacos', 'barbacoa'];
+        },
+        getHandleStats: () => {
+            const stats: IHandleStats = {
+                percentage_complete: '',
+                current_memory_used: 0,
+                memory_size: 0,
+                ogmios_elapsed: '',
+                building_elapsed: '',
+                slot_date: new Date(),
+                handle_count: 0,
+                current_slot: 0,
+                current_block_hash: '',
+                schema_version: 1
+            };
+            return stats;
+        }
+    }),
+    ['apiKeysRepo']: jest.fn().mockReturnValue({
+        get: (key: string) => key === 'valid-key'
+    })
 }));
 
 afterAll(async () => {
