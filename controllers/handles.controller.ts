@@ -6,7 +6,6 @@ import {
     HandleType,
     IHandlesRepository,
     IReferenceToken,
-    IS_PRODUCTION,
     isEmpty,
     ISubHandleSettings,
     ISubHandleTypeSettings,
@@ -147,7 +146,7 @@ class HandlesController {
                     handles = handleRepo.getHandlesByHolderAddresses(handles)
                     break;
                 case 'stakekeyhash':
-                    handles = handleRepo.getHandlesByHolderAddresses(handles.map(hash => bech32FromHex(hash, !IS_PRODUCTION , 'stake')))
+                    handles = handleRepo.getHandlesByStakeKeyHashes(handles)
                     break;
                 case 'assetname':
                     handles = handles.map(name => Buffer.from(parseAssetNameLabel(name) ? name.slice(8) : name, 'hex').toString('utf8'));

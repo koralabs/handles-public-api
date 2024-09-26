@@ -1,4 +1,5 @@
 import {
+    decodeAddress,
     HandlePaginationModel, HandleSearchModel,
     HolderAddressDetails,
     HolderPaginationModel,
@@ -11,6 +12,7 @@ import {
     SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput,
     StoredHandle
 } from '@koralabs/kora-labs-common';
+import * as crypto from 'crypto';
 import { memoryWatcher } from '../../services/ogmios/utils';
 import { HandleStore } from './HandleStore';
 
@@ -281,7 +283,19 @@ class MemoryHandlesRepository implements IHandlesRepository {
             const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
             return array.length === 0 ? [this.EMPTY] : array;
         }
-        ).flat() as string[];
+        ).concat(addresses.map((h) => {
+            const hashed = crypto.createHash('md5').update(Buffer.from(decodeAddress(h)!, 'hex')).digest('hex');
+            const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        })).flat() as string[];
+    }
+
+    public getHandlesByStakeKeyHashes = (hashes: string[]): string[]  => {
+        return hashes.map((h) => {
+            const hashed = crypto.createHash('md5').update(Buffer.from(h, 'hex')).digest('hex');
+            const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        }).flat() as string[];
     }
 
     public getHandlesByAddresses = (addresses: string[]): string[]  => {

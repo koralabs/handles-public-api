@@ -42,7 +42,7 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr123', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number }): BlockPraos => ({
+    const txBlock = ({ address = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number }): BlockPraos => ({
         ancestor: 'test',
         era: 'babbage',
         type: 'praos',
@@ -157,7 +157,7 @@ describe('processBlock Tests', () => {
         og_number: 1,
         standard_image: 'some_hash_test1234',
         rarity: Rarity.basic,
-        resolved_addresses: { ada: 'addr123' },
+        resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
         default_in_wallet: 'some_hdl',
         pfp_image: 'some_hash_test1234',
         bg_image: 'some_hash_test1234',
@@ -183,7 +183,7 @@ describe('processBlock Tests', () => {
         await ogmios['processBlock']({ policyId, txBlock: txBlock({}), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
@@ -218,7 +218,7 @@ describe('processBlock Tests', () => {
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ datum }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
@@ -245,7 +245,7 @@ describe('processBlock Tests', () => {
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ script }), tip });
 
         expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
@@ -312,7 +312,7 @@ describe('processBlock Tests', () => {
         });
 
         expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             datum: undefined,
             hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             image: '',
@@ -343,7 +343,7 @@ describe('processBlock Tests', () => {
         });
 
         expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             datum: undefined,
             hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             name: 'burritos',
@@ -403,7 +403,7 @@ describe('processBlock Tests', () => {
                 index: 0,
                 lovelace: 1,
                 tx_id: 'some_id',
-                address: 'addr123'
+                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
             },
             personalizationDatum: {
                 agreed_terms: '',
@@ -455,7 +455,7 @@ describe('processBlock Tests', () => {
 
         expect(saveSubHandleSettingsChangeSpy).toHaveBeenCalledWith({
             name: 'burritos',
-            utxoDetails: { address: 'addr123', datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff', index: 0, lovelace: 1, tx_id: 'some_id' },
+            utxoDetails: { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff', index: 0, lovelace: 1, tx_id: 'some_id' },
             settingsDatum: cbor,
             slotNumber: 0
         });
@@ -478,7 +478,7 @@ describe('processBlock Tests', () => {
         });
 
         expect(saveMintedHandleSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr123',
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             datum: undefined,
             hex: handleHexName,
             image: '',
@@ -549,7 +549,7 @@ describe('processBlock Tests', () => {
                 index: 0,
                 lovelace: 1,
                 tx_id: 'some_id',
-                address: 'addr123'
+                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
             },
             personalizationDatum: {
                 agreed_terms: '',

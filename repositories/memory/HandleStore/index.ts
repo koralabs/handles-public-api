@@ -133,9 +133,9 @@ export class HandleStore {
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
         const payment_key_hash = (await getPaymentKeyHash(ada))!;
-        const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!, 'hex')).digest('hex')
         updatedHandle.payment_key_hash = payment_key_hash;
-        updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash);
+        console.log('DREP', updatedHandle.id_hash, buildDrep(ada, updatedHandle.id_hash?.replace('0x', '')))
+        updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash?.replace('0x', ''));
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -152,10 +152,14 @@ export class HandleStore {
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
-        this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
         this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
+        
+        if (holder.address && holder.address != '') {
+            const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!, 'hex')).digest('hex')
+            this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
+        }
 
         if (name.includes('@')) {
             const rootHandle = name.split('@')[1];
@@ -384,7 +388,8 @@ export class HandleStore {
                 personalization: existingHandle.personalization,
                 last_update_address: existingHandle.last_update_address,
                 pz_enabled: existingHandle.pz_enabled,
-                last_edited_time: existingHandle.last_edited_time
+                last_edited_time: existingHandle.last_edited_time,
+                id_hash: existingHandle.id_hash
             };
             const builtHandle = await HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });

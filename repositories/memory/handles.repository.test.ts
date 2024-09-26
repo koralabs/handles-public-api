@@ -1,8 +1,8 @@
-import { HandlePaginationModel, HandleSearchModel, HolderPaginationModel, HolderAddressIndex, SaveMintingTxInput, AssetNameLabel, HandleType } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandlePaginationModel, HandleSearchModel, HandleType, HolderAddressIndex, HolderPaginationModel, SaveMintingTxInput } from '@koralabs/kora-labs-common';
+import * as config from '../../config';
 import MemoryHandlesRepository from './handles.repository';
 import { HandleStore } from './HandleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
-import * as config from '../../config';
 
 describe('MemoryHandlesRepository Tests', () => {
     const expectedVirtualHandle = {
@@ -373,7 +373,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const saveHandleInput: SaveMintingTxInput = {
                 hex: 'salsa-hex',
                 name: 'salsa',
-                adaAddress: 'addr1salsa',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
@@ -426,7 +426,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const rootHandleInput: SaveMintingTxInput = {
                 hex: 'chili-colorado-hex',
                 name: rootHandleName,
-                adaAddress: 'addr1chili-colorado',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
@@ -453,7 +453,7 @@ describe('MemoryHandlesRepository Tests', () => {
         it('should get subhandle settings by name', async () => {
             const repo = new MemoryHandlesRepository();
 
-            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
             await HandleStore.saveSubHandleSettingsChange({
                 name: rootHandleName,
@@ -478,7 +478,7 @@ describe('MemoryHandlesRepository Tests', () => {
             const subHandleInput: SaveMintingTxInput = {
                 hex: `${subHandle}-hex`,
                 name: subHandle,
-                adaAddress: `addr1${rootHandleName}`,
+                adaAddress: `addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q`,
                 og_number: 0,
                 image: '',
                 slotNumber: 0,

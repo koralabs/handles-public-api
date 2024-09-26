@@ -347,7 +347,8 @@ describe('HandleStore tests', () => {
                 nsfw: false,
                 agreed_terms: '',
                 migrate_sig_required: false,
-                pz_enabled: false
+                pz_enabled: false,
+                id_hash: '0x0fed83b6268892be468965a7fa0705ff22014c4b78a6ba82b4d65fe395d6d5ee9f'
             };
 
             await HandleStore.savePersonalizationChange({
@@ -411,7 +412,14 @@ describe('HandleStore tests', () => {
                                 reference_token: undefined,
                                 holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 holder_type: 'wallet',
-                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710'
+                                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
+                                drep: {
+                                    cip_105: 'drep1qtguav4wkw66frtjwrujjzmjjercjrjcudnuq7uj85m3q3mau0l',
+                                    cip_129: 'drep1ygpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwyqwqn702',
+                                    cred: 'key',
+                                    hex: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
+                                    type: 'drep'
+                                }
                             },
                             old: {
                                 created_slot_number: 99,
@@ -438,7 +446,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: sushiHex,
                 name: sushiHandle,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -477,7 +485,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: '000de14073756240686e646c',
                 name: subHandleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -514,7 +522,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: '000000007669727475616c40686e646c',
                 name: handleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -1412,7 +1420,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -1602,7 +1610,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: 'shrimp-taco-hex',
                 name: 'shrimp-taco',
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -1613,7 +1621,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
 
             await HandleStore.saveSubHandleSettingsChange({
@@ -1660,7 +1668,7 @@ describe('HandleStore tests', () => {
             await HandleStore.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
-                adaAddress: 'addr123',
+                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
                 lovelace: 0,
@@ -1671,7 +1679,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const utxoDetails = { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
+            const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
 
             // First settings change
@@ -1684,7 +1692,7 @@ describe('HandleStore tests', () => {
 
             const handle = HandleStore.get(handleName);
             expect(handle?.subhandle_settings).toEqual({
-                utxo: { address: 'addr123', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
+                utxo: { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
                 settings
             });
 
