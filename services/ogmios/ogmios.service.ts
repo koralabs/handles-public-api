@@ -189,10 +189,11 @@ class OgmiosService {
             for (let i = 0; i < mintAssets.length; i++) {
                 const [policy, assetInfo] = mintAssets[i];
                 if (policy === policyId) {
-                    const [assetName, quantity] = Object.entries(assetInfo)[0];
-                    if (quantity === BigInt(-1)) {
-                        const { name } = getHandleNameFromAssetName(assetName);
-                        await this.handlesRepo.burnHandle(name, currentSlot);
+                    for (const [assetName, quantity] of Object.entries(assetInfo)) {
+                        if (quantity === BigInt(-1)) {
+                            const { name } = getHandleNameFromAssetName(assetName);
+                            await this.handlesRepo.burnHandle(name, currentSlot);
+                        }
                     }
                 }
             }
@@ -203,10 +204,9 @@ class OgmiosService {
             // Iterate through all the outputs and find asset keys that start with our policyId
             for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
                 const o = txBody?.outputs[i];
-                const asset = o?.value?.[policyId];
-                if (asset) {
-                    const assetName = Object.keys(asset)[0];
-                    const { datum = null, script: outputScript } = o;
+                const assets = o?.value?.[policyId];
+                for (const [assetName] of Object.entries(assets ?? {})) {
+                    const { datum = null, script: outputScript } = o!;
 
                     // We need to get the datum. This can either be a string or json object.
                     let datumString;
@@ -244,10 +244,10 @@ class OgmiosService {
 
                     const input: ProcessAssetTokenInput = {
                         assetName,
-                        address: o.address,
+                        address: o!.address,
                         slotNumber: currentSlot,
                         utxo: `${txId}#${i}`,
-                        lovelace: parseInt(o.value['ada'].lovelace.toString()),
+                        lovelace: parseInt(o!.value['ada'].lovelace.toString()),
                         datum: datumString,
                         script,
                         handleMetadata,
