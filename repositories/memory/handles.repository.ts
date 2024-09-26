@@ -20,7 +20,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     constructor() {}
 
-    public async initialize(): Promise<IHandlesRepository> {
+    public initialize(): IHandlesRepository {
         // const metricsInterval = setInterval(() => {
         //     if (process.env.CONSOLE_STATUS === 'true') {
         //         const metrics = HandleStore.getMetrics();
@@ -44,7 +44,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         // }, 1000);
 
         if (this.intervals.length === 0) {
-            const saveFilesInterval = setInterval(async () => {
+            const saveFilesInterval = setInterval(() => {
                 const { current_slot, current_block_hash } = HandleStore.getMetrics();
 
                 // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
@@ -58,7 +58,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                     process.exit(2);
                 }
 
-                await HandleStore.saveHandlesFile(current_slot, current_block_hash);
+                HandleStore.saveHandlesFile(current_slot, current_block_hash);
 
                 memoryWatcher();
             }, 10 * 60 * 1000);

@@ -1,18 +1,18 @@
-import path from 'path';
+import { LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
 import cors from 'cors';
-import fs from 'fs';
-import { Logger, LogCategory, delay } from '@koralabs/kora-labs-common';
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { parse } from 'yaml';
-import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
+import { CREDENTIALS, NODE_ENV, ORIGIN, PORT } from './config';
+import { IBlockProcessor } from './interfaces/ogmios.interfaces';
+import { IRegistry } from './interfaces/registry.interface';
+import { DynamicLoadType } from './interfaces/util.interface';
 import errorMiddleware from './middlewares/error.middleware';
+import { LocalService } from './services/local/local.service';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad } from './utils/util';
-import { DynamicLoadType } from './interfaces/util.interface';
-import { LocalService } from './services/local/local.service';
-import { IRegistry } from './interfaces/registry.interface';
-import { IBlockProcessor } from './interfaces/ogmios.interfaces';
 
 class App {
     public app: express.Application;

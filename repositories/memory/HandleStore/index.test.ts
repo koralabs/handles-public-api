@@ -1793,7 +1793,6 @@ describe('HandleStore tests', () => {
                     type: 'wallet',
                     knownOwnerName: ''
                 });
-
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await HandleStore.saveMintedHandle({

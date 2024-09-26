@@ -163,7 +163,7 @@ class OgmiosService {
 
         try {
             await client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-            await this.handlesRepo.initialize();
+            this.handlesRepo.initialize();
         } catch (err: any) {
             this.handlesRepo.destroy();
             if (err.code === 1000) {

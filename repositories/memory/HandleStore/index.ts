@@ -2,10 +2,15 @@ import {
     AddressDetails,
     AssetNameLabel,
     bech32FromHex,
+    buildCharacters,
+    buildDrep,
+    buildNumericModifiers,
+    decodeAddress,
     diff,
     getAddressHolderDetails,
     getDateStringFromSlot, getElapsedTime,
     getPaymentKeyHash,
+    getRarity,
     HandleHistory,
     HandleType,
     HolderAddressIndex,
@@ -20,13 +25,14 @@ import {
     StoredHandle
 } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
+import * as crypto from 'crypto';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
-import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
+
 
 export class HandleStore {
     // Indexes
@@ -38,6 +44,7 @@ export class HandleStore {
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    static hashOfStakeKeyHashIndex = new Map<string, Set<string>>();
     static addressesIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
@@ -126,7 +133,9 @@ export class HandleStore {
         updatedHandle.holder = holder.address;
         updatedHandle.holder_type = holder.type;
         const payment_key_hash = (await getPaymentKeyHash(ada))!;
+        const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!, 'hex')).digest('hex')
         updatedHandle.payment_key_hash = payment_key_hash;
+        updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash);
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -143,6 +152,7 @@ export class HandleStore {
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
+        this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
         this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
@@ -152,7 +162,10 @@ export class HandleStore {
             this.addIndexSet(this.subHandlesIndex, rootHandle, name);
         }
 
-        const isWithinMaxSlot = this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+        // This is commented out for now as we might not need it since the history gets cleaned up on every call
+        // const isWithinMaxSlot = this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+        const isWithinMaxSlot = true;
+
         if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle);
             if (history)
@@ -258,7 +271,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -300,6 +313,7 @@ export class HandleStore {
             sub_rarity,
             virtual,
             original_address,
+            id_hash,
             pz_enabled,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
             last_edited_time
@@ -454,6 +468,7 @@ export class HandleStore {
                 virtual,
                 last_update_address: personalizationDatum?.last_update_address,
                 original_address: personalizationDatum?.original_address,
+                id_hash: personalizationDatum?.id_hash,
                 lovelace: 0,
                 pz_enabled: personalizationDatum?.pz_enabled ?? false,
                 last_edited_time: personalizationDatum?.last_edited_time
@@ -487,6 +502,7 @@ export class HandleStore {
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
+            id_hash: personalizationDatum?.id_hash,
             pz_enabled: personalizationDatum?.pz_enabled ?? false,
             last_edited_time: personalizationDatum?.last_edited_time,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
@@ -630,14 +646,14 @@ export class HandleStore {
         return networkSync == 1 && lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
-    static async saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): Promise<boolean> {
+    static saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${this.handles.size} handles & ${history.length} history entries`);
-        const result = await HandleStore.saveFileContents({
+        const result = HandleStore.saveFileContents({
             content: { handles, history },
             storagePath,
             slot,
@@ -647,9 +663,9 @@ export class HandleStore {
         return result;
     }
 
-    static async saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): Promise<boolean> {
+    static saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): boolean {
         try {
-            const worker = new Worker('./workers/saveFile.worker.js', {
+            const worker = new Worker('./workers/handleStore.worker.js', {
                 workerData: {
                     content,
                     storagePath,

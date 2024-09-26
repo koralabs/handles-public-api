@@ -237,12 +237,7 @@ class HandlesController {
                 return;
             }
 
-            if (!handleData.handle.script) {
-                res.status(404).send({ message: 'Script not found' });
-                return;
-            }
-
-            const reference_script = handleData.handle.script.cbor;
+            const reference_script = handleData.handle.script?.cbor;
             
             let datum = await handleRepo.getHandleDatumByName(handleData.handle.name);
 
