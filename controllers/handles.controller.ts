@@ -4,8 +4,10 @@ import {
     checkHandlePattern,
     HandlePaginationModel, HandleSearchModel,
     HandleType,
+    IGetAllQueryParams, IGetHandleRequest,
     IHandlesRepository,
     IReferenceToken,
+    ISearchBody,
     isEmpty,
     ISubHandleSettings,
     ISubHandleTypeSettings,
@@ -17,7 +19,6 @@ import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } fro
 import { NextFunction, Request, Response } from 'express';
 import { isDatumEndpointEnabled } from '../config';
 import { IRegistry } from '../interfaces/registry.interface';
-import { IGetAllQueryParams, IGetHandleRequest, ISearchBody } from '../interfaces/request.interface';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';

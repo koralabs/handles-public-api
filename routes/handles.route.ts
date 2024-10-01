@@ -17,11 +17,14 @@ class HandlesRoute extends BaseRoute {
         this.router.get(`${this.path}/:handle/utxo`, this.handlesController.getHandleUTxO);
         this.router.get(`${this.path}/:handle/personalized`, this.handlesController.getPersonalizedHandle);
         this.router.get(`${this.path}/:handle/personalized/utxo`, this.handlesController.getPersonalizationUTxO);
-        this.router.get(`${this.path}/:handle/subhandle_settings`, this.handlesController.getSubHandleSettings);
-        this.router.get(`${this.path}/:handle/subhandle_settings/utxo`, this.handlesController.getSubHandleSettingsUTxO);
+        this.router.get(`${this.path}/:handle/subhandle-settings`, this.handlesController.getSubHandleSettings);
+        this.router.get(`${this.path}/:handle/subhandle-settings/utxo`, this.handlesController.getSubHandleSettingsUTxO);
         this.router.get(`${this.path}/:handle/subhandles`, this.handlesController.getSubHandles);
 
         // *** OBSOLETE ** //
+        // DON'T USE UNDERSCORES IN REST PATHS. ONLY IN QUERY PARAMS & FIELDS
+        this.router.get(`${this.path}/:handle/subhandle_settings`, this.handlesController.getSubHandleSettings);
+        this.router.get(`${this.path}/:handle/subhandle_settings/utxo`, this.handlesController.getSubHandleSettingsUTxO);
         this.router.get(`${this.path}/:handle/reference_token`, this.handlesController.getPersonalizationUTxO);
         this.router.get(`${this.path}/:handle/datum`, this.handlesController.getHandleDatum);
         this.router.get(`${this.path}/:handle/script`, this.handlesController.getHandleScript);

@@ -130,12 +130,11 @@ export class HandleStore {
         } = updatedHandle;
 
         const holder = getAddressHolderDetails(ada);
-        updatedHandle.holder = holder.address;
-        updatedHandle.holder_type = holder.type;
         const payment_key_hash = (await getPaymentKeyHash(ada))!;
         updatedHandle.payment_key_hash = payment_key_hash;
-        console.log('DREP', updatedHandle.id_hash, buildDrep(ada, updatedHandle.id_hash?.replace('0x', '')))
         updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash?.replace('0x', ''));
+        updatedHandle.holder = updatedHandle.drep ? updatedHandle.drep.cip_129 : holder.address;
+        updatedHandle.holder_type = updatedHandle.drep ? 'drep': holder.type;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -157,7 +156,7 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, name);
         
         if (holder.address && holder.address != '') {
-            const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!, 'hex')).digest('hex')
+            const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!.slice(2), 'hex')).digest('hex')
             this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
         }
 

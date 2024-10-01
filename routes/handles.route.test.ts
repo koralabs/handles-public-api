@@ -1,8 +1,8 @@
+import { ERROR_TEXT, HandleType, HttpException } from '@koralabs/kora-labs-common';
+import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import request from 'supertest';
 import App from '../app';
 import * as config from '../config';
-import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
-import { HandleType, HttpException, ERROR_TEXT } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 

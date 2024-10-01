@@ -284,7 +284,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             return array.length === 0 ? [this.EMPTY] : array;
         }
         ).concat(addresses.map((h) => {
-            const hashed = crypto.createHash('md5').update(Buffer.from(decodeAddress(h)!, 'hex')).digest('hex');
+            const hashed = crypto.createHash('md5').update(Buffer.from(decodeAddress(h)!.slice(2), 'hex')).digest('hex');
             const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
             return array.length === 0 ? [this.EMPTY] : array;
         })).flat() as string[];
