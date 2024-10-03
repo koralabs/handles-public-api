@@ -645,9 +645,9 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1', networkSync = 0 } = this.metrics;
+        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.metrics;
         //console.log('lastSlot', lastSlot, 'currentSlot', currentSlot, 'currentBlockHash', currentBlockHash, 'tipBlockHash', tipBlockHash);
-        return networkSync == 1 && lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
+        return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
     static saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
