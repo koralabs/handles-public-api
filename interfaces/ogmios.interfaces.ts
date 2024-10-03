@@ -156,7 +156,7 @@ export interface HealthResponseBody {
     slotInEpoch: number;
 }
 
-export interface ProcessAssetTokenInput {
+export interface ProcessOwnerTokenInput {
     assetName: string;
     slotNumber: number;
     address: string;

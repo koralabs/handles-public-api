@@ -8,13 +8,14 @@ import {
     IHandlesRepository,
     IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
     LogCategory, Logger,
-    Network
+    Network,
+    parseAssetNameLabel
 } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
-import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessAssetTokenInput } from '../../interfaces/ogmios.interfaces';
+import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { } from '../../utils/util';
 import { handleEraBoundaries } from './constants';
@@ -165,15 +166,11 @@ class OgmiosService {
                                 cbor: outputScript.cbor ?? ''
                             };
                         } catch {
-                            Logger.log({
-                                message: `Error error getting script for ${txId}`,
-                                category: LogCategory.ERROR,
-                                event: 'processBlock.decodingScript'
-                            });
+                            Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
                         }
                     }
 
-                    const input: ProcessAssetTokenInput = {
+                    const input: ProcessOwnerTokenInput = {
                         assetName,
                         address: o!.address,
                         slotNumber: currentSlot,
@@ -185,10 +182,20 @@ class OgmiosService {
                         isMintTx
                     };
 
-                    if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(v))) {
-                        await this.processAssetClassToken(input);
-                    } else {
-                        await this.processAssetToken(input);
+                    switch (parseAssetNameLabel(assetName)) {
+                        case null:
+                        case AssetNameLabel.LBL_222:
+                            await this.processHandleOwnerToken(input);
+                            break;
+                        case AssetNameLabel.LBL_100:
+                        case AssetNameLabel.LBL_000:
+                            await this.processAssetReferenceToken(input);
+                            break;
+                        case AssetNameLabel.LBL_001:
+                            await this.processSubHandleSettingsToken(input);
+                            break;
+                        default:
+                            Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processBlock.processAssetClassToken.unknownAssetName' });
                     }
                 }
             }
@@ -197,9 +204,7 @@ class OgmiosService {
         // finish timer for our logs
         const buildingExecFinished = Date.now() - startBuildingExec;
         const { elapsedBuildingExec } = this.handlesRepo.getTimeMetrics();
-        this.handlesRepo.setMetrics({
-            elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished
-        });
+        this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished });
     };
 
     private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
@@ -445,42 +450,10 @@ class OgmiosService {
         });
     };
 
-    private processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
-        if (assetName.includes(AssetNameLabel.LBL_222)) {
-            await this.processAssetToken({
-                assetName,
-                slotNumber,
-                address,
-                utxo,
-                lovelace,
-                datum,
-                script,
-                handleMetadata,
-                isMintTx
-            });
-            return;
-        }
-
-        if (assetName.includes(AssetNameLabel.LBL_100) || assetName.includes(AssetNameLabel.LBL_000)) {
-            await this.processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
-            return;
-        }
-
-        if (assetName.includes('00001070')) {
-            await this.processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
-            return;
-        }
-
-        Logger.log({
-            message: `unknown asset name ${assetName}`,
-            category: LogCategory.ERROR,
-            event: 'processBlock.processAssetClassToken.unknownAssetName'
-        });
-    };
-
-    private processAssetToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
+    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
-
+        const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
+        const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
         const input = {
             hex,
             name,
@@ -490,44 +463,18 @@ class OgmiosService {
             lovelace,
             datum,
             script,
-            handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
+            handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE,
+            og_number: ((data as any)?.core ?? data)?.og_number ?? 0,
+            image: data?.image ?? '',
+            version: ((data as any)?.core ?? data)?.version ?? 0,
+            sub_characters: data?.sub_characters,
+            sub_length: data?.sub_length,
+            sub_numeric_modifiers: data?.sub_numeric_modifiers,
+            sub_rarity: data?.sub_rarity
         };
 
         if (isMintTx) {
-            let image = '';
-            let og_number = 0;
-            let version = 0;
-            let sub_characters;
-            let sub_length;
-            let sub_numeric_modifiers;
-            let sub_rarity;
-
-            if (assetName.includes(AssetNameLabel.LBL_222)) {
-                const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
-                og_number = data?.og_number ?? 0;
-                image = data?.image ?? '';
-                version = data?.version ?? 0;
-                sub_characters = data?.sub_characters;
-                sub_length = data?.sub_length;
-                sub_numeric_modifiers = data?.sub_numeric_modifiers;
-                sub_rarity = data?.sub_rarity;
-            } else {
-                const data = handleMetadata && handleMetadata[name];
-                og_number = data?.core?.og_number ?? 0;
-                image = data?.image ?? '';
-                version = data?.core?.version ?? 0;
-            }
-
-            await this.handlesRepo.saveMintedHandle({
-                ...input,
-                og_number,
-                image,
-                version,
-                sub_characters,
-                sub_length,
-                sub_numeric_modifiers,
-                sub_rarity
-            });
+            await this.handlesRepo.saveMintedHandle(input);
             // Do a webhook processor call here
         } else {
             await this.handlesRepo.saveHandleUpdate(input);

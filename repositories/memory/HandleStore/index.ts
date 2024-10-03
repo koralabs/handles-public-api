@@ -770,10 +770,7 @@ export class HandleStore {
         }
     }
 
-    static async prepareHandlesStorage(loadS3 = true): Promise<{
-        slot: number;
-        hash: string;
-    } | null> {
+    static async prepareHandlesStorage(loadS3 = true): Promise<{ slot: number; hash: string; } | null> {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
         const files = [HandleStore.getFile<IHandleFileContent>(this.storageFilePath)];
         if (loadS3) {
