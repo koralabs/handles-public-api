@@ -9,7 +9,6 @@ import {
     IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
     LogCategory, Logger,
     Network,
-    parseAssetNameLabel
 } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import fastq from 'fastq';
@@ -181,17 +180,18 @@ class OgmiosService {
                         handleMetadata,
                         isMintTx
                     };
-
-                    switch (parseAssetNameLabel(assetName)) {
+                    
+                    const {assetLabel} = checkNameLabel(assetName);
+                    switch (assetLabel) {
                         case null:
-                        case AssetNameLabel.LBL_222:
+                        case '222':
                             await this.processHandleOwnerToken(input);
                             break;
-                        case AssetNameLabel.LBL_100:
-                        case AssetNameLabel.LBL_000:
+                        case '100':
+                        case '000':
                             await this.processAssetReferenceToken(input);
                             break;
-                        case AssetNameLabel.LBL_001:
+                        case '001':
                             await this.processSubHandleSettingsToken(input);
                             break;
                         default:
@@ -505,7 +505,7 @@ class OgmiosService {
      */
 
     /** @category Constructor */
-    private createLocalChainSyncClient = async (context: InteractionContext, options?: { sequential?: boolean }): Promise<ChainSynchronizationClient> => {
+    private createLocalChainSyncClient = async (context: InteractionContext): Promise<ChainSynchronizationClient> => {
         const { socket } = context;
         return new Promise((resolve) => {
             return resolve({
@@ -516,6 +516,7 @@ class OgmiosService {
                     }
                 },
                 resume: async (points) => {
+                    Logger.log('Ogmios client resumed.');
                     const intersection = await findIntersection(context, points || [await this.createPointFromCurrentTip(context)]);
                     ensureSocketIsOpen(socket);
                     socket.on('message', async (message: string) => {
@@ -573,12 +574,14 @@ class OgmiosService {
                                         }
                                     }
                                 } catch (error) {
-                                    console.error(error);
+                                    Logger.log({message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message'});
                                 }
                             }, 1).push(response);
                         }    
                         nextBlock(socket);
                     });
+                    
+                    nextBlock(socket);
                     return intersection;
                 }
             });

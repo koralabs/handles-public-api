@@ -285,7 +285,10 @@ describe('processBlock Tests', () => {
             handle_type: HandleType.HANDLE,
             datum: undefined,
             lovelace: 1,
-            script: undefined
+            script: undefined,
+            image: 'ifps://some_hash_test1234',
+            og_number: 0,
+            version: 0
         });
     });
 
@@ -351,7 +354,10 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             handle_type: HandleType.HANDLE,
             lovelace: 1,
-            script: undefined
+            script: undefined,
+            image: '',
+            og_number: 0,
+            version: 0
         });
     });
 
