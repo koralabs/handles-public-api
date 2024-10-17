@@ -771,12 +771,13 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@^5.1.7":
-  version "5.1.7"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.7.tgz#c8216ec44d4ba0365e1f4fa39a88822085c9b128"
-  integrity sha512-aaJnTbDWhWgn/AP3v5nMmq7wfayPd/AJMIWICrS3FgfuC/rblFpb9dWG7zdfsuijtnUmekSbzVobywipTEgOqg==
+"@koralabs/kora-labs-common@5.1.12":
+  version "5.1.12"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.12.tgz#ea66e9436fc9a4a7e74c701424d802bfcb87adbc"
+  integrity sha512-OFepj0DkPY09ad5G/iM6GrYF3loAcVS5b9cluXGb3VWlYIdGTmOG/KfCKrZpXU/NvXCk4+SswbKR4oX2lS6+rw==
   dependencies:
     bech32 "^2.0.0"
+    blakejs "^1.2.1"
     boolean "^3.2.0"
     bs58 "^6.0.0"
     cbor "^9.0.2"
@@ -1769,6 +1770,11 @@ bindings@^1.5.0:
   integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
   dependencies:
     file-uri-to-path "1.0.0"
+
+blakejs@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/blakejs/-/blakejs-1.2.1.tgz#5057e4206eadb4a97f7c0b6e197a505042fc3814"
+  integrity sha512-QXUSXI3QVc/gJME0dBpXrag1kbzOqCjCX8/b54ntNyW6sjtoqxqRk3LTmXzaJoh71zMsDCjM+47jS7XiwN/+fQ==
 
 body-parser@1.20.2:
   version "1.20.2"
