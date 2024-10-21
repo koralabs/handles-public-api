@@ -91,7 +91,7 @@ class App {
             
             for(let i=0;i<processors.length;i++) {
                 const processor = processors[i] as IBlockProcessor;
-                this.blockProcessors.push(await processor.initialize());
+                this.blockProcessors.push(await processor.initialize(this.registry));
             }
         }
         this.app.set('registry', this.registry);

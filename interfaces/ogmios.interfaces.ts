@@ -1,5 +1,6 @@
 import { NextBlockResponse } from '@cardano-ogmios/schema';
 import { IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
+import { IRegistry } from './registry.interface';
 
 export enum MetadataLabel {
     'NFT' = 721,
@@ -169,6 +170,6 @@ export interface ProcessOwnerTokenInput {
 }
 
 export interface IBlockProcessor {
-    initialize: () => Promise<IBlockProcessor>;
+    initialize: (dynamicRegistry: IRegistry) => Promise<IBlockProcessor>;
     processBlock: (response: NextBlockResponse) => Promise<void>;
 }
