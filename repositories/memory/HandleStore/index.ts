@@ -684,15 +684,15 @@ export class HandleStore {
             });
             worker.on('error', (msg) => {
                 Logger.log({
-                    message: `Error calling lockfile worker: ${msg}`,
-                    event: 'saveFileContents.errorSavingFile',
+                    message: `Error calling lockfile worker for handleStore: ${msg}`,
+                    event: 'saveFileContents.errorSavingHandleStoreFile',
                     category: LogCategory.INFO
                 });
             });
         } catch (error: any) {
             Logger.log({
-                message: `Error calling lockfile worker: ${error.message}`,
-                event: 'saveFileContents.errorSavingFile',
+                message: `Error calling lockfile worker for handleStore: ${error.message}`,
+                event: 'saveFileContents.errorSavingHandleStoreFile',
                 category: LogCategory.INFO
             });
             return false;
