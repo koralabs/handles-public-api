@@ -199,7 +199,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-            return { searchTotal: handles.length, handles };
+            return { searchTotal: items.length, handles };
         }
 
         items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
@@ -216,7 +216,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const startIndex = (page - 1) * handlesPerPage;
         const handles = items.slice(startIndex, startIndex + handlesPerPage);
 
-        return { searchTotal: handles.length, handles };
+        return { searchTotal: items.length, handles };
     }
 
     public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetails[]> {
