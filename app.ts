@@ -1,18 +1,18 @@
-import path from 'path';
+import { LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
 import cors from 'cors';
-import fs from 'fs';
-import { Logger, LogCategory, delay } from '@koralabs/kora-labs-common';
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { parse } from 'yaml';
-import { NODE_ENV, PORT, ORIGIN, CREDENTIALS } from './config';
+import { CREDENTIALS, NODE_ENV, ORIGIN, PORT } from './config';
+import { IBlockProcessor } from './interfaces/ogmios.interfaces';
+import { IRegistry } from './interfaces/registry.interface';
+import { DynamicLoadType } from './interfaces/util.interface';
 import errorMiddleware from './middlewares/error.middleware';
+import { LocalService } from './services/local/local.service';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad } from './utils/util';
-import { DynamicLoadType } from './interfaces/util.interface';
-import { LocalService } from './services/local/local.service';
-import { IRegistry } from './interfaces/registry.interface';
-import { IBlockProcessor } from './interfaces/ogmios.interfaces';
 
 class App {
     public app: express.Application;
@@ -88,11 +88,13 @@ class App {
             });
 
             const processors = await dynamicallyLoad(path.resolve(`${dir}/block_processors`), DynamicLoadType.BLOCK_PROCESSOR);
-            processors.forEach((processor: IBlockProcessor) => {
-                this.blockProcessors.push(processor);
-            });
+            
+            for(let i=0;i<processors.length;i++) {
+                const processor = processors[i] as IBlockProcessor;
+                this.blockProcessors.push(await processor.initialize(this.registry));
+            }
         }
-        this.app.set("registry", this.registry);
+        this.app.set('registry', this.registry);
     }
 
     private async initializeStorage() {
@@ -137,7 +139,7 @@ class App {
     }
 
     private async initializeSwagger() {
-        var options = {
+        const options = {
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'Handles API',
             customfavIcon: '/assets/favicon.ico'

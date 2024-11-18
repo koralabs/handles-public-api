@@ -1,5 +1,4 @@
-import { HandleType, Rarity } from '@koralabs/kora-labs-common';
-import { HttpException, StoredHandle } from '@koralabs/kora-labs-common';
+import { HandleType, HttpException, IDrep, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 
 export class HandleViewModel {
     hex: string;
@@ -46,6 +45,7 @@ export class HandleViewModel {
         expires_time: number;
         public_mint: boolean;
     };
+    drep?: IDrep
 
     getPzEnabled(handleType: HandleType, pz_enabled?: boolean): boolean | undefined {
         if (pz_enabled !== undefined) {
@@ -89,6 +89,7 @@ export class HandleViewModel {
         this.handle_type = handle.handle_type;
         this.payment_key_hash = handle.payment_key_hash;
         this.pz_enabled = this.getPzEnabled(handle.handle_type, handle.pz_enabled);
+        this.drep = handle.drep
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;

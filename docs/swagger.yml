@@ -386,7 +386,7 @@ paths:
           description: Handle not found
       security:
       - api-key: []
-  "/handles/{handle}/subhandle_settings":
+  "/handles/{handle}/subhandle-settings":
     get:
       tags:
       - handles
@@ -422,7 +422,7 @@ paths:
           description: Handle not found
       security:
       - api-key: []
-  "/handles/{handle}/subhandle_settings/utxo":
+  "/handles/{handle}/subhandle-settings/utxo":
     get:
       tags:
       - handles

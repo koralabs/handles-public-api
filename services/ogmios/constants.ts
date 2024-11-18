@@ -18,7 +18,7 @@ export const handleEraBoundaries: EraBoundaries = {
         id: '' //'46a069ecc79659fcfc98e03e31bd29ee7f05b88623cc606d8b9658d804728842'
     },
     preview: {
-        slot: 0, // 1470391,
-        id: '' // '56ace254a1474adc08d301a23884d6b3bc670e2208859abbf7e8adc010d8f8de'
+        slot: 0, // 61411075,
+        id: '' // 'cf500ae3c39abf26c4c8d60644f5b8450028c51e1de9784f91e9063557720aae'
     }
 };

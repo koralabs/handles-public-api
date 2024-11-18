@@ -1,41 +1,28 @@
-import { createInteractionContext, InteractionContext } from '@cardano-ogmios/client';
-import { Block, Ogmios, BlockPraos, Point, PointOrOrigin, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { LogCategory, Logger, HANDLE_POLICIES, Network, IHandlesRepository, AssetNameLabel, checkNameLabel,
-    HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
-import { handleEraBoundaries } from './constants';
-import { OGMIOS_HOST } from '../../config';
-import * as url from 'url';
-import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
-import { MetadataLabel, ProcessAssetTokenInput, BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor } from '../../interfaces/ogmios.interfaces';
-import { getHandleNameFromAssetName } from './utils';
-import { decodeCborFromIPFSFile } from '../../utils/ipfs';
-import {  } from '../../utils/util';
-import fastq from 'fastq';
-import { ensureSocketIsOpen, safeJSON } from '@cardano-ogmios/client';
+import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
-import { fetchHealth } from './utils';
+import { BlockPraos, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
+import {
+    AssetNameLabel, checkNameLabel,
+    HANDLE_POLICIES,
+    HandleType, IHandleMetadata,
+    IHandlesRepository,
+    IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
+    LogCategory, Logger,
+    Network,
+} from '@koralabs/kora-labs-common';
+import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import fastq from 'fastq';
+import * as url from 'url';
+import { OGMIOS_HOST } from '../../config';
+import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
+import { decodeCborFromIPFSFile } from '../../utils/ipfs';
+import { } from '../../utils/util';
+import { handleEraBoundaries } from './constants';
+import { getHandleNameFromAssetName } from './utils';
 
 let startOgmiosExec = 0;
 
 const blackListedIpfsCids: string[] = [];
-
-/** @category ChainSync */
-export interface ChainSyncMessageHandlers {
-    rollBackward: (
-        response: {
-            point: PointOrOrigin;
-            tip: TipOrOrigin;
-        },
-        requestNext: () => void
-    ) => Promise<void>;
-    rollForward: (
-        response: {
-            block: Block;
-            tip: TipOrOrigin;
-        },
-        requestNext: () => void
-    ) => Promise<void>;
-}
 
 class OgmiosService {
     public intervals: NodeJS.Timeout[] = [];
@@ -51,59 +38,6 @@ class OgmiosService {
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.loadS3 = loadS3;
         this.blockProcessors = blockProcessors;
-    }
-
-    private async rollForward(
-        response: {
-            block: Block;
-            tip: unknown;
-        },
-        requestNext: () => void
-    ) {
-        // finish timer for ogmios rollForward
-        const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-        const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
-        this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
-
-        const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
-
-        if (response.block.type !== 'praos') {
-            throw new Error(`Block type ${response.block.type} is not supported`);
-        }
-
-        const block = { policyId, txBlock: response.block as BlockPraos, tip: response.tip as Tip };
-
-        await this.processBlock(block);
-
-        if (this.blockProcessors.length > 0) {
-            for (let i = 0; i < this.blockProcessors.length; i++) {
-                await this.blockProcessors[i].processBlock(block);
-            }
-        }
-
-        // start timer for ogmios rollForward
-        startOgmiosExec = Date.now();
-        requestNext();
-    }
-
-    private async rollBackward(response: { point: PointOrOrigin; tip: TipOrOrigin }, requestNext: () => void): Promise<void> {
-        const { current_slot } = this.handlesRepo.getMetrics();
-        Logger.log({
-            message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.point)}`,
-            event: 'OgmiosService.rollBackward',
-            category: LogCategory.INFO
-        });
-
-        const { point, tip } = response;
-        await this.processRollback(point, tip);
-
-        if (this.blockProcessors.length > 0) {
-            for (let i = 0; i < this.blockProcessors.length; i++) {
-                await this.blockProcessors[i].processRollback(point, tip);
-            }
-        }
-
-        requestNext();
     }
 
     public async getStartingPoint(): Promise<Point> {
@@ -149,16 +83,13 @@ class OgmiosService {
                 }
             }
         );
-        const client = await this.createLocalChainSyncClient(context, {
-            rollForward: this.rollForward.bind(this),
-            rollBackward: this.rollBackward.bind(this)
-        });
+        const client = await this.createLocalChainSyncClient(context);
 
         const startingPoint = await this.getStartingPoint();
 
         try {
             await client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-            await this.handlesRepo.initialize();
+            this.handlesRepo.initialize();
         } catch (err: any) {
             this.handlesRepo.destroy();
             if (err.code === 1000) {
@@ -212,7 +143,7 @@ class OgmiosService {
                     let datumString;
                     try {
                         datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                    } catch (error) {
+                    } catch {
                         Logger.log({
                             message: `Error decoding datum for ${txId}`,
                             category: LogCategory.ERROR,
@@ -233,16 +164,12 @@ class OgmiosService {
                                 type: outputScript.language.replace(':', '_'),
                                 cbor: outputScript.cbor ?? ''
                             };
-                        } catch (error) {
-                            Logger.log({
-                                message: `Error error getting script for ${txId}`,
-                                category: LogCategory.ERROR,
-                                event: 'processBlock.decodingScript'
-                            });
+                        } catch {
+                            Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
                         }
                     }
 
-                    const input: ProcessAssetTokenInput = {
+                    const input: ProcessOwnerTokenInput = {
                         assetName,
                         address: o!.address,
                         slotNumber: currentSlot,
@@ -253,11 +180,22 @@ class OgmiosService {
                         handleMetadata,
                         isMintTx
                     };
-
-                    if (Object.values(AssetNameLabel).some((v) => assetName.startsWith(v))) {
-                        await this.processAssetClassToken(input);
-                    } else {
-                        await this.processAssetToken(input);
+                    
+                    const {assetLabel} = checkNameLabel(assetName);
+                    switch (assetLabel) {
+                        case null:
+                        case '222':
+                            await this.processHandleOwnerToken(input);
+                            break;
+                        case '100':
+                        case '000':
+                            await this.processAssetReferenceToken(input);
+                            break;
+                        case '001':
+                            await this.processSubHandleSettingsToken(input);
+                            break;
+                        default:
+                            Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processBlock.processAssetClassToken.unknownAssetName' });
                     }
                 }
             }
@@ -266,9 +204,7 @@ class OgmiosService {
         // finish timer for our logs
         const buildingExecFinished = Date.now() - startBuildingExec;
         const { elapsedBuildingExec } = this.handlesRepo.getTimeMetrics();
-        this.handlesRepo.setMetrics({
-            elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished
-        });
+        this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished });
     };
 
     private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
@@ -301,7 +237,7 @@ class OgmiosService {
         // start timer for ipfs calls
         const ipfsTimer = Date.now();
 
-        const [ipfsPortal, ipfsDesigner, ipfsSocials, ipfsVendor] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this.getDataFromIPFSLink));
+        const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this.getDataFromIPFSLink));
 
         // stop timer for ipfs calls
         const endIpfsTimer = Date.now() - ipfsTimer;
@@ -451,7 +387,7 @@ class OgmiosService {
 
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
-        let reference_token = {
+        const reference_token = {
             tx_id: txId,
             index,
             lovelace,
@@ -514,42 +450,10 @@ class OgmiosService {
         });
     };
 
-    private processAssetClassToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
-        if (assetName.includes(AssetNameLabel.LBL_222)) {
-            await this.processAssetToken({
-                assetName,
-                slotNumber,
-                address,
-                utxo,
-                lovelace,
-                datum,
-                script,
-                handleMetadata,
-                isMintTx
-            });
-            return;
-        }
-
-        if (assetName.includes(AssetNameLabel.LBL_100) || assetName.includes(AssetNameLabel.LBL_000)) {
-            await this.processAssetReferenceToken({ assetName, slotNumber, utxo, lovelace, address, datum });
-            return;
-        }
-
-        if (assetName.includes('00001070')) {
-            await this.processSubHandleSettingsToken({ assetName, slotNumber, utxo, lovelace, address, datum });
-            return;
-        }
-
-        Logger.log({
-            message: `unknown asset name ${assetName}`,
-            category: LogCategory.ERROR,
-            event: 'processBlock.processAssetClassToken.unknownAssetName'
-        });
-    };
-
-    private processAssetToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessAssetTokenInput) => {
+    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
-
+        const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
+        const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
         const input = {
             hex,
             name,
@@ -559,44 +463,18 @@ class OgmiosService {
             lovelace,
             datum,
             script,
-            handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE
+            handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE,
+            og_number: ((data as any)?.core ?? data)?.og_number ?? 0,
+            image: data?.image ?? '',
+            version: ((data as any)?.core ?? data)?.version ?? 0,
+            sub_characters: data?.sub_characters,
+            sub_length: data?.sub_length,
+            sub_numeric_modifiers: data?.sub_numeric_modifiers,
+            sub_rarity: data?.sub_rarity
         };
 
         if (isMintTx) {
-            let image = '';
-            let og_number = 0;
-            let version = 0;
-            let sub_characters;
-            let sub_length;
-            let sub_numeric_modifiers;
-            let sub_rarity;
-
-            if (assetName.includes(AssetNameLabel.LBL_222)) {
-                const data = handleMetadata && (handleMetadata[hex] as unknown as IHandleMetadata);
-                og_number = data?.og_number ?? 0;
-                image = data?.image ?? '';
-                version = data?.version ?? 0;
-                sub_characters = data?.sub_characters;
-                sub_length = data?.sub_length;
-                sub_numeric_modifiers = data?.sub_numeric_modifiers;
-                sub_rarity = data?.sub_rarity;
-            } else {
-                const data = handleMetadata && handleMetadata[name];
-                og_number = data?.core?.og_number ?? 0;
-                image = data?.image ?? '';
-                version = data?.core?.version ?? 0;
-            }
-
-            await this.handlesRepo.saveMintedHandle({
-                ...input,
-                og_number,
-                image,
-                version,
-                sub_characters,
-                sub_length,
-                sub_numeric_modifiers,
-                sub_rarity
-            });
+            await this.handlesRepo.saveMintedHandle(input);
             // Do a webhook processor call here
         } else {
             await this.handlesRepo.saveHandleUpdate(input);
@@ -627,77 +505,9 @@ class OgmiosService {
      */
 
     /** @category Constructor */
-    private createLocalChainSyncClient = async (context: InteractionContext, messageHandlers: ChainSyncMessageHandlers, options?: { sequential?: boolean }): Promise<ChainSynchronizationClient> => {
+    private createLocalChainSyncClient = async (context: InteractionContext): Promise<ChainSynchronizationClient> => {
         const { socket } = context;
         return new Promise((resolve) => {
-            const messageHandler = async (response: Ogmios['NextBlockResponse']) => {
-                if (this.isNextBlockResponse(response)) {
-                    switch (response.result.direction) {
-                        case 'backward':
-                            return await messageHandlers.rollBackward(
-                                {
-                                    point: response.result.point,
-                                    tip: response.result.tip
-                                },
-                                () => nextBlock(socket)
-                            );
-                        case 'forward':
-                            return await messageHandlers.rollForward(
-                                {
-                                    block: response.result.block,
-                                    tip: response.result.tip
-                                },
-                                () => nextBlock(socket)
-                            );
-                        default:
-                            break;
-                    }
-                }
-            };
-
-            const responseHandler = fastq.promise(messageHandler, 1).push;
-
-            const processMessage = async (message: string) => {
-                const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
-                let processTheBlock = false;
-
-                // check if the message contains the Handle policy ID or is a RollBackward
-                if (message.indexOf('"result":{"direction":"backward"') >= 0) {
-                    processTheBlock = true;
-                } else {
-                    processTheBlock = message.indexOf(policyId) >= 0;
-                    const ogmiosStatus = await fetchHealth();
-                    // SEE ./docs/ogmios-block.json
-                    let slotMatch: string | null = (message.match(/"block":{(?:(?!"slot").)*"slot":\s?(\d*)/m) || ['', '0'])[1];
-                    let blockMatch: string | null = (message.match(/"block":{(?:(?!"id").)*"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
-                    let tipSlotMatch: string | null = (message.match(/"tip":.*?"slot":\s?(\d*)/m) || ['', '0'])[1];
-                    let tipHashMatch: string | null = (message.match(/"tip":.*?"id":\s?"([0-9a-fA-F]*)"/m) || ['', '0'])[1];
-                    //console.log({slotMatch, blockMatch, tipSlotMatch});
-                    this.handlesRepo.setMetrics({
-                        currentSlot: parseInt(slotMatch),
-                        currentBlockHash: blockMatch,
-                        tipBlockHash: tipHashMatch,
-                        lastSlot: parseInt(tipSlotMatch),
-                        networkSync: ogmiosStatus?.networkSynchronization
-                    });
-                    slotMatch = blockMatch = tipSlotMatch = null;
-                }
-
-                if (processTheBlock) {
-                    const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
-                    if (response.method === 'nextBlock') {
-                        try {
-                            await responseHandler(response);
-                            return;
-                        } catch (error) {
-                            console.error(error);
-                        }
-                    }
-                }
-
-                nextBlock(socket);
-            };
-
             return resolve({
                 context,
                 shutdown: async () => {
@@ -705,15 +515,73 @@ class OgmiosService {
                         socket.close();
                     }
                 },
-                resume: async (points, inFlight) => {
+                resume: async (points) => {
+                    Logger.log('Ogmios client resumed.');
                     const intersection = await findIntersection(context, points || [await this.createPointFromCurrentTip(context)]);
                     ensureSocketIsOpen(socket);
                     socket.on('message', async (message: string) => {
-                        await processMessage(message);
-                    });
-                    for (let n = 0; n < (inFlight || 100); n += 1) {
+                        const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
+                        if (this.isNextBlockResponse(response)) {
+                            await fastq.promise(async (response: Ogmios['NextBlockResponse']) => {
+                                try {
+                                    if (response.result.direction == 'forward') {
+                                        this.handlesRepo.setMetrics({
+                                            currentSlot: ((response.result as RollForward).block as BlockPraos).slot,
+                                            currentBlockHash: (response.result as RollForward).block.id,
+                                            tipBlockHash: response.result.tip.id,
+                                            lastSlot: response.result.tip.slot
+                                        });
+                                    }              
+                                    if (response.method === 'nextBlock') {
+                                        switch (response.result.direction) {
+                                            case 'backward': {
+                                                const { current_slot } = this.handlesRepo.getMetrics();
+                                                Logger.log({
+                                                    message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                                    event: 'OgmiosService.rollBackward',
+                                                    category: LogCategory.INFO
+                                                });
+                                                await this.processRollback(response.result.point, response.result.tip);
+                                                break;
+                                            }  
+                                            case 'forward': {
+                                                // finish timer for ogmios rollForward
+                                                const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
+                                                const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
+                                                this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
+
+                                                const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
+
+                                                if (response.result.block.type !== 'praos') {
+                                                    throw new Error(`Block type ${response.result.block.type} is not supported`);
+                                                }
+
+                                                const block = { policyId, txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
+
+                                                await this.processBlock(block);
+
+                                                // start timer for ogmios rollForward
+                                                startOgmiosExec = Date.now();
+                                                break;
+                                            }
+                                            default:
+                                                break;
+                                        }
+                                    }
+                                    if (this.blockProcessors.length > 0) {
+                                        for (let i = 0; i < this.blockProcessors.length; i++) {
+                                            await this.blockProcessors[i].processBlock(response);
+                                        }
+                                    }
+                                } catch (error) {
+                                    Logger.log({message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message'});
+                                }
+                            }, 1).push(response);
+                        }    
                         nextBlock(socket);
-                    }
+                    });
+                    
+                    nextBlock(socket);
                     return intersection;
                 }
             });

@@ -1,6 +1,6 @@
-import { HolderAddressIndex } from "@koralabs/kora-labs-common";
-import { HandleStore } from "./HandleStore";
-import { createRandomHandles, performRandomHandleUpdates } from "./tests/fixtures/handles";
+import { HolderAddressIndex } from '@koralabs/kora-labs-common';
+import { HandleStore } from './HandleStore';
+import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
 
 describe('holder index integrity', () => {
     it('holder index should be accurate', async () => {

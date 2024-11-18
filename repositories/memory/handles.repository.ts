@@ -1,9 +1,20 @@
-import { HandlePaginationModel, HandleSearchModel, HolderPaginationModel, IHandleStats, IUTxO, 
-    LogCategory, Logger, HolderAddressDetails, HttpException, HolderAddressIndex, IHandleStoreMetrics, 
-    SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, 
-    StoredHandle, IHandlesRepository } from '@koralabs/kora-labs-common';
-import { HandleStore } from './HandleStore';
+import {
+    decodeAddress,
+    HandlePaginationModel, HandleSearchModel,
+    HolderAddressDetails,
+    HolderPaginationModel,
+    HttpException,
+    IHandlesRepository,
+    IHandleStats,
+    IHandleStoreMetrics,
+    IUTxO,
+    LogCategory, Logger,
+    SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput,
+    StoredHandle
+} from '@koralabs/kora-labs-common';
+import * as crypto from 'crypto';
 import { memoryWatcher } from '../../services/ogmios/utils';
+import { HandleStore } from './HandleStore';
 
 class MemoryHandlesRepository implements IHandlesRepository {
     public EMPTY = '|empty|';
@@ -11,7 +22,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     constructor() {}
 
-    public async initialize(): Promise<IHandlesRepository> {
+    public initialize(): IHandlesRepository {
         // const metricsInterval = setInterval(() => {
         //     if (process.env.CONSOLE_STATUS === 'true') {
         //         const metrics = HandleStore.getMetrics();
@@ -35,7 +46,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         // }, 1000);
 
         if (this.intervals.length === 0) {
-            const saveFilesInterval = setInterval(async () => {
+            const saveFilesInterval = setInterval(() => {
                 const { current_slot, current_block_hash } = HandleStore.getMetrics();
 
                 // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
@@ -49,7 +60,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                     process.exit(2);
                 }
 
-                await HandleStore.saveHandlesFile(current_slot, current_block_hash);
+                HandleStore.saveHandlesFile(current_slot, current_block_hash);
 
                 memoryWatcher();
             }, 10 * 60 * 1000);
@@ -62,23 +73,23 @@ class MemoryHandlesRepository implements IHandlesRepository {
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
         return this;
-    };
+    }
 
     public destroy(): void {
         this.intervals.map((i) => clearInterval(i));
-    };
+    }
 
     public isCaughtUp(): boolean {
         return HandleStore.isCaughtUp();
     }
 
     public getTimeMetrics() {
-         return HandleStore.getTimeMetrics();
-    };
+        return HandleStore.getTimeMetrics();
+    }
     
     public setMetrics(metrics: IHandleStoreMetrics){
         HandleStore.setMetrics(metrics);
-    };
+    }
     
     public getMetrics(): IHandleStats {
         return HandleStore.getMetrics();
@@ -94,27 +105,27 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public async burnHandle(handleName: string, slotNumber: number): Promise<void> {
         return await HandleStore.burnHandle(handleName, slotNumber);
-    };
+    }
 
     public async rewindChangesToSlot(slot: { slot: number; hash: string; lastSlot: number; }): Promise<{ name: string; action: string; handle: Partial<StoredHandle> | undefined; }[]> {
         return await HandleStore.rewindChangesToSlot(slot);
-    };
+    }
 
     public async savePersonalizationChange(change: SavePersonalizationInput): Promise<void> {
         return await HandleStore.savePersonalizationChange(change);
-    };
+    }
 
     public async saveSubHandleSettingsChange(change: SaveSubHandleSettingsInput): Promise<void> {
         return await HandleStore.saveSubHandleSettingsChange(change);
-    };
+    }
 
     public async saveMintedHandle(input: SaveMintingTxInput): Promise<void> {
         return await HandleStore.saveMintedHandle(input);
-    };
+    }
 
     public async saveHandleUpdate(update: SaveWalletAddressMoveInput): Promise<void> {
         return await HandleStore.saveHandleUpdate(update);
-    };
+    }
     
     private search(searchModel: HandleSearchModel) {
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
@@ -165,23 +176,23 @@ class MemoryHandlesRepository implements IHandlesRepository {
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
                 ? nonEmptyHandles.reduce<StoredHandle[]>((agg, name) => {
-                      const handle = HandleStore.get(name as string);
-                      if (handle) {
-                          if (search && !handle.name.includes(search)) return agg;
-                          if (handle_type && handle.handle_type !== handle_type) return agg;
-                          if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
-                          agg.push(handle);
-                      }
-                      return agg;
-                  }, [])
+                    const handle = HandleStore.get(name as string);
+                    if (handle) {
+                        if (search && !handle.name.includes(search)) return agg;
+                        if (handle_type && handle.handle_type !== handle_type) return agg;
+                        if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
+                        agg.push(handle);
+                    }
+                    return agg;
+                }, [])
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
-                      if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
-                      if (handle_type && handle.handle_type !== handle_type) return agg;
-                      if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
+                    if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
+                    if (handle_type && handle.handle_type !== handle_type) return agg;
+                    if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
 
-                      agg.push(handle);
-                      return agg;
-                  }, []);
+                    agg.push(handle);
+                    return agg;
+                }, []);
 
         if (searchModel.personalized) {
             array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
@@ -222,7 +233,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
     public async getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Promise<HolderAddressDetails[]> {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items: HolderAddressDetails[] = new Array();
+        const items: HolderAddressDetails[] = [];
         HandleStore.holderAddressIndex.forEach((holder, address) => {
             if (holder) {
                 const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
@@ -248,7 +259,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         const handles = this.search(search);
         const filteredHandles = handles.filter((handle) => !!handle.utxo);
         if (sort === 'random') {
-            let shuffledHandles = filteredHandles
+            const shuffledHandles = filteredHandles
                 .map((value) => ({ value, sort: Math.random() }))
                 .sort((a, b) => a.sort - b.sort)
                 .map(({ value }) => value);
@@ -261,25 +272,37 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandlesByPaymentKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
-                const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? []);
-                return array.length === 0 ? [this.EMPTY] : array;
-            }
+            const array = Array.from(HandleStore.paymentKeyHashesIndex.get(h) ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        }
         ).flat();
     }
 
     public getHandlesByHolderAddresses = (addresses: string[]): string[]  => {
         return addresses.map((h) => {
-                const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
-                return array.length === 0 ? [this.EMPTY] : array;
-            }
-        ).flat() as string[];
+            const array = Array.from(HandleStore.holderAddressIndex.get(h)?.handles ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        }
+        ).concat(addresses.map((h) => {
+            const hashed = crypto.createHash('md5').update(Buffer.from(decodeAddress(h)!.slice(2), 'hex')).digest('hex');
+            const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        })).flat() as string[];
+    }
+
+    public getHandlesByStakeKeyHashes = (hashes: string[]): string[]  => {
+        return hashes.map((h) => {
+            const hashed = crypto.createHash('md5').update(Buffer.from(h, 'hex')).digest('hex');
+            const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
+            return array.length === 0 ? [this.EMPTY] : array;
+        }).flat() as string[];
     }
 
     public getHandlesByAddresses = (addresses: string[]): string[]  => {
         return addresses.map((h) => {
             const array = Array.from(HandleStore.addressesIndex.get(h) ?? []);
-                return array.length === 0 ? [this.EMPTY] : array;
-            }
+            return array.length === 0 ? [this.EMPTY] : array;
+        }
         ).flat();
     }
 

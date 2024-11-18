@@ -1,10 +1,9 @@
-import fetch from 'cross-fetch';
+import { AssetNameLabel, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { Buffer } from 'buffer';
-import { AssetNameLabel, Rarity } from '@koralabs/kora-labs-common';
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import fetch from 'cross-fetch';
 import v8 from 'v8';
-import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
+import { HealthResponseBody } from '../../../interfaces/ogmios.interfaces';
 
 const parseCborObject = (value: any) => {
     const lastKey = Object.keys(value).pop();
@@ -80,61 +79,6 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
         hex
     };
-};
-
-export const buildCharacters = (name: string): string => {
-    const characters: string[] = [];
-
-    if (/[a-z]+/.test(name)) {
-        characters.push('letters');
-    }
-
-    if (/[0-9]+/.test(name)) {
-        characters.push('numbers');
-    }
-
-    if (/[_\-\.]+/.test(name)) {
-        characters.push('special');
-    }
-
-    return characters.join(',');
-};
-
-export const buildNumericModifiers = (name: string): string => {
-    const modifiers: string[] = [];
-
-    if (/^-?[0-9]\d*(\.\d+)?$/.test(name)) {
-        if (name.startsWith('-')) {
-            modifiers.push('negative');
-        }
-
-        if (name.includes('.')) {
-            modifiers.push('decimal');
-        }
-    }
-
-    return modifiers.join(',');
-};
-
-export const getRarity = (name: string): Rarity => {
-    const length = name.length;
-    if (1 === length) {
-        return Rarity.legendary;
-    }
-
-    if (2 === length) {
-        return Rarity.ultra_rare;
-    }
-
-    if (3 === length) {
-        return Rarity.rare;
-    }
-
-    if (length > 3 && length < 8) {
-        return Rarity.common;
-    }
-
-    return Rarity.basic;
 };
 
 export const stringifyBlock = (metadata: any) => JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));

@@ -1,140 +1,140 @@
+import { ERROR_TEXT, HandleType, HttpException } from '@koralabs/kora-labs-common';
+import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import request from 'supertest';
 import App from '../app';
 import * as config from '../config';
-import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
-import { HandleType, HttpException, ERROR_TEXT } from '@koralabs/kora-labs-common';
 
 jest.mock('../services/ogmios/ogmios.service');
 
 jest.mock('../ioc/main.registry', () => ({
-        ['handlesRepo']: jest.fn().mockReturnValue({
-            getHandleByName: (handleName: string) => {
-                if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
+    ['handlesRepo']: jest.fn().mockReturnValue({
+        getHandleByName: (handleName: string) => {
+            if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
-                if (handleName === 'no-utxo') {
-                    return {
-                        name: handleName,
+            if (handleName === 'no-utxo') {
+                return {
+                    name: handleName,
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                };
+            }
+
+            if (handleName === 'no_ref_token') {
+                return {
+                    name: handleName,
+                    resolved_addresses: {
+                        ada: 'addr1'
+                    },
+                    utxo: 'utxo#0'
+                };
+            }
+
+            if (handleName === 'nope@handle') {
+                return null;
+            }
+
+            return {
+                name: handleName,
+                utxo: 'utxo#0',
+                resolved_addresses: {
+                    ada: 'addr1'
+                },
+                personalization: {
+                    p: 'z',
+                    reference_token: {
+                        address: 'script_addr1'
+                    }
+                },
+                reference_token: {
+                    tx_id: 'tx_id',
+                    index: 0,
+                    lovelace: 0,
+                    datum: '',
+                    address: 'addr1_ref_token',
+                    script: { type: 'plutus_v2', cbor: 'a247' }
+                },
+                datum: 'a247',
+                script: {
+                    type: 'plutus_v2',
+                    cbor: 'a247'
+                }
+            };
+        },
+        getAll: () => {
+            return {
+                searchTotal: 1,
+                handles: [
+                    {
+                        name: 'burritos',
+                        utxo: 'utxo#0',
                         personalization: {
                             p: 'z'
                         },
                         datum: 'a247'
-                    };
-                }
-
-                if (handleName === 'no_ref_token') {
-                    return {
-                        name: handleName,
-                        resolved_addresses: {
-                            ada: 'addr1'
-                        },
-                        utxo: 'utxo#0'
-                    };
-                }
-
-                if (handleName === 'nope@handle') {
-                    return null;
-                }
-
-                return {
-                    name: handleName,
-                    utxo: 'utxo#0',
-                    resolved_addresses: {
-                        ada: 'addr1'
-                    },
-                    personalization: {
-                        p: 'z',
-                        reference_token: {
-                            address: 'script_addr1'
-                        }
-                    },
-                    reference_token: {
-                        tx_id: 'tx_id',
-                        index: 0,
-                        lovelace: 0,
-                        datum: '',
-                        address: 'addr1_ref_token',
-                        script: { type: 'plutus_v2', cbor: 'a247' }
-                    },
-                    datum: 'a247',
-                    script: {
-                        type: 'plutus_v2',
-                        cbor: 'a247'
                     }
-                };
-            },
-            getAll: () => {
-                return {
-                    searchTotal: 1,
-                    handles: [
-                        {
-                            name: 'burritos',
-                            utxo: 'utxo#0',
-                            personalization: {
-                                p: 'z'
-                            },
-                            datum: 'a247'
-                        }
-                    ]
-                };
-            },
-            getAllHandleNames: () => {
-                return ['burritos', 'tacos', 'barbacoa'];
-            },
-            getHolderAddressDetails: (key: string) => {
-                if (key === 'nope') {
-                    throw new HttpException(404, 'Not found');
-                }
-
-                return {
-                    handles: ['burritos'],
-                    default_handle: 'burritos',
-                    manually_set: false
-                };
-            },
-            currentHttpStatus: () => {
-                return 200;
-            },
-            getHandleDatumByName: (handleName: string) => {
-                if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
-
-                if (handleName === 'burrito') {
-                    return 'd87981a26768616e646c657381a263756d6d647965616862796f6368657964736f6d65a16477656c70a1657468696e67657269676874';
-                }
-
-                return `${handleName}_datum`;
-            },
-            getSubHandleSettings: (handleName: string) => {
-                if (handleName === 'no_settings@handle') {
-                    return null;
-                }
-
-                if (handleName === 'not@array') {
-                    return {};
-                }
-
-                return {
-                    settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff',
-                    utxo: {
-                        tx_id: 'tx_id',
-                        index: 0,
-                        lovelace: 0,
-                        datum: '',
-                        address: 'addr1_ref_token',
-                        script: { type: 'plutus_v2', cbor: 'a247' }
-                    }
-                };
-            },
-            getSubHandles: (handleName: string) => {
-                return [
-                    { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
-                    { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
-                    { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
-                ];
+                ]
+            };
+        },
+        getAllHandleNames: () => {
+            return ['burritos', 'tacos', 'barbacoa'];
+        },
+        getHolderAddressDetails: (key: string) => {
+            if (key === 'nope') {
+                throw new HttpException(404, 'Not found');
             }
-        }),
-        ['apiKeysRepo']: jest.fn().mockReturnValue({
-            get: (key: string) => key === 'valid-key'
-        })
+
+            return {
+                handles: ['burritos'],
+                default_handle: 'burritos',
+                manually_set: false
+            };
+        },
+        currentHttpStatus: () => {
+            return 200;
+        },
+        getHandleDatumByName: (handleName: string) => {
+            if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
+
+            if (handleName === 'burrito') {
+                return 'd87981a26768616e646c657381a263756d6d647965616862796f6368657964736f6d65a16477656c70a1657468696e67657269676874';
+            }
+
+            return `${handleName}_datum`;
+        },
+        getSubHandleSettings: (handleName: string) => {
+            if (handleName === 'no_settings@handle') {
+                return null;
+            }
+
+            if (handleName === 'not@array') {
+                return {};
+            }
+
+            return {
+                settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff',
+                utxo: {
+                    tx_id: 'tx_id',
+                    index: 0,
+                    lovelace: 0,
+                    datum: '',
+                    address: 'addr1_ref_token',
+                    script: { type: 'plutus_v2', cbor: 'a247' }
+                }
+            };
+        },
+        getSubHandles: (handleName: string) => {
+            return [
+                { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
+                { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
+                { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
+            ];
+        }
+    }),
+    ['apiKeysRepo']: jest.fn().mockReturnValue({
+        get: (key: string) => key === 'valid-key'
+    })
 }));
 
 afterAll(async () => {
@@ -506,7 +506,7 @@ describe('Testing Handles Routes', () => {
             // jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/reference_token');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ "cbor": "a247", type: "plutus_v2" }});
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ 'cbor': 'a247', type: 'plutus_v2' }});
         });
 
         it('should return empty object when reference token cannot be found', async () => {
@@ -527,7 +527,7 @@ describe('Testing Handles Routes', () => {
             //jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
             const response = await request(app?.getServer()).get('/handles/burritos/personalized/utxo');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ "cbor": "a247", type: "plutus_v2" } });
+            expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, tx_id: 'tx_id', script:{ 'cbor': 'a247', type: 'plutus_v2' } });
         });
 
         it('should return empty object when reference token cannot be found', async () => {

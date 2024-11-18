@@ -1,7 +1,6 @@
-import { Logger } from '@koralabs/kora-labs-common';
-import { buildNumericModifiers, getRarity, stringifyBlock, buildOnChainObject, memoryWatcher, getHandleNameFromAssetName } from '.';
+import { AssetNameLabel, buildNumericModifiers, getRarity, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
-import { AssetNameLabel } from '@koralabs/kora-labs-common';
+import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher, stringifyBlock } from '.';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 

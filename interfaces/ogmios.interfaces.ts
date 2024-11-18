@@ -1,5 +1,6 @@
-import { BlockPraos, PointOrOrigin, Tip, TipOrOrigin } from '@cardano-ogmios/schema';
+import { NextBlockResponse } from '@cardano-ogmios/schema';
 import { IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
+import { IRegistry } from './registry.interface';
 
 export enum MetadataLabel {
     'NFT' = 721,
@@ -102,7 +103,7 @@ export interface TxBody {
         mint?: {
             coins: number;
             assets?: {
-                [policyIdDotHex: string]: BigInt;
+                [policyIdDotHex: string]: bigint;
             };
         };
     };
@@ -156,7 +157,7 @@ export interface HealthResponseBody {
     slotInEpoch: number;
 }
 
-export interface ProcessAssetTokenInput {
+export interface ProcessOwnerTokenInput {
     assetName: string;
     slotNumber: number;
     address: string;
@@ -169,6 +170,6 @@ export interface ProcessAssetTokenInput {
 }
 
 export interface IBlockProcessor {
-    processBlock: ({ policyId, txBlock, tip }: { policyId: string; txBlock: BlockPraos; tip: Tip }) => Promise<void>;
-    processRollback: (point: PointOrOrigin, tip: TipOrOrigin) => Promise<void>;
+    initialize: (dynamicRegistry: IRegistry) => Promise<IBlockProcessor>;
+    processBlock: (response: NextBlockResponse) => Promise<void>;
 }

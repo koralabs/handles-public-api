@@ -111,3 +111,4 @@ storage/
 /handles/*.json
 api/*
 handles/*
+workers/apiStore.worker.js
