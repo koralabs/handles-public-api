@@ -531,7 +531,7 @@ export class HandleStore {
                 category: LogCategory.NOTIFY
             });
 
-            throw new Error(message);
+            throw new Error(message);  
         }
 
         const updatedHandle: StoredHandle = {
