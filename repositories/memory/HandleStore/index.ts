@@ -156,8 +156,12 @@ export class HandleStore {
         this.addIndexSet(this.lengthIndex, `${length}`, name);
         
         if (holder.address && holder.address != '') {
-            const hashofStakeKeyHash = crypto.createHash('md5').update(Buffer.from(decodeAddress(holder.address)!.slice(2), 'hex')).digest('hex')
-            this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
+            // This could return null if it is a pre-Shelley address (not bech32)
+            const decodedAddress = decodeAddress(holder.address);
+            if (decodedAddress) {
+                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
+                this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
+            }
         }
 
         if (name.includes('@')) {
