@@ -8,7 +8,7 @@ import {
     IHandlesRepository,
     IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
     LogCategory, Logger,
-    Network,
+    Network
 } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import fastq from 'fastq';

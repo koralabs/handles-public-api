@@ -3,9 +3,9 @@ openapi: 3.0.3
 info:
   title: Handles Public API
   description: ADA Handle Public API
-  termsOfService: https://mint.handle.me/tou
+  termsOfService: https://handle.me/#tou
   contact:
-    email: hello@adahandle.com
+    email: hello@koralabs.io
   version: "{{version}}"
 servers:
 - url: https://api.handle.me
