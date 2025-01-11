@@ -771,10 +771,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@5.1.12":
-  version "5.1.12"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.12.tgz#ea66e9436fc9a4a7e74c701424d802bfcb87adbc"
-  integrity sha512-OFepj0DkPY09ad5G/iM6GrYF3loAcVS5b9cluXGb3VWlYIdGTmOG/KfCKrZpXU/NvXCk4+SswbKR4oX2lS6+rw==
+"@koralabs/kora-labs-common@5.1.13":
+  version "5.1.13"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.13.tgz#5c2ceb4b5a306bb8c99659cbcd7e401825b13c5a"
+  integrity sha512-PLGuUVzy16gc0Yu2mpLDeFO6bhB72eQqkZgvBUCINr4SDdvbYhhkM+TkEXrqUCp104gkOBV5R4C/XO/Nc8D1vg==
   dependencies:
     bech32 "^2.0.0"
     blakejs "^1.2.1"
@@ -4707,10 +4707,10 @@ nan@^2.12.1:
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.20.0.tgz#08c5ea813dd54ed16e5bd6505bf42af4f7838ca3"
   integrity sha512-bk3gXBZDGILuuo/6sKtr0DQmSThYHLtNCdSdXk9YkxD/jK6X2vmCyyXBBxyqZ4XcnzTyYEAThfX3DCEnLf6igw==
 
-nanoid@^3.1.31:
-  version "3.3.7"
-  resolved "https://registry.npmjs.org/nanoid/-/nanoid-3.3.7.tgz"
-  integrity sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==
+nanoid@^3.3.8:
+  version "3.3.8"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.8.tgz#b1be3030bee36aaff18bacb375e5cce521684baf"
+  integrity sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==
 
 nanomatch@^1.2.9:
   version "1.2.13"

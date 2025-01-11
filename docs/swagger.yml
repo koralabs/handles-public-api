@@ -119,6 +119,12 @@ paths:
         required: false
         schema:
           type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the search is in hex form
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful and up to date
