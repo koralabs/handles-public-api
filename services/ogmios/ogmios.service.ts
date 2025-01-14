@@ -85,6 +85,11 @@ class OgmiosService {
         );
         const client = await this.createLocalChainSyncClient(context);
 
+        this.resume(client);
+    }
+
+    private async resume(client: ChainSynchronizationClient) {
+
         const startingPoint = await this.getStartingPoint();
 
         try {
@@ -94,8 +99,14 @@ class OgmiosService {
             this.handlesRepo.destroy();
             if (err.code === 1000) {
                 // this means the slot that came back from the files is bad
-                await this.handlesRepo.rollBackToGenesis();
+                if (this.loadS3) {
+                    // Try again without the S3 file
+                    this.loadS3 = false;
+                    this.resume(client);
+                    return
+                }
             }
+            await this.handlesRepo.rollBackToGenesis();
             await client.shutdown();
             throw err;
         }

@@ -782,10 +782,11 @@ export class HandleStore {
         }
         const [localHandles, externalHandles] = await Promise.all(files);
 
-        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
+        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? localHandles : null;
+        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? externalHandles : null;
 
         // If we don't have any valid files, return null
-        if (!externalHandles && !localContent) {
+        if (!externalContent && !localContent) {
             Logger.log({
                 message: 'No valid files found',
                 category: LogCategory.INFO,
@@ -815,31 +816,28 @@ export class HandleStore {
         } | null = null;
 
         // only the local file exists
-        if (localContent && !externalHandles) {
+        if (localContent && !externalContent) {
             filesContent = buildFilesContent(localContent);
         }
 
         // only the external file exists
-        if (externalHandles && !localContent) {
-            filesContent = buildFilesContent(externalHandles, true);
+        if (externalContent && !localContent) {
+            filesContent = buildFilesContent(externalContent, true);
         }
 
         // both files exist and we need to compare them to see which one to use.
-        if (externalHandles && localContent) {
-            if (
-                // check to see if the local file slot and schema version are greater than the external file
-                // if so, use the local file otherwise use the external file
-                localContent.slot > externalHandles.slot &&
-                (localContent.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
-            ) {
+        if (externalContent && localContent) {
+            // check to see if the local file slot is greater than the external file
+            // if so, use the local file otherwise use the external file
+            if (localContent.slot > externalContent.slot) {
                 filesContent = buildFilesContent(localContent);
             } else {
-                filesContent = buildFilesContent(externalHandles, true);
+                filesContent = buildFilesContent(externalContent, true);
             }
         }
 
         // At this point, we should have a valid filesContent object.
-        // If we don't perform this check we'd have to use a large terinary operator which is pretty ugly
+        // If we don't perform this check we'd have to use a large ternary operator which is pretty ugly
         if (!filesContent) {
             return null;
         }
