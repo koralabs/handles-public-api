@@ -51,7 +51,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 39;
+    static storageSchemaVersion = 40;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -151,23 +151,31 @@ export class HandleStore {
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
-        this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
-        
-        if (holder.address && holder.address != '') {
-            // This could return null if it is a pre-Shelley address (not bech32)
-            const decodedAddress = decodeAddress(holder.address);
-            if (decodedAddress) {
-                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
-                this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
-            }
-        }
 
         if (name.includes('@')) {
             const rootHandle = name.split('@')[1];
             this.addIndexSet(this.subHandlesIndex, rootHandle, name);
         }
+
+        if (holder.address && holder.address != '') {
+            // This could return null if it is a pre-Shelley address (not bech32)
+            const decodedAddress = decodeAddress(holder.address);
+            const oldDecodedAddress = decodeAddress(`${oldHandle?.holder}`);
+            if (decodedAddress) {
+                if (oldDecodedAddress) {
+                    // if there is an old stake key hash, remove it from the index
+                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress.slice(2), 'hex').digest('hex')
+                    this.hashOfStakeKeyHashIndex.get(oldHashofStakeKeyHash)?.delete(name);                    
+                }
+                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
+                this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
+            }
+        }
+
+        this.addressesIndex.get(oldHandle?.resolved_addresses.ada!)?.delete(name); 
+        this.addIndexSet(this.addressesIndex, ada, name);
 
         // This is commented out for now as we might not need it since the history gets cleaned up on every call
         // const isWithinMaxSlot = this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
