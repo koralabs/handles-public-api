@@ -180,7 +180,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                     if (handle) {
                         if (search && !handle.name.includes(search)) return agg;
                         if (handle_type && handle.handle_type !== handle_type) return agg;
-                        if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
+                        if (handles && !handles.includes(handle.name)) return agg;
                         agg.push(handle);
                     }
                     return agg;
@@ -188,7 +188,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
                 : HandleStore.getHandles().reduce<StoredHandle[]>((agg, handle) => {
                     if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
                     if (handle_type && handle.handle_type !== handle_type) return agg;
-                    if (handles && !(handles.includes(handle.name) || handles.includes(handle.hex))) return agg;
+                    if (handles && !handles.includes(handle.name)) return agg;
 
                     agg.push(handle);
                     return agg;
