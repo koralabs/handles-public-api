@@ -60,21 +60,19 @@ release_host() {
 export RELEASE_HOST=$(release_host)
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
-    DB_FILE=${NODE_DB}/protocolMagicId
     if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
-        if [ ! -f "$DB_FILE" ]; then
-            mkdir -p ${NODE_DB}
-            echo "No cardano-node db detected. Grabbing latest snapshot with Mithril."
-            MITHRIL_VERSION=2430.0
-            curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
-            export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
-            export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
-            export SNAPSHOT_DIGEST=latest
-            chmod +x ./mithril-client
-            curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
-            #./mithril-client snapshot download $SNAPSHOT_DIGEST
-            echo "Mithril snapshot downloaded and validated."
-        fi
+        mkdir -p ${NODE_DB}
+        rm -rf ${NODE_DB}
+        echo "Grabbing latest snapshot with Mithril."
+        MITHRIL_VERSION=2450.0
+        curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
+        export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
+        export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
+        export SNAPSHOT_DIGEST=latest
+        chmod +x ./mithril-client
+        curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
+        #./mithril-client snapshot download $SNAPSHOT_DIGEST
+        echo "Mithril snapshot downloaded and validated."
     fi
     
     trap cleanup INT TERM KILL QUIT ABRT
