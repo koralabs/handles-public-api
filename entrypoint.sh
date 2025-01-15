@@ -61,8 +61,8 @@ export RELEASE_HOST=$(release_host)
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
     if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
-        mkdir -p ${NODE_DB}
         rm -rf ${NODE_DB}
+        mkdir -p ${NODE_DB}
         echo "Grabbing latest snapshot with Mithril."
         MITHRIL_VERSION=2450.0
         curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
