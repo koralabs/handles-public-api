@@ -291,26 +291,26 @@
   resolved "https://registry.npmjs.org/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@cardano-ogmios/client@^6.5.0":
-  version "6.6.0"
-  resolved "https://registry.npmjs.org/@cardano-ogmios/client/-/client-6.6.0.tgz"
-  integrity sha512-weCmjGd558Zyd41m/QljR7Wsxxq510ErTXb/pwbKyROazH7pLXzQQ+Q3ul6V6u/HYHInl126wEcJvWnr2rqQZA==
+"@cardano-ogmios/client@^6.11.0":
+  version "6.11.0"
+  resolved "https://registry.yarnpkg.com/@cardano-ogmios/client/-/client-6.11.0.tgz#eebfd693d4b3d9b3f5363194a73baf189ca8b59f"
+  integrity sha512-3Nk/w8XHH5Vs4/Zizw3a/lYEedqMCW6rDcblB804L1BTjBY01vHYTFuw4LLMY8cn7ZjZefRpNb3y3i994vd+5g==
   dependencies:
-    "@cardano-ogmios/schema" "6.6.0"
+    "@cardano-ogmios/schema" "6.11.0"
     "@cardanosolutions/json-bigint" "^1.0.1"
     "@types/json-bigint" "^1.0.1"
     bech32 "^2.0.0"
     cross-fetch "^3.1.4"
     fastq "^1.11.0"
     isomorphic-ws "^4.0.1"
-    nanoid "^3.1.31"
+    nanoid "^3.3.8"
     ts-custom-error "^3.2.0"
     ws "^7.5.10"
 
-"@cardano-ogmios/schema@6.6.0", "@cardano-ogmios/schema@^6.5.0":
-  version "6.6.0"
-  resolved "https://registry.npmjs.org/@cardano-ogmios/schema/-/schema-6.6.0.tgz"
-  integrity sha512-xrCUscstcg8+QMIiofXSTgBdtSIfV++qdSzIIl/v+NCNB1XrIxnqUKhlu3mfRibCLRVeP7c2Z2tTP6MBdFS/AQ==
+"@cardano-ogmios/schema@6.11.0", "@cardano-ogmios/schema@^6.11.0":
+  version "6.11.0"
+  resolved "https://registry.yarnpkg.com/@cardano-ogmios/schema/-/schema-6.11.0.tgz#09ea28a8d7be94db4de0ba5366afc915c1399f1d"
+  integrity sha512-wHfkknaLKRmjLZ5sljYh0dYRmTXAiqGPzHpWMQ6yHNScIlJe1CZLkv/ks2g4G5zIDznydvwKHkRI2VA/6amy2A==
 
 "@cardanosolutions/json-bigint@^1.0.1":
   version "1.0.1"

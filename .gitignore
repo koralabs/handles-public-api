@@ -112,3 +112,4 @@ storage/
 api/*
 handles/*
 workers/apiStore.worker.js
+/swagger.yml

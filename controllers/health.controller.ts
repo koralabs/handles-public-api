@@ -1,7 +1,7 @@
+import { IHandlesRepository, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
-import { IHandlesRepository } from '@koralabs/kora-labs-common';
-import { fetchHealth } from '../services/ogmios/utils';
 import { IRegistry } from '../interfaces/registry.interface';
+import { fetchHealth } from '../services/ogmios/utils';
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -12,10 +12,12 @@ enum HealthStatus {
 
 class HealthController {
     public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        Logger.log('HEALTH CHECK: endpoint called');
         try {
             const ogmiosResults = await fetchHealth();
             const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
             const stats = handleRepo.getHandleStats();
+            Logger.log(`HEALTH CHECK: OGMIOS RESULTS - ${ogmiosResults?.connectionStatus}`);
 
             if (!ogmiosResults) {
                 res.status(202).json({
