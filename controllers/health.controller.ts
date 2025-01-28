@@ -1,4 +1,4 @@
-import { IHandlesRepository, Logger } from '@koralabs/kora-labs-common';
+import { IHandlesRepository, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
 import { IRegistry } from '../interfaces/registry.interface';
 import { fetchHealth } from '../services/ogmios/utils';
@@ -35,6 +35,7 @@ class HealthController {
                 status = HealthStatus.OGMIOS_BEHIND;
             }
             if (ogmiosResults.connectionStatus !== 'connected') {
+                Logger.log({category:LogCategory.WARN, message: 'Ogmios can\'t connect to the node socket', event: 'healthcheck.failure'});
                 status = HealthStatus.WAITING_ON_CARDANO_NODE;
             }
 
