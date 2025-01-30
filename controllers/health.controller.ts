@@ -44,13 +44,15 @@ class HealthController {
                 statusCode = 503;
             else if (status != HealthStatus.CURRENT)
                 statusCode = 202;
-
+            
+            Logger.log(`HEALTH CHECK: STATUS - ${statusCode}: ${status}`);
             res.status(statusCode).json({
                 status,
                 ogmios: ogmiosResults,
                 stats
             });
-        } catch (error) {
+        } catch (error: any) {
+            Logger.log(`HEALTH CHECK: ERROR - ${error.message}`);
             next(error);
         }
     };
