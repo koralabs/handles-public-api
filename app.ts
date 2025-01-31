@@ -1,4 +1,5 @@
-import { LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
+import { NextBlockResponse } from '@cardano-ogmios/schema';
+import { IHandleFileContent, LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
 import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
@@ -6,6 +7,7 @@ import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { parse } from 'yaml';
 import { CREDENTIALS, NODE_ENV, ORIGIN, PORT } from './config';
+import { handleEraBoundaries } from './config/constants';
 import { IBlockProcessor } from './interfaces/ogmios.interfaces';
 import { IRegistry } from './interfaces/registry.interface';
 import { DynamicLoadType } from './interfaces/util.interface';
@@ -34,7 +36,7 @@ class App {
         if ((this.env == 'development' || this.env == 'test') && process.env.DYNAMIC_LOAD_DIR) {
             return ['./', ...process.env.DYNAMIC_LOAD_DIR.split(';')];
         }
-        return ['./']; 
+        return ['./'];
     }
 
     public async listen() {
@@ -67,8 +69,8 @@ class App {
     private async initializeDynamicHandlers() {
         this.initializeSwagger();
         const dirs = this._getDynamicLoadDirectories();
-        
-        for(let i=0;i<dirs.length;i++) {
+
+        for (let i = 0; i < dirs.length; i++) {
             const dir = dirs[i];
             const middlewares = await dynamicallyLoad(path.resolve(`${dir}/middlewares`), DynamicLoadType.MIDDLEWARE);
             middlewares.forEach((middleware) => {
@@ -88,13 +90,28 @@ class App {
             });
 
             const processors = await dynamicallyLoad(path.resolve(`${dir}/block_processors`), DynamicLoadType.BLOCK_PROCESSOR);
-            
-            for(let i=0;i<processors.length;i++) {
+            for (let i = 0; i < processors.length; i++) {
                 const processor = processors[i] as IBlockProcessor;
                 this.blockProcessors.push(await processor.initialize(this.registry));
             }
         }
         this.app.set('registry', this.registry);
+    }
+
+    public async processBlock(block: NextBlockResponse) {
+        if (this.blockProcessors.length > 0) {
+            for (let i = 0; i < this.blockProcessors.length; i++) {
+                await this.blockProcessors[i].processBlock(block);
+            }
+        }
+    }
+
+    private async resetBlockProcessors() {        
+        // loop through registries and clear out storage and file
+        for (const registry of Object.keys(this.registry)) {
+            if (this.registry[registry].destroy) this.registry[registry].destroy();            
+            if (this.registry[registry].rollBackToGenesis) this.registry[registry].rollBackToGenesis();
+        }
     }
 
     private async initializeStorage() {
@@ -108,34 +125,60 @@ class App {
             return;
         }
 
-        const connectOgmiosService = async () => {
-            let ogmiosStarted = false;
-            let loadS3 = true;
-            while (!ogmiosStarted) {
-                try {
-                    const ogmiosService = new OgmiosService(this.registry.handlesRepo, loadS3, this.blockProcessors);
-                    await ogmiosService.startSync();
-                    ogmiosStarted = true;
-                } catch (error: any) {
-                    if (error.code === 1000) {
-                        loadS3 = false;
-                    }
-                    Logger.log({
-                        message: `Unable to connect Ogmios: ${error.message}`,
-                        category: LogCategory.ERROR,
-                        event: 'connectOgmiosService.failed.errorMessage'
-                    });
-                    // Logger.log({
-                    //     message: `Error: ${JSON.stringify(error)}`,
-                    //     category: LogCategory.INFO,
-                    //     event: 'connectOgmiosService.failed.error'
-                    // });
-                    await delay(30 * 1000);
-                }
-            }
-        };
+        // get s3 and EFS files
+        const files = (await this.registry.handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
 
-        await connectOgmiosService();
+        const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock);
+        await ogmiosService.initialize();
+
+        // attempt ogmios resume (see if starting point exists or errors)
+        let ogmiosStarted = false;
+        while (!ogmiosStarted) {
+            try {
+                if (!files) {
+                    await this.resetBlockProcessors();
+                    const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
+                    await ogmiosService.startSync(initialStartingPoint);
+                    ogmiosStarted = true;
+                    continue;
+                } else {
+                    const [firstFile] = files;
+                    try {
+                        this.registry.handlesRepo.prepareHandlesStorage(firstFile);
+                        await ogmiosService.startSync({ slot: firstFile.slot, id: firstFile.hash });
+                        ogmiosStarted = true;
+                    } catch (error: any) {
+                        // If error, try the other file's starting point
+                        if (files.length > 1 && error.code === 1000) {
+                            this.registry.handlesRepo.destroy();
+                            const [secondFile] = files.slice(1);
+                            try {
+                                this.registry.handlesRepo.prepareHandlesStorage(secondFile);
+                                await ogmiosService.startSync({ slot: secondFile.slot, id: secondFile.hash });
+                                ogmiosStarted = true;
+                            } catch (error: any) {
+                                if (error.code === 1000) {
+                                    // this means the slot that came back from the files is bad
+                                    await this.resetBlockProcessors();
+                                    process.exit(2);
+                                }
+
+                                throw error;
+                            }
+                        }
+                    }
+                }
+            } catch (error: any) {
+                Logger.log({
+                    message: `Unable to connect Ogmios: ${error.message}`,
+                    category: LogCategory.ERROR,
+                    event: 'initializeStorage.failed.errorMessage'
+                });
+                
+                if (ogmiosService.client) ogmiosService.client.shutdown();
+            }
+            await delay(30 * 1000);
+        }
     }
 
     private async initializeSwagger() {
