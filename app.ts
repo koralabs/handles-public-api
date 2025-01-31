@@ -1,5 +1,5 @@
 import { NextBlockResponse } from '@cardano-ogmios/schema';
-import { IHandleFileContent, LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
+import { IHandleFileContent, IHandlesRepository, LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
 import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
@@ -106,11 +106,23 @@ class App {
         }
     }
 
+    private async loadBlockProcessorIndexes() {
+        if (this.blockProcessors.length > 0) {
+            for (let i = 0; i < this.blockProcessors.length; i++) {
+                await this.blockProcessors[i].loadIndexes();
+            }
+        }
+    }
+
     private async resetBlockProcessors() {        
         // loop through registries and clear out storage and file
-        for (const registry of Object.keys(this.registry)) {
-            if (this.registry[registry].destroy) this.registry[registry].destroy();            
-            if (this.registry[registry].rollBackToGenesis) this.registry[registry].rollBackToGenesis();
+        const handlesRepo = new this.registry.handlesRepo() as IHandlesRepository;
+        await handlesRepo.rollBackToGenesis();
+        
+        if (this.blockProcessors.length > 0) {
+            for (let i = 0; i < this.blockProcessors.length; i++) {
+                await this.blockProcessors[i].resetIndexes();
+            }
         }
     }
 
@@ -125,8 +137,9 @@ class App {
             return;
         }
 
+        const handlesRepo = new this.registry.handlesRepo() as IHandlesRepository;
         // get s3 and EFS files
-        const files = (await this.registry.handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
+        const files = (await handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
 
         const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock);
         await ogmiosService.initialize();
@@ -144,16 +157,18 @@ class App {
                 } else {
                     const [firstFile] = files;
                     try {
-                        this.registry.handlesRepo.prepareHandlesStorage(firstFile);
+                        handlesRepo.prepareHandlesStorage(firstFile);
+                        await this.loadBlockProcessorIndexes();
                         await ogmiosService.startSync({ slot: firstFile.slot, id: firstFile.hash });
                         ogmiosStarted = true;
                     } catch (error: any) {
                         // If error, try the other file's starting point
                         if (files.length > 1 && error.code === 1000) {
-                            this.registry.handlesRepo.destroy();
+                            handlesRepo.destroy();
                             const [secondFile] = files.slice(1);
                             try {
-                                this.registry.handlesRepo.prepareHandlesStorage(secondFile);
+                                handlesRepo.prepareHandlesStorage(secondFile);
+                                await this.loadBlockProcessorIndexes();
                                 await ogmiosService.startSync({ slot: secondFile.slot, id: secondFile.hash });
                                 ogmiosStarted = true;
                             } catch (error: any) {
