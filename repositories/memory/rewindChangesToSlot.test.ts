@@ -1,7 +1,8 @@
 import { Logger } from '@koralabs/kora-labs-common';
-import { HandleStore } from '.';
-import { handlesFixture, slotHistoryFixture } from '../tests/fixtures/handles';
-
+import { MemoryHandlesRepository } from './handles.repository';
+import { HandleStore } from './handleStore';
+import { handlesFixture, slotHistoryFixture } from './tests/fixtures/handles';
+const repo = new MemoryHandlesRepository();
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
@@ -22,7 +23,7 @@ describe('rewindChangesToSlot', () => {
                 handle_type,
                 last_update_address
             } = handle;
-            await HandleStore.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
+            await repo.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
         }
 
         // set the slotHistoryIndex
@@ -37,7 +38,7 @@ describe('rewindChangesToSlot', () => {
     afterEach(() => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            HandleStore.remove(handle.name);
+            repo.Internal.remove(handle.name);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -47,19 +48,19 @@ describe('rewindChangesToSlot', () => {
 
     it('Should rewind to the slot 0 and remove all handle', async () => {
         jest.spyOn(Logger, 'log');
-        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
+        const setMetricsSpy = jest.spyOn(repo, 'setMetrics').mockImplementation();
 
         // We should have 3 handles before the rollback
-        expect(HandleStore.getHandles()).toHaveLength(3);
+        expect(repo.getHandles()).toHaveLength(3);
 
         const slot = 0;
         const hash = 'hash0';
         const lastSlot = 10;
 
-        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+        await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(HandleStore.getHandles().length).toEqual(0);
+        expect(repo.getHandles().length).toEqual(0);
         expect(Object.entries(HandleStore.slotHistoryIndex)).toEqual([]);
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -68,13 +69,13 @@ describe('rewindChangesToSlot', () => {
         const slot = 2;
         const hash = 'hash2';
         const lastSlot = 10;
-        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
+        const setMetricsSpy = jest.spyOn(repo, 'setMetrics').mockImplementation();
 
-        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+        await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(HandleStore.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
-        expect(HandleStore.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
+        expect(repo.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
+        expect(repo.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -83,13 +84,13 @@ describe('rewindChangesToSlot', () => {
         const slot = 4;
         const hash = 'hash4';
         const lastSlot = 10;
-        jest.spyOn(HandleStore, 'setMetrics').mockImplementation();
+        jest.spyOn(repo, 'setMetrics').mockImplementation();
 
-        await HandleStore.burnHandle('taco', 5);
+        await repo.burnHandle('taco', 5);
 
-        await HandleStore.rewindChangesToSlot({ slot, hash, lastSlot });
+        await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // should pull back the entire handle
-        expect(HandleStore.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
+        expect(repo.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
     });
 });

@@ -1,12 +1,10 @@
 import * as ogmiosClient from '@cardano-ogmios/client';
-import { HandleStore } from '../../repositories/memory/HandleStore';
+import { IHandlesRepository } from '@koralabs/kora-labs-common';
+import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
 import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
-import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
-import { IHandlesRepository } from '@koralabs/kora-labs-common';
 
 jest.mock('@cardano-ogmios/client');
-jest.mock('../../repositories/memory/HandleStore');
 const handlesRepo = MemoryHandlesRepository as unknown as IHandlesRepository
 const ogmios = new OgmiosService(handlesRepo);
 //(someInstance as unknown) as { privateMethod: SomeClass['privateMethod'] }
@@ -26,9 +24,7 @@ describe('OgmiosService Tests', () => {
                 }
             });
             const createInteractionContextSpy = jest.spyOn(ogmiosClient, 'createInteractionContext');
-            jest.spyOn(HandleStore, 'getFile');
-            jest.spyOn(HandleStore, 'getFileOnline');
-            jest.spyOn(HandleStore, 'getMetrics').mockReturnValue({
+            jest.spyOn(MemoryHandlesRepository.prototype, 'getMetrics').mockReturnValue({
                 percentage_complete: '0',
                 current_memory_used: 0,
                 memory_size: 0,
@@ -51,14 +47,14 @@ describe('OgmiosService Tests', () => {
 
     describe('getStartingPoint', () => {
         it('Should use starting point from constants if both no data is found from files', async () => {
-            jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue(null);
+            jest.spyOn(MemoryHandlesRepository.prototype, 'prepareHandlesStorage').mockResolvedValue(null);
             const ogmiosService = new OgmiosService(handlesRepo);
             const startingPoint = await ogmiosService.getStartingPoint();
             expect(startingPoint).toEqual(handleEraBoundaries['preview']);
         });
 
         it('Should use starting point from prepareHandlesStorage', async () => {
-            jest.spyOn(HandleStore, 'prepareHandlesStorage').mockResolvedValue({
+            jest.spyOn(MemoryHandlesRepository.prototype, 'prepareHandlesStorage').mockResolvedValue({
                 slot: 2,
                 hash: 'b'
             });

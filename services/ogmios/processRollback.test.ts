@@ -1,15 +1,12 @@
-import OgmiosService from './ogmios.service';
-import { HandleStore } from '../../repositories/memory/HandleStore';
-import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
 import { IHandlesRepository } from '@koralabs/kora-labs-common';
-
-jest.mock('../../repositories/memory/HandleStore');
+import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
+import OgmiosService from './ogmios.service';
 
 const ogmios = new OgmiosService(MemoryHandlesRepository as unknown as IHandlesRepository);
 
 describe('processRollback', () => {
     it('should apply previous changes to handle', () => {
-        const rewindSpy = jest.spyOn(HandleStore, 'rewindChangesToSlot');
+        const rewindSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'rewindChangesToSlot');
         const rollbackSlot = 1234;
         const rollbackHash = '1234-hash';
         const tipSlot = 2000;
@@ -19,7 +16,7 @@ describe('processRollback', () => {
     });
 
     it('should rollback to genesis if point is origin', () => {
-        const rollbackSpy = jest.spyOn(HandleStore, 'rollBackToGenesis');
+        const rollbackSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'rollBackToGenesis');
         ogmios['processRollback']('origin', 'origin');
 
         expect(rollbackSpy).toHaveBeenCalledTimes(1);

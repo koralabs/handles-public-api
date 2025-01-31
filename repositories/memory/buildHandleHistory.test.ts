@@ -1,7 +1,8 @@
-import { HandleStore } from '.';
-import { handlesFixture } from '../tests/fixtures/handles';
+import { MemoryHandlesRepository } from './handles.repository';
+import { handlesFixture } from './tests/fixtures/handles';
 
 describe('buildHandleHistory', () => {
+    const repo = new MemoryHandlesRepository();
     it('should log the correct old and new value', () => {
         const newHandle = {
             ...handlesFixture[0],
@@ -11,7 +12,7 @@ describe('buildHandleHistory', () => {
         };
         const oldHandle = handlesFixture[0];
 
-        const history = HandleStore.buildHandleHistory(newHandle, oldHandle);
+        const history = repo.Internal.buildHandleHistory(newHandle, oldHandle);
 
         expect(history).toEqual({
             new: {
@@ -24,7 +25,7 @@ describe('buildHandleHistory', () => {
     });
 
     it('should not add history if nothing changes', () => {
-        const history = HandleStore.buildHandleHistory(handlesFixture[0], handlesFixture[0]);
+        const history = repo.Internal.buildHandleHistory(handlesFixture[0], handlesFixture[0]);
 
         expect(history).toEqual(null);
     });

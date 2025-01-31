@@ -1,6 +1,8 @@
-import { HandleStore } from '.';
 import { HandleHistory } from '@koralabs/kora-labs-common';
-import { slotHistoryFixture } from '../tests/fixtures/handles';
+import { MemoryHandlesRepository } from './handles.repository';
+import { HandleStore } from './handleStore';
+import { slotHistoryFixture } from './tests/fixtures/handles';
+const repo = new MemoryHandlesRepository();
 
 describe('saveSlotHistory', () => {
     beforeEach(() => {
@@ -22,7 +24,7 @@ describe('saveSlotHistory', () => {
         const history: HandleHistory = {
             old: null
         };
-        HandleStore.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5 });
+        repo.Internal.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
             [0, {}],
             [
@@ -68,7 +70,7 @@ describe('saveSlotHistory', () => {
         };
 
         // setting max slot to 2 which means it will be 3 (5 - 2)
-        HandleStore.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5, maxSlots: 2 });
+        repo.Internal.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5, maxSlots: 2 });
 
         // expecting 0, 1, 2 to be removed
         expect(Array.from(HandleStore.slotHistoryIndex.keys())).toEqual([3, 4, 5]);
@@ -79,7 +81,7 @@ describe('saveSlotHistory', () => {
             old: null
         };
 
-        HandleStore.saveSlotHistory({ handleHistory: history2, handleName: handleName2, slotNumber: 6, maxSlots: 2 });
+        repo.Internal.saveSlotHistory({ handleHistory: history2, handleName: handleName2, slotNumber: 6, maxSlots: 2 });
 
         expect(Array.from(HandleStore.slotHistoryIndex.keys())).toEqual([4, 5, 6]);
     });
@@ -89,7 +91,7 @@ describe('saveSlotHistory', () => {
         const history: HandleHistory = {
             old: null
         };
-        HandleStore.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 4 });
+        repo.Internal.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 4 });
         expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
             [0, {}],
             [1, expect.any(Object)],

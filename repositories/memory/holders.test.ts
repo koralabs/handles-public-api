@@ -1,13 +1,15 @@
 import { HolderAddressIndex } from '@koralabs/kora-labs-common';
-import { HandleStore } from './HandleStore';
+import { MemoryHandlesRepository } from './handles.repository';
+import { HandleStore } from './handleStore';
 import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
+const repo = new MemoryHandlesRepository();
 
 describe('holder index integrity', () => {
     it('holder index should be accurate', async () => {
         await createRandomHandles(1000, true);
         await performRandomHandleUpdates(1000, 1001);
         const testHolderIndex = new Map<string, HolderAddressIndex>();
-        const handles = HandleStore.getHandles().sort((a,b) => a.updated_slot_number - b.updated_slot_number)
+        const handles = repo.getHandles().sort((a,b) => a.updated_slot_number - b.updated_slot_number)
         for (let i = 0; i<handles.length;i++) {
             const handle = handles[i];
             const holder = testHolderIndex.get(handle.holder);

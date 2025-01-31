@@ -1,6 +1,6 @@
 import { HandleType, HolderAddressIndex, ISlotHistoryIndex, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
-import { HandleStore } from '../../HandleStore';
+import { MemoryHandlesRepository } from '../../handles.repository';
 
 export const handlesFixture: StoredHandle[] = [
     {
@@ -155,11 +155,12 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
 ]);
 
 export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
+    const repo = new MemoryHandlesRepository();
     const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
-        if (!HandleStore.get(handleName)) {
-            const handle = await HandleStore.buildHandle({
+        if (!repo.get(handleName)) {
+            const handle = await repo.Internal.buildHandle({
                 adaAddress: createRandomAddress(),
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
@@ -171,7 +172,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 lovelace: 0
             });
             if (saveToHandleStore) {
-                await HandleStore.save({ handle });
+                await repo.Internal.save({ handle });
             }
             handles.push(handle);
         }
@@ -206,12 +207,13 @@ export const createRandomHandleName = (): string => {
 };
 
 export const performRandomHandleUpdates = async (count: number, beginningSlot = 0) => {
+    const repo = new MemoryHandlesRepository();
     for (let i = 0; i < count; i++) {
         switch (i % 3) {
             case 0: { // add
                 const handleName = createRandomHandleName();
-                if (!HandleStore.get(handleName)) {
-                    const newHandle = await HandleStore.buildHandle({
+                if (!repo.get(handleName)) {
+                    const newHandle = await repo.Internal.buildHandle({
                         adaAddress: createRandomAddress(),
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
@@ -222,23 +224,23 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         utxo: createRandomUtxo(),
                         lovelace: 0
                     });
-                    await HandleStore.save({ handle: newHandle });
+                    await repo.Internal.save({ handle: newHandle });
                 }
                 break;
             }
             case 1: { // update
-                const oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)];
+                const oldHandle = repo.getHandles()[Math.floor(Math.random() * repo.getHandles().length)];
                 const handle = {
                     ...oldHandle,
                     utxo: createRandomUtxo(),
                     resolved_addresses: { ada: createRandomAddress() },
                     updated_slot_number: beginningSlot + i
                 };
-                await HandleStore.save({ handle, oldHandle });
+                await repo.Internal.save({ handle, oldHandle });
                 break;
             }
             case 2: // remove
-                await HandleStore.burnHandle(HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)].name, beginningSlot + i);
+                await repo.burnHandle(repo.getHandles()[Math.floor(Math.random() * repo.getHandles().length)].name, beginningSlot + i);
                 break;
         }
     }

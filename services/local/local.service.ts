@@ -1,6 +1,7 @@
-import { IHandle, IPersonalization, IHandleFileContent } from '@koralabs/kora-labs-common';
+import { IHandle, IHandleFileContent, IPersonalization } from '@koralabs/kora-labs-common';
 import fs from 'fs';
-import { HandleStore } from '../../repositories/memory/HandleStore';
+import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
+const repo = new MemoryHandlesRepository();
 
 interface PersonalizationUpdates extends IHandle {
     personalization: IPersonalization;
@@ -16,7 +17,7 @@ export class LocalService {
                 Object.entries(fileContents.handles).forEach(async ([k, v]) => {
                     const { hex, name, personalization, resolved_addresses: addresses } = v as PersonalizationUpdates;
                     console.log(`${name} changed! saving personalization`);
-                    await HandleStore.savePersonalizationChange({
+                    await repo.savePersonalizationChange({
                         hex,
                         name,
                         personalization,
@@ -32,7 +33,7 @@ export class LocalService {
     }
 
     async startSync() {
-        await HandleStore.prepareHandlesStorage();
+        await repo.prepareHandlesStorage();
         fs.watch(this.filePath, this.rollForward);
     }
 }

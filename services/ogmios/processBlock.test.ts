@@ -1,11 +1,8 @@
 import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 import { AssetNameLabel, HandleType, IHandlesRepository, Logger, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
-import MemoryHandlesRepository from '../../repositories/memory/handles.repository';
-import { HandleStore } from '../../repositories/memory/HandleStore';
+import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
 import * as ipfs from '../../utils/ipfs';
 import OgmiosService from './ogmios.service';
-
-jest.mock('../../repositories/memory/HandleStore');
 
 const ogmios = new OgmiosService(MemoryHandlesRepository as unknown as IHandlesRepository);
 
@@ -176,9 +173,9 @@ describe('processBlock Tests', () => {
     };
 
     it('Should save a new handle to the datastore and set metrics', async () => {
-        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
-        const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const saveSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
+        const setMetricsSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'setMetrics');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({ policyId, txBlock: txBlock({}), tip });
 
@@ -211,9 +208,9 @@ describe('processBlock Tests', () => {
 
     it('Should save datum', async () => {
         const datum = 'a2some_datum';
-        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
+        const saveSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
 
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ datum }), tip });
 
@@ -238,9 +235,9 @@ describe('processBlock Tests', () => {
 
     it('Should save script', async () => {
         const script: Script = { language: 'plutus:v2', cbor: 'a2some_cbor' };
-        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
+        const saveSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
 
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ script }), tip });
 
@@ -269,10 +266,10 @@ describe('processBlock Tests', () => {
 
     it('Should update a handle when it is not a mint', async () => {
         const newAddress = 'addr456';
-        const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
-        jest.spyOn(HandleStore, 'setMetrics');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
-        jest.spyOn(HandleStore, 'get').mockReturnValue(expectedItem);
+        const saveHandleUpdateSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveHandleUpdate');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'setMetrics');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(MemoryHandlesRepository.prototype, 'get').mockReturnValue(expectedItem);
 
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ address: newAddress, isMint: false }), tip });
 
@@ -293,8 +290,8 @@ describe('processBlock Tests', () => {
     });
 
     it('Should not save anything if policyId does not match', async () => {
-        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
-        const saveAddressSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
+        const saveSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
+        const saveAddressSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveHandleUpdate');
 
         await ogmios['processBlock']({ policyId, txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
 
@@ -305,8 +302,8 @@ describe('processBlock Tests', () => {
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
-        const saveSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const saveSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
             policyId,
@@ -336,8 +333,8 @@ describe('processBlock Tests', () => {
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
-        const saveHandleUpdateSpy = jest.spyOn(HandleStore, 'saveHandleUpdate');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const saveHandleUpdateSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveHandleUpdate');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
             policyId,
@@ -365,8 +362,8 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const savePersonalizationChangeSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'savePersonalizationChange');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         const cbor =
@@ -443,8 +440,8 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_001}${Buffer.from(handleName).toString('hex')}`;
 
-        const saveSubHandleSettingsChangeSpy = jest.spyOn(HandleStore, 'saveSubHandleSettingsChange');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const saveSubHandleSettingsChangeSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveSubHandleSettingsChange');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         const cbor = '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff';
@@ -471,8 +468,8 @@ describe('processBlock Tests', () => {
         const handleName = `sub@hndl`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
 
-        const saveMintedHandleSpy = jest.spyOn(HandleStore, 'saveMintedHandle');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const saveMintedHandleSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'saveMintedHandle');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
             policyId,
@@ -507,8 +504,8 @@ describe('processBlock Tests', () => {
         const handleName = `virtual@hndl`;
         const handleHexName = `${AssetNameLabel.LBL_000}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const savePersonalizationChangeSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'savePersonalizationChange');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
         const cbor =
@@ -584,8 +581,8 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const savePersonalizationChangeSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'savePersonalizationChange');
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
         const loggerSpy = jest.spyOn(Logger, 'log').mockImplementation();
 
@@ -610,9 +607,9 @@ describe('processBlock Tests', () => {
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
-        const savePersonalizationChangeSpy = jest.spyOn(HandleStore, 'savePersonalizationChange');
+        const savePersonalizationChangeSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'savePersonalizationChange');
         const loggerSpy = jest.spyOn(Logger, 'log');
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
             policyId,
@@ -632,8 +629,8 @@ describe('processBlock Tests', () => {
         const slot = 1234;
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
-        const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+        const burnHandleSpy = jest.spyOn(MemoryHandlesRepository.prototype, 'burnHandle').mockImplementation();
+        jest.spyOn(MemoryHandlesRepository.prototype, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
             policyId,

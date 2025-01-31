@@ -1,9 +1,11 @@
 import * as klc from '@koralabs/kora-labs-common';
 import { delay, HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
 import { unlinkSync, writeFileSync } from 'fs';
-import { HandleStore } from '.';
-import * as config from '../../../config';
-import { handlesFixture } from '../tests/fixtures/handles';
+import * as config from '../../config';
+import { HandleStore } from './handleStore';
+import { MemoryHandlesRepository } from './handles.repository';
+import { handlesFixture } from './tests/fixtures/handles';
+const repo = new MemoryHandlesRepository();
 
 //const klc = {getAddressHolderDetails, bech32FromHex};
 jest.mock('@koralabs/kora-labs-common', () => ({
@@ -41,7 +43,7 @@ describe('HandleStore tests', () => {
         address: ''
     };
     beforeEach(async () => {
-        HandleStore.setMetrics({ currentSlot: 1, lastSlot: 2 });
+        repo.setMetrics({ currentSlot: 1, lastSlot: 2 });
         jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
         // populate storage
         for (const key in handlesFixture) {
@@ -60,7 +62,7 @@ describe('HandleStore tests', () => {
                 handle_type,
                 last_update_address
             } = handle;
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 adaAddress,
                 hex,
                 image,
@@ -79,9 +81,9 @@ describe('HandleStore tests', () => {
     });
 
     afterEach(async () => {
-        const handles = HandleStore.getHandles().filter(Boolean);
+        const handles = repo.getHandles().filter(Boolean);
         for (const handle of handles) {
-            await HandleStore.remove(handle.name);
+            await repo.Internal.remove(handle.name);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -99,121 +101,26 @@ describe('HandleStore tests', () => {
         unlinkSync(filePath);
     });
 
-    describe('saveHandlesFile tests', () => {
-        it('should save the file', async () => {
-            const saveFileContentsSpy = jest.spyOn(HandleStore, 'saveFileContents').mockImplementation();
-            await HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
-            expect(saveFileContentsSpy).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    content: expect.objectContaining({
-                        handles: expect.objectContaining({
-                            barbacoa: expect.objectContaining({
-                                bg_image: '',
-                                characters: 'letters',
-                                created_slot_number: expect.any(Number),
-                                datum: 'some_datum_0',
-                                default_in_wallet: '',
-                                has_datum: true,
-                                hex: 'barbacoa-hex',
-                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
-                                length: 8,
-                                name: 'barbacoa',
-                                image: '',
-                                numeric_modifiers: '',
-                                og_number: 0,
-                                standard_image: '',
-                                pfp_image: '',
-                                rarity: 'basic',
-                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
-                                updated_slot_number: expect.any(Number),
-                                utxo: 'utxo1#0'
-                            }),
-                            burrito: expect.objectContaining({
-                                bg_image: '',
-                                characters: 'letters',
-                                created_slot_number: expect.any(Number),
-                                datum: 'some_datum_1',
-                                default_in_wallet: '',
-                                has_datum: true,
-                                hex: 'burrito-hex',
-                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
-                                length: 7,
-                                name: 'burrito',
-                                image: '',
-                                numeric_modifiers: '',
-                                og_number: 0,
-                                standard_image: '',
-                                pfp_image: '',
-                                rarity: 'common',
-                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
-                                updated_slot_number: expect.any(Number),
-                                utxo: 'utxo2#0'
-                            }),
-                            taco: expect.objectContaining({
-                                bg_image: '',
-                                characters: 'letters',
-                                created_slot_number: expect.any(Number),
-                                datum: 'some_datum_2',
-                                default_in_wallet: '',
-                                has_datum: true,
-                                hex: 'taco-hex',
-                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
-                                length: 4,
-                                name: 'taco',
-                                image: '',
-                                numeric_modifiers: '',
-                                og_number: 0,
-                                standard_image: '',
-                                pfp_image: '',
-                                rarity: 'common',
-                                resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
-                                updated_slot_number: expect.any(Number),
-                                utxo: 'utxo3#0'
-                            })
-                        }),
-                        history: [
-                            [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
-                            [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
-                            [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }]
-                        ]
-                    }),
-                    hash: 'some-hash',
-                    slot: 123,
-                    storagePath: 'storage/handles-test.json',
-                    testDelay: true
-                })
-            );
-        });
-
-        it.skip('should not allow saving if file is locked', async () => {
-            HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
-            await delay(100);
-            const saved = await HandleStore.saveHandlesFile(345, 'some-hash', filePath);
-            await delay(1000);
-            expect(saved).toEqual(false);
-        });
-    });
-
     describe.skip('getFile tests', () => {
         it('should not allow reading if file is locked', async () => {
-            await HandleStore.saveHandlesFile(123, 'some-hash', filePath);
-            const file = await HandleStore.getFile(filePath);
+            await repo.Internal.saveHandlesFile(123, 'some-hash', filePath);
+            const file = await repo.Internal.getFile(filePath);
             expect(file).toEqual({
                 slot: 123,
                 hash: 'some-hash',
                 schemaVersion: 1,
                 handles: expect.any(Object)
             });
-            HandleStore.saveHandlesFile(123, 'some-hash', filePath, true);
+            repo.Internal.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
-            const locked = await HandleStore.getFile(filePath);
+            const locked = await repo.Internal.getFile(filePath);
             expect(locked).toEqual(null);
         });
     });
 
     describe('get', () => {
         it('should return a handle', () => {
-            const handle = HandleStore.get('barbacoa');
+            const handle = repo.get('barbacoa');
             expect(handle).toEqual({
                 bg_image: '',
                 characters: 'letters',
@@ -250,7 +157,7 @@ describe('HandleStore tests', () => {
 
     describe('getByHex', () => {
         it('should return a handle', () => {
-            const handle = HandleStore.getByHex('barbacoa-hex');
+            const handle = repo.getByHex('barbacoa-hex');
             expect(handle?.name).toEqual('barbacoa');
         });
     });
@@ -260,7 +167,7 @@ describe('HandleStore tests', () => {
 
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -275,7 +182,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const handle = HandleStore.get('nachos');
+            const handle = repo.get('nachos');
 
             // expect to get the correct handle properties
             expect(handle).toEqual({
@@ -351,7 +258,7 @@ describe('HandleStore tests', () => {
                 id_hash: '0x0fed83b6268892be468965a7fa0705ff22014c4b78a6ba82b4d65fe395d6d5ee9f'
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 slotNumber: 99,
@@ -373,7 +280,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -387,7 +294,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const handle = HandleStore.get('chimichanga');
+            const handle = repo.get('chimichanga');
 
             // expect the personalization data to be added to the handle
             expect(handle?.personalization).toEqual(personalizationData);
@@ -443,7 +350,7 @@ describe('HandleStore tests', () => {
         it('Should property update the amount property when another mint happens', async () => {
             const sushiHandle = 'sushi';
             const sushiHex = 'sushi-hex';
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -458,7 +365,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr1234',
@@ -473,7 +380,7 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const handle = HandleStore.get(sushiHandle);
+            const handle = repo.get(sushiHandle);
             expect(handle?.amount).toEqual(2);
         });
 
@@ -482,7 +389,7 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             const subHandleName = 'sub@hndl';
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: '000de14073756240686e646c',
                 name: subHandleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -501,12 +408,12 @@ describe('HandleStore tests', () => {
                 sub_numeric_modifiers: 'numbers'
             });
 
-            const handle = HandleStore.get(subHandleName);
+            const handle = repo.get(subHandleName);
             expect(handle?.name).toEqual(subHandleName);
             expect(handle?.handle_type).toEqual(HandleType.NFT_SUBHANDLE);
 
             // expect subHandle to get added to the subHandlesIndex
-            const subHandles = HandleStore.getRootHandleSubHandles('hndl');
+            const subHandles = repo.Internal.getRootHandleSubHandles('hndl');
             expect([...subHandles]).toEqual([subHandleName]);
         });
 
@@ -519,7 +426,7 @@ describe('HandleStore tests', () => {
                 public_mint: true
             };
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: '000000007669727475616c40686e646c',
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -540,20 +447,20 @@ describe('HandleStore tests', () => {
                 original_address: '0x123'
             });
 
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
             expect(handle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
             expect(handle?.virtual).toEqual(virtual);
             expect(handle?.original_address).toEqual('0x123');
 
             // expect subHandle to get added to the subHandlesIndex
-            const subHandles = HandleStore.getRootHandleSubHandles('hndl');
+            const subHandles = repo.Internal.getRootHandleSubHandles('hndl');
             expect([...subHandles]).toEqual([handleName]);
         });
     });
 
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -606,7 +513,7 @@ describe('HandleStore tests', () => {
                 last_edited_time: 123
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
@@ -628,7 +535,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const handle = HandleStore.get('nacho-cheese');
+            const handle = repo.get('nacho-cheese');
             expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.pfp_image).toEqual('todo');
             expect(handle?.bg_image).toEqual('todo');
@@ -701,7 +608,6 @@ describe('HandleStore tests', () => {
         });
 
         it('Should update personalization data before 222 data', async () => {
-            const saveSpy = jest.spyOn(HandleStore, 'save');
             const personalizationUpdates: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xtodo',
@@ -738,7 +644,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'sour-cream-hex',
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
@@ -760,55 +666,46 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            expect(saveSpy).toHaveBeenCalledWith({
-                handle: {
-                    bg_image: '',
-                    characters: 'letters,special',
-                    created_slot_number: 200,
-                    datum: undefined,
-                    default_in_wallet: '',
-                    last_update_address: '',
-                    has_datum: false,
-                    hex: 'sour-cream-hex',
-                    holder: '',
-                    length: 10,
-                    name: 'sour-cream',
-                    image: 'ipfs://123',
-                    image_hash: '0x123',
-                    numeric_modifiers: '',
-                    og_number: 0,
-                    standard_image: 'ipfs://123',
-                    svg_version: '1.0.0',
-                    standard_image_hash: '0x123',
-                    personalization: personalizationUpdates,
-                    reference_token: defaultReferenceToken,
-                    script: undefined,
-                    pfp_image: '',
-                    rarity: 'basic',
-                    resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                    updated_slot_number: 200,
-                    utxo: '',
-                    lovelace: 0,
-                    amount: 1,
-                    holder_type: '',
-                    version: 0,
-                    handle_type: HandleType.HANDLE,
-                    payment_key_hash: null,
-                    sub_characters: undefined,
-                    sub_length: undefined,
-                    sub_numeric_modifiers: undefined,
-                    sub_rarity: undefined,
-                    virtual: undefined,
-                    original_address: undefined,
-                    pz_enabled: false
-                }
+            expect(HandleStore.handles.get('sour-cream')).toEqual({
+                bg_image: '',
+                characters: 'letters,special',
+                created_slot_number: 200,
+                default_in_wallet: '',
+                last_update_address: '',
+                has_datum: false,
+                hex: 'sour-cream-hex',
+                holder: '',
+                length: 10,
+                name: 'sour-cream',
+                image: 'ipfs://123',
+                image_hash: '0x123',
+                numeric_modifiers: '',
+                og_number: 0,
+                standard_image: 'ipfs://123',
+                svg_version: '1.0.0',
+                standard_image_hash: '0x123',
+                personalization: personalizationUpdates,
+                reference_token: defaultReferenceToken,
+                pfp_image: '',
+                rarity: 'basic',
+                resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
+                updated_slot_number: 200,
+                utxo: '',
+                lovelace: 0,
+                amount: 1,
+                holder_type: 'other',
+                version: 0,
+                handle_type: HandleType.HANDLE,
+                payment_key_hash: null,
+                pz_enabled: false,
+                drep: undefined
             });
         });
 
         it('Should update personalization data and save the default handle', async () => {
             const handleName = 'tortilla-soup';
             const handleHex = `${handleName}-hex`;
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -852,7 +749,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -875,10 +772,10 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
 
             // Expect the personalization data to be set
-            // Expect the default_in_wallet to be set (this uses the getter in the HandleStore.get)
+            // Expect the default_in_wallet to be set (this uses the getter in the repo.get)
             expect(handle?.default_in_wallet).toEqual(handleName);
             expect(handle?.personalization).toEqual(personalizationUpdates);
 
@@ -899,7 +796,7 @@ describe('HandleStore tests', () => {
         it('Should save default handle and history correctly when saving multiple times', async () => {
             const handleName = 'pork-belly';
             const handleHex = `${handleName}-hex`;
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -951,7 +848,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -974,7 +871,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
             expect(handle?.personalization).toEqual(personalizationUpdates);
             expect(handle?.default_in_wallet).toEqual(handleName);
 
@@ -1008,7 +905,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: newPersonalizationUpdates,
@@ -1031,7 +928,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const updatedHandle = HandleStore.get(handleName);
+            const updatedHandle = repo.get(handleName);
             expect(updatedHandle?.personalization).toEqual(newPersonalizationUpdates);
 
             // Default in wallet should not change because it was not updated or removed.
@@ -1066,7 +963,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdatesWithDefaultWalletChange,
@@ -1089,7 +986,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const finalHandle = HandleStore.get(handleName);
+            const finalHandle = repo.get(handleName);
             expect(finalHandle?.personalization).toEqual(personalizationUpdatesWithDefaultWalletChange);
 
             // Default should be changed because we removed it.
@@ -1225,7 +1122,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate,
@@ -1248,7 +1145,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const tacoHandle = HandleStore.get('taco');
+            const tacoHandle = repo.get('taco');
             expect(tacoHandle?.default_in_wallet).toEqual('taco');
             const burritoPzUpdate: IPersonalization = {
                 designer: {
@@ -1279,7 +1176,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'burrito-hex',
                 name: 'burrito',
                 personalization: burritoPzUpdate,
@@ -1302,7 +1199,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const burritoHandle = HandleStore.get('burrito');
+            const burritoHandle = repo.get('burrito');
             expect(burritoHandle?.default_in_wallet).toEqual('taco');
             const barbacoaPzUpdate: IPersonalization = {
                 designer: {
@@ -1333,7 +1230,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'barbacoa-hex',
                 name: 'barbacoa',
                 personalization: barbacoaPzUpdate,
@@ -1356,7 +1253,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const barbacoaHandle = HandleStore.get('barbacoa');
+            const barbacoaHandle = repo.get('barbacoa');
             expect(barbacoaHandle?.default_in_wallet).toEqual('barbacoa');
             const tacoPzUpdate2: IPersonalization = {
                 designer: {
@@ -1387,7 +1284,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate2,
@@ -1410,14 +1307,14 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const tacoHandle2 = HandleStore.get('taco');
+            const tacoHandle2 = repo.get('taco');
             expect(tacoHandle2?.default_in_wallet).toEqual('barbacoa');
         });
 
         it('should save details for nft handle', async () => {
             const handleName = 'nft@hndl';
             const handleHex = `${handleName}-hex`;
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -1464,7 +1361,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -1487,7 +1384,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            const nftSubHandle = HandleStore.get(handleName);
+            const nftSubHandle = repo.get(handleName);
             expect(nftSubHandle?.personalization).toEqual(personalizationUpdates);
             expect(nftSubHandle?.handle_type).toEqual(HandleType.NFT_SUBHANDLE);
         });
@@ -1552,7 +1449,7 @@ describe('HandleStore tests', () => {
                 migrate_sig_required: false
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -1562,7 +1459,7 @@ describe('HandleStore tests', () => {
                 metadata
             });
 
-            const virtualSubHandle = HandleStore.get(handleName);
+            const virtualSubHandle = repo.get(handleName);
             expect(virtualSubHandle?.personalization).toEqual(personalizationUpdates);
 
             // expect virtual sub handle utxo to be the utxo of the reference token
@@ -1589,7 +1486,7 @@ describe('HandleStore tests', () => {
                 index: 1
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -1599,7 +1496,7 @@ describe('HandleStore tests', () => {
                 metadata
             });
 
-            const updatedVirtualSubHandle = HandleStore.get(handleName);
+            const updatedVirtualSubHandle = repo.get(handleName);
             expect(updatedVirtualSubHandle?.virtual).toEqual({ expires_time: 2, public_mint: false });
             expect(updatedVirtualSubHandle?.utxo).toEqual(`${newReferenceToken.tx_id}#${newReferenceToken.index}`);
         });
@@ -1607,7 +1504,7 @@ describe('HandleStore tests', () => {
 
     describe('saveSubHandleSettingsChange tests', () => {
         it('Should update SubHandle settings', async () => {
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: 'shrimp-taco-hex',
                 name: 'shrimp-taco',
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -1624,14 +1521,14 @@ describe('HandleStore tests', () => {
             const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
 
-            await HandleStore.saveSubHandleSettingsChange({
+            await repo.saveSubHandleSettingsChange({
                 name: 'shrimp-taco',
                 utxoDetails,
                 settingsDatum: settings,
                 slotNumber: 200
             });
 
-            const handle = HandleStore.get('shrimp-taco');
+            const handle = repo.get('shrimp-taco');
             expect(handle?.subhandle_settings).toEqual({
                 utxo: utxoDetails,
                 settings
@@ -1665,7 +1562,7 @@ describe('HandleStore tests', () => {
         it('Should update settings and history correctly when saving multiple times', async () => {
             const handleName = 'halibut-taco';
             const handleHex = `${handleName}-hex`;
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
@@ -1683,14 +1580,14 @@ describe('HandleStore tests', () => {
             const settings = 'abc';
 
             // First settings change
-            await HandleStore.saveSubHandleSettingsChange({
+            await repo.saveSubHandleSettingsChange({
                 name: handleName,
                 utxoDetails,
                 settingsDatum: settings,
                 slotNumber: 200
             });
 
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
             expect(handle?.subhandle_settings).toEqual({
                 utxo: { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
                 settings
@@ -1698,7 +1595,7 @@ describe('HandleStore tests', () => {
 
             const newSettings = 'def';
 
-            await HandleStore.saveSubHandleSettingsChange({
+            await repo.saveSubHandleSettingsChange({
                 name: handleName,
                 utxoDetails,
                 settingsDatum: newSettings,
@@ -1707,7 +1604,7 @@ describe('HandleStore tests', () => {
 
             const finalSettings = 'ghi';
 
-            await HandleStore.saveSubHandleSettingsChange({
+            await repo.saveSubHandleSettingsChange({
                 name: handleName,
                 utxoDetails,
                 settingsDatum: finalSettings,
@@ -1803,7 +1700,7 @@ describe('HandleStore tests', () => {
                 });
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: handleHex,
                 name: handleName,
                 adaAddress: address,
@@ -1818,14 +1715,14 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE
             });
 
-            const existingHandle = HandleStore.get(handleName);
+            const existingHandle = repo.get(handleName);
             expect(existingHandle?.resolved_addresses.ada).toEqual(address);
             expect(existingHandle?.holder).toEqual(stakeKey);
 
             const holderAddress = HandleStore.holderAddressIndex.get(stakeKey);
             expect(holderAddress?.handles?.has(handleName)).toBeTruthy();
 
-            await HandleStore.saveHandleUpdate({
+            await repo.saveHandleUpdate({
                 name: handleName,
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
@@ -1833,7 +1730,7 @@ describe('HandleStore tests', () => {
                 datum: undefined
             });
 
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
             expect(handle).toEqual({
                 amount: 1,
                 holder: updatedStakeKey,
@@ -1911,7 +1808,7 @@ describe('HandleStore tests', () => {
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const newAddress = 'addr123_new';
-            await HandleStore.saveHandleUpdate({
+            await repo.saveHandleUpdate({
                 name: 'not-a-handle',
                 adaAddress: newAddress,
                 slotNumber: 1234,
@@ -1928,10 +1825,10 @@ describe('HandleStore tests', () => {
     describe('burnHandle tests', () => {
         it('Should burn a handle, update history and update the default handle', async () => {
             const handleName = 'taco';
-            await HandleStore.burnHandle(handleName, 200);
+            await repo.burnHandle(handleName, 200);
 
             // After burn, expect not to find the handle
-            const handle = HandleStore.get(handleName);
+            const handle = repo.get(handleName);
             expect(handle).toEqual(null);
 
             // Once a handle is burned, expect it to be removed from the holderAddressIndex and a NEW defaultHandle set
