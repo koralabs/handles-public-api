@@ -7,7 +7,7 @@ import {
     HandleSearchModel,
     HolderAddressDetails,
     HolderPaginationModel,
-    IHandlesRepository,
+    IHandlesProvider,
     IHandleStats,
     IHandleStoreMetrics,
     IUTxO,
@@ -18,8 +18,8 @@ import {
 } from '@koralabs/kora-labs-common';
 import * as crypto from 'crypto';
 
-export class RedisRepository implements IHandlesRepository{
-    initialize: () => IHandlesRepository;
+export class RedisRepository implements IHandlesProvider{
+    initialize: () => IHandlesProvider;
     getAll: (params: { pagination: HandlePaginationModel; search: HandleSearchModel; }) => Promise<{ searchTotal: number; handles: StoredHandle[]; }>;
     getHandlesByPaymentKeyHashes: (hashes: string[]) => string[];
     getHandlesByAddresses: (addresses: string[]) => string[];

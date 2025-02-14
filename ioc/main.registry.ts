@@ -1,6 +1,6 @@
 import { IRegistry } from '../interfaces/registry.interface';
+import { MemoryHandlesRepository } from '../repositories/memory';
 import MemoryApiKeysRepository from '../repositories/memory/apiKeys.repository';
-import { MemoryHandlesRepository } from '../repositories/memory/handles.repository';
 
 const registry: IRegistry = {
     ['handlesRepo']: MemoryHandlesRepository,

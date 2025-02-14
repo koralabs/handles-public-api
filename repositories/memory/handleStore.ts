@@ -1,9 +1,9 @@
-import { HolderAddressIndex, ISlotHistoryIndex, StoredHandle } from '@koralabs/kora-labs-common';
+import { Holder, ISlotHistory, StoredHandle } from '@koralabs/kora-labs-common';
 
 export class HandleStore {
     public static handles = new Map<string, StoredHandle>();
-    public static slotHistoryIndex = new Map<number, ISlotHistoryIndex>();
-    public static holderAddressIndex = new Map<string, HolderAddressIndex>();
+    public static slotHistoryIndex = new Map<number, ISlotHistory>();
+    public static holderAddressIndex = new Map<string, Holder>();
     public static subHandlesIndex = new Map<string, Set<string>>();
     public static rarityIndex = new Map<string, Set<string>>();
     public static ogIndex = new Map<string, Set<string>>();

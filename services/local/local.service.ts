@@ -1,6 +1,6 @@
 import { IHandle, IHandleFileContent, IPersonalization } from '@koralabs/kora-labs-common';
 import fs from 'fs';
-import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
+import { MemoryHandlesRepository } from '../../repositories/memory';
 const repo = new MemoryHandlesRepository();
 
 interface PersonalizationUpdates extends IHandle {

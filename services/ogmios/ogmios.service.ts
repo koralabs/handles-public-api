@@ -5,7 +5,7 @@ import {
     AssetNameLabel, checkNameLabel,
     HANDLE_POLICIES,
     HandleType, IHandleMetadata,
-    IHandlesRepository,
+    IHandlesProvider,
     IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
     LogCategory, Logger,
     Network
@@ -15,6 +15,7 @@ import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
 import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
+import { HandlesRepository } from '../../repositories/handlesRepository';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { } from '../../utils/util';
 import { handleEraBoundaries } from './constants';
@@ -29,11 +30,11 @@ class OgmiosService {
     private startTime: number;
     private firstMemoryUsage: number;
     private loadS3 = true;
-    private handlesRepo: IHandlesRepository;
+    private handlesProvider: HandlesRepository;
     private blockProcessors: IBlockProcessor[];
 
-    constructor(handlesRepo: IHandlesRepository, loadS3 = true, blockProcessors: IBlockProcessor[] = []) {
-        this.handlesRepo = new (handlesRepo as any)();
+    constructor(handlesProvider: IHandlesProvider, loadS3 = true, blockProcessors: IBlockProcessor[] = []) {
+        this.handlesProvider = new HandlesRepository(handlesProvider);
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.loadS3 = loadS3;
@@ -42,7 +43,7 @@ class OgmiosService {
 
     public async getStartingPoint(): Promise<Point> {
         const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
-        const handlesContent = await this.handlesRepo.prepareHandlesStorage(this.loadS3);
+        const handlesContent = await this.handlesProvider.prepareHandlesStorage(this.loadS3);
 
         if (!handlesContent) {
             Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
@@ -54,7 +55,7 @@ class OgmiosService {
     }
 
     public async startSync() {
-        this.handlesRepo.setMetrics({
+        this.handlesProvider.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
@@ -66,7 +67,7 @@ class OgmiosService {
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
             () => {
-                this.handlesRepo.destroy();
+                this.handlesProvider.destroy();
                 this.intervals.map((i) => clearInterval(i));
                 Logger.log({
                     message: 'Connection closed.',
@@ -94,9 +95,9 @@ class OgmiosService {
 
         try {
             await client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-            this.handlesRepo.initialize();
+            this.handlesProvider.initialize();
         } catch (err: any) {
-            this.handlesRepo.destroy();
+            this.handlesProvider.destroy();
             if (err.code === 1000) {
                 // this means the slot that came back from the files is bad
                 if (this.loadS3) {
@@ -106,7 +107,7 @@ class OgmiosService {
                     return
                 }
             }
-            await this.handlesRepo.rollBackToGenesis();
+            await this.handlesProvider.rollBackToGenesis();
             await client.shutdown();
             throw err;
         }
@@ -120,7 +121,7 @@ class OgmiosService {
         const currentBlockHash = txBlock.id ?? '0';
         const tipBlockHash = tip?.id ?? '1';
 
-        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
+        this.handlesProvider.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
 
         for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
             const txBody = txBlock?.transactions?.[b];
@@ -134,7 +135,7 @@ class OgmiosService {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity === BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
-                            await this.handlesRepo.burnHandle(name, currentSlot);
+                            await this.handlesProvider.removeHandle(name, currentSlot);
                         }
                     }
                 }
@@ -214,15 +215,15 @@ class OgmiosService {
 
         // finish timer for our logs
         const buildingExecFinished = Date.now() - startBuildingExec;
-        const { elapsedBuildingExec } = this.handlesRepo.getTimeMetrics();
-        this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec + buildingExecFinished });
+        const { elapsedBuildingExec } = this.handlesProvider.getMetrics();
+        this.handlesProvider.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
     };
 
     private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
-            await this.handlesRepo.rollBackToGenesis();
+            await this.handlesProvider.rollBackToGenesis();
         } else {
             const { slot, id } = point;
             let lastSlot = 0;
@@ -231,7 +232,7 @@ class OgmiosService {
             }
 
             // The idea here is we need to rollback all changes from a given slot
-            await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            await this.handlesProvider.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
 
@@ -421,7 +422,7 @@ class OgmiosService {
             });
         }
 
-        await this.handlesRepo.savePersonalizationChange({
+        await this.handlesProvider.savePersonalizationChange({
             hex,
             name,
             personalization,
@@ -453,7 +454,7 @@ class OgmiosService {
             address
         };
 
-        await this.handlesRepo.saveSubHandleSettingsChange({
+        await this.handlesProvider.saveSubHandleSettingsChange({
             name,
             settingsDatum: datum,
             utxoDetails,
@@ -485,10 +486,10 @@ class OgmiosService {
         };
 
         if (isMintTx) {
-            await this.handlesRepo.saveMintedHandle(input);
+            await this.handlesProvider.saveMintedHandle(input);
             // Do a webhook processor call here
         } else {
-            await this.handlesRepo.saveHandleUpdate(input);
+            await this.handlesProvider.saveHandleUpdate(input);
         }
     };
 
@@ -536,7 +537,7 @@ class OgmiosService {
                             await fastq.promise(async (response: Ogmios['NextBlockResponse']) => {
                                 try {
                                     if (response.result.direction == 'forward') {
-                                        this.handlesRepo.setMetrics({
+                                        this.handlesProvider.setMetrics({
                                             currentSlot: ((response.result as RollForward).block as BlockPraos).slot,
                                             currentBlockHash: (response.result as RollForward).block.id,
                                             tipBlockHash: response.result.tip.id,
@@ -546,9 +547,9 @@ class OgmiosService {
                                     if (response.method === 'nextBlock') {
                                         switch (response.result.direction) {
                                             case 'backward': {
-                                                const { current_slot } = this.handlesRepo.getMetrics();
+                                                const { currentSlot } = this.handlesProvider.getMetrics();
                                                 Logger.log({
-                                                    message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                                    message: `Rollback ocurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
                                                     event: 'OgmiosService.rollBackward',
                                                     category: LogCategory.INFO
                                                 });
@@ -558,8 +559,8 @@ class OgmiosService {
                                             case 'forward': {
                                                 // finish timer for ogmios rollForward
                                                 const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-                                                const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
-                                                this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
+                                                const { elapsedOgmiosExec } = this.handlesProvider.getMetrics();
+                                                this.handlesProvider.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec ?? 0 + ogmiosExecFinished });
 
                                                 const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
 
