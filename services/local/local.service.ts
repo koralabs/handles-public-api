@@ -33,7 +33,8 @@ export class LocalService {
     }
 
     async startSync() {
-        await repo.prepareHandlesStorage();
-        fs.watch(this.filePath, this.rollForward);
+        // TODO: implement this
+        // await HandleStore.prepareHandlesStorage();
+        // fs.watch(this.filePath, this.rollForward);
     }
 }

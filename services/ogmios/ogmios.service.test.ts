@@ -1,11 +1,12 @@
 import * as ogmiosClient from '@cardano-ogmios/client';
 import { IHandlesRepository } from '@koralabs/kora-labs-common';
 import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
-import { handleEraBoundaries } from './constants';
 import OgmiosService from './ogmios.service';
 
 jest.mock('@cardano-ogmios/client');
-const handlesRepo = MemoryHandlesRepository as unknown as IHandlesRepository
+jest.mock('../../repositories/memory/HandleStore');
+jest.mock('../../repositories/memory/handles.repository');
+const handlesRepo = MemoryHandlesRepository as unknown as IHandlesRepository;
 const ogmios = new OgmiosService(handlesRepo);
 //(someInstance as unknown) as { privateMethod: SomeClass['privateMethod'] }
 
@@ -16,7 +17,7 @@ describe('OgmiosService Tests', () => {
 
     describe('startSync', () => {
         it('Should call ogmios functions and start sync', async () => {
-            const mockedOgmios = (ogmios as unknown) as { createLocalChainSyncClient: OgmiosService['createLocalChainSyncClient'] } as any;
+            const mockedOgmios = ogmios as unknown as { client: { resume: () => {} }; createLocalChainSyncClient: OgmiosService['createLocalChainSyncClient'] } as any;
             const createChainSyncClientSpy = jest.spyOn(mockedOgmios, 'createLocalChainSyncClient').mockResolvedValue({
                 resume: (result: any) => {
                     expect(result).toEqual(['origin']);
@@ -36,34 +37,11 @@ describe('OgmiosService Tests', () => {
                 current_block_hash: '',
                 schema_version: 0
             });
-            await mockedOgmios.startSync();
-
-            mockedOgmios.intervals.map((i: any) => clearInterval(i));
+            await mockedOgmios.initialize();
+            await mockedOgmios.startSync({ slot: 0 });
 
             expect(createChainSyncClientSpy).toHaveBeenCalledTimes(1);
             expect(createInteractionContextSpy).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('getStartingPoint', () => {
-        it('Should use starting point from constants if both no data is found from files', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'prepareHandlesStorage').mockResolvedValue(null);
-            const ogmiosService = new OgmiosService(handlesRepo);
-            const startingPoint = await ogmiosService.getStartingPoint();
-            expect(startingPoint).toEqual(handleEraBoundaries['preview']);
-        });
-
-        it('Should use starting point from prepareHandlesStorage', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'prepareHandlesStorage').mockResolvedValue({
-                slot: 2,
-                hash: 'b'
-            });
-            const ogmiosService = new OgmiosService(handlesRepo);
-            const startingPoint = await ogmiosService.getStartingPoint();
-            expect(startingPoint).toEqual({
-                slot: 2,
-                id: 'b'
-            });
         });
     });
 });
