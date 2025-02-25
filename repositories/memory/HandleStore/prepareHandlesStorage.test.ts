@@ -11,13 +11,13 @@ describe('prepareHandlesStorage', () => {
             slot: 75171663,
             hash: 'd7b348e2d841e25d13e5551246275f6c8c6f47c2591288a64a009945b392a368',
             handles: {},
-            schemaVersion: 1
+            schemaVersion: HandleStore.storageSchemaVersion
         });
         jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
             slot: 42971872,
             hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
             handles: {},
-            schemaVersion: 1
+            schemaVersion: HandleStore.storageSchemaVersion
         });
 
         const startingPoint = await HandleStore.prepareHandlesStorage();
@@ -61,7 +61,7 @@ describe('prepareHandlesStorage', () => {
             slot: 42971872,
             hash: 'b5b276cb389ee36e624c66c632b0e983027609e7390fa7072a222261077117d6',
             handles: {},
-            schemaVersion: 2
+            schemaVersion: HandleStore.storageSchemaVersion
         });
         jest.spyOn(HandleStore, 'getFile').mockResolvedValue({
             slot: 75171663,
@@ -120,7 +120,7 @@ describe('prepareHandlesStorage', () => {
         jest.spyOn(HandleStore, 'getFileOnline').mockResolvedValue({
             slot: 2,
             hash: 'b',
-            schemaVersion: 1,
+            schemaVersion: HandleStore.storageSchemaVersion,
             handles: {}
         });
         jest.spyOn(HandleStore, 'getFile').mockResolvedValue(null);
