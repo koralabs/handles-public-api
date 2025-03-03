@@ -1,8 +1,8 @@
 import { Logger } from '@koralabs/kora-labs-common';
-import { MemoryHandlesRepository } from './handles.repository';
+import { MemoryHandlesProvider } from '.';
 import { HandleStore } from './handleStore';
 import { handlesFixture, slotHistoryFixture } from './tests/fixtures/handles';
-const repo = new MemoryHandlesRepository();
+const repo = new MemoryHandlesProvider();
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {

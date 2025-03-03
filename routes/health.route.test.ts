@@ -1,13 +1,13 @@
+import { IApiMetricsViewModel } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
-import * as ogmiosUtils from '../services/ogmios/utils';
-import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
+import * as ogmiosUtils from '../services/ogmios/utils';
 
 jest.mock('../services/ogmios/ogmios.service');
 
 let percentage: string = '';
-const getStats = (): IHandleStats => ({
+const getStats = (): IApiMetricsViewModel => ({
     percentage_complete: percentage,
     current_memory_used: 0,
     memory_size: 0,

@@ -1,11 +1,11 @@
 import * as klc from '@koralabs/kora-labs-common';
 import { delay, HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
 import { unlinkSync, writeFileSync } from 'fs';
+import { MemoryHandlesProvider } from '.';
 import * as config from '../../config';
 import { HandleStore } from './handleStore';
-import { MemoryHandlesRepository } from './handles.repository';
 import { handlesFixture } from './tests/fixtures/handles';
-const repo = new MemoryHandlesRepository();
+const repo = new MemoryHandlesProvider();
 
 //const klc = {getAddressHolderDetails, bech32FromHex};
 jest.mock('@koralabs/kora-labs-common', () => ({

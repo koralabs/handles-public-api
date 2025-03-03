@@ -1,11 +1,11 @@
-import { AssetNameLabel, HandlePaginationModel, HandleSearchModel, HandleType, HolderAddressIndex, HolderPaginationModel, SaveMintingTxInput } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, SaveMintingTxInput } from '@koralabs/kora-labs-common';
+import { MemoryHandlesProvider } from '.';
 import * as config from '../../config';
-import { MemoryHandlesRepository } from './handles.repository';
 import { HandleStore } from './handleStore';
 import { handlesFixture, holdersFixture } from './tests/fixtures/handles';
-const repo = new MemoryHandlesRepository();
+const repo = new MemoryHandlesProvider();
 
-describe('MemoryHandlesRepository Tests', () => {
+describe('MemoryHandlesProvider Tests', () => {
     const expectedVirtualHandle = {
         amount: 1,
         bg_image: '',
@@ -221,14 +221,14 @@ describe('MemoryHandlesRepository Tests', () => {
 
     describe('getAllHandleNames', () => {
         it('should get all handle names', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel({});
             const result = await repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
         });
 
         it('should search all handle names', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel({
                 length: '4'
             });
@@ -237,7 +237,7 @@ describe('MemoryHandlesRepository Tests', () => {
         });
 
         it('should search all handle names', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel({
                 length: '4-7'
             });
@@ -246,7 +246,7 @@ describe('MemoryHandlesRepository Tests', () => {
         });
 
         it('should sort handles randomly', async () => {
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel();
             const result1 = await repo.getAllHandleNames(search, 'random');
             const result2 = await repo.getAllHandleNames(search, 'random');
@@ -272,7 +272,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 handle_type: HandleType.HANDLE
             });
             const handles = [...handlesFixture, newHandle];
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getHandles').mockReturnValue(handles);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getHandles').mockReturnValue(handles);
             const search = new HandleSearchModel();
             const result = await repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);

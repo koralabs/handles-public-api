@@ -1,4 +1,4 @@
-import { EMPTY, HandleSearchModel, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { EMPTY, HandleSearchModel, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -7,7 +7,8 @@ import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } f
 import { memoryWatcher } from '../../services/ogmios/utils';
 import { HandleStore } from './handleStore';
 
-export class MemoryHandlesRepository implements IHandlesProvider {
+export class MemoryHandlesProvider implements IHandlesProvider {
+    private _files: IHandleFileContent[] | null = null;
     public setHandle(handleName: string, value: StoredHandle): void {
         HandleStore.handles.set(handleName, value);
     }
@@ -119,7 +120,7 @@ export class MemoryHandlesRepository implements IHandlesProvider {
     private storageFileName = `handles.json`;
     private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
 
-    public initialize(): IHandlesProvider {
+    public async initialize(): Promise<IHandlesProvider> {
         if (this.intervals.length === 0) {
             const saveFilesInterval = setInterval(() => {
                 const { currentSlot, currentBlockHash } = this.metrics;
@@ -147,6 +148,7 @@ export class MemoryHandlesRepository implements IHandlesProvider {
 
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
+        this._files = await this._getFilesContent();
         return this;
     }
 
@@ -155,7 +157,7 @@ export class MemoryHandlesRepository implements IHandlesProvider {
     }
 
     public getHandle(key: string): StoredHandle | null {
-        const handle = HandleStore.handles.get(key);
+        const handle = structuredClone(HandleStore.handles.get(key));
 
         return this.returnHandleWithDefault(handle);
     }
@@ -163,7 +165,7 @@ export class MemoryHandlesRepository implements IHandlesProvider {
     public getHandleByHex(hex: string): StoredHandle | null {
         let handle: StoredHandle | null = null;
         for (const [ , value] of HandleStore.handles.entries()) {
-            if (value.hex === hex) handle = value;
+            if (value.hex === hex) handle = structuredClone(value);
             break;
         }
         return this.returnHandleWithDefault(handle);
@@ -430,7 +432,7 @@ export class MemoryHandlesRepository implements IHandlesProvider {
         }
     }
 
-    private async getFileOnline<T>(fileName: string): Promise<T | null> {
+    private async _getFileOnline<T>(fileName: string): Promise<T | null> {
         if (NODE_ENV === 'local' || DISABLE_HANDLES_SNAPSHOT == 'true') {
             return null;
         }
@@ -458,14 +460,13 @@ export class MemoryHandlesRepository implements IHandlesProvider {
             return null;
         }
     }
-
-    private async prepareHandlesStorage(loadS3 = true): Promise<{ slot: number; hash: string; } | null> {
+    
+    private async _getFilesContent() {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-        const files = [this._getFile<IHandleFileContent>(this.storageFilePath)];
-        if (loadS3) {
-            files.push(this.getFileOnline<IHandleFileContent>(fileName));
-        }
-        const [localHandles, externalHandles] = await Promise.all(files);
+        const [localHandles, externalHandles] = await Promise.all([
+            this._getFile<IHandleFileContent>(this.storageFilePath), 
+            this._getFileOnline<IHandleFileContent>(fileName)
+        ]);
 
         const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this._storageSchemaVersion ? localHandles : null;
         const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this._storageSchemaVersion ? externalHandles : null;
@@ -475,59 +476,73 @@ export class MemoryHandlesRepository implements IHandlesProvider {
             Logger.log({
                 message: 'No valid files found',
                 category: LogCategory.INFO,
-                event: 'this.prepareHandlesStorage.noValidFilesFound'
+                event: 'HandleStore.prepareHandlesStorage.noValidFilesFound'
             });
             return null;
         }
 
-        const buildFilesContent = (content: IHandleFileContent, isNew = false) => {
+        const buildFilesContent = (content: IHandleFileContent) => {
             return {
                 handles: content.handles,
                 history: content.history,
                 slot: content.slot,
                 schemaVersion: content.schemaVersion ?? 0,
-                hash: content.hash,
-                isNew
+                hash: content.hash
             };
         };
 
-        let filesContent: {
-            handles: Record<string, StoredHandle>;
-            history: [number, ISlotHistory][];
-            slot: number;
-            schemaVersion: number;
-            hash: string;
-            isNew: boolean;
-        } | null = null;
-
         // only the local file exists
         if (localContent && !externalContent) {
-            filesContent = buildFilesContent(localContent);
+            return [buildFilesContent(localContent)];
         }
 
         // only the external file exists
         if (externalContent && !localContent) {
-            filesContent = buildFilesContent(externalContent, true);
+            return [buildFilesContent(externalContent)];
         }
 
         // both files exist and we need to compare them to see which one to use.
+
         if (externalContent && localContent) {
+            const externalFilesContent = buildFilesContent(externalContent);
+            const localFilesContent = buildFilesContent(localContent);
             // check to see if the local file slot is greater than the external file
             // if so, use the local file otherwise use the external file
             if (localContent.slot > externalContent.slot) {
-                filesContent = buildFilesContent(localContent);
+                return [localFilesContent, externalFilesContent]
             } else {
-                filesContent = buildFilesContent(externalContent, true);
+                return [externalFilesContent, localFilesContent]
             }
         }
 
         // At this point, we should have a valid filesContent object.
         // If we don't perform this check we'd have to use a large ternary operator which is pretty ugly
-        if (!filesContent) {
+        return null;
+    }
+
+    public async getStartingPoint(save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, failed = false) {
+        if (!this._files) {
             return null;
         }
 
-        const { handles, slot, hash, history, isNew } = filesContent;
+        if (!failed) {
+            const [firstFile] = this._files;
+            await this.prepareHandlesStorage(save, firstFile);
+            return { slot: firstFile.slot, id: firstFile.hash }
+        }
+        else {
+            if (this._files.length > 1) {
+                const [secondFile] = this._files.slice(1);
+                await this.prepareHandlesStorage(save, secondFile);
+                return { slot: secondFile.slot, id: secondFile.hash }
+            }
+        }
+        this.rollBackToGenesis();
+        return null;
+    }
+
+    private async prepareHandlesStorage(save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
+        const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
         const keys = Object.keys(handles ?? {});
@@ -538,20 +553,13 @@ export class MemoryHandlesRepository implements IHandlesProvider {
                 ...handle
             };
             // delete the personalization object from the handle so we don't double store it
-            await this.save({ handle: newHandle, saveHistory: false });
+            await save({ handle: newHandle, saveHistory: false });
         }
 
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
 
         Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
-
-        // if the file contents are new (from the external source), save the handles and history to the store.
-        if (isNew) {
-            await this._saveHandlesFile(slot, hash);
-        }
-
-        return { slot, hash };
     }
 
     private eraseStorage() {
@@ -573,6 +581,8 @@ export class MemoryHandlesRepository implements IHandlesProvider {
         saveHandlesFile: this._saveHandlesFile.bind(this),
         getFile: this._getFile.bind(this),
         getRootHandleSubHandles: this._getRootHandleSubHandles.bind(this),
-        storageSchemaVersion: this._storageSchemaVersion
+        storageSchemaVersion: this._storageSchemaVersion,
+        getFileOnline: this._getFileOnline.bind(this),
+        getFilesContent: this._getFilesContent.bind(this)
     }
 }

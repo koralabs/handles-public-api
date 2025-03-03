@@ -1,8 +1,8 @@
 import { HolderAddressIndex } from '@koralabs/kora-labs-common';
-import { MemoryHandlesRepository } from './handles.repository';
+import { MemoryHandlesProvider } from '.';
 import { HandleStore } from './handleStore';
 import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
-const repo = new MemoryHandlesRepository();
+const repo = new MemoryHandlesProvider();
 
 describe('holder index integrity', () => {
     it('holder index should be accurate', async () => {

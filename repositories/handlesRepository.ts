@@ -1,3 +1,4 @@
+import { Point } from '@cardano-ogmios/schema';
 import { AddressDetails, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildNumericModifiers, decodeAddress, diff, EMPTY, getAddressHolderDetails, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandlesProvider, IndexNames, IUTxO, LogCategory, Logger, NETWORK, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -42,7 +43,7 @@ export class HandlesRepository {
         // The ['|empty|'] is important for `AND` searches here and indicates 
         // that we couldn't find any results for one of the search terms
         // When intersected with all other results, ['|empty|'] ensures empty result set
-        const checkEmptyResult = (indexName: string, term: string | undefined) => {
+        const checkEmptyResult = (indexName: IndexNames, term: string | undefined) => {
             if (!term) return [];
             const array = this.provider.getValuesFromIndex(indexName, term);
             return array.length === 0 ? [EMPTY] : array;
@@ -61,7 +62,7 @@ export class HandlesRepository {
         }
         const rarityArray = checkEmptyResult(IndexNames.RARITY, rarity);
         const numericModifiersArray = checkEmptyResult(IndexNames.NUMERIC_MODIFIER, numeric_modifiers);
-        const ogArray = og ? checkEmptyResult('1', IndexNames.OG) : [];
+        const ogArray = og ? checkEmptyResult(IndexNames.OG, '1') : [];
         const holderArray = (() => {
             if (!holder_address) return [];
             const array = this.provider.getValuesFromIndex(IndexNames.HOLDER, holder_address);
@@ -134,7 +135,7 @@ export class HandlesRepository {
 
     }
 
-    public getAllHandleNames(search: HandleSearchModel, sort: string) {
+    public getAllHandleNames(search: HandleSearchModel, sort = 'asc') {
         const handles = this.filter(search);
         const filteredHandles = handles.filter((handle) => !!handle.utxo);
         if (sort === 'random') {
@@ -414,7 +415,7 @@ export class HandlesRepository {
         return rewoundHandles;
     }
 
-    private async buildHandle({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> {
+    private async _buildHandle({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -516,7 +517,7 @@ export class HandlesRepository {
                 pz_enabled: personalizationDatum?.pz_enabled ?? false,
                 last_edited_time: personalizationDatum?.last_edited_time
             };
-            const handle = await this.buildHandle(buildHandleInput);
+            const handle = await this._buildHandle(buildHandleInput);
             await this.save({ handle });
             return;
         }
@@ -610,12 +611,12 @@ export class HandlesRepository {
                 last_edited_time: existingHandle.last_edited_time,
                 id_hash: existingHandle.id_hash
             };
-            const builtHandle = await this.buildHandle(inputWithExistingHandle);
+            const builtHandle = await this._buildHandle(inputWithExistingHandle);
             await this.save({ handle: builtHandle, oldHandle: existingHandle });
             return;
         }
 
-        const newHandle = await this.buildHandle(input);
+        const newHandle = await this._buildHandle(input);
         await this.save({ handle: newHandle });
     }
 
@@ -646,7 +647,7 @@ export class HandlesRepository {
         });
     }
 
-    protected async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
+    public async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
         const updatedHandle: StoredHandle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
         const {
             name,
@@ -664,8 +665,8 @@ export class HandlesRepository {
         const ogFlag = og_number === 0 ? 0 : 1;
         updatedHandle.payment_key_hash = payment_key_hash;
         updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash?.replace('0x', ''));
-        updatedHandle.holder = updatedHandle.drep ? updatedHandle.drep.cip_129 : holder.address;
-        updatedHandle.holder_type = updatedHandle.drep ? 'drep': holder.type;
+        updatedHandle.holder = holder.address;
+        updatedHandle.holder_type = holder.type;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -712,7 +713,7 @@ export class HandlesRepository {
         const isWithinMaxSlot = true;
 
         if (saveHistory && isWithinMaxSlot) {
-            const history = this.buildHandleHistory(updatedHandle, oldHandle);
+            const history = this._buildHandleHistory(updatedHandle, oldHandle);
             if (history)
                 this.saveSlotHistory({
                     handleHistory: history,
@@ -722,7 +723,7 @@ export class HandlesRepository {
         }
     }
 
-    private buildHandleHistory(newHandle: Partial<StoredHandle>, oldHandle?: Partial<StoredHandle>, testMode = true): HandleHistory | null {
+    private _buildHandleHistory(newHandle: Partial<StoredHandle>, oldHandle?: Partial<StoredHandle>, testMode = true): HandleHistory | null {
         const { name } = newHandle;
         if (!oldHandle) {
             return testMode ? { old: null, new: { name } } : { old: null };
@@ -763,5 +764,18 @@ export class HandlesRepository {
         // });
 
         this.provider.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
+    }
+
+    public async getStartingPoint(
+        save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, 
+        failed = false
+    ): Promise<Point | null> {
+        return this.provider.getStartingPoint(save , failed);
+    }
+
+    // Used for unit testing
+    Internal = {
+        buildHandleHistory: this._buildHandleHistory.bind(this),
+        buildHandle: this._buildHandle.bind(this)
     }
 }

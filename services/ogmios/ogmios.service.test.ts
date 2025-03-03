@@ -1,12 +1,12 @@
 import * as ogmiosClient from '@cardano-ogmios/client';
-import { IHandlesRepository } from '@koralabs/kora-labs-common';
-import { MemoryHandlesRepository } from '../../repositories/memory/handles.repository';
+import { IHandlesProvider } from '@koralabs/kora-labs-common';
+import { MemoryHandlesProvider } from '../../repositories/memory';
 import OgmiosService from './ogmios.service';
 
 jest.mock('@cardano-ogmios/client');
 jest.mock('../../repositories/memory/HandleStore');
-jest.mock('../../repositories/memory/handles.repository');
-const handlesRepo = MemoryHandlesRepository as unknown as IHandlesRepository;
+jest.mock('../../repositories/memory');
+const handlesRepo = MemoryHandlesProvider as unknown as IHandlesProvider;
 const ogmios = new OgmiosService(handlesRepo);
 //(someInstance as unknown) as { privateMethod: SomeClass['privateMethod'] }
 
@@ -25,7 +25,7 @@ describe('OgmiosService Tests', () => {
                 }
             });
             const createInteractionContextSpy = jest.spyOn(ogmiosClient, 'createInteractionContext');
-            jest.spyOn(MemoryHandlesRepository.prototype, 'getMetrics').mockReturnValue({
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getMetrics').mockReturnValue({
                 percentage_complete: '0',
                 current_memory_used: 0,
                 memory_size: 0,

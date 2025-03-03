@@ -1,13 +1,14 @@
 import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
 import { BlockPraos, NextBlockResponse, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { AssetNameLabel, checkNameLabel, HANDLE_POLICIES, HandleType, IHandleMetadata, IHandlesRepository, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, LogCategory, Logger, Network } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, checkNameLabel, delay, HANDLE_POLICIES, HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, LogCategory, Logger, Network } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
 import { handleEraBoundaries } from '../../config/constants';
 import { BuildPersonalizationInput, HandleOnChainMetadata, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
+import { HandlesRepository } from '../../repositories/handlesRepository';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { } from '../../utils/util';
 import { getHandleNameFromAssetName } from './utils';
@@ -19,18 +20,18 @@ const blackListedIpfsCids: string[] = [];
 class OgmiosService {
     private startTime: number;
     private firstMemoryUsage: number;
-    private handlesRepo: IHandlesRepository;
+    private handlesRepo: HandlesRepository;
     client?: ChainSynchronizationClient;
     processBlockCallback?: (block: NextBlockResponse) => Promise<void>;
 
-    constructor(handlesRepo: IHandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
-        this.handlesRepo = new (handlesRepo as any)();
+    constructor(handlesRepo: HandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
+        this.handlesRepo = handlesRepo;
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.processBlockCallback = processBlockCallback;
     }
 
-    public async initialize() {
+    public async initialize(reset: () => Promise<void>, load: () => Promise<void>) {
         this.handlesRepo.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
@@ -59,14 +60,63 @@ class OgmiosService {
         );
 
         this.client = await this.createLocalChainSyncClient(context);
-    }
-
-    public async startSync(startingPoint: Point) {
+        
         if (!this.client) {
             throw new Error('Ogmios client is not initialized.');
         }
-        
-        await this.client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+
+        // attempt ogmios resume (see if starting point exists or errors)
+        let ogmiosStarted = false;
+        const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save);
+
+        while (!ogmiosStarted) {
+            try {
+                if (!firstStartingPoint) {                    
+                    const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
+                    await reset();
+                    await this._resume(initialStartingPoint);
+                    ogmiosStarted = true;
+                    continue;
+                } else {
+                    try {
+                        await load();
+                        await this._resume(firstStartingPoint);
+                        ogmiosStarted = true;
+                    } catch (error: any) {
+                        const secondStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save, true);
+                        // If error, try the other file's starting point
+                        if (secondStartingPoint && error.code === 1000) {
+                            this.handlesRepo.destroy();
+                            try {
+                                await load();
+                                await this._resume(secondStartingPoint);
+                                ogmiosStarted = true;
+                            } catch (error: any) {
+                                if (error.code === 1000) {
+                                    // this means the slot that came back from the files is bad
+                                    await reset();
+                                    process.exit(2);
+                                }
+                                throw error;
+                            }
+                        }
+                    }
+                }
+            } catch (error: any) {
+                Logger.log({
+                    message: `Unable to connect Ogmios: ${error.message}`,
+                    category: LogCategory.ERROR,
+                    event: 'initializeStorage.failed.errorMessage'
+                });
+                
+                if (this.client) this.client.shutdown();
+            }
+            await delay(30 * 1000);
+        }
+    }
+
+    private async _resume(startingPoint: Point) {        
+        await this.client!.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
         this.handlesRepo.initialize();
     }
 
@@ -78,7 +128,7 @@ class OgmiosService {
         const currentBlockHash = txBlock.id ?? '0';
         const tipBlockHash = tip?.id ?? '1';
 
-        this.handlesProvider.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
+        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
 
         for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
             const txBody = txBlock?.transactions?.[b];
@@ -92,7 +142,7 @@ class OgmiosService {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity === BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
-                            await this.handlesProvider.removeHandle(name, currentSlot);
+                            await this.handlesRepo.removeHandle(name, currentSlot);
                         }
                     }
                 }
@@ -172,15 +222,15 @@ class OgmiosService {
 
         // finish timer for our logs
         const buildingExecFinished = Date.now() - startBuildingExec;
-        const { elapsedBuildingExec } = this.handlesProvider.getMetrics();
-        this.handlesProvider.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
+        const { elapsedBuildingExec } = this.handlesRepo.getMetrics();
+        this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
     };
 
     private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
-            await this.handlesProvider.rollBackToGenesis();
+            await this.handlesRepo.rollBackToGenesis();
         } else {
             const { slot, id } = point;
             let lastSlot = 0;
@@ -189,7 +239,7 @@ class OgmiosService {
             }
 
             // The idea here is we need to rollback all changes from a given slot
-            await this.handlesProvider.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
 
@@ -379,7 +429,7 @@ class OgmiosService {
             });
         }
 
-        await this.handlesProvider.savePersonalizationChange({
+        await this.handlesRepo.savePersonalizationChange({
             hex,
             name,
             personalization,
@@ -411,7 +461,7 @@ class OgmiosService {
             address
         };
 
-        await this.handlesProvider.saveSubHandleSettingsChange({
+        await this.handlesRepo.saveSubHandleSettingsChange({
             name,
             settingsDatum: datum,
             utxoDetails,
@@ -443,10 +493,10 @@ class OgmiosService {
         };
 
         if (isMintTx) {
-            await this.handlesProvider.saveMintedHandle(input);
+            await this.handlesRepo.saveMintedHandle(input);
             // Do a webhook processor call here
         } else {
-            await this.handlesProvider.saveHandleUpdate(input);
+            await this.handlesRepo.saveHandleUpdate(input);
         }
     };
 
@@ -505,9 +555,9 @@ class OgmiosService {
                                         if (response.method === 'nextBlock') {
                                             switch (response.result.direction) {
                                                 case 'backward': {
-                                                    const { current_slot } = this.handlesRepo.getMetrics();
+                                                    const { currentSlot } = this.handlesRepo.getMetrics();
                                                     Logger.log({
-                                                        message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                                        message: `Rollback ocurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
                                                         event: 'OgmiosService.rollBackward',
                                                         category: LogCategory.INFO
                                                     });
@@ -517,8 +567,8 @@ class OgmiosService {
                                                 case 'forward': {
                                                     // finish timer for ogmios rollForward
                                                     const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-                                                    const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
-                                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
+                                                    const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
+                                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
 
                                                     const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
 
