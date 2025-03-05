@@ -52,8 +52,7 @@ class OgmiosService {
             {
                 connection: {
                     host: ogmiosUrl.hostname,
-                    port: parseInt(ogmiosUrl.port),
-                    tls: ogmiosUrl.protocol.startsWith('https')
+                    port: parseInt(ogmiosUrl.port)
                 }
             }
         );

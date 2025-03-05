@@ -141,7 +141,7 @@ class App {
         // get s3 and EFS files
         const files = (await handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
 
-        const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock);
+        const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock.bind(this));
         await ogmiosService.initialize();
 
         // attempt ogmios resume (see if starting point exists or errors)
@@ -162,6 +162,7 @@ class App {
                         await ogmiosService.startSync({ slot: firstFile.slot, id: firstFile.hash });
                         ogmiosStarted = true;
                     } catch (error: any) {
+                        Logger.log({ message: `Error connecting Ogmios: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
                         // If error, try the other file's starting point
                         if (files.length > 1 && error.code === 1000) {
                             handlesRepo.destroy();
