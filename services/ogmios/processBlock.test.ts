@@ -42,7 +42,7 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0 }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number }): BlockPraos => ({
+    const txBlock = ({ address = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0, additionalAssets = {} }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number, additionalAssets?: { [key: string]: bigint } } ): BlockPraos => ({
         ancestor: 'test',
         era: 'babbage',
         type: 'praos',
@@ -86,7 +86,8 @@ describe('processBlock Tests', () => {
                                     lovelace: BigInt(1)
                                 },
                                 [policy]: {
-                                    [handleHexName]: BigInt(1)
+                                    [handleHexName]: BigInt(1),
+                                    ...additionalAssets
                                 }
                             }
                         }
@@ -94,7 +95,8 @@ describe('processBlock Tests', () => {
                     mint: isMint
                         ? {
                             [policyId]: {
-                                [handleHexName]: BigInt(1)
+                                [handleHexName]: BigInt(1),
+                                ...additionalAssets
                             }
                         }
                         : undefined,
@@ -180,13 +182,33 @@ describe('processBlock Tests', () => {
         const setMetricsSpy = jest.spyOn(HandleStore, 'setMetrics');
         jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId }), tip });
+        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip });
 
-        expect(saveSpy).toHaveBeenCalledWith({
+        expect(saveSpy).toHaveBeenCalledTimes(2);
+
+        expect(saveSpy).toHaveBeenNthCalledWith(1, {
             adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
             name: 'test1234',
+            og_number: 0,
+            slotNumber: 0,
+            utxo: 'some_id#0',
+            policy: policyId,
+            version: 0,
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined
+        });
+
+        expect(saveSpy).toHaveBeenNthCalledWith(2, {
+            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
+            hex: '74657374343536',
+            image: '',
+            name: 'test456',
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
