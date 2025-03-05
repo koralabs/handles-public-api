@@ -45,7 +45,8 @@ export class HandleViewModel {
         expires_time: number;
         public_mint: boolean;
     };
-    drep?: IDrep
+    drep?: IDrep;
+    policy: string;
 
     getPzEnabled(handleType: HandleType, pz_enabled?: boolean): boolean | undefined {
         if (pz_enabled !== undefined) {
@@ -90,6 +91,7 @@ export class HandleViewModel {
         this.payment_key_hash = handle.payment_key_hash;
         this.pz_enabled = this.getPzEnabled(handle.handle_type, handle.pz_enabled);
         this.drep = handle.drep
+        this.policy = handle.policy || '';
 
         // SubHandle settings
         this.sub_rarity = handle.sub_rarity;

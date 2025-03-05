@@ -167,6 +167,7 @@ export interface ProcessOwnerTokenInput {
     script?: { type: string; cbor: string };
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
+    policyId: string;
 }
 
 export interface IBlockProcessor {

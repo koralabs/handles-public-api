@@ -8,6 +8,7 @@ import {
     IHandlesRepository,
     IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
     LogCategory, Logger,
+    NETWORK,
     Network
 } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
@@ -112,7 +113,7 @@ class OgmiosService {
         }
     }
 
-    private processBlock = async ({ policyId, txBlock, tip }: { policyId: string; txBlock: BlockPraos; tip: Tip }) => {
+    private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
         const startBuildingExec = Date.now();
 
         const lastSlot = tip.slot;
@@ -130,7 +131,7 @@ class OgmiosService {
             const mintAssets = Object.entries(txBody?.mint ?? {});
             for (let i = 0; i < mintAssets.length; i++) {
                 const [policy, assetInfo] = mintAssets[i];
-                if (policy === policyId) {
+                if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity === BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
@@ -140,73 +141,75 @@ class OgmiosService {
                 }
             }
 
-            // get metadata so we can use it later
-            const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
-
             // Iterate through all the outputs and find asset keys that start with our policyId
             for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
                 const o = txBody?.outputs[i];
-                const assets = o?.value?.[policyId];
-                for (const [assetName] of Object.entries(assets ?? {})) {
-                    const { datum = null, script: outputScript } = o!;
+                const values = Object.entries(o?.value ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
+                for (const [policyId, assets] of Object.entries(values ?? {})) {
+                    for (const [assetName] of Object.entries(assets ?? {})) {
+                        const { datum = null, script: outputScript } = o!;
 
-                    // We need to get the datum. This can either be a string or json object.
-                    let datumString;
-                    try {
-                        datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                    } catch {
-                        Logger.log({
-                            message: `Error decoding datum for ${txId}`,
-                            category: LogCategory.ERROR,
-                            event: 'processBlock.decodingDatum'
-                        });
-                    }
-
-                    const isMintTx = this.isMintingTransaction(assetName, policyId, txBody);
-                    if (assetName === policyId) {
-                        // Don't save nameless token.
-                        continue;
-                    }
-
-                    let script: { type: string; cbor: string } | undefined;
-                    if (outputScript) {
+                        // We need to get the datum. This can either be a string or json object.
+                        let datumString;
                         try {
-                            script = {
-                                type: outputScript.language.replace(':', '_'),
-                                cbor: outputScript.cbor ?? ''
-                            };
+                            datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
                         } catch {
-                            Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
+                            Logger.log({
+                                message: `Error decoding datum for ${txId}`,
+                                category: LogCategory.ERROR,
+                                event: 'processBlock.decodingDatum'
+                            });
                         }
-                    }
 
-                    const input: ProcessOwnerTokenInput = {
-                        assetName,
-                        address: o!.address,
-                        slotNumber: currentSlot,
-                        utxo: `${txId}#${i}`,
-                        lovelace: parseInt(o!.value['ada'].lovelace.toString()),
-                        datum: datumString,
-                        script,
-                        handleMetadata,
-                        isMintTx
-                    };
-                    
-                    const {assetLabel} = checkNameLabel(assetName);
-                    switch (assetLabel) {
-                        case null:
-                        case '222':
-                            await this.processHandleOwnerToken(input);
-                            break;
-                        case '100':
-                        case '000':
-                            await this.processAssetReferenceToken(input);
-                            break;
-                        case '001':
-                            await this.processSubHandleSettingsToken(input);
-                            break;
-                        default:
-                            Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processBlock.processAssetClassToken.unknownAssetName' });
+                        const isMintTx = this.isMintingTransaction(assetName, policyId, txBody);
+                        if (assetName === policyId) {
+                            // Don't save nameless token.
+                            continue;
+                        }
+
+                        let script: { type: string; cbor: string } | undefined;
+                        if (outputScript) {
+                            try {
+                                script = {
+                                    type: outputScript.language.replace(':', '_'),
+                                    cbor: outputScript.cbor ?? ''
+                                };
+                            } catch {
+                                Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
+                            }
+                        }
+
+                        const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
+
+                        const input: ProcessOwnerTokenInput = {
+                            assetName,
+                            address: o!.address,
+                            slotNumber: currentSlot,
+                            utxo: `${txId}#${i}`,
+                            policyId,
+                            lovelace: parseInt(o!.value['ada'].lovelace.toString()),
+                            datum: datumString,
+                            script,
+                            handleMetadata,
+                            isMintTx
+                        };
+
+                        const { assetLabel } = checkNameLabel(assetName);
+                        switch (assetLabel) {
+                            case null:
+                            case '222':
+                                await this.processHandleOwnerToken(input);
+                                break;
+                            case '100':
+                            case '000':
+                                await this.processAssetReferenceToken(input);
+                                break;
+                            case '001':
+                                await this.processSubHandleSettingsToken(input);
+                                break;
+                            default:
+                                Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processBlock.processAssetClassToken.unknownAssetName' });
+                        }
                     }
                 }
             }
@@ -461,7 +464,7 @@ class OgmiosService {
         });
     };
 
-    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
+    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx, policyId }: ProcessOwnerTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
         const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
@@ -481,7 +484,8 @@ class OgmiosService {
             sub_characters: data?.sub_characters,
             sub_length: data?.sub_length,
             sub_numeric_modifiers: data?.sub_numeric_modifiers,
-            sub_rarity: data?.sub_rarity
+            sub_rarity: data?.sub_rarity,
+            policy_id: policyId
         };
 
         if (isMintTx) {
@@ -561,13 +565,11 @@ class OgmiosService {
                                                 const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
                                                 this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
-                                                const policyId = HANDLE_POLICIES.getActivePolicy((process.env.NETWORK ?? 'preview') as Network)!;
-
                                                 if (response.result.block.type !== 'praos') {
                                                     throw new Error(`Block type ${response.result.block.type} is not supported`);
                                                 }
 
-                                                const block = { policyId, txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
+                                                const block = { txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
 
                                                 await this.processBlock(block);
 

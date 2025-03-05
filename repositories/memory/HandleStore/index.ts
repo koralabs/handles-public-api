@@ -411,7 +411,7 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({ name, adaAddress, utxo, slotNumber, datum, script }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({ name, adaAddress, utxo, lovelace, slotNumber, datum, script }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             Logger.log({
@@ -422,9 +422,11 @@ export class HandleStore {
             return;
         }
 
-        const updatedHandle = {
+        const updatedHandle: StoredHandle = {
             ...existingHandle,
             utxo,
+            lovelace,
+            created_slot_number: slotNumber,
             resolved_addresses: { ...existingHandle.resolved_addresses, ada: adaAddress },
             updated_slot_number: slotNumber,
             has_datum: !!datum,
