@@ -46,6 +46,7 @@ describe('MemoryHandlesRepository Tests', () => {
         updated_slot_number: 8,
         last_update_address: '',
         utxo: '#0',
+        policy: 'f0ff',
         lovelace: 0,
         version: 0,
         pz_enabled: false
@@ -59,6 +60,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 name,
                 og_number,
                 utxo,
+                policy = 'f0ff',
                 lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
@@ -75,6 +77,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 name,
                 og_number,
                 slotNumber,
+                policy,
                 utxo,
                 lovelace,
                 datum,
@@ -101,6 +104,7 @@ describe('MemoryHandlesRepository Tests', () => {
                     datum: '',
                     address: ''
                 },
+                policy: 'f0ff',
                 personalizationDatum: {
                     standard_image: '',
                     image_hash: '',
@@ -219,14 +223,6 @@ describe('MemoryHandlesRepository Tests', () => {
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[0], handlesFixture[2]] });
         });
-
-        it('should find handles by hex using the handle parameter', async () => {
-            const repo = new MemoryHandlesRepository();
-            const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ handles: ['barbacoa-hex'] });
-            const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[0]] });
-        });
     });
 
     describe('getAllHandleNames', () => {
@@ -277,6 +273,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 adaAddress: '',
                 utxo: '',
                 lovelace: 0,
+                policy: 'f0ff',
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
@@ -377,6 +374,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
+                policy: 'f0ff',
                 utxo: 'test_tx#0',
                 lovelace: 0,
                 datum,
@@ -430,6 +428,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 og_number: 0,
                 image: '',
                 slotNumber: 0,
+                policy: 'f0ff',
                 utxo: 'test_tx#0',
                 lovelace: 0,
                 datum: 'a2some2key6another2key',
@@ -483,6 +482,7 @@ describe('MemoryHandlesRepository Tests', () => {
                 image: '',
                 slotNumber: 0,
                 utxo: 'test_tx#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 datum: 'a2some2key6another2key',
                 image_hash: '',

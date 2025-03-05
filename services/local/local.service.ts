@@ -1,4 +1,4 @@
-import { IHandle, IPersonalization, IHandleFileContent } from '@koralabs/kora-labs-common';
+import { IHandle, IHandleFileContent, IPersonalization } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { HandleStore } from '../../repositories/memory/HandleStore';
 
@@ -32,7 +32,8 @@ export class LocalService {
     }
 
     async startSync() {
-        await HandleStore.prepareHandlesStorage();
-        fs.watch(this.filePath, this.rollForward);
+        // TODO: implement this
+        // await HandleStore.prepareHandlesStorage();
+        // fs.watch(this.filePath, this.rollForward);
     }
 }

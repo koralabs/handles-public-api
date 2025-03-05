@@ -1,24 +1,15 @@
 import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
-import { BlockPraos, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import {
-    AssetNameLabel, checkNameLabel,
-    HANDLE_POLICIES,
-    HandleType, IHandleMetadata,
-    IHandlesRepository,
-    IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema,
-    LogCategory, Logger,
-    NETWORK,
-    Network
-} from '@koralabs/kora-labs-common';
+import { BlockPraos, NextBlockResponse, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
+import { AssetNameLabel, checkNameLabel, HANDLE_POLICIES, HandleType, IHandleMetadata, IHandlesRepository, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
-import { BuildPersonalizationInput, HandleOnChainMetadata, IBlockProcessor, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
+import { handleEraBoundaries } from '../../config/constants';
+import { BuildPersonalizationInput, HandleOnChainMetadata, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
 import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { } from '../../utils/util';
-import { handleEraBoundaries } from './constants';
 import { getHandleNameFromAssetName } from './utils';
 
 let startOgmiosExec = 0;
@@ -26,35 +17,20 @@ let startOgmiosExec = 0;
 const blackListedIpfsCids: string[] = [];
 
 class OgmiosService {
-    public intervals: NodeJS.Timeout[] = [];
     private startTime: number;
     private firstMemoryUsage: number;
-    private loadS3 = true;
     private handlesRepo: IHandlesRepository;
-    private blockProcessors: IBlockProcessor[];
+    client?: ChainSynchronizationClient;
+    processBlockCallback?: (block: NextBlockResponse) => Promise<void>;
 
-    constructor(handlesRepo: IHandlesRepository, loadS3 = true, blockProcessors: IBlockProcessor[] = []) {
+    constructor(handlesRepo: IHandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
         this.handlesRepo = new (handlesRepo as any)();
         this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
-        this.loadS3 = loadS3;
-        this.blockProcessors = blockProcessors;
+        this.processBlockCallback = processBlockCallback;
     }
 
-    public async getStartingPoint(): Promise<Point> {
-        const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
-        const handlesContent = await this.handlesRepo.prepareHandlesStorage(this.loadS3);
-
-        if (!handlesContent) {
-            Logger.log(`Handle storage not found - using starting point: ${JSON.stringify(initialStartingPoint)}`);
-            return initialStartingPoint;
-        }
-
-        const { slot, hash: id } = handlesContent;
-        return { slot, id };
-    }
-
-    public async startSync() {
+    public async initialize() {
         this.handlesRepo.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
@@ -67,14 +43,11 @@ class OgmiosService {
         const context: InteractionContext = await createInteractionContext(
             (err) => console.error(err),
             () => {
-                this.handlesRepo.destroy();
-                this.intervals.map((i) => clearInterval(i));
                 Logger.log({
                     message: 'Connection closed.',
                     category: LogCategory.WARN,
                     event: 'OgmiosService.createInteractionContext.closeHandler'
                 });
-                process.exit(2);
             },
             {
                 connection: {
@@ -84,33 +57,17 @@ class OgmiosService {
                 }
             }
         );
-        const client = await this.createLocalChainSyncClient(context);
 
-        this.resume(client);
+        this.client = await this.createLocalChainSyncClient(context);
     }
 
-    private async resume(client: ChainSynchronizationClient) {
-
-        const startingPoint = await this.getStartingPoint();
-
-        try {
-            await client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-            this.handlesRepo.initialize();
-        } catch (err: any) {
-            this.handlesRepo.destroy();
-            if (err.code === 1000) {
-                // this means the slot that came back from the files is bad
-                if (this.loadS3) {
-                    // Try again without the S3 file
-                    this.loadS3 = false;
-                    this.resume(client);
-                    return
-                }
-            }
-            await this.handlesRepo.rollBackToGenesis();
-            await client.shutdown();
-            throw err;
+    public async startSync(startingPoint: Point) {
+        if (!this.client) {
+            throw new Error('Ogmios client is not initialized.');
         }
+        
+        await this.client.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+        this.handlesRepo.initialize();
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
@@ -145,7 +102,7 @@ class OgmiosService {
             for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
                 const o = txBody?.outputs[i];
                 const values = Object.entries(o?.value ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
-                for (const [policyId, assets] of Object.entries(values ?? {})) {
+                for (const [policyId, assets] of values) {
                     for (const [assetName] of Object.entries(assets ?? {})) {
                         const { datum = null, script: outputScript } = o!;
 
@@ -186,7 +143,7 @@ class OgmiosService {
                             address: o!.address,
                             slotNumber: currentSlot,
                             utxo: `${txId}#${i}`,
-                            policyId,
+                            policy: policyId,
                             lovelace: parseInt(o!.value['ada'].lovelace.toString()),
                             datum: datumString,
                             script,
@@ -385,7 +342,7 @@ class OgmiosService {
         return this.buildValidDatum(handle, hex, datumObjectConstructor);
     };
 
-    private processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
+    private processAssetReferenceToken = async ({ assetName, slotNumber, utxo, policy, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; policy: string; lovelace: number; address: string; datum?: string }) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
 
         if (!datum) {
@@ -430,6 +387,7 @@ class OgmiosService {
             personalization,
             reference_token,
             slotNumber,
+            policy,
             metadata,
             personalizationDatum
         });
@@ -464,7 +422,7 @@ class OgmiosService {
         });
     };
 
-    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx, policyId }: ProcessOwnerTokenInput) => {
+    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx, policy }: ProcessOwnerTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
         const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
@@ -485,7 +443,7 @@ class OgmiosService {
             sub_length: data?.sub_length,
             sub_numeric_modifiers: data?.sub_numeric_modifiers,
             sub_rarity: data?.sub_rarity,
-            policy_id: policyId
+            policy
         };
 
         if (isMintTx) {
@@ -537,63 +495,61 @@ class OgmiosService {
                     socket.on('message', async (message: string) => {
                         const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
                         if (this.isNextBlockResponse(response)) {
-                            await fastq.promise(async (response: Ogmios['NextBlockResponse']) => {
-                                try {
-                                    if (response.result.direction == 'forward') {
-                                        this.handlesRepo.setMetrics({
-                                            currentSlot: ((response.result as RollForward).block as BlockPraos).slot,
-                                            currentBlockHash: (response.result as RollForward).block.id,
-                                            tipBlockHash: response.result.tip.id,
-                                            lastSlot: response.result.tip.slot
-                                        });
-                                    }              
-                                    if (response.method === 'nextBlock') {
-                                        switch (response.result.direction) {
-                                            case 'backward': {
-                                                const { current_slot } = this.handlesRepo.getMetrics();
-                                                Logger.log({
-                                                    message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.result.point)}`,
-                                                    event: 'OgmiosService.rollBackward',
-                                                    category: LogCategory.INFO
-                                                });
-                                                await this.processRollback(response.result.point, response.result.tip);
-                                                break;
-                                            }  
-                                            case 'forward': {
-                                                // finish timer for ogmios rollForward
-                                                const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-                                                const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
-                                                this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
-
-                                                if (response.result.block.type !== 'praos') {
-                                                    throw new Error(`Block type ${response.result.block.type} is not supported`);
+                            await fastq
+                                .promise(async (response: Ogmios['NextBlockResponse']) => {
+                                    try {
+                                        if (response.result.direction == 'forward') {
+                                            this.handlesRepo.setMetrics({
+                                                currentSlot: ((response.result as RollForward).block as BlockPraos).slot,
+                                                currentBlockHash: (response.result as RollForward).block.id,
+                                                tipBlockHash: response.result.tip.id,
+                                                lastSlot: response.result.tip.slot
+                                            });
+                                        }
+                                        if (response.method === 'nextBlock') {
+                                            switch (response.result.direction) {
+                                                case 'backward': {
+                                                    const { current_slot } = this.handlesRepo.getMetrics();
+                                                    Logger.log({
+                                                        message: `Rollback ocurred at slot: ${current_slot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                                        event: 'OgmiosService.rollBackward',
+                                                        category: LogCategory.INFO
+                                                    });
+                                                    await this.processRollback(response.result.point, response.result.tip);
+                                                    break;
                                                 }
+                                                case 'forward': {
+                                                    // finish timer for ogmios rollForward
+                                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
+                                                    const { elapsedOgmiosExec } = this.handlesRepo.getTimeMetrics();
+                                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: elapsedOgmiosExec + ogmiosExecFinished });
 
-                                                const block = { txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
+                                                    if (response.result.block.type !== 'praos') {
+                                                        throw new Error(`Block type ${response.result.block.type} is not supported`);
+                                                    }
 
-                                                await this.processBlock(block);
+                                                    const block = { txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
 
-                                                // start timer for ogmios rollForward
-                                                startOgmiosExec = Date.now();
-                                                break;
+                                                    await this.processBlock(block);
+
+                                                    // start timer for ogmios rollForward
+                                                    startOgmiosExec = Date.now();
+                                                    break;
+                                                }
+                                                default:
+                                                    break;
                                             }
-                                            default:
-                                                break;
                                         }
+                                        if (this.processBlockCallback) await this.processBlockCallback(response);
+                                    } catch (error) {
+                                        Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
                                     }
-                                    if (this.blockProcessors.length > 0) {
-                                        for (let i = 0; i < this.blockProcessors.length; i++) {
-                                            await this.blockProcessors[i].processBlock(response);
-                                        }
-                                    }
-                                } catch (error) {
-                                    Logger.log({message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message'});
-                                }
-                            }, 1).push(response);
-                        }    
+                                }, 1)
+                                .push(response);
+                        }
                         nextBlock(socket);
                     });
-                    
+
                     nextBlock(socket);
                     return intersection;
                 }

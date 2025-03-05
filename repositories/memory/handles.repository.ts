@@ -4,6 +4,7 @@ import {
     HolderAddressDetails,
     HolderPaginationModel,
     HttpException,
+    IHandleFileContent,
     IHandlesRepository,
     IHandleStats,
     IHandleStoreMetrics,
@@ -16,7 +17,7 @@ import * as crypto from 'crypto';
 import { memoryWatcher } from '../../services/ogmios/utils';
 import { HandleStore } from './HandleStore';
 
-class MemoryHandlesRepository implements IHandlesRepository {
+export class MemoryHandlesRepository implements IHandlesRepository {
     public EMPTY = '|empty|';
     private intervals: NodeJS.Timeout[] = [];
 
@@ -72,11 +73,15 @@ class MemoryHandlesRepository implements IHandlesRepository {
 
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
-        return this;
+        return this as unknown as IHandlesRepository;
     }
 
+    /**
+     * Clears intervals and erases storage
+     */
     public destroy(): void {
         this.intervals.map((i) => clearInterval(i));
+        HandleStore.eraseStorage();
     }
 
     public isCaughtUp(): boolean {
@@ -95,8 +100,12 @@ class MemoryHandlesRepository implements IHandlesRepository {
         return HandleStore.getMetrics();
     }
 
-    public async prepareHandlesStorage(loadS3: boolean = true): Promise<{ slot: number; hash: string; } | null> {
-        return await HandleStore.prepareHandlesStorage(loadS3);
+    public async getFilesContent(): Promise<IHandleFileContent[] | null> {
+        return await HandleStore.getFilesContent();
+    }
+
+    public async prepareHandlesStorage(filesContent: IHandleFileContent): Promise<void> {
+        return await HandleStore.prepareHandlesStorage(filesContent);
     }
 
     public async rollBackToGenesis(): Promise<void> {
@@ -206,7 +215,7 @@ class MemoryHandlesRepository implements IHandlesRepository {
         let items = this.search(search);
 
         if (slotNumber) {
-            items.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number ?? 0));
+            items.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : (a.updated_slot_number ?? 0) - (b.updated_slot_number ?? 0)));
             const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
             const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
