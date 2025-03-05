@@ -771,10 +771,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@5.1.13":
-  version "5.1.13"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.13.tgz#5c2ceb4b5a306bb8c99659cbcd7e401825b13c5a"
-  integrity sha512-PLGuUVzy16gc0Yu2mpLDeFO6bhB72eQqkZgvBUCINr4SDdvbYhhkM+TkEXrqUCp104gkOBV5R4C/XO/Nc8D1vg==
+"@koralabs/kora-labs-common@5.1.24":
+  version "5.1.24"
+  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-5.1.24.tgz#556b0c9a0e96d1fc1790a944a91330d2b26a2c99"
+  integrity sha512-wAZT1QB/kkT/Ceb/mh4/w6yGrMeaPhmubgliB5uxnlVO2xY+/0yjZFfbSvC2kYTOxoNrWgE2NPXKoW4GDsgRJQ==
   dependencies:
     bech32 "^2.0.0"
     blakejs "^1.2.1"
@@ -846,7 +846,7 @@
   resolved "https://registry.npmjs.org/@pkgjs/parseargs/-/parseargs-0.11.0.tgz"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
 
-"@prettier/eslint@npm:prettier-eslint@^15.0.1", prettier-eslint@^15.0.1:
+"@prettier/eslint@npm:prettier-eslint@^15.0.1":
   version "15.0.1"
   resolved "https://registry.npmjs.org/prettier-eslint/-/prettier-eslint-15.0.1.tgz"
   integrity sha512-mGOWVHixSvpZWARqSDXbdtTL54mMBxc5oQYQ6RAqy8jecuNJBgN3t9E5a81G66F8x8fsKNiR1HWaBV66MJDOpg==
@@ -5130,6 +5130,26 @@ prettier-eslint-cli@^7.1.0:
     rxjs "^7.5.6"
     yargs "^13.1.1"
 
+prettier-eslint@^15.0.1:
+  version "15.0.1"
+  resolved "https://registry.npmjs.org/prettier-eslint/-/prettier-eslint-15.0.1.tgz"
+  integrity sha512-mGOWVHixSvpZWARqSDXbdtTL54mMBxc5oQYQ6RAqy8jecuNJBgN3t9E5a81G66F8x8fsKNiR1HWaBV66MJDOpg==
+  dependencies:
+    "@types/eslint" "^8.4.2"
+    "@types/prettier" "^2.6.0"
+    "@typescript-eslint/parser" "^5.10.0"
+    common-tags "^1.4.0"
+    dlv "^1.1.0"
+    eslint "^8.7.0"
+    indent-string "^4.0.0"
+    lodash.merge "^4.6.0"
+    loglevel-colored-level-prefix "^1.0.0"
+    prettier "^2.5.1"
+    pretty-format "^23.0.1"
+    require-relative "^0.8.7"
+    typescript "^4.5.4"
+    vue-eslint-parser "^8.0.1"
+
 prettier@^2.5.1, prettier@^2.7.1:
   version "2.8.8"
   resolved "https://registry.npmjs.org/prettier/-/prettier-2.8.8.tgz"
@@ -5829,8 +5849,7 @@ string-length@^4.0.1:
     char-regex "^1.0.2"
     strip-ansi "^6.0.0"
 
-"string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
-  name string-width-cjs
+"string-width-cjs@npm:string-width@^4.2.0":
   version "4.2.3"
   resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -5847,6 +5866,15 @@ string-width@^3.0.0, string-width@^3.1.0:
     emoji-regex "^7.0.1"
     is-fullwidth-code-point "^2.0.0"
     strip-ansi "^5.1.0"
+
+string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+  version "4.2.3"
+  resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
+  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
+  dependencies:
+    emoji-regex "^8.0.0"
+    is-fullwidth-code-point "^3.0.0"
+    strip-ansi "^6.0.1"
 
 string-width@^5.0.1, string-width@^5.1.2:
   version "5.1.2"
@@ -5871,8 +5899,7 @@ string_decoder@~1.1.1:
   dependencies:
     safe-buffer "~5.1.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
-  name strip-ansi-cjs
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
   version "6.0.1"
   resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -5892,6 +5919,13 @@ strip-ansi@^5.0.0, strip-ansi@^5.1.0, strip-ansi@^5.2.0:
   integrity sha512-DuRs1gKbBqsMKIZlrffwlug8MHkcnpjs5VPmL1PAh+mA30U0DTotfDZ0d2UUsXpPmPmMMJ6W773MaA3J+lbiWA==
   dependencies:
     ansi-regex "^4.1.0"
+
+strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
+  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
+  dependencies:
+    ansi-regex "^5.0.1"
 
 strip-ansi@^7.0.1:
   version "7.1.0"
@@ -6471,8 +6505,7 @@ wordwrap@~0.0.2:
   resolved "https://registry.npmjs.org/wordwrap/-/wordwrap-0.0.3.tgz"
   integrity sha512-1tMA907+V4QmxV7dbRvb4/8MaRALK6q9Abid3ndMYnbyo8piisCmeONVqVSXqQA3KaP4SLt5b7ud6E2sqP8TFw==
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
-  name wrap-ansi-cjs
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -6489,6 +6522,15 @@ wrap-ansi@^5.1.0:
     ansi-styles "^3.2.0"
     string-width "^3.0.0"
     strip-ansi "^5.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
 
 wrap-ansi@^8.1.0:
   version "8.1.0"

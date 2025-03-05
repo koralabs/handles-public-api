@@ -172,4 +172,6 @@ export interface ProcessOwnerTokenInput {
 export interface IBlockProcessor {
     initialize: (dynamicRegistry: IRegistry) => Promise<IBlockProcessor>;
     processBlock: (response: NextBlockResponse) => Promise<void>;
+    loadIndexes: () => Promise<void>;
+    resetIndexes: () => Promise<void>;
 }
