@@ -417,8 +417,8 @@ describe('HandleStore tests', () => {
                                 image_hash: '0xtodo',
                                 standard_image_hash: '0xtodo',
                                 reference_token: undefined,
-                                holder: 'drep1ygpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwyqwqn702',
-                                holder_type: 'drep',
+                                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+                                holder_type: 'wallet',
                                 payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
                                 drep: {
                                     cip_105: 'drep1qtguav4wkw66frtjwrujjzmjjercjrjcudnuq7uj85m3q3mau0l',

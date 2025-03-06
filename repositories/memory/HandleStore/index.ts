@@ -133,8 +133,8 @@ export class HandleStore {
         const payment_key_hash = (await getPaymentKeyHash(ada))!;
         updatedHandle.payment_key_hash = payment_key_hash;
         updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash?.replace('0x', ''));
-        updatedHandle.holder = updatedHandle.drep ? updatedHandle.drep.cip_129 : holder.address;
-        updatedHandle.holder_type = updatedHandle.drep ? 'drep': holder.type;
+        updatedHandle.holder = holder.address;
+        updatedHandle.holder_type = holder.type;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
