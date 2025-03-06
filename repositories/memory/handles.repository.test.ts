@@ -209,14 +209,6 @@ describe('MemoryHandlesProvider Tests', () => {
             const result = await repo.getAll({ pagination, search });
             expect(result).toEqual({ searchTotal: 2, handles: [handlesFixture[0], handlesFixture[2]] });
         });
-
-        // Is this test correct?
-        it.skip('should find handles by hex using the handle parameter', async () => {
-            const pagination = new HandlePaginationModel();
-            const search = new HandleSearchModel({ handles: ['barbacoa-hex'] });
-            const result = await repo.getAll({ pagination, search });
-            expect(result).toEqual({ searchTotal: 1, handles: [handlesFixture[0]] });
-        });
     });
 
     describe('getAllHandleNames', () => {

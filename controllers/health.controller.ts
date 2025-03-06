@@ -13,7 +13,7 @@ enum HealthStatus {
 
 class HealthController {
     public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        Logger.log('HEALTH CHECK: endpoint called');
+        Logger.log(`HEALTH CHECK: HEADERS - ${JSON.stringify(req.headers)}`);
         try {
             const ogmiosResults = await fetchHealth();
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
@@ -66,13 +66,15 @@ class HealthController {
                 statusCode = 503;
             else if (status != HealthStatus.CURRENT)
                 statusCode = 202;
-
+            
+            Logger.log(`HEALTH CHECK: STATUS - ${statusCode}: ${status}`);
             res.status(statusCode).json({
                 status,
                 ogmios: ogmiosResults,
                 stats
             });
-        } catch (error) {
+        } catch (error: any) {
+            Logger.log(`HEALTH CHECK: ERROR - ${error.message}`);
             next(error);
         }
     };

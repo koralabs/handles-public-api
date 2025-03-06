@@ -87,14 +87,14 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
         --socket-path ${SOCKET_PATH} &
 
     if [[ "${ENABLE_SOCKET_REDIRECT}" == "true" ]]; then
-        # CHANGE THIS TO S3
-        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
         until [ -S ${SOCKET_PATH} ]
         do
             sleep 1
         done
         echo "Found! ${SOCKET_PATH}"
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
+        # CHANGE THIS TO S3
+        curl ${ECS_CONTAINER_METADATA_URI_V4} | jq -r .Networks[0].IPv4Addresses[0] > /mnt/efs/cardano/${NETWORK}/cardano-node.ip
     fi
 fi
 wait
