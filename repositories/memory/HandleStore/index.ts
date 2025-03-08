@@ -393,15 +393,8 @@ export class HandleStore {
 
             // if there is no utxo, it means we already received a 100 token.
             const inputWithExistingHandle: SaveMintingTxInput = {
-                ...input,
-                image: existingHandle.image,
-                og_number: existingHandle.og_number,
-                version: existingHandle.version,
-                personalization: existingHandle.personalization,
-                last_update_address: existingHandle.last_update_address,
-                pz_enabled: existingHandle.pz_enabled,
-                last_edited_time: existingHandle.last_edited_time,
-                id_hash: existingHandle.id_hash
+                ...existingHandle,
+                ...input
             };
             const builtHandle = await HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });

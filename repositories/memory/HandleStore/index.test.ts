@@ -416,7 +416,6 @@ describe('HandleStore tests', () => {
                                 utxo: 'utxo123#0',
                                 image_hash: '0xtodo',
                                 standard_image_hash: '0xtodo',
-                                reference_token: undefined,
                                 holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 holder_type: 'wallet',
                                 payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
@@ -436,7 +435,6 @@ describe('HandleStore tests', () => {
                                 utxo: '',
                                 image_hash: '0x123',
                                 standard_image_hash: '0x123',
-                                reference_token: defaultReferenceToken,
                                 holder: '',
                                 holder_type: 'other',
                                 payment_key_hash: null
@@ -445,6 +443,122 @@ describe('HandleStore tests', () => {
                     }
                 ]
             ]);
+        });
+
+        it('Should process a demi handle which has the 100 token before the 222 token', async () => {
+            const personalizationData: IPersonalization = {
+                validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                default: false,
+                last_update_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1',
+                image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368',
+                standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368',
+                svg_version: '3.0.14',
+                agreed_terms: 'https://handle.me/$/tou',
+                migrate_sig_required: false,
+                trial: false,
+                nsfw: false,
+                pz_enabled: true
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'chimichanga-hex',
+                name: 'chimichanga',
+                slotNumber: 99,
+                personalization: personalizationData,
+                reference_token: {
+                    tx_id: 'utxo123',
+                    index: 0,
+                    lovelace: 50,
+                    datum: 'datum123',
+                    address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
+                },
+                personalizationDatum,
+                policy: 'f0ff',
+                metadata: {
+                    name: '$chimichanga',
+                    image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                    mediaType: 'image/jpeg',
+                    og: 0,
+                    og_number: 0,
+                    rarity: 'basic',
+                    length: 12,
+                    characters: 'letters,numbers,special',
+                    numeric_modifiers: '',
+                    handle_type: HandleType.HANDLE,
+                    version: 1
+                }
+            });
+
+            await HandleStore.saveMintedHandle({
+                hex: 'chimichanga-hex',
+                name: 'chimichanga',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
+                slotNumber: 100,
+                utxo: 'utxo123#1',
+                lovelace: 100,
+                handle_type: HandleType.HANDLE,
+                og_number: 0,
+                image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                version: 1,
+                policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e'
+            });
+
+            const handle = HandleStore.get('chimichanga');
+
+            // expect the personalization data to be added to the handle
+            expect(handle).toEqual({ 
+                amount: 1, 
+                bg_image: '', 
+                characters: 'letters', 
+                created_slot_number: 100, 
+                default_in_wallet: 'taco',
+                handle_type: 'handle', 
+                has_datum: false, 
+                hex: 'chimichanga-hex', 
+                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70', 
+                holder_type: 'wallet', 
+                image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M', 
+                last_update_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1', 
+                length: 11, 
+                lovelace: 100, 
+                name: 'chimichanga', 
+                numeric_modifiers: '', 
+                og_number: 0, 
+                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710', 
+                personalization: { nsfw: false, trial: false, validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1' }, 
+                pfp_image: '', 
+                policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e', 
+                pz_enabled: true, 
+                rarity: 'basic', 
+                resolved_addresses: { 
+                    ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' 
+                }, 
+                reference_token: {
+                    tx_id: 'utxo123',
+                    index: 0,
+                    lovelace: 50,
+                    datum: 'datum123',
+                    address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
+                },
+                standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M', 
+                standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
+                image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
+                svg_version: '3.0.14', 
+                updated_slot_number: 100, 
+                utxo: 'utxo123#1', 
+                version: 1 
+            });
         });
 
         it('Should property update the amount property when another mint happens', async () => {

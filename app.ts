@@ -157,22 +157,23 @@ class App {
                 } else {
                     const [firstFile] = files;
                     try {
-                        handlesRepo.prepareHandlesStorage(firstFile);
+                        await handlesRepo.prepareHandlesStorage(firstFile);
                         await this.loadBlockProcessorIndexes();
                         await ogmiosService.startSync({ slot: firstFile.slot, id: firstFile.hash });
                         ogmiosStarted = true;
                     } catch (error: any) {
-                        Logger.log({ message: `Error connecting Ogmios: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
+                        Logger.log({ message: `Error initializing Handles: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
                         // If error, try the other file's starting point
                         if (files.length > 1 && error.code === 1000) {
                             handlesRepo.destroy();
                             const [secondFile] = files.slice(1);
                             try {
-                                handlesRepo.prepareHandlesStorage(secondFile);
+                                await handlesRepo.prepareHandlesStorage(secondFile);
                                 await this.loadBlockProcessorIndexes();
                                 await ogmiosService.startSync({ slot: secondFile.slot, id: secondFile.hash });
                                 ogmiosStarted = true;
                             } catch (error: any) {
+                                Logger.log({ message: `Error initializing Handles: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.secondFileFailed' });
                                 if (error.code === 1000) {
                                     // this means the slot that came back from the files is bad
                                     await this.resetBlockProcessors();
