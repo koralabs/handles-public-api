@@ -2022,7 +2022,6 @@ describe('HandleStore tests', () => {
                     {
                         [handleName]: {
                             new: {
-                                created_slot_number: 200,
                                 lovelace: 10,
                                 holder: 'stake_test1urcr464g6xz4hn2ypnd4tulcnnjq38sg5e5rmdwa6tspwuqn7lhlg',
                                 resolved_addresses: {
@@ -2035,7 +2034,6 @@ describe('HandleStore tests', () => {
                                 payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                             },
                             old: {
-                                created_slot_number: 100,
                                 lovelace: 0,
                                 holder: stakeKey,
                                 resolved_addresses: { ada: address },

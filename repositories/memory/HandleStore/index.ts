@@ -420,7 +420,6 @@ export class HandleStore {
             ...existingHandle,
             utxo,
             lovelace,
-            created_slot_number: slotNumber,
             resolved_addresses: { ...existingHandle.resolved_addresses, ada: adaAddress },
             updated_slot_number: slotNumber,
             has_datum: !!datum,
