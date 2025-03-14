@@ -34,7 +34,8 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
     },
     {
         hex: 'burrito-hex',
@@ -66,7 +67,8 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
     },
     {
         hex: 'taco-hex',
@@ -98,13 +100,15 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
     }
 ];
 
-export const slotHistoryFixture: Record<number, ISlotHistory> = {
-    0: {},
-    1: {
+// @ts-expect-error
+export const slotHistoryFixture: Map<number, ISlotHistory> = new Map([
+    [0, {}],
+    [1, {
         barbacoa: {
             old: null
         },
@@ -114,23 +118,23 @@ export const slotHistoryFixture: Record<number, ISlotHistory> = {
         taco: {
             old: null
         }
-    },
-    2: {
+    }],
+    [2, {
         barbacoa: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    },
-    3: {
+    }],
+    [3, {
         burrito: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    },
-    4: {
+    }],
+    [4, {
         barbacoa: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    }
-};
+    }]
+]);
 
 export const holdersFixture = new Map<string, Holder>([
     [
@@ -140,8 +144,7 @@ export const holdersFixture = new Map<string, Holder>([
             defaultHandle: 'burritos',
             manuallySet: false,
             type: 'script',
-            knownOwnerName: 'funnable.token',
-            address: ''
+            knownOwnerName: 'funnable.token'
         }
     ],
     [
@@ -151,8 +154,7 @@ export const holdersFixture = new Map<string, Holder>([
             defaultHandle: 'tacos',
             manuallySet: false,
             type: 'wallet',
-            knownOwnerName: '',
-            address: ''
+            knownOwnerName: ''
         }
     ]
 ]);
@@ -165,6 +167,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
         if (!repo.get(handleName)) {
             const handle = await repo.Internal.buildHandle({
                 adaAddress: createRandomAddress(),
+                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
@@ -218,6 +221,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                 if (!repo.get(handleName)) {
                     const newHandle = await repo.Internal.buildHandle({
                         adaAddress: createRandomAddress(),
+                        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,

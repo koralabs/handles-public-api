@@ -62,6 +62,18 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             };
         },
+        getAllHandles: () => {
+            return [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ]
+        },
         getAll: () => {
             return {
                 searchTotal: 1,
@@ -130,6 +142,22 @@ jest.mock('../ioc/main.registry', () => ({
                 { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
                 { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
             ];
+        },
+        getMetrics: () => {
+            return {
+                firstSlot: 0,
+                lastSlot: 0,
+                currentSlot: 0,
+                elapsedOgmiosExec: 0,
+                elapsedBuildingExec: 0,
+                firstMemoryUsage: 0,
+                currentBlockHash: '',
+                tipBlockHash: '',
+                memorySize: 0,
+                networkSync: 0,
+                count: 0,
+                schemaVersion: 0
+            }
         }
     }),
     ['apiKeysRepo']: jest.fn().mockReturnValue({

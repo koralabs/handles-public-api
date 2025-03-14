@@ -1,17 +1,13 @@
 import { HandleHistory } from '@koralabs/kora-labs-common';
 import { MemoryHandlesProvider } from '.';
+import { HandlesRepository } from '../handlesRepository';
 import { HandleStore } from './handleStore';
 import { slotHistoryFixture } from './tests/fixtures/handles';
-const repo = new MemoryHandlesProvider();
+const repo = new HandlesRepository(new MemoryHandlesProvider());
 
 describe('saveSlotHistory', () => {
     beforeEach(() => {
-        HandleStore.slotHistoryIndex = new Map(
-            Object.keys(slotHistoryFixture).map((k) => {
-                const slot = parseInt(k);
-                return [slot, slotHistoryFixture[slot]];
-            })
-        );
+        HandleStore.slotHistoryIndex = structuredClone(slotHistoryFixture);
     });
 
     afterEach(() => {

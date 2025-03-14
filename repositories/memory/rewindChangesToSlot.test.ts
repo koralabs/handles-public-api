@@ -1,8 +1,9 @@
 import { Logger } from '@koralabs/kora-labs-common';
 import { MemoryHandlesProvider } from '.';
+import { HandlesRepository } from '../handlesRepository';
 import { HandleStore } from './handleStore';
 import { handlesFixture, slotHistoryFixture } from './tests/fixtures/handles';
-const repo = new MemoryHandlesProvider();
+const repo = new HandlesRepository( new MemoryHandlesProvider());
 
 describe('rewindChangesToSlot', () => {
     beforeEach(async () => {
@@ -21,24 +22,20 @@ describe('rewindChangesToSlot', () => {
                 lovelace,
                 resolved_addresses: { ada: adaAddress },
                 handle_type,
-                last_update_address
+                last_update_address,
+                policy
             } = handle;
-            await repo.saveMintedHandle({ adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
+            await repo.saveMintedHandle({ policy, adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
         }
 
         // set the slotHistoryIndex
-        HandleStore.slotHistoryIndex = new Map(
-            Object.keys(slotHistoryFixture).map((k) => {
-                const slot = parseInt(k);
-                return [slot, slotHistoryFixture[slot]];
-            })
-        );
+        HandleStore.slotHistoryIndex = slotHistoryFixture;
     });
 
     afterEach(() => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            repo.Internal.remove(handle.name);
+            repo.removeHandle(handle.name, 0);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -51,7 +48,7 @@ describe('rewindChangesToSlot', () => {
         const setMetricsSpy = jest.spyOn(repo, 'setMetrics').mockImplementation();
 
         // We should have 3 handles before the rollback
-        expect(repo.getHandles()).toHaveLength(3);
+        expect(repo.getAllHandleNames()).toHaveLength(3);
 
         const slot = 0;
         const hash = 'hash0';
@@ -60,7 +57,7 @@ describe('rewindChangesToSlot', () => {
         await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(repo.getHandles().length).toEqual(0);
+        expect(repo.getAllHandleNames().length).toEqual(0);
         expect(Object.entries(HandleStore.slotHistoryIndex)).toEqual([]);
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -86,7 +83,7 @@ describe('rewindChangesToSlot', () => {
         const lastSlot = 10;
         jest.spyOn(repo, 'setMetrics').mockImplementation();
 
-        await repo.burnHandle('taco', 5);
+        await repo.removeHandle('taco', 5);
 
         await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 

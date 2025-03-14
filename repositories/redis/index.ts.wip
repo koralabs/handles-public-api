@@ -78,7 +78,7 @@ export class RedisRepository implements IHandlesProvider{
         this.redis.set(`handles-${name}`, JSON.stringify(updatedHandle))
 
         // Set default name during personalization
-        this.setHolderAddressIndex(holder, name, handleDefault, oldHandle?.holder);
+        this.setHolderIndex(holder, name, handleDefault, oldHandle?.holder);
 
         // set all one-to-many indexes
         this.addIndexSet(this.rarityIndex, rarity, name);

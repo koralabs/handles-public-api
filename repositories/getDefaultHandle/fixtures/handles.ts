@@ -1,4 +1,5 @@
 import { HandleType, IHandle, Rarity } from '@koralabs/kora-labs-common';
+const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 export const ogHandles: IHandle[] = [
     {
@@ -28,7 +29,8 @@ export const ogHandles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: 'og2-hex',
@@ -57,7 +59,8 @@ export const ogHandles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: 'og3-hex',
@@ -86,7 +89,8 @@ export const ogHandles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     }
 ];
 
@@ -118,7 +122,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '10-hex',
@@ -147,7 +152,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '1000-hex',
@@ -176,7 +182,8 @@ export const handlesWithDifferentLengths: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     }
 ];
 
@@ -208,7 +215,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '11-hex',
@@ -237,7 +245,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '12-hex',
@@ -266,7 +275,8 @@ export const handlesWithDifferentSlotNumbers: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     }
 ];
 
@@ -298,7 +308,8 @@ export const handles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '10-hex',
@@ -327,7 +338,8 @@ export const handles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     },
     {
         hex: '12-hex',
@@ -356,6 +368,7 @@ export const handles: IHandle[] = [
         svg_version: '1.0.0',
         holder_type: '',
         handle_type: HandleType.NFT_SUBHANDLE,
-        version: 0
+        version: 0,
+        policy
     }
 ];

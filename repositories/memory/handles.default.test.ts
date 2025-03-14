@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Holder } from '@koralabs/kora-labs-common';
 import { MemoryHandlesProvider } from '.';
 import { HandleStore } from './handleStore';
@@ -21,14 +22,15 @@ describe('holder index integrity', () => {
                     handles: set,
                     knownOwnerName: '',
                     manuallySet: false,
-                    type: 'wallet',
-                    address: ''
+                    type: 'wallet'
                 });
             } else {
                 holder.defaultHandle = handle.default_in_wallet;
                 holder.handles.add(handle.name);
             }
         }
-        expect(HandleStore.holderAddressIndex).toEqual(testHolderIndex);
+        console.log(HandleStore.holderIndex)
+        const thisthing = HandleStore.holderIndex;
+        expect(thisthing).toEqual(testHolderIndex);
     });
 });

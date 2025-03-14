@@ -1,4 +1,4 @@
-import { EMPTY, HandleSearchModel, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -8,6 +8,14 @@ import { memoryWatcher } from '../../services/ogmios/utils';
 import { HandleStore } from './handleStore';
 
 export class MemoryHandlesProvider implements IHandlesProvider {
+    public getValueFromIndex (indexName: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
+        return this.convertIndexNameToIndex(indexName)?.get(key);
+    }
+
+    public setValueOnIndex (indexName: IndexNames, key: string | number, value: Set<string> | Holder | ISlotHistory | StoredHandle) {
+        this.convertIndexNameToIndex(indexName)?.set(key, value);
+    }
+
     private _files: IHandleFileContent[] | null = null;
     public setHandle(handleName: string, value: StoredHandle): void {
         HandleStore.handles.set(handleName, value);
@@ -17,39 +25,35 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         HandleStore.handles.delete(handleName)
     }
 
-    public getIndex(indexName: IndexNames): any {
-        return this.convertIndexNameToIndex(indexName);
+    public getIndex(indexName: IndexNames) {
+        return this.convertIndexNameToIndex(indexName)!;
     }
 
-    public getValuesFromIndex(indexName: IndexNames, key: string | number): any {
-        return this.convertIndexNameToIndex(indexName).get(key);
+    public getValuesFromIndexedSet(indexName: IndexNames, key: string | number): Set<string> | undefined {
+        return (this.convertIndexNameToIndex(indexName) as Map<string|number, Set<string>>)?.get(key);
     }
 
-    public setValueOnIndex(indexName: IndexNames, key: string | number, value: any): void {
-        const index = this.convertIndexNameToIndex(indexName);
-        const set = index.get(key);
-        if (set instanceof Set) {
-            set.add(value);
-            index.set(key, set);
-        }
-        else {
-            index.set(key, value)
-        }
+    public addValueToIndexedSet(indexName: IndexNames, key: string | number, value: any): void {
+        const index = this.convertIndexNameToIndex(indexName) as Map<string|number, Set<string>>;
+        const set = index!.get(key) ?? new Set<string>();
+        set.add(value);
+        index!.set(key, set);
     }
 
-    public removeValueFromIndex(indexName: IndexNames, key: string | number, value: string): void {
-        const index = this.convertIndexNameToIndex(indexName).get(key);
+    public removeValueFromIndexedSet(indexName: IndexNames, key: string | number, value: string): void {
+        const index = this.convertIndexNameToIndex(indexName)?.get(key);
         if (index instanceof Set) {
             index.delete(value);
         }
     }
 
     public removeKeyFromIndex(indexName: IndexNames, key: string | number): void {
-        this.convertIndexNameToIndex(indexName).delete(key);
+        this.convertIndexNameToIndex(indexName)?.delete(key);
 
     }
 
     public getMetrics(): IApiMetrics {
+        this.metrics.count = HandleStore.handles.size;
         return this.metrics;
     }
 
@@ -57,50 +61,35 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return this._storageSchemaVersion;
     }
 
-    private convertIndexNameToIndex(indexName: IndexNames) {
-        let index: Map<string|number, any>;
+    private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, Set<string> | Holder | ISlotHistory | StoredHandle> {
         switch (indexName) {
             case IndexNames.ADDRESS:
-                index = HandleStore.addressesIndex
-                break;
+                return HandleStore.addressesIndex
             case IndexNames.CHARACTER:
-                index = HandleStore.charactersIndex
-                break;
-            case IndexNames.HANDLE:
-                index = HandleStore.handles
-                break;
+                return HandleStore.charactersIndex
             case IndexNames.HASH_OF_STAKE_KEY_HASH:
-                index = HandleStore.hashOfStakeKeyHashIndex
-                break;
-            case IndexNames.HOLDER:
-                index = HandleStore.holderAddressIndex
-                break;
+                return HandleStore.hashOfStakeKeyHashIndex
             case IndexNames.LENGTH:
-                index = HandleStore.lengthIndex
-                break;
+                return HandleStore.lengthIndex
             case IndexNames.NUMERIC_MODIFIER:
-                index = HandleStore.numericModifiersIndex
-                break;
+                return HandleStore.numericModifiersIndex
             case IndexNames.OG:
-                index = HandleStore.ogIndex
-                break;
+                return HandleStore.ogIndex
             case IndexNames.PAYMENT_KEY_HASH:
-                index = HandleStore.paymentKeyHashesIndex
-                break;
+                return HandleStore.paymentKeyHashesIndex
             case IndexNames.RARITY:
-                index = HandleStore.rarityIndex
-                break;
-            case IndexNames.SLOT_HISTORY:
-                index = HandleStore.slotHistoryIndex
-                break;
+                return HandleStore.rarityIndex
             case IndexNames.SUBHANDLE:
-                index = HandleStore.subHandlesIndex
-                break;
+                return HandleStore.subHandlesIndex
             case IndexNames.STAKE_KEY_HASH:
-                index = HandleStore.addressesIndex
-                break;
+                return HandleStore.addressesIndex
+            case IndexNames.HANDLE:
+                return HandleStore.handles
+            case IndexNames.HOLDER:
+                return HandleStore.holderIndex
+            case IndexNames.SLOT_HISTORY:
+                return HandleStore.slotHistoryIndex
         }
-        return index!;
     }
 
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
@@ -176,7 +165,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
             return null;
         }
 
-        const holder = HandleStore.holderAddressIndex.get(handle.holder);
+        const holder = HandleStore.holderIndex.get(handle.holder);
         if (holder) {
             handle.default_in_wallet = holder.defaultHandle;
         }
@@ -212,82 +201,11 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         });
         return result;
     }
-    
-    private search(searchModel: HandleSearchModel) {
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
-
-        // helper function to get a list of hashes from the Set indexes
-        const getHandlesFromIndex = (index: Map<string, Set<string>>, key: string | undefined) => {
-            if (!key) return [];
-            const array = Array.from(index.get(key) ?? [], (value) => value);
-            return array.length === 0 ? [EMPTY] : array;
-        };
-
-        // get handle name arrays for all the search parameters
-        const characterArray = getHandlesFromIndex(HandleStore.charactersIndex, characters);
-        let lengthArray: string[] = [];
-        if (length?.includes('-')) {
-            for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
-                lengthArray = lengthArray.concat(getHandlesFromIndex(HandleStore.lengthIndex, `${i}`));
-            }
-        } else {
-            lengthArray = getHandlesFromIndex(HandleStore.lengthIndex, length);
-        }
-        const rarityArray = getHandlesFromIndex(HandleStore.rarityIndex, rarity);
-        const numericModifiersArray = getHandlesFromIndex(HandleStore.numericModifiersIndex, numeric_modifiers);
-        const ogArray = og ? getHandlesFromIndex(HandleStore.ogIndex, '1') : [];
-
-        const getHolderAddressHandles = (key: string | undefined) => {
-            if (!key) return [];
-            const array = Array.from(HandleStore.holderAddressIndex.get(key)?.handles ?? [], (value) => value);
-            return array.length === 0 ? [EMPTY] : array;
-        };
-
-        const holderAddressItemsArray = getHolderAddressHandles(holder_address);
-
-        // filter out any empty arrays
-        const filteredArrays = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderAddressItemsArray, ogArray].filter((a) => a.length);
-
-        // get the intersection of all the arrays
-        const handleNames = filteredArrays.length ? filteredArrays.reduce((a, b) => a.filter((c) => b.includes(c))) : [];
-
-        // remove duplicates by getting the unique names
-        const uniqueHandleNames = [...new Set(handleNames)];
-
-        // remove the empty names
-        const nonEmptyHandles = uniqueHandleNames.filter((name) => name !== EMPTY);
-
-        let array =
-            characters || length || rarity || numeric_modifiers || holder_address || og
-                ? nonEmptyHandles.reduce<StoredHandle[]>((agg, name) => {
-                    const handle = this.getHandle(name as string);
-                    if (handle) {
-                        if (search && !handle.name.includes(search)) return agg;
-                        if (handle_type && handle.handle_type !== handle_type) return agg;
-                        if (handles && !handles.includes(handle.name)) return agg;
-                        agg.push(handle);
-                    }
-                    return agg;
-                }, [])
-                : this.getAllHandles().reduce<StoredHandle[]>((agg, handle) => {
-                    if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
-                    if (handle_type && handle.handle_type !== handle_type) return agg;
-                    if (handles && !handles.includes(handle.name)) return agg;
-
-                    agg.push(handle);
-                    return agg;
-                }, []);
-
-        if (searchModel.personalized) {
-            array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
-        }
-        return array;
-    }
 
     public getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Holder[] {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items: Holder[] = [...HandleStore.holderAddressIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.size - a.handles.size : a.handles.size - b.handles.size));
+        const items: Holder[] = [...HandleStore.holderIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.size - a.handles.size : a.handles.size - b.handles.size));
         const startIndex = (page - 1) * recordsPerPage;
         const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
@@ -295,7 +213,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getHolderAddressDetails(key: string): HolderViewModel {
-        const holderAddressDetails = HandleStore.holderAddressIndex.get(key);
+        const holderAddressDetails = HandleStore.holderIndex.get(key);
         if (!holderAddressDetails) throw new HttpException(404, 'Not found');
 
         const { defaultHandle, manuallySet, handles, knownOwnerName, type } = holderAddressDetails;
@@ -313,7 +231,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     public getTotalHandlesStats(): { total_handles: number; total_holders: number } {
         return {
             total_handles: this.count(),
-            total_holders: HandleStore.holderAddressIndex.size
+            total_holders: HandleStore.holderIndex.size
         };
     }
 
@@ -565,7 +483,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     private eraseStorage() {
         // erase all indexes
         HandleStore.handles = new Map<string, StoredHandle>();
-        HandleStore.holderAddressIndex = new Map<string, Holder>();
+        HandleStore.holderIndex = new Map<string, Holder>();
         HandleStore.rarityIndex = new Map<string, Set<string>>();
         HandleStore.ogIndex = new Map<string, Set<string>>();
         HandleStore.subHandlesIndex = new Map<string, Set<string>>();

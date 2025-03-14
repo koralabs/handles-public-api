@@ -197,7 +197,8 @@ class OgmiosService {
                         datum: datumString,
                         script,
                         handleMetadata,
-                        isMintTx
+                        isMintTx,
+                        policy: policyId
                     };
 
                     const { assetLabel } = checkNameLabel(assetName);
@@ -390,7 +391,7 @@ class OgmiosService {
         return this.buildValidDatum(handle, hex, datumObjectConstructor);
     };
 
-    private processAssetReferenceToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
+    private processAssetReferenceToken = async ({ policy, assetName, slotNumber, utxo, lovelace, address, datum }: { policy: string; assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
 
         if (!datum) {
@@ -430,6 +431,7 @@ class OgmiosService {
         }
 
         await this.handlesRepo.savePersonalizationChange({
+            policy,
             hex,
             name,
             personalization,
@@ -469,7 +471,7 @@ class OgmiosService {
         });
     };
 
-    private processHandleOwnerToken = async ({ assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
+    private processHandleOwnerToken = async ({ policy, assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
         const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
@@ -489,7 +491,8 @@ class OgmiosService {
             sub_characters: data?.sub_characters,
             sub_length: data?.sub_length,
             sub_numeric_modifiers: data?.sub_numeric_modifiers,
-            sub_rarity: data?.sub_rarity
+            sub_rarity: data?.sub_rarity,
+            policy
         };
 
         if (isMintTx) {
