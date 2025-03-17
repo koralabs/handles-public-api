@@ -142,12 +142,13 @@ class App {
         const files = (await handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
 
         const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock.bind(this));
-        await ogmiosService.initialize();
 
         // attempt ogmios resume (see if starting point exists or errors)
         let ogmiosStarted = false;
         while (!ogmiosStarted) {
             try {
+                await ogmiosService.initialize();
+
                 if (!files) {
                     await this.resetBlockProcessors();
                     const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
@@ -207,7 +208,6 @@ class App {
 
         try {
             const swaggerDoc = parse(fs.readFileSync('./swagger.yml').toString());
-            // @ts-expect-error
             this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
         } catch (error: any) {
             Logger.log(`Unable to load swagger with error: ${error}`);
