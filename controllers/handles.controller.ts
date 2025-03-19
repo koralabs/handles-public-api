@@ -251,7 +251,7 @@ class HandlesController {
 
             res.status(handleRepo.currentHttpStatus()).json({
                 tx_id: handleData.handle.utxo.split('#')[0],
-                index: parseInt(handleData.handle.utxo.split('#')[0]),
+                index: parseInt(handleData.handle.utxo.split('#')[1]),
                 lovelace: handleData.handle.lovelace,
                 address: handleData.handle.resolved_addresses.ada,
                 datum,

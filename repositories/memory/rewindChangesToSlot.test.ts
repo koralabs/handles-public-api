@@ -19,6 +19,7 @@ describe('rewindChangesToSlot', () => {
                 og_number,
                 updated_slot_number: slotNumber,
                 utxo,
+                policy = 'f0ff',
                 lovelace,
                 resolved_addresses: { ada: adaAddress },
                 handle_type,

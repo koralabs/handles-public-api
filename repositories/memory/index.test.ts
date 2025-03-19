@@ -56,6 +56,7 @@ describe('HandleStore tests', () => {
                 name,
                 og_number,
                 utxo,
+                policy = 'f0ff',
                 lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
@@ -73,6 +74,7 @@ describe('HandleStore tests', () => {
                 og_number,
                 slotNumber,
                 utxo,
+                policy,
                 lovelace,
                 datum: `some_datum_${key}`,
                 image_hash: standard_image_hash,
@@ -149,6 +151,7 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 amount: 1,
                 holder_type: 'wallet',
@@ -178,6 +181,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -212,6 +216,7 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 has_datum: true,
                 datum: 'datum123',
@@ -272,6 +277,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationData,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
+                policy: 'f0ff',
                 metadata: {
                     name: 'chimichanga',
                     image: 'ipfs://123',
@@ -294,6 +300,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -324,7 +331,6 @@ describe('HandleStore tests', () => {
                                 utxo: 'utxo123#0',
                                 image_hash: '0xtodo',
                                 standard_image_hash: '0xtodo',
-                                reference_token: undefined,
                                 holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 holder_type: 'wallet',
                                 payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
@@ -344,7 +350,6 @@ describe('HandleStore tests', () => {
                                 utxo: '',
                                 image_hash: '0x123',
                                 standard_image_hash: '0x123',
-                                reference_token: defaultReferenceToken,
                                 holder: '',
                                 holder_type: 'other',
                                 payment_key_hash: null
@@ -353,6 +358,122 @@ describe('HandleStore tests', () => {
                     }
                 ]
             ]);
+        });
+
+        it('Should process a demi handle which has the 100 token before the 222 token', async () => {
+            const personalizationData: IPersonalization = {
+                validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1',
+                trial: false,
+                nsfw: false
+            };
+
+            const personalizationDatum: IPzDatumConvertedUsingSchema = {
+                standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                portal: '',
+                designer: '',
+                socials: '',
+                vendor: '',
+                default: false,
+                last_update_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1',
+                image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368',
+                standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368',
+                svg_version: '3.0.14',
+                agreed_terms: 'https://handle.me/$/tou',
+                migrate_sig_required: false,
+                trial: false,
+                nsfw: false,
+                pz_enabled: true
+            };
+
+            await HandleStore.savePersonalizationChange({
+                hex: 'chimichanga-hex',
+                name: 'chimichanga',
+                slotNumber: 99,
+                personalization: personalizationData,
+                reference_token: {
+                    tx_id: 'utxo123',
+                    index: 0,
+                    lovelace: 50,
+                    datum: 'datum123',
+                    address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
+                },
+                personalizationDatum,
+                policy: 'f0ff',
+                metadata: {
+                    name: '$chimichanga',
+                    image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                    mediaType: 'image/jpeg',
+                    og: 0,
+                    og_number: 0,
+                    rarity: 'basic',
+                    length: 12,
+                    characters: 'letters,numbers,special',
+                    numeric_modifiers: '',
+                    handle_type: HandleType.HANDLE,
+                    version: 1
+                }
+            });
+
+            await HandleStore.saveMintedHandle({
+                hex: 'chimichanga-hex',
+                name: 'chimichanga',
+                adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
+                slotNumber: 100,
+                utxo: 'utxo123#1',
+                lovelace: 100,
+                handle_type: HandleType.HANDLE,
+                og_number: 0,
+                image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
+                version: 1,
+                policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e'
+            });
+
+            const handle = HandleStore.get('chimichanga');
+
+            // expect the personalization data to be added to the handle
+            expect(handle).toEqual({ 
+                amount: 1, 
+                bg_image: '', 
+                characters: 'letters', 
+                created_slot_number: 100, 
+                default_in_wallet: 'taco',
+                handle_type: 'handle', 
+                has_datum: false, 
+                hex: 'chimichanga-hex', 
+                holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70', 
+                holder_type: 'wallet', 
+                image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M', 
+                last_update_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1', 
+                length: 11, 
+                lovelace: 100, 
+                name: 'chimichanga', 
+                numeric_modifiers: '', 
+                og_number: 0, 
+                payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710', 
+                personalization: { nsfw: false, trial: false, validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1' }, 
+                pfp_image: '', 
+                policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e', 
+                pz_enabled: true, 
+                rarity: 'basic', 
+                resolved_addresses: { 
+                    ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' 
+                }, 
+                reference_token: {
+                    tx_id: 'utxo123',
+                    index: 0,
+                    lovelace: 50,
+                    datum: 'datum123',
+                    address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
+                },
+                standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M', 
+                standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
+                image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
+                svg_version: '3.0.14', 
+                updated_slot_number: 100, 
+                utxo: 'utxo123#1', 
+                version: 1 
+            });
         });
 
         it('Should property update the amount property when another mint happens', async () => {
@@ -365,6 +486,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -381,6 +503,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr1234',
                 og_number: 0,
                 utxo: 'utxo124#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -406,6 +529,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -444,6 +568,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -479,6 +604,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -534,6 +660,7 @@ describe('HandleStore tests', () => {
                 reference_token: defaultReferenceToken,
                 slotNumber: 200,
                 personalizationDatum,
+                policy: 'f0ff',
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -665,6 +792,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
+                policy: 'f0ff',
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -728,6 +856,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -773,7 +902,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -821,6 +950,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -874,7 +1004,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -932,7 +1062,7 @@ describe('HandleStore tests', () => {
                 personalization: newPersonalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: newPersonalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 300,
                 metadata: {
                     name: 'nacho-cheese',
@@ -991,7 +1121,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdatesWithDefaultWalletChange,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: finalPersonalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 400,
                 metadata: {
                     name: handleName,
@@ -1151,7 +1281,7 @@ describe('HandleStore tests', () => {
                 personalization: tacoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 100,
                 metadata: {
                     name: 'taco',
@@ -1206,7 +1336,7 @@ describe('HandleStore tests', () => {
                 personalization: burritoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: burritoPersonalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 200,
                 metadata: {
                     name: 'burrito',
@@ -1261,7 +1391,7 @@ describe('HandleStore tests', () => {
                 personalization: barbacoaPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: barbacoaPersonalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 300,
                 metadata: {
                     name: 'barbacoa',
@@ -1316,7 +1446,7 @@ describe('HandleStore tests', () => {
                 personalization: tacoPzUpdate2,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatumUpdate2,
-
+                policy: 'f0ff',
                 slotNumber: 400,
                 metadata: {
                     name: 'taco',
@@ -1347,6 +1477,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -1395,7 +1526,7 @@ describe('HandleStore tests', () => {
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-
+                policy: 'f0ff',
                 slotNumber: 300,
                 metadata: {
                     name: handleHex,
@@ -1481,6 +1612,7 @@ describe('HandleStore tests', () => {
                 policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
+                policy: 'f0ff',
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
@@ -1519,6 +1651,7 @@ describe('HandleStore tests', () => {
                 policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
+                policy: 'f0ff',
                 personalization: personalizationUpdates,
                 reference_token: newReferenceToken,
                 personalizationDatum: newPzDatum,
@@ -1541,6 +1674,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -1600,6 +1734,7 @@ describe('HandleStore tests', () => {
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -1739,6 +1874,7 @@ describe('HandleStore tests', () => {
                 adaAddress: address,
                 og_number: 0,
                 utxo: 'utxo_salsa1#0',
+                policy: 'f0ff',
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -1761,6 +1897,8 @@ describe('HandleStore tests', () => {
                 name: handleName,
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
+                policy: 'f0ff',
+                lovelace: 10,
                 slotNumber: 200,
                 datum: undefined
             });
@@ -1774,7 +1912,8 @@ describe('HandleStore tests', () => {
                 characters: 'letters',
                 hex: handleHex,
                 utxo: 'utxo_salsa2#0',
-                lovelace: 0,
+                policy: 'f0ff',
+                lovelace: 10,
                 length: 5,
                 name: 'salsa',
                 image: 'ipfs://123',
@@ -1815,6 +1954,7 @@ describe('HandleStore tests', () => {
                     {
                         [handleName]: {
                             new: {
+                                lovelace: 10,
                                 holder: 'stake_test1urcr464g6xz4hn2ypnd4tulcnnjq38sg5e5rmdwa6tspwuqn7lhlg',
                                 resolved_addresses: {
                                     ada: 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746'
@@ -1826,6 +1966,7 @@ describe('HandleStore tests', () => {
                                 payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                             },
                             old: {
+                                lovelace: 0,
                                 holder: stakeKey,
                                 resolved_addresses: { ada: address },
                                 datum: 'a2datum_salsa',
@@ -1850,7 +1991,9 @@ describe('HandleStore tests', () => {
                 name: 'not-a-handle',
                 adaAddress: newAddress,
                 slotNumber: 1234,
-                utxo: 'utxo'
+                utxo: 'utxo',
+                lovelace: 0,
+                policy: 'f0ff'
             });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',
