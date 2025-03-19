@@ -284,15 +284,19 @@ describe('MemoryHandlesProvider Tests', () => {
         });
     });
 
-    describe('getHolderAddressDetails', () => {
+    describe('getHolder', () => {
         it('should get holderAddress details', async () => {
             const result = repo.getHolder('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70');
             expect(result).toEqual({
-                address: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
-                default_handle: 'taco',
-                known_owner_name: '',
-                manually_set: false,
-                total_handles: 4,
+                defaultHandle: 'taco',
+                knownOwnerName: '',
+                manuallySet: false,
+                handles: new Set([
+                    'barbacoa',
+                    'burrito',
+                    'taco',
+                    'v@taco'
+                ]),
                 type: 'wallet'
             });
         });

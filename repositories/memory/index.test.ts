@@ -424,7 +424,7 @@ describe('HandleStore tests', () => {
             expect(handle?.handle_type).toEqual(HandleType.NFT_SUBHANDLE);
 
             // expect subHandle to get added to the subHandlesIndex
-            const subHandles = repo.getSubHandlesByRootHandle('hndl');
+            const subHandles = repo.getSubHandlesByRootHandle('hndl').map(s => s.name);
             expect([...subHandles]).toEqual([subHandleName]);
         });
 
@@ -465,7 +465,7 @@ describe('HandleStore tests', () => {
             expect(handle?.original_address).toEqual('0x123');
 
             // expect subHandle to get added to the subHandlesIndex
-            const subHandles = repo.getSubHandlesByRootHandle('hndl');
+            const subHandles = repo.getSubHandlesByRootHandle('hndl').map(s => s.name);
             expect([...subHandles]).toEqual([handleName]);
         });
     });
