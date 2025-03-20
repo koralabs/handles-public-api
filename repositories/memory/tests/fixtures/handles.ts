@@ -2,6 +2,7 @@ import { HandleSearchModel, HandleType, Holder, ISlotHistory, Rarity, StoredHand
 import { bech32 } from 'bech32';
 import { MemoryHandlesProvider } from '../..';
 import { HandlesRepository } from '../../../handlesRepository';
+const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 export const handlesFixture: StoredHandle[] = [
     {
@@ -13,7 +14,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 8,
         og_number: 0,
         utxo: 'utxo1#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.basic,
         characters: 'letters',
@@ -35,8 +36,7 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
         hex: 'burrito-hex',
@@ -47,7 +47,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 7,
         og_number: 0,
         utxo: 'utxo2#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
@@ -69,8 +69,7 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
         hex: 'taco-hex',
@@ -81,7 +80,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 4,
         og_number: 0,
         utxo: 'utxo3#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
@@ -103,8 +102,7 @@ export const handlesFixture: StoredHandle[] = [
         holder_type: 'wallet',
         version: 0,
         handle_type: HandleType.HANDLE,
-        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a'
+        payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     }
 ];
 
@@ -170,10 +168,9 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
         if (!repo.get(handleName)) {
             const handle = await repo.Internal.buildHandle({
                 adaAddress: createRandomAddress(),
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
-                policy: 'f0ff',
+                policy,
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                 og_number: Math.floor(Math.random() * 2438),
                 slotNumber: i,
@@ -225,10 +222,9 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                 if (!repo.get(handleName)) {
                     const newHandle = await repo.Internal.buildHandle({
                         adaAddress: createRandomAddress(),
-                        policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
-                        policy: 'f0ff',
+                        policy,
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                         og_number: Math.floor(Math.random() * 2438),
                         slotNumber: beginningSlot + i,

@@ -8,6 +8,7 @@ import { HandleStore } from './handleStore';
 import { handlesFixture } from './tests/fixtures/handles';
 const provider = new MemoryHandlesProvider();
 const repo = new HandlesRepository(provider);
+const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 //const klc = {getAddressHolderDetails, bech32FromHex};
 jest.mock('@koralabs/kora-labs-common', () => ({
@@ -56,7 +57,6 @@ describe('HandleStore tests', () => {
                 name,
                 og_number,
                 utxo,
-                policy = 'f0ff',
                 lovelace,
                 updated_slot_number: slotNumber,
                 resolved_addresses: { ada: adaAddress },
@@ -66,7 +66,6 @@ describe('HandleStore tests', () => {
                 last_update_address
             } = handle;
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 adaAddress,
                 hex,
                 image,
@@ -127,7 +126,6 @@ describe('HandleStore tests', () => {
         it('should return a handle', () => {
             const handle = repo.get('barbacoa');
             expect(handle).toEqual({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 bg_image: '',
                 characters: 'letters',
                 created_slot_number: expect.any(Number),
@@ -151,7 +149,7 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
                 updated_slot_number: expect.any(Number),
                 utxo: 'utxo1#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 amount: 1,
                 holder_type: 'wallet',
@@ -175,13 +173,12 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'nachos-hex',
                 name: 'nachos',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -195,7 +192,6 @@ describe('HandleStore tests', () => {
 
             // expect to get the correct handle properties
             expect(handle).toEqual({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 bg_image: '',
                 characters: 'letters',
                 created_slot_number: 100,
@@ -216,7 +212,7 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
                 updated_slot_number: 100,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 has_datum: true,
                 datum: 'datum123',
@@ -270,14 +266,13 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 slotNumber: 99,
                 personalization: personalizationData,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 metadata: {
                     name: 'chimichanga',
                     image: 'ipfs://123',
@@ -294,13 +289,12 @@ describe('HandleStore tests', () => {
             });
 
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -386,7 +380,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: true
             };
 
-            await HandleStore.savePersonalizationChange({
+            await repo.savePersonalizationChange({
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 slotNumber: 99,
@@ -399,7 +393,7 @@ describe('HandleStore tests', () => {
                     address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
                 },
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 metadata: {
                     name: '$chimichanga',
                     image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
@@ -415,7 +409,7 @@ describe('HandleStore tests', () => {
                 }
             });
 
-            await HandleStore.saveMintedHandle({
+            await repo.saveMintedHandle({
                 hex: 'chimichanga-hex',
                 name: 'chimichanga',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
@@ -429,7 +423,7 @@ describe('HandleStore tests', () => {
                 policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e'
             });
 
-            const handle = HandleStore.get('chimichanga');
+            const handle = repo.get('chimichanga');
 
             // expect the personalization data to be added to the handle
             expect(handle).toEqual({ 
@@ -480,13 +474,12 @@ describe('HandleStore tests', () => {
             const sushiHandle = 'sushi';
             const sushiHex = 'sushi-hex';
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -497,13 +490,12 @@ describe('HandleStore tests', () => {
             });
 
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: sushiHex,
                 name: sushiHandle,
                 adaAddress: 'addr1234',
                 og_number: 0,
                 utxo: 'utxo124#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -523,13 +515,12 @@ describe('HandleStore tests', () => {
 
             const subHandleName = 'sub@hndl';
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: '000de14073756240686e646c',
                 name: subHandleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -562,13 +553,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: '000000007669727475616c40686e646c',
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -598,13 +588,12 @@ describe('HandleStore tests', () => {
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -653,14 +642,13 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'nacho-cheese-hex',
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 slotNumber: 200,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 metadata: {
                     name: 'nacho-cheese',
                     image: 'ipfs://123',
@@ -786,13 +774,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'sour-cream-hex',
                 name: 'sour-cream',
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -810,7 +797,6 @@ describe('HandleStore tests', () => {
             });
 
             expect(HandleStore.handles.get('sour-cream')).toEqual({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 bg_image: '',
                 characters: 'letters,special',
                 created_slot_number: 200,
@@ -842,7 +828,8 @@ describe('HandleStore tests', () => {
                 handle_type: HandleType.HANDLE,
                 payment_key_hash: null,
                 pz_enabled: false,
-                drep: undefined
+                drep: undefined,
+                policy
             });
         });
 
@@ -850,13 +837,12 @@ describe('HandleStore tests', () => {
             const handleName = 'tortilla-soup';
             const handleHex = `${handleName}-hex`;
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -896,13 +882,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -944,13 +929,12 @@ describe('HandleStore tests', () => {
             const handleName = 'pork-belly';
             const handleHex = `${handleName}-hex`;
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -998,13 +982,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 200,
                 metadata: {
                     name: 'nacho-cheese',
@@ -1056,13 +1039,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 personalization: newPersonalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: newPersonalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 300,
                 metadata: {
                     name: 'nacho-cheese',
@@ -1115,13 +1097,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdatesWithDefaultWalletChange,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: finalPersonalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 400,
                 metadata: {
                     name: handleName,
@@ -1275,13 +1256,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'taco-hex',
                 name: 'taco',
                 personalization: tacoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 100,
                 metadata: {
                     name: 'taco',
@@ -1330,13 +1310,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'burrito-hex',
                 name: 'burrito',
                 personalization: burritoPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: burritoPersonalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 200,
                 metadata: {
                     name: 'burrito',
@@ -1385,13 +1364,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'barbacoa-hex',
                 name: 'barbacoa',
                 personalization: barbacoaPzUpdate,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: barbacoaPersonalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 300,
                 metadata: {
                     name: 'barbacoa',
@@ -1441,12 +1419,11 @@ describe('HandleStore tests', () => {
 
             await repo.savePersonalizationChange({
                 hex: 'taco-hex',
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 name: 'taco',
                 personalization: tacoPzUpdate2,
                 reference_token: defaultReferenceToken,
                 personalizationDatum: tacoPersonalizationDatumUpdate2,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 400,
                 metadata: {
                     name: 'taco',
@@ -1471,13 +1448,12 @@ describe('HandleStore tests', () => {
             const handleName = 'nft@hndl';
             const handleHex = `${handleName}-hex`;
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -1520,13 +1496,12 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
-                policy: 'f0ff',
+                policy,
                 slotNumber: 300,
                 metadata: {
                     name: handleHex,
@@ -1609,10 +1584,9 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
-                policy: 'f0ff',
+                policy,
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 personalizationDatum,
@@ -1648,10 +1622,9 @@ describe('HandleStore tests', () => {
             };
 
             await repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
-                policy: 'f0ff',
+                policy,
                 personalization: personalizationUpdates,
                 reference_token: newReferenceToken,
                 personalizationDatum: newPzDatum,
@@ -1668,13 +1641,12 @@ describe('HandleStore tests', () => {
     describe('saveSubHandleSettingsChange tests', () => {
         it('Should update SubHandle settings', async () => {
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: 'shrimp-taco-hex',
                 name: 'shrimp-taco',
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -1728,13 +1700,12 @@ describe('HandleStore tests', () => {
             const handleName = 'halibut-taco';
             const handleHex = `${handleName}-hex`;
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 utxo: 'utxo123#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: '',
                 slotNumber: 100,
@@ -1868,13 +1839,12 @@ describe('HandleStore tests', () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
             await repo.saveMintedHandle({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 hex: handleHex,
                 name: handleName,
                 adaAddress: address,
                 og_number: 0,
                 utxo: 'utxo_salsa1#0',
-                policy: 'f0ff',
+                policy,
                 lovelace: 0,
                 image: 'ipfs://123',
                 slotNumber: 100,
@@ -1892,28 +1862,25 @@ describe('HandleStore tests', () => {
             expect(holderAddress?.handles?.has(handleName)).toBeTruthy();
 
             await repo.saveHandleUpdate({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 lovelace: 0,
                 name: handleName,
                 adaAddress: newAddress,
                 utxo: 'utxo_salsa2#0',
-                policy: 'f0ff',
-                lovelace: 10,
+                policy,
                 slotNumber: 200,
                 datum: undefined
             });
 
             const handle = repo.get(handleName);
             expect(handle).toEqual({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 amount: 1,
                 holder: updatedStakeKey,
                 bg_image: '',
                 characters: 'letters',
                 hex: handleHex,
                 utxo: 'utxo_salsa2#0',
-                policy: 'f0ff',
-                lovelace: 10,
+                policy,
+                lovelace: 0,
                 length: 5,
                 name: 'salsa',
                 image: 'ipfs://123',
@@ -1986,14 +1953,12 @@ describe('HandleStore tests', () => {
 
             const newAddress = 'addr123_new';
             await repo.saveHandleUpdate({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 lovelace: 0,
                 name: 'not-a-handle',
                 adaAddress: newAddress,
                 slotNumber: 1234,
                 utxo: 'utxo',
-                lovelace: 0,
-                policy: 'f0ff'
+                policy
             });
             expect(loggerSpy).toHaveBeenCalledWith({
                 category: 'ERROR',

@@ -1,21 +1,17 @@
 import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
 import { BlockPraos, NextBlockResponse, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { AssetNameLabel, checkNameLabel, delay, HANDLE_POLICIES, HandleType, IHandleMetadata, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
-import { decodeCborToJson, designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import { checkNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
 import { handleEraBoundaries } from '../../config/constants';
-import { BuildPersonalizationInput, HandleOnChainMetadata, MetadataLabel, ProcessOwnerTokenInput } from '../../interfaces/ogmios.interfaces';
+import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from '../../interfaces/ogmios.interfaces';
 import { HandlesRepository } from '../../repositories/handlesRepository';
-import { decodeCborFromIPFSFile } from '../../utils/ipfs';
 import { } from '../../utils/util';
 import { getHandleNameFromAssetName } from './utils';
 
 let startOgmiosExec = 0;
-
-const blackListedIpfsCids: string[] = [];
 
 class OgmiosService {
     private startTime: number;
@@ -186,7 +182,7 @@ class OgmiosService {
 
                         const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
 
-                        const input: ProcessOwnerTokenInput = {
+                        const scannedHandleInfo: ScannedHandleInfo = {
                             assetName,
                             address: o!.address,
                             slotNumber: currentSlot,
@@ -195,26 +191,11 @@ class OgmiosService {
                             lovelace: parseInt(o!.value['ada'].lovelace.toString()),
                             datum: datumString,
                             script,
-                            handleMetadata,
+                            metadata: handleMetadata,
                             isMintTx
                         };
 
-                        const { assetLabel } = checkNameLabel(assetName);
-                        switch (assetLabel) {
-                            case null:
-                            case '222':
-                                await this.processHandleOwnerToken(input);
-                                break;
-                            case '100':
-                            case '000':
-                                await this.processAssetReferenceToken(input);
-                                break;
-                            case '001':
-                                await this.processSubHandleSettingsToken(input);
-                                break;
-                            default:
-                                Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processBlock.processAssetClassToken.unknownAssetName' });
-                        }
+                        await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo);
                     }
                 }
             }
@@ -226,6 +207,20 @@ class OgmiosService {
         this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
     };
 
+    private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) => {
+        const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
+        // is CIP67 is false OR is CIP67 is true and label is 222
+        const { isCip67, assetLabel } = checkNameLabel(assetName);
+        if (isCip67) {
+            if (assetLabel === '222') {
+                return assetNameInMintAssets;
+            }
+            return false;
+        }
+        // not cip68
+        return assetNameInMintAssets;
+    };
+    
     private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
@@ -242,281 +237,7 @@ class OgmiosService {
             await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
-
-    private getDataFromIPFSLink = async ({ link, schema }: { link?: string; schema?: any }): Promise<any | undefined> => {
-        if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
-
-        const cid = link.split('ipfs://')[1];
-        return decodeCborFromIPFSFile(`${cid}`, schema);
-    };
-
-    private buildPersonalization = async ({ personalizationDatum, personalization }: BuildPersonalizationInput): Promise<IPersonalization> => {
-        const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
-
-        // start timer for ipfs calls
-        const ipfsTimer = Date.now();
-
-        const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this.getDataFromIPFSLink));
-
-        // stop timer for ipfs calls
-        const endIpfsTimer = Date.now() - ipfsTimer;
-        Logger.log({
-            message: `IPFS calls took ${endIpfsTimer}ms`,
-            category: LogCategory.INFO,
-            event: 'buildPersonalization.ipfsTime'
-        });
-
-        const updatedPersonalization: IPersonalization = {
-            ...personalization,
-            validated_by,
-            trial,
-            nsfw
-        };
-
-        if (ipfsDesigner) {
-            updatedPersonalization.designer = ipfsDesigner;
-        }
-
-        if (ipfsPortal) {
-            updatedPersonalization.portal = ipfsPortal;
-        }
-
-        if (ipfsSocials) {
-            updatedPersonalization.socials = ipfsSocials;
-        }
-
-        // add vendor settings
-        // if (ipfsVendor) {
-        //     updatedPersonalization.vendor = ipfsVendor;
-        // }
-
-        return updatedPersonalization;
-    };
-
-    private buildValidDatum = (handle: string, hex: string, datumObject: any): { metadata: IHandleMetadata | null; personalizationDatum: IPzDatumConvertedUsingSchema | null } => {
-        const result = {
-            metadata: null,
-            personalizationDatum: null
-        };
-
-        const { constructor_0 } = datumObject;
-
-        const getHandleType = (hex: string): HandleType => {
-            if (hex.startsWith(AssetNameLabel.LBL_000)) {
-                return HandleType.VIRTUAL_SUBHANDLE;
-            }
-
-            if (hex.startsWith(AssetNameLabel.LBL_222) && handle.includes('@')) {
-                return HandleType.NFT_SUBHANDLE;
-            }
-
-            return HandleType.HANDLE;
-        };
-
-        const requiredMetadata: IHandleMetadata = {
-            name: '',
-            image: '',
-            mediaType: '',
-            og: 0,
-            og_number: 0,
-            rarity: '',
-            length: 0,
-            characters: '',
-            numeric_modifiers: '',
-            version: 0,
-            handle_type: getHandleType(hex)
-        };
-
-        const requiredProperties: IPzDatum = {
-            standard_image: '',
-            default: 0,
-            last_update_address: '',
-            validated_by: '',
-            image_hash: '',
-            standard_image_hash: '',
-            svg_version: '',
-            agreed_terms: '',
-            migrate_sig_required: 0,
-            trial: 0,
-            nsfw: 0
-        };
-
-        const getMissingKeys = (object: any, requiredObject: any): string[] =>
-            Object.keys(requiredObject).reduce<string[]>((memo, key) => {
-                if (!Object.keys(object).includes(key)) {
-                    memo.push(key);
-                }
-
-                return memo;
-            }, []);
-
-        if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
-            const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
-            if (missingMetadata.length > 0) {
-                Logger.log({
-                    category: LogCategory.INFO,
-                    message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`,
-                    event: 'buildValidDatum.missingMetadata'
-                });
-            }
-            const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
-            if (missingDatum.length > 0) {
-                Logger.log({
-                    category: LogCategory.INFO,
-                    message: `${handle} missing datum keys: ${missingDatum.join(', ')}`,
-                    event: 'buildValidDatum.missingDatum'
-                });
-            }
-
-            return {
-                metadata: constructor_0[0],
-                personalizationDatum: constructor_0[2]
-            };
-        }
-
-        Logger.log({
-            category: LogCategory.ERROR,
-            message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`,
-            event: 'buildValidDatum.invalidMetadata'
-        });
-
-        return result;
-    };
-
-    private buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
-        const decodedDatum = await decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
-        const datumObjectConstructor = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
-
-        return this.buildValidDatum(handle, hex, datumObjectConstructor);
-    };
-
-    private processAssetReferenceToken = async ({ policy, assetName, slotNumber, utxo, lovelace, address, datum }: { policy: string; assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
-        const { hex, name } = getHandleNameFromAssetName(assetName);
-
-        if (!datum) {
-            // our reference token should always have datum.
-            // If we do not have datum, something is wrong.
-            Logger.log({
-                message: `no datum for reference token ${assetName}`,
-                category: LogCategory.ERROR,
-                event: 'processBlock.processAssetReferenceToken.noDatum'
-            });
-            return;
-        }
-
-        const [txId, indexString] = utxo.split('#');
-        const index = parseInt(indexString);
-        const reference_token = {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum,
-            address
-        };
-        let personalization: IPersonalization = {
-            validated_by: '',
-            trial: true,
-            nsfw: true
-        };
-
-        const { metadata, personalizationDatum } = await this.buildPersonalizationData(name, hex, datum);
-
-        if (personalizationDatum) {
-            // populate personalization from the reference token
-            personalization = await this.buildPersonalization({
-                personalizationDatum,
-                personalization
-            });
-        }
-
-        await this.handlesRepo.savePersonalizationChange({
-            policy,
-            hex,
-            name,
-            personalization,
-            reference_token,
-            slotNumber,
-            metadata,
-            personalizationDatum
-        });
-    };
-
-    private processSubHandleSettingsToken = async ({ assetName, slotNumber, utxo, lovelace, address, datum }: { assetName: string; slotNumber: number; utxo: string; lovelace: number; address: string; datum?: string }) => {
-        const { name } = getHandleNameFromAssetName(assetName);
-
-        if (!datum) {
-            Logger.log({
-                message: `no datum for SubHandle token ${assetName}`,
-                category: LogCategory.ERROR,
-                event: 'processBlock.processSubHandleSettingsToken.noDatum'
-            });
-        }
-
-        const [txId, indexString] = utxo.split('#');
-        const index = parseInt(indexString);
-        const utxoDetails = {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum: datum ?? '',
-            address
-        };
-
-        await this.handlesRepo.saveSubHandleSettingsChange({
-            name,
-            settingsDatum: datum,
-            utxoDetails,
-            slotNumber
-        });
-    };
-
-    private processHandleOwnerToken = async ({ policy, assetName, slotNumber, address, utxo, lovelace, datum, script, handleMetadata, isMintTx }: ProcessOwnerTokenInput) => {
-        const { hex, name } = getHandleNameFromAssetName(assetName);
-        const isCip68 = assetName.startsWith(AssetNameLabel.LBL_222);
-        const data = handleMetadata && (handleMetadata[isCip68 ? hex : name] as unknown as IHandleMetadata);
-        const input = {
-            hex,
-            name,
-            adaAddress: address,
-            slotNumber,
-            utxo,
-            lovelace,
-            datum,
-            script,
-            handle_type: name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE,
-            og_number: ((data as any)?.core ?? data)?.og_number ?? 0,
-            image: data?.image ?? '',
-            version: ((data as any)?.core ?? data)?.version ?? 0,
-            sub_characters: data?.sub_characters,
-            sub_length: data?.sub_length,
-            sub_numeric_modifiers: data?.sub_numeric_modifiers,
-            sub_rarity: data?.sub_rarity,
-            policy
-        };
-
-        if (isMintTx) {
-            await this.handlesRepo.saveMintedHandle(input);
-            // Do a webhook processor call here
-        } else {
-            await this.handlesRepo.saveHandleUpdate(input);
-        }
-    };
-
-    private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) => {
-        const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
-        // is CIP67 is false OR is CIP67 is true and label is 222
-        const { isCip67, assetLabel } = checkNameLabel(assetName);
-        if (isCip67) {
-            if (assetLabel === '222') {
-                return assetNameInMintAssets;
-            }
-
-            return false;
-        }
-
-        // not cip68
-        return assetNameInMintAssets;
-    };
+    
     /**
      * Local Chain Sync client specifically for ADA Handles API.
      *

@@ -1,8 +1,14 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AddressDetails, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildNumericModifiers, decodeAddress, diff, EMPTY, getAddressHolderDetails, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandlesProvider, IndexNames, ISlotHistory, IUTxO, LogCategory, Logger, NETWORK, SaveMintingTxInput, SavePersonalizationInput, SaveSubHandleSettingsInput, SaveWalletAddressMoveInput, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AddressDetails, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildNumericModifiers, checkNameLabel, decodeAddress, decodeCborToJson, diff, EMPTY, getAddressHolderDetails, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
+import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
+import { getHandleNameFromAssetName } from '../services/ogmios/utils';
+import { decodeCborFromIPFSFile } from '../utils/ipfs';
 import { getDefaultHandle } from './getDefaultHandle';
+const blackListedIpfsCids: string[] = [];
+const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
 
 export class HandlesRepository {
     private provider: IHandlesProvider;
@@ -36,79 +42,11 @@ export class HandlesRepository {
     public getHolder(address: string): Holder {
         return this.provider.getValueFromIndex(IndexNames.HOLDER, address) as Holder;
     }
-    
-    private filter(searchModel?: HandleSearchModel) {
-        if (!searchModel) return this.provider.getAllHandles();
-
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
-
-        // The ['|empty|'] is important for `AND` searches here and indicates 
-        // that we couldn't find any results for one of the search terms
-        // When intersected with all other results, ['|empty|'] ensures empty result set
-        const checkEmptyResult = (indexName: IndexNames, term: string | number | undefined) => {
-            if (!term) return [];
-            const set = this.provider.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
-            return set.size === 0 ? [EMPTY] : [...set];
-        };
-
-        // get handle name arrays for all the search parameters
-        const characterArray = checkEmptyResult(IndexNames.CHARACTER, characters);
-        let lengthArray: string[] = [];
-        if (length?.includes('-')) {
-            for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
-                lengthArray = lengthArray.concat([...this.provider.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
-            }
-            if (lengthArray.length === 0) lengthArray = [EMPTY];
-        } else {
-            lengthArray = checkEmptyResult(IndexNames.LENGTH, parseInt(length || '0'));
-        }
-        const rarityArray = checkEmptyResult(IndexNames.RARITY, rarity);
-        const numericModifiersArray = checkEmptyResult(IndexNames.NUMERIC_MODIFIER, numeric_modifiers);
-        const ogArray = og ? checkEmptyResult(IndexNames.OG, 1) : [];
-        const holderArray = (() => {
-            if (!holder_address) return [];
-            const holder = this.provider.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
-            return holder ? [...holder.handles] : [EMPTY];
-        })()
-
-        // filter out any empty arrays
-        const filtered = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderArray, ogArray].filter((a) => a?.length)
-        // Get the intersection
-        const handleNames = [...new Set(filtered.length ? filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))) : [])]
-            // if there is an EMPTY here, there is no result set
-            .filter((name) => name !== EMPTY)
-
-        let array =
-            characters || length || rarity || numeric_modifiers || holder_address || og
-                ? handleNames.reduce<StoredHandle[]>((agg, name) => {
-                    const handle = this.get(name as string);
-                    if (handle) {
-                        if (search && !handle.name.includes(search)) return agg;
-                        if (handle_type && handle.handle_type !== handle_type) return agg;
-                        if (handles && !handles.includes(handle.name)) return agg;
-                        agg.push(handle);
-                    }
-                    return agg;
-                }, [])
-                : this.provider.getAllHandles().reduce<StoredHandle[]>((agg, handle) => {
-                    if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
-                    if (handle_type && handle.handle_type !== handle_type) return agg;
-                    if (handles && !handles.includes(handle.name)) return agg;
-
-                    agg.push(handle);
-                    return agg;
-                }, []);
-
-        if (searchModel.personalized) {
-            array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
-        }
-        return array;
-    }
 
     public search(pagination: HandlePaginationModel, search: HandleSearchModel) {
         const { page, sort, handlesPerPage, slotNumber } = pagination;
 
-        let items = this.filter(search);
+        let items = this._filter(search);
 
         if (slotNumber) {
             items.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
@@ -137,7 +75,7 @@ export class HandlesRepository {
     }
 
     public getAllHandleNames(search?: HandleSearchModel, sort = 'asc') {
-        const handles = this.filter(search);
+        const handles = this._filter(search);
         const filteredHandles = handles.filter((handle) => !!handle.utxo);
         if (sort === 'random') {
             const shuffledHandles = filteredHandles
@@ -327,7 +265,7 @@ export class HandlesRepository {
         if (amount === 0) {
             this.provider.removeHandle(handleName);
             const history: HandleHistory = { old: handle, new: null };
-            this.saveSlotHistory({
+            this._saveSlotHistory({
                 handleHistory: history,
                 handleName,
                 slotNumber
@@ -414,239 +352,127 @@ export class HandlesRepository {
         }
         return rewoundHandles;
     }
+    
+    public async processScannedHandleInfo(scannedHandleInfo: ScannedHandleInfo): Promise<void> {
+        const {assetName, utxo, lovelace, datum, address, policy, slotNumber, script, metadata, isMintTx} = scannedHandleInfo
+        const { isCip67, assetLabel } = checkNameLabel(assetName);
+        const { hex, name } = getHandleNameFromAssetName(assetName);
+        const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
+        const existingHandle = this.get(name) ?? undefined;
+        const handleExists = !!existingHandle;
+        const handle = existingHandle ?? await this._buildHandle({name, hex, policy}, address, slotNumber, data);
+        const [txId, indexString] = utxo.split('#');
+        const index = parseInt(indexString);
 
-    private async _buildHandle({ policy, hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> {
-        const newHandle: StoredHandle = {
-            name,
-            hex,
-            holder: '', // Populate on save
-            holder_type: '', // Populate on save
-            length: name.length,
-            utxo,
+        const utxoDetails = {
+            tx_id: txId,
+            index,
             lovelace,
-            rarity: getRarity(name),
-            characters: buildCharacters(name),
-            numeric_modifiers: buildNumericModifiers(name),
-            resolved_addresses: {
-                ...resolved_addresses,
-                ada: adaAddress
-            },
-            og_number,
-            standard_image: image,
-            standard_image_hash: image_hash,
-            image: image,
-            image_hash: image_hash,
-            bg_image,
-            default_in_wallet: '',
-            pfp_image,
-            created_slot_number: slotNumber,
-            updated_slot_number: slotNumber,
-            has_datum: !!datum,
-            last_update_address,
-            datum: isDatumEndpointEnabled() && datum ? datum : undefined,
-            script,
-            personalization,
-            reference_token,
-            amount,
-            svg_version,
-            version,
-            handle_type,
-            sub_characters,
-            sub_length,
-            sub_numeric_modifiers,
-            sub_rarity,
-            virtual,
-            original_address,
-            id_hash,
-            pz_enabled,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
-            last_edited_time,
-            policy
+            datum: datum ?? '',
+            address
         };
 
-        return newHandle;
-    }
+        let personalization: IPersonalization = {
+            validated_by: '',
+            trial: true,
+            nsfw: true
+        };
 
-    public async savePersonalizationChange({ policy, name, hex, personalization, reference_token, personalizationDatum, slotNumber, metadata }: SavePersonalizationInput): Promise<void> {
-        const image = metadata?.image ?? '';
-        const version = metadata?.version ?? 0;
-        const og_number = metadata?.og_number ?? 0;
-        const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
-        const isVirtualSubHandle = hex.startsWith(AssetNameLabel.LBL_000);
-        const handleType = isVirtualSubHandle ? HandleType.VIRTUAL_SUBHANDLE : name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
-
-        const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
-
-        // update resolved addresses
-        // remove ada from the new addresses. The contract should not allow adding an incorrect address
-        // but to be safe, we'll remove the ada address from the resolved addresses
-        const addresses = personalizationDatum?.resolved_addresses
-            ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                if (key !== 'ada') {
-                    acc[key] = value as string;
+        switch (assetLabel) {
+            case null:
+            case '222':
+                if (!existingHandle && !isMintTx) {
+                    Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
+                    return;
                 }
-                return acc;
-            }, {})
-            : {};
-
-        const existingHandle = this.get(name);
-        if (!existingHandle) {
-            const buildHandleInput: SaveMintingTxInput = {
-                policy,
-                name,
-                hex,
-                slotNumber,
-                adaAddress: isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : '', // address will come from the 222 token
-                utxo: isVirtualSubHandle ? `${reference_token.tx_id}#${reference_token.index}` : '', // utxo will come from the 222 token,
-                og_number,
-                image,
-                image_hash: personalizationDatum?.image_hash,
-                personalization,
-                reference_token,
-                resolved_addresses: addresses,
-                svg_version: personalizationDatum?.svg_version,
-                version,
-                handle_type: handleType,
-                sub_rarity: metadata?.sub_rarity,
-                sub_length: metadata?.sub_length,
-                sub_characters: metadata?.sub_characters,
-                sub_numeric_modifiers: metadata?.sub_numeric_modifiers,
-                virtual,
-                last_update_address: personalizationDatum?.last_update_address,
-                original_address: personalizationDatum?.original_address,
-                id_hash: personalizationDatum?.id_hash,
-                lovelace: 0,
-                pz_enabled: personalizationDatum?.pz_enabled ?? false,
-                last_edited_time: personalizationDatum?.last_edited_time
-            };
-            const handle = await this._buildHandle(buildHandleInput);
-            await this.save({ handle });
-            return;
-        }
-
-        // If asset is a 000 token, we need to use the address from the personalization datum. Otherwise use existing address
-        const adaAddress = isVirtualSubHandle && personalizationDatum?.resolved_addresses?.ada ? bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet) : existingHandle.resolved_addresses.ada;
-
-        const updatedHandle: StoredHandle = {
-            ...existingHandle,
-            image,
-            image_hash: personalizationDatum?.image_hash ?? '',
-            standard_image_hash: personalizationDatum?.standard_image_hash ?? '',
-            bg_image: personalizationDatum?.bg_image,
-            bg_asset: personalizationDatum?.bg_asset,
-            pfp_image: personalizationDatum?.pfp_image,
-            pfp_asset: personalizationDatum?.pfp_asset,
-            updated_slot_number: slotNumber,
-            resolved_addresses: {
-                ...addresses,
-                ada: adaAddress
-            },
-            personalization,
-            reference_token,
-            svg_version: personalizationDatum?.svg_version ?? '',
-            default: personalizationDatum?.default ?? false,
-            last_update_address: personalizationDatum?.last_update_address,
-            virtual,
-            original_address: personalizationDatum?.original_address,
-            id_hash: personalizationDatum?.id_hash,
-            pz_enabled: personalizationDatum?.pz_enabled ?? false,
-            last_edited_time: personalizationDatum?.last_edited_time,
-            payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
-            // set the utxo to incoming reference_token for virtual subhandles
-            ...(isVirtualSubHandle ? { utxo: `${reference_token.tx_id}#${reference_token.index}` } : {})
-        };
-
-        await this.save({
-            handle: updatedHandle,
-            oldHandle: existingHandle
-        });
-    }
-
-    public async saveSubHandleSettingsChange({ name, settingsDatum, utxoDetails, slotNumber }: SaveSubHandleSettingsInput): Promise<void> {
-        const existingHandle = this.get(name);
-        if (!existingHandle) {
-            // There should always be an existing root handle for a subhandle
-            const message = `Cannot save subhandle settings for ${name} because root handle does not exist`;
-            Logger.log({
-                message,
-                event: 'this.saveSubHandleSettingsChange',
-                category: LogCategory.NOTIFY
-            });
-
-            throw new Error(message);  
-        }
-
-        const updatedHandle: StoredHandle = {
-            ...existingHandle,
-            subhandle_settings: {
-                settings: settingsDatum,
-                utxo: utxoDetails
-            },
-            updated_slot_number: slotNumber
-        };
-
-        await this.save({
-            handle: updatedHandle,
-            oldHandle: existingHandle
-        });
-    }
-
-    public async saveMintedHandle(input: SaveMintingTxInput): Promise<void> {
-        const existingHandle = this.get(input.name);
-        if (existingHandle) {
-            // check if existing handle has a utxo. If it does, we may have a double mint
-            if (existingHandle.utxo) {
-                const updatedHandle = { ...existingHandle, amount: existingHandle.amount + 1 };
-                await this.save({ handle: updatedHandle, oldHandle: existingHandle });
-                return;
+                // check if existing handle has a utxo. If it does, we may have a double mint
+                if (isMintTx && existingHandle?.utxo) {
+                    handle.amount = (handle.amount ?? 0) + 1;
+                    Logger.log({ message: `POSSIBLE DOUBLE MINT!!!\n UTxO already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
+                }
+                handle.script = script;
+                handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
+                handle.has_datum = !!datum;
+                handle.lovelace = lovelace;
+                handle.utxo = utxo;
+                handle.updated_slot_number = slotNumber;
+                handle.resolved_addresses!.ada = address;
+                break;
+            case '100':
+            case '000':
+            {
+                if (!datum) {
+                    Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
+                    return;
+                }
+                const { personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
+                if (personalizationDatum) {
+                    // populate personalization from the reference token
+                    personalization = await this._buildPersonalization({
+                        personalizationDatum,
+                        personalization
+                    });
+                }
+                const addresses = personalizationDatum?.resolved_addresses
+                    ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
+                        if (key !== 'ada') {
+                            acc[key] = value as string;
+                        }
+                        return acc;
+                    }, {})
+                    : {};
+                const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+                handle.image_hash = personalizationDatum?.image_hash ?? ''
+                handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
+                handle.bg_image = personalizationDatum?.bg_image
+                handle.bg_asset = personalizationDatum?.bg_asset
+                handle.pfp_image = personalizationDatum?.pfp_image
+                handle.pfp_asset = personalizationDatum?.pfp_asset
+                handle.updated_slot_number = slotNumber
+                handle.resolved_addresses = {
+                    ...addresses,
+                    ada: existingHandle?.resolved_addresses?.ada ?? ''
+                }
+                handle.personalization = personalization
+                handle.reference_token = utxoDetails
+                handle.svg_version = personalizationDatum?.svg_version ?? ''
+                handle.default = personalizationDatum?.default ?? false
+                handle.last_update_address = personalizationDatum?.last_update_address
+                handle.virtual = virtual
+                handle.original_address = personalizationDatum?.original_address
+                handle.id_hash = personalizationDatum?.id_hash
+                handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
+                handle.last_edited_time = personalizationDatum?.last_edited_time
+                if (assetLabel == '000') {
+                    handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
+                    handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
+                }
+                break;
             }
+            case '001':
+                if (!handleExists) {
+                    // There should always be an existing root handle for a subhandle
+                    Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });
+                    return;  
+                }
+        
+                if (!datum) {
+                    Logger.log({ message: `No datum for SubHandle token ${scannedHandleInfo.assetName}`,  category: LogCategory.ERROR, event: 'processScannedHandleInfo.subHandle.noDatum'});
+                    return;
+                }
 
-            // if there is no utxo, it means we already received a 100 token.
-            const inputWithExistingHandle: SaveMintingTxInput = {
-                ...input,
-                image: existingHandle.image,
-                og_number: existingHandle.og_number,
-                version: existingHandle.version,
-                personalization: existingHandle.personalization,
-                last_update_address: existingHandle.last_update_address,
-                pz_enabled: existingHandle.pz_enabled,
-                last_edited_time: existingHandle.last_edited_time,
-                id_hash: existingHandle.id_hash
-            };
-            const builtHandle = await this._buildHandle(inputWithExistingHandle);
-            await this.save({ handle: builtHandle, oldHandle: existingHandle });
-            return;
+                handle.subhandle_settings = {
+                    settings: datum,
+                    utxo: utxoDetails
+                }                
+                handle.updated_slot_number = slotNumber;
+                break;
+            default:
+                Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
         }
+        
+        await this.save({ handle: handle as StoredHandle, oldHandle: existingHandle });
 
-        const newHandle = await this._buildHandle(input);
-        await this.save({ handle: newHandle });
-    }
-
-    public async saveHandleUpdate({ name, adaAddress, utxo, slotNumber, datum, script }: SaveWalletAddressMoveInput) {
-        const existingHandle = this.get(name);
-        if (!existingHandle) {
-            Logger.log({
-                message: `Handle was updated but there is no existing handle in storage with name: ${name}`,
-                category: LogCategory.ERROR,
-                event: 'saveHandleUpdate.noHandleFound'
-            });
-            return;
-        }
-
-        const updatedHandle = {
-            ...existingHandle,
-            utxo,
-            resolved_addresses: { ...existingHandle.resolved_addresses, ada: adaAddress },
-            updated_slot_number: slotNumber,
-            has_datum: !!datum,
-            datum: isDatumEndpointEnabled() && datum ? datum : undefined,
-            script
-        };
-
-        await this.save({
-            handle: updatedHandle,
-            oldHandle: existingHandle
-        });
     }
 
     public async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
@@ -717,12 +543,110 @@ export class HandlesRepository {
         if (saveHistory && isWithinMaxSlot) {
             const history = this._buildHandleHistory(updatedHandle, oldHandle);
             if (history)
-                this.saveSlotHistory({
+                this._saveSlotHistory({
                     handleHistory: history,
                     handleName: name,
                     slotNumber: updated_slot_number
                 });
         }
+    }
+
+    public async getStartingPoint(
+        save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, 
+        failed = false
+    ): Promise<Point | null> {
+        return this.provider.getStartingPoint(save , failed);
+    }
+    
+    private _filter(searchModel?: HandleSearchModel) {
+        if (!searchModel) return this.provider.getAllHandles();
+
+        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
+
+        // The ['|empty|'] is important for `AND` searches here and indicates 
+        // that we couldn't find any results for one of the search terms
+        // When intersected with all other results, ['|empty|'] ensures empty result set
+        const checkEmptyResult = (indexName: IndexNames, term: string | number | undefined) => {
+            if (!term) return [];
+            const set = this.provider.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
+            return set.size === 0 ? [EMPTY] : [...set];
+        };
+
+        // get handle name arrays for all the search parameters
+        const characterArray = checkEmptyResult(IndexNames.CHARACTER, characters);
+        let lengthArray: string[] = [];
+        if (length?.includes('-')) {
+            for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
+                lengthArray = lengthArray.concat([...this.provider.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
+            }
+            if (lengthArray.length === 0) lengthArray = [EMPTY];
+        } else {
+            lengthArray = checkEmptyResult(IndexNames.LENGTH, parseInt(length || '0'));
+        }
+        const rarityArray = checkEmptyResult(IndexNames.RARITY, rarity);
+        const numericModifiersArray = checkEmptyResult(IndexNames.NUMERIC_MODIFIER, numeric_modifiers);
+        const ogArray = og ? checkEmptyResult(IndexNames.OG, 1) : [];
+        const holderArray = (() => {
+            if (!holder_address) return [];
+            const holder = this.provider.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
+            return holder ? [...holder.handles] : [EMPTY];
+        })()
+
+        // filter out any empty arrays
+        const filtered = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderArray, ogArray].filter((a) => a?.length)
+        // Get the intersection
+        const handleNames = [...new Set(filtered.length ? filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))) : [])]
+            // if there is an EMPTY here, there is no result set
+            .filter((name) => name !== EMPTY)
+
+        let array =
+            characters || length || rarity || numeric_modifiers || holder_address || og
+                ? handleNames.reduce<StoredHandle[]>((agg, name) => {
+                    const handle = this.get(name as string);
+                    if (handle) {
+                        if (search && !handle.name.includes(search)) return agg;
+                        if (handle_type && handle.handle_type !== handle_type) return agg;
+                        if (handles && !handles.includes(handle.name)) return agg;
+                        agg.push(handle);
+                    }
+                    return agg;
+                }, [])
+                : this.provider.getAllHandles().reduce<StoredHandle[]>((agg, handle) => {
+                    if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
+                    if (handle_type && handle.handle_type !== handle_type) return agg;
+                    if (handles && !handles.includes(handle.name)) return agg;
+
+                    agg.push(handle);
+                    return agg;
+                }, []);
+
+        if (searchModel.personalized) {
+            array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
+        }
+        return array;
+    }
+
+    private async _buildHandle(handle: Partial<StoredHandle>, address: string, slotNumber: number, data?: IHandleMetadata): Promise<Partial<StoredHandle>> {
+        const {name} = handle;
+        handle.rarity = getRarity(name!);
+        handle.characters = buildCharacters(name!);
+        handle.numeric_modifiers = buildNumericModifiers(name!);
+        handle.created_slot_number = slotNumber;
+        handle.updated_slot_number = slotNumber;
+        handle.payment_key_hash = (await getPaymentKeyHash(address))!;
+        handle.handle_type = name!.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
+        handle.image = data?.image ?? '';
+        handle.standard_image = data?.image ?? '';
+        handle.version = ((data as any)?.core ?? data)?.version ?? 0;
+        handle.sub_characters = data?.sub_characters;
+        handle.sub_length = data?.sub_length;
+        handle.sub_numeric_modifiers = data?.sub_numeric_modifiers;
+        handle.sub_rarity = data?.sub_rarity;
+        handle.resolved_addresses = {
+            ada: address
+        }
+        handle.amount = 1;
+        return handle;
     }
 
     private _buildHandleHistory(newHandle: Partial<StoredHandle>, oldHandle?: Partial<StoredHandle>, testMode = true): HandleHistory | null {
@@ -748,7 +672,135 @@ export class HandlesRepository {
         return testMode ? { old, new: difference } : { old };
     }
 
-    private saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = TWELVE_HOURS_IN_SLOTS }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
+    private _buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
+        const decodedDatum = await decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
+        const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
+        const { constructor_0 } = datumObject;
+
+        const getHandleType = (hex: string): HandleType => {
+            if (hex.startsWith(AssetNameLabel.LBL_000)) {
+                return HandleType.VIRTUAL_SUBHANDLE;
+            }
+
+            if (hex.startsWith(AssetNameLabel.LBL_222) && handle.includes('@')) {
+                return HandleType.NFT_SUBHANDLE;
+            }
+
+            return HandleType.HANDLE;
+        };
+
+        const requiredMetadata: IHandleMetadata = {
+            name: '',
+            image: '',
+            mediaType: '',
+            og: 0,
+            og_number: 0,
+            rarity: '',
+            length: 0,
+            characters: '',
+            numeric_modifiers: '',
+            version: 0,
+            handle_type: getHandleType(hex)
+        };
+
+        const requiredProperties: IPzDatum = {
+            standard_image: '',
+            default: 0,
+            last_update_address: '',
+            validated_by: '',
+            image_hash: '',
+            standard_image_hash: '',
+            svg_version: '',
+            agreed_terms: '',
+            migrate_sig_required: 0,
+            trial: 0,
+            nsfw: 0
+        };
+
+        const getMissingKeys = (object: any, requiredObject: any): string[] =>
+            Object.keys(requiredObject).reduce<string[]>((memo, key) => {
+                if (!Object.keys(object).includes(key)) {
+                    memo.push(key);
+                }
+                return memo;
+            }, []);
+
+        if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
+            const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
+            if (missingMetadata.length > 0) {
+                Logger.log({ category: LogCategory.INFO, message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`, event: 'buildValidDatum.missingMetadata' });
+            }
+
+            const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
+            if (missingDatum.length > 0) {
+                Logger.log({ category: LogCategory.INFO, message: `${handle} missing datum keys: ${missingDatum.join(', ')}`, event: 'buildValidDatum.missingDatum' });
+            }
+
+            return {
+                metadata: constructor_0[0],
+                personalizationDatum: constructor_0[2]
+            };
+        }
+
+        Logger.log({ category: LogCategory.ERROR, message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`, event: 'buildValidDatum.invalidMetadata' });
+
+        return {
+            metadata: null,
+            personalizationDatum: null
+        };
+    };
+
+    private _getDataFromIPFSLink = async ({ link, schema }: { link?: string; schema?: any }): Promise<any | undefined> => {
+        if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
+
+        const cid = link.split('ipfs://')[1];
+        return decodeCborFromIPFSFile(`${cid}`, schema);
+    };
+
+    private _buildPersonalization = async ({ personalizationDatum, personalization }: BuildPersonalizationInput): Promise<IPersonalization> => {
+        const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
+
+        // start timer for ipfs calls
+        const ipfsTimer = Date.now();
+
+        const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this._getDataFromIPFSLink));
+
+        // stop timer for ipfs calls
+        const endIpfsTimer = Date.now() - ipfsTimer;
+        Logger.log({
+            message: `IPFS calls took ${endIpfsTimer}ms`,
+            category: LogCategory.INFO,
+            event: 'buildPersonalization.ipfsTime'
+        });
+
+        const updatedPersonalization: IPersonalization = {
+            ...personalization,
+            validated_by,
+            trial,
+            nsfw
+        };
+
+        if (ipfsDesigner) {
+            updatedPersonalization.designer = ipfsDesigner;
+        }
+
+        if (ipfsPortal) {
+            updatedPersonalization.portal = ipfsPortal;
+        }
+
+        if (ipfsSocials) {
+            updatedPersonalization.socials = ipfsSocials;
+        }
+
+        // add vendor settings
+        // if (ipfsVendor) {
+        //     updatedPersonalization.vendor = ipfsVendor;
+        // }
+
+        return updatedPersonalization;
+    };
+
+    private _saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = TWELVE_HOURS_IN_SLOTS }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
         let slotHistory = this.provider.getValueFromIndex(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory;
         if (!slotHistory) {
             slotHistory = {
@@ -768,17 +820,10 @@ export class HandlesRepository {
         this.provider.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
 
-    public async getStartingPoint(
-        save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, 
-        failed = false
-    ): Promise<Point | null> {
-        return this.provider.getStartingPoint(save , failed);
-    }
-
     // Used for unit testing
     Internal = {
         buildHandleHistory: this._buildHandleHistory.bind(this),
         buildHandle: this._buildHandle.bind(this),
-        saveSlotHistory: this.saveSlotHistory.bind(this)
+        saveSlotHistory: this._saveSlotHistory.bind(this)
     }
 }

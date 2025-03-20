@@ -36,8 +36,7 @@ describe('OgmiosService Tests', () => {
                 currentBlockHash: '',
                 schemaVersion: 0
             });
-            await mockedOgmios.initialize();
-            await mockedOgmios.startSync({ slot: 0 });
+            await mockedOgmios.initialize(() => {}, () => {});
 
             expect(createChainSyncClientSpy).toHaveBeenCalledTimes(1);
             expect(createInteractionContextSpy).toHaveBeenCalledTimes(1);

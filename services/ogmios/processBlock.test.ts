@@ -194,7 +194,6 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             version: 0,
             handle_type: HandleType.HANDLE,
             lovelace: 1,
@@ -249,7 +248,6 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             datum,
             version: 0,
             handle_type: HandleType.HANDLE,
@@ -278,7 +276,6 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             script: {
                 type: 'plutus_v2',
                 cbor: 'a2some_cbor'
@@ -310,7 +307,6 @@ describe('processBlock Tests', () => {
             name,
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             handle_type: HandleType.HANDLE,
             datum: undefined,
             lovelace: 1,
@@ -352,7 +348,6 @@ describe('processBlock Tests', () => {
             og_number: 0,
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             version: 0,
             handle_type: HandleType.HANDLE,
             lovelace: 1,
@@ -382,7 +377,6 @@ describe('processBlock Tests', () => {
             name: 'burritos',
             slotNumber: 0,
             utxo: 'some_id#0',
-            policy: policyId,
             handle_type: HandleType.HANDLE,
             lovelace: 1,
             script: undefined,
@@ -436,7 +430,6 @@ describe('processBlock Tests', () => {
                 trial: false,
                 nsfw: false
             },
-            policy: policyId,
             reference_token: {
                 datum: cbor,
                 index: 0,
@@ -528,7 +521,6 @@ describe('processBlock Tests', () => {
             slotNumber: 0,
             handle_type: HandleType.NFT_SUBHANDLE,
             utxo: 'some_id#0',
-            policy: policyId,
             version: 0,
             lovelace: 1,
             sub_characters: undefined,
@@ -586,7 +578,6 @@ describe('processBlock Tests', () => {
                 trial: false,
                 nsfw: false
             },
-            policy: policyId,
             reference_token: {
                 datum: cbor,
                 index: 0,
