@@ -359,7 +359,6 @@ export class HandlesRepository {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
-        const handleExists = !!existingHandle;
         const handle = existingHandle ?? await this._buildHandle({name, hex, policy}, address, slotNumber, data);
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
@@ -370,12 +369,6 @@ export class HandlesRepository {
             lovelace,
             datum: datum ?? '',
             address
-        };
-
-        let personalization: IPersonalization = {
-            validated_by: '',
-            trial: true,
-            nsfw: true
         };
 
         switch (assetLabel) {
@@ -405,19 +398,16 @@ export class HandlesRepository {
                     Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
                     return;
                 }
+
+                let personalization = handle.personalization ?? { validated_by: '', trial: true, nsfw: true };
                 const { personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
                 if (personalizationDatum) {
                     // populate personalization from the reference token
-                    personalization = await this._buildPersonalization({
-                        personalizationDatum,
-                        personalization
-                    });
+                    personalization = await this._buildPersonalization({ personalizationDatum, personalization });
                 }
                 const addresses = personalizationDatum?.resolved_addresses
                     ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                        if (key !== 'ada') {
-                            acc[key] = value as string;
-                        }
+                        if (key !== 'ada') { acc[key] = value as string; }
                         return acc;
                     }, {})
                     : {};
@@ -450,7 +440,7 @@ export class HandlesRepository {
                 break;
             }
             case '001':
-                if (!handleExists) {
+                if (!existingHandle) {
                     // There should always be an existing root handle for a subhandle
                     Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });
                     return;  
