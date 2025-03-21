@@ -379,7 +379,8 @@ export class HandlesRepository {
                     return;
                 }
                 // check if existing handle has a utxo. If it does, we may have a double mint
-                if (isMintTx && existingHandle?.utxo) {
+                if (isMintTx && existingHandle?.utxo && slotNumber >= (handle.updated_slot_number ?? handle.created_slot_number ?? 0)) {
+                    console.log('SLOTS', handle.updated_slot_number, handle.created_slot_number, slotNumber)
                     handle.amount = (handle.amount ?? 0) + 1;
                     Logger.log({ message: `POSSIBLE DOUBLE MINT!!!\n UTxO already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
                 }
@@ -400,7 +401,7 @@ export class HandlesRepository {
                 }
 
                 let personalization = handle.personalization ?? { validated_by: '', trial: true, nsfw: true };
-                const { personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
+                const { metadata,  personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
                 if (personalizationDatum) {
                     // populate personalization from the reference token
                     personalization = await this._buildPersonalization({ personalizationDatum, personalization });
@@ -412,6 +413,7 @@ export class HandlesRepository {
                     }, {})
                     : {};
                 const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+                handle.og_number = metadata?.og_number ?? 0;
                 handle.image_hash = personalizationDatum?.image_hash ?? ''
                 handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
                 handle.bg_image = personalizationDatum?.bg_image
@@ -636,6 +638,7 @@ export class HandlesRepository {
             ada: address
         }
         handle.amount = 1;
+        handle.og_number = 0;
         return handle;
     }
 

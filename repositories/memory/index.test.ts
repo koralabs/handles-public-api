@@ -65,7 +65,7 @@ describe('HandleStore tests', () => {
                 handle_type,
                 last_update_address
             } = handle;
-            await repo.saveMintedHandle({
+            await repo.save({
                 adaAddress,
                 hex,
                 image,

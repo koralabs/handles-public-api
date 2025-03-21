@@ -1,16 +1,23 @@
 import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
-import { AssetNameLabel, HandleType, Logger, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, Logger, Rarity, StoredHandle, encodeJsonToDatum } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../../repositories/handlesRepository';
 import { MemoryHandlesProvider } from '../../repositories/memory';
+import { HandleStore } from '../../repositories/memory/handleStore';
 import * as ipfs from '../../utils/ipfs';
 import OgmiosService from './ogmios.service';
-
-const ogmios = new OgmiosService(new HandlesRepository(new MemoryHandlesProvider()));
+const repo = new HandlesRepository(new MemoryHandlesProvider());
+const ogmios = new OgmiosService(repo);
+jest.mock('../../config/index', () => ({
+    isDatumEndpointEnabled: jest.fn(() => true)
+}));
 
 describe('processBlock Tests', () => {
     afterEach(() => {
         jest.clearAllMocks();
     });
+    beforeEach(() => {
+        HandleStore.handles.clear();
+    })
 
     const tip: Tip = {
         slot: 0,
@@ -176,92 +183,129 @@ describe('processBlock Tests', () => {
         policy: ''
     };
 
-    it('Should save a new handle to the datastore and set metrics', async () => {
-        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
+    it('Should save a new handle to the datastore and set metrics', () => {
+        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         const setMetricsSpy = jest.spyOn(MemoryHandlesProvider.prototype, 'setMetrics');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip });
+        Promise.resolve(ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip })).then(() => {
 
-        expect(saveSpy).toHaveBeenCalledTimes(2);
+            expect(saveSpy).toHaveBeenCalledTimes(2);
 
-        expect(saveSpy).toHaveBeenNthCalledWith(1, {
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            policy: policyId,
-            hex: '7465737431323334',
-            image: 'ifps://some_hash_test1234',
-            name: 'test1234',
-            og_number: 0,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            version: 0,
-            handle_type: HandleType.HANDLE,
-            lovelace: 1,
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined
+            expect(saveSpy).toHaveBeenNthCalledWith(1, { handle: {
+                policy: policyId,
+                hex: '7465737431323334',
+                image: 'ifps://some_hash_test1234',
+                name: 'test1234',
+                og_number: 0,
+                utxo: 'some_id#0',
+                version: 0,
+                handle_type: HandleType.HANDLE,
+                lovelace: 1,
+                sub_characters: undefined,
+                sub_length: undefined,
+                sub_numeric_modifiers: undefined,
+                sub_rarity: undefined,
+                amount: 1,
+                characters: 'letters,numbers',
+                created_slot_number: 0,
+                datum: undefined,
+                has_datum: false,
+                numeric_modifiers: '',
+                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+                rarity: 'basic',
+                resolved_addresses: {
+                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                },
+                script: undefined,
+                standard_image: 'ifps://some_hash_test1234',
+                updated_slot_number: 0
+            }});
+    
+            expect(saveSpy).toHaveBeenNthCalledWith(2, { handle: {
+                hex: '74657374343536',
+                image: '',
+                name: 'test456',
+                og_number: 0,
+                utxo: 'some_id#0',
+                policy: policyId,
+                version: 0,
+                handle_type: HandleType.HANDLE,
+                lovelace: 1,
+                sub_characters: undefined,
+                sub_length: undefined,
+                sub_numeric_modifiers: undefined,
+                sub_rarity: undefined,
+                amount: 1,
+                characters: 'letters,numbers',
+                created_slot_number: 0,
+                datum: undefined,
+                has_datum: false,
+                numeric_modifiers: '',
+                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+                rarity: 'common',
+                resolved_addresses: {
+                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                },
+                script: undefined,
+                standard_image: '',
+                updated_slot_number: 0
+            }});
+    
+            expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
+                tipBlockHash: 'some_hash',
+                currentBlockHash: 'some_block_hash',
+                currentSlot: 0,
+                lastSlot: 0
+            });
+    
+            expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
         });
 
-        expect(saveSpy).toHaveBeenNthCalledWith(2, {
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            hex: '74657374343536',
-            image: '',
-            name: 'test456',
-            og_number: 0,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            policy: policyId,
-            version: 0,
-            handle_type: HandleType.HANDLE,
-            lovelace: 1,
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined
-        });
-
-        expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
-            tipBlockHash: 'some_hash',
-            currentBlockHash: 'some_block_hash',
-            currentSlot: 0,
-            lastSlot: 0
-        });
-
-        expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
     });
 
-    it('Should save datum', async () => {
+    it('Should save datum', () => {
         const datum = 'a2some_datum';
-        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
+        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
 
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, datum }), tip });
-
-        expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            policy: policyId,
-            hex: '7465737431323334',
-            image: 'ifps://some_hash_test1234',
-            name: 'test1234',
-            og_number: 0,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            datum,
-            version: 0,
-            handle_type: HandleType.HANDLE,
-            lovelace: 1,
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined
+        Promise.resolve(ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, datum }), tip })).then(() => {
+            expect(saveSpy).toHaveBeenCalledWith({handle: {
+                resolved_addresses: {
+                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                },
+                policy: policyId,
+                hex: '7465737431323334',
+                image: 'ifps://some_hash_test1234',
+                name: 'test1234',
+                og_number: 0,
+                utxo: 'some_id#0',
+                datum,
+                version: 0,
+                handle_type: HandleType.HANDLE,
+                lovelace: 1,
+                sub_characters: undefined,
+                sub_length: undefined,
+                sub_numeric_modifiers: undefined,
+                sub_rarity: undefined,
+                amount: 1,
+                characters: 'letters,numbers',
+                created_slot_number: 0,
+                has_datum: true,
+                numeric_modifiers: '',
+                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+                rarity: 'basic',
+                script: undefined,
+                standard_image: 'ifps://some_hash_test1234',
+                updated_slot_number: 0
+            }});
         });
     });
 
     it('Should save script', async () => {
         const script: Script = { language: 'plutus:v2', cbor: 'a2some_cbor' };
-        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
+        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
 
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -293,7 +337,7 @@ describe('processBlock Tests', () => {
 
     it('Should update a handle when it is not a mint', async () => {
         const newAddress = 'addr456';
-        const saveHandleUpdateSpy = jest.spyOn(HandlesRepository.prototype, 'saveHandleUpdate');
+        const saveHandleUpdateSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'setMetrics');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(HandlesRepository.prototype, 'get').mockReturnValue(expectedItem);
@@ -318,8 +362,8 @@ describe('processBlock Tests', () => {
     });
 
     it('Should not save anything if policyId does not match', async () => {
-        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
-        const saveAddressSpy = jest.spyOn(HandlesRepository.prototype, 'saveHandleUpdate');
+        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
+        const saveAddressSpy = jest.spyOn(HandlesRepository.prototype, 'save');
 
         await ogmios['processBlock']({ txBlock: txBlock({ policy: 'no-ada-handle' }), tip });
 
@@ -330,7 +374,7 @@ describe('processBlock Tests', () => {
     it('Should process 222 asset class token mint', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
-        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
+        const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
@@ -361,7 +405,7 @@ describe('processBlock Tests', () => {
     it('Should process 222 update', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
-        const saveHandleUpdateSpy = jest.spyOn(HandlesRepository.prototype, 'saveHandleUpdate');
+        const saveHandleUpdateSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
@@ -390,7 +434,7 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'savePersonalizationChange');
+        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
@@ -469,7 +513,7 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_001}${Buffer.from(handleName).toString('hex')}`;
 
-        const saveSubHandleSettingsChangeSpy = jest.spyOn(HandlesRepository.prototype, 'saveSubHandleSettingsChange');
+        const saveSubHandleSettingsChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
@@ -493,40 +537,50 @@ describe('processBlock Tests', () => {
         });
     });
 
-    it('should process as NFT Sub handle', async () => {
+    it('should process as NFT Sub handle', () => {
         const handleName = `sub@hndl`;
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
 
-        const saveMintedHandleSpy = jest.spyOn(HandlesRepository.prototype, 'saveMintedHandle');
+        const saveMintedHandleSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await ogmios['processBlock']({
+        Promise.resolve(ogmios['processBlock']({
             txBlock: txBlock({
                 policy: policyId,
                 handleHexName,
                 isMint: true
             }) as BlockPraos,
             tip
-        });
-
-        expect(saveMintedHandleSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            policy: policyId,
-            datum: undefined,
-            hex: handleHexName,
-            image: '',
-            name: handleName,
-            og_number: 0,
-            script: undefined,
-            slotNumber: 0,
-            handle_type: HandleType.NFT_SUBHANDLE,
-            utxo: 'some_id#0',
-            version: 0,
-            lovelace: 1,
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined
+        })).then(() => {
+            expect(saveMintedHandleSpy).toHaveBeenCalledWith({handle: {
+                resolved_addresses: {
+                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                },
+                policy: policyId,
+                datum: undefined,
+                hex: handleHexName,
+                image: '',
+                name: handleName,
+                og_number: 0,
+                script: undefined,
+                handle_type: HandleType.NFT_SUBHANDLE,
+                utxo: 'some_id#0',
+                version: 0,
+                lovelace: 1,
+                sub_characters: undefined,
+                sub_length: undefined,
+                sub_numeric_modifiers: undefined,
+                sub_rarity: undefined,
+                amount: 1,
+                characters: 'letters',
+                created_slot_number: 0,
+                has_datum: false,
+                numeric_modifiers: '',
+                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+                rarity: 'basic',
+                standard_image: '',
+                updated_slot_number: 0
+            }});
         });
     });
 
@@ -534,7 +588,7 @@ describe('processBlock Tests', () => {
         const handleName = `virtual@hndl`;
         const handleHexName = `${AssetNameLabel.LBL_000}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'savePersonalizationChange');
+        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
@@ -612,7 +666,7 @@ describe('processBlock Tests', () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
 
-        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'savePersonalizationChange');
+        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
         const loggerSpy = jest.spyOn(Logger, 'log').mockImplementation();
@@ -638,7 +692,7 @@ describe('processBlock Tests', () => {
     it('Should log error for 100 asset token when there is no datum', async () => {
         const handleName = `burritos`;
         const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
-        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'savePersonalizationChange');
+        const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         const loggerSpy = jest.spyOn(Logger, 'log');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
@@ -650,8 +704,8 @@ describe('processBlock Tests', () => {
         expect(savePersonalizationChangeSpy).toHaveBeenCalledTimes(0);
         expect(loggerSpy).toHaveBeenCalledWith({
             category: 'ERROR',
-            event: 'processBlock.processAssetReferenceToken.noDatum',
-            message: 'no datum for reference token 000643b06275727269746f73'
+            event: 'processScannedHandleInfo.referenceToken.noDatum',
+            message: 'No datum for reference token 000643b06275727269746f73'
         });
     });
 
@@ -671,32 +725,32 @@ describe('processBlock Tests', () => {
     });
 
     describe('isValidDatum tests', () => {
-        it('should return null for invalid datum', () => {
-            const datum = {
+        it('should return null for invalid datum', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_12: [{}, 1, {}]
-            };
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            });
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: null, personalizationDatum: null });
         });
 
-        it('should return empty datum', () => {
-            const datum = {
+        it('should return empty datum', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_0: [{}, 1, {}]
-            };
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            });
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: {}, personalizationDatum: {} });
         });
 
-        it('should return invalid datum', () => {
-            const datum = {
+        it('should return invalid datum', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_0: [{ a: 'a' }, 1, { b: 'b' }]
-            };
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            }, {defaultToText:true});
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toEqual({ metadata: { a: 'a' }, personalizationDatum: { b: 'b' } });
         });
 
-        it('should return pz datum even with one missing required field', () => {
-            const datum = {
+        it('should return pz datum even with one missing required field', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_0: [
                     {
                         name: '',
@@ -722,9 +776,9 @@ describe('processBlock Tests', () => {
                         validated_by: ''
                     }
                 ]
-            };
+            });
 
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toEqual({
                 metadata: {
                     characters: '',
@@ -733,7 +787,7 @@ describe('processBlock Tests', () => {
                     mediaType: '',
                     name: '',
                     numeric_modifiers: '',
-                    og: 0,
+                    og: false,
                     og_number: 0,
                     rarity: '',
                     version: 0
@@ -744,14 +798,14 @@ describe('processBlock Tests', () => {
                     socials: '',
                     vendor: '',
                     default: false,
-                    last_update_address: '',
-                    validated_by: ''
+                    last_update_address: '0x',
+                    validated_by: '0x'
                 }
             });
         });
 
-        it('should return true for valid datum', () => {
-            const datum = {
+        it('should return true for valid datum', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_0: [
                     {
                         name: '',
@@ -781,13 +835,13 @@ describe('processBlock Tests', () => {
                         nsfw: 0
                     }
                 ]
-            };
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            });
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toBeTruthy();
         });
 
-        it('should build valid datum for NFT Sub handle', () => {
-            const datum = {
+        it('should build valid datum for NFT Sub handle', async () => {
+            const datum = await encodeJsonToDatum({
                 constructor_0: [
                     {
                         name: '',
@@ -826,8 +880,8 @@ describe('processBlock Tests', () => {
                         nsfw: 0
                     }
                 ]
-            };
-            const result = ogmios['buildValidDatum']('taco', 'taco', datum);
+            });
+            const result = await repo['_buildPersonalizationData']('taco', 'taco', datum);
             expect(result).toBeTruthy();
         });
     });

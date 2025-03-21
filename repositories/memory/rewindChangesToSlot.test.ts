@@ -10,22 +10,7 @@ describe('rewindChangesToSlot', () => {
         // populate storage
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            const {
-                hex,
-                standard_image: image,
-                standard_image_hash,
-                svg_version,
-                name,
-                og_number,
-                updated_slot_number: slotNumber,
-                utxo,
-                lovelace,
-                resolved_addresses: { ada: adaAddress },
-                handle_type,
-                last_update_address,
-                policy
-            } = handle;
-            await repo.saveMintedHandle({ policy, adaAddress, hex, image, name, og_number, slotNumber, utxo, lovelace, image_hash: standard_image_hash, svg_version, handle_type, last_update_address });
+            await repo.save({ handle });
         }
 
         // set the slotHistoryIndex
