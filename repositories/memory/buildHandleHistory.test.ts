@@ -4,7 +4,7 @@ import { handlesFixture } from './tests/fixtures/handles';
 
 describe('buildHandleHistory', () => {
     const repo = new HandlesRepository(new MemoryHandlesProvider);
-    it('should log the correct old and new value', () => {
+    it('should log the correct old and new value', async () => {
         const newHandle = {
             ...handlesFixture[0],
             resolved_addresses: {
@@ -13,7 +13,7 @@ describe('buildHandleHistory', () => {
         };
         const oldHandle = handlesFixture[0];
 
-        const history = repo.Internal.buildHandleHistory(newHandle, oldHandle);
+        const history = await repo.Internal.buildHandleHistory(newHandle, oldHandle);
 
         expect(history).toEqual({
             new: {

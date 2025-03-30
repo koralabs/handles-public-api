@@ -10,8 +10,7 @@ jest.mock('../ioc/main.registry', () => ({
                 total_handles: 10,
                 total_holders: 5
             };
-        },
-        currentHttpStatus: () => 200
+        }
     }),
     ['apiKeysRepo']: jest.fn().mockReturnValue({
         get: (key: string) => key === 'valid-key'

@@ -6,8 +6,8 @@ import * as config from '../config';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
         getHandleByName: (handleName: string) => {
             if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
@@ -69,12 +69,35 @@ jest.mock('../ioc/main.registry', () => ({
                 {
                     name: 'burritos',
                     utxo: 'utxo#0',
+                    policy: 'f0ff',
                     personalization: {
                         p: 'z'
                     },
                     datum: 'a247'
                 }
             ]
+        },
+        search: () => {
+            return { searchTotal: 1, handles: [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    policy: 'f0ff',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ] }
+        },
+        getHolder: () => {
+            return {
+                handles: [],
+                defaultHandle: '',
+                manuallySet: false,
+                type: 'handle',
+                knownOwnerName: ''
+            }
         },
         getAll: () => {
             return {
@@ -139,7 +162,7 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             };
         },
-        getSubHandles: (handleName: string) => {
+        getSubHandlesByRootHandle: (handleName: string) => {
             return [
                 { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
                 { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
@@ -162,11 +185,13 @@ jest.mock('../ioc/main.registry', () => ({
                 schemaVersion: 0
             }
         }
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
+
+
+// ['apiKeysRepo']: jest.fn().mockReturnValue({
+//     get: (key: string) => key === 'valid-key'
+// })
 
 afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));

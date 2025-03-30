@@ -144,7 +144,6 @@ class App {
 
         try {
             const swaggerDoc = parse(fs.readFileSync('./swagger.yml').toString());
-            // @ts-expect-error
             this.app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDoc, options));
         } catch (error: any) {
             Logger.log(`Unable to load swagger with error: ${error}`);

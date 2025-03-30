@@ -29,7 +29,6 @@ describe('holder index integrity', () => {
                 holder.handles.add(handle.name);
             }
         }
-        console.log(HandleStore.holderIndex)
         const thisthing = HandleStore.holderIndex;
         expect(thisthing).toEqual(testHolderIndex);
     });

@@ -61,42 +61,45 @@ class OgmiosService {
         }
 
         // attempt ogmios resume (see if starting point exists or errors)
-        let ogmiosStarted = false;
         const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save);
 
-        while (!ogmiosStarted) {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
             try {
                 if (!firstStartingPoint) {                    
                     const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
                     await reset();
                     await this._resume(initialStartingPoint);
-                    ogmiosStarted = true;
-                    continue;
+                    break;
                 } else {
                     try {
                         await load();
                         await this._resume(firstStartingPoint);
-                        ogmiosStarted = true;
+                        break;
                     } catch (error: any) {
+                        Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
                         const secondStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save, true);
                         // If error, try the other file's starting point
-                        if (secondStartingPoint && error.code === 1000) {
+                        if (error.code === 1000) {
                             this.handlesRepo.destroy();
-                            try {
-                                await load();
-                                await this._resume(secondStartingPoint);
-                                ogmiosStarted = true;
-                            } catch (error: any) {
-                                if (error.code === 1000) {
-                                    // this means the slot that came back from the files is bad
-                                    await reset();
-                                    process.exit(2);
+                            if (secondStartingPoint) {
+                                try {
+                                    await load();
+                                    await this._resume(secondStartingPoint);
+                                    break;
+                                } catch (error: any) {
+                                    if (error.code === 1000) {
+                                        // this means the slot that came back from the files is bad
+                                        await reset();
+                                        process.exit(2);
+                                    }
+                                    throw error;
                                 }
-                                throw error;
                             }
                         }
                     }
                 }
+                if (this.client) this.client.shutdown();
             } catch (error: any) {
                 Logger.log({
                     message: `Unable to connect Ogmios: ${error.message}`,

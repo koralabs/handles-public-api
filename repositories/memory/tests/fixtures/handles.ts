@@ -6,7 +6,7 @@ const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 export const handlesFixture: StoredHandle[] = [
     {
-        hex: 'barbacoa-hex',
+        hex: '6261726261636f61',
         name: 'barbacoa',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -39,7 +39,7 @@ export const handlesFixture: StoredHandle[] = [
         payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
-        hex: 'burrito-hex',
+        hex: '6275727269746f',
         name: 'burrito',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -72,7 +72,7 @@ export const handlesFixture: StoredHandle[] = [
         payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
-        hex: 'taco-hex',
+        hex: '7461636f',
         name: 'taco',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -167,16 +167,16 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
         const handleName = createRandomHandleName();
         if (!repo.get(handleName)) {
             const handle = await repo.Internal.buildHandle({
-                adaAddress: createRandomAddress(),
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
                 policy,
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                 og_number: Math.floor(Math.random() * 2438),
-                slotNumber: i,
                 handle_type: HandleType.HANDLE,
                 utxo: createRandomUtxo(),
-                lovelace: 0
+                lovelace: 0,
+                resolved_addresses: {ada: createRandomAddress()},
+                updated_slot_number: i
             });
             if (saveToHandleStore) {
                 await repo.save({ handle });
@@ -221,16 +221,16 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                 const handleName = createRandomHandleName();
                 if (!repo.get(handleName)) {
                     const newHandle = await repo.Internal.buildHandle({
-                        adaAddress: createRandomAddress(),
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
                         policy,
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                         og_number: Math.floor(Math.random() * 2438),
-                        slotNumber: beginningSlot + i,
                         handle_type: HandleType.HANDLE,
                         utxo: createRandomUtxo(),
-                        lovelace: 0
+                        lovelace: 0,
+                        resolved_addresses: {ada: createRandomAddress()},
+                        updated_slot_number: beginningSlot + i
                     });
                     await repo.save({ handle: newHandle });
                 }

@@ -183,124 +183,143 @@ describe('processBlock Tests', () => {
         policy: ''
     };
 
-    it('Should save a new handle to the datastore and set metrics', () => {
+    it('Should save a new handle to the datastore and set metrics', async () => {
         const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         const setMetricsSpy = jest.spyOn(MemoryHandlesProvider.prototype, 'setMetrics');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        Promise.resolve(ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip })).then(() => {
+        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip })
 
-            expect(saveSpy).toHaveBeenCalledTimes(2);
+        expect(saveSpy).toHaveBeenCalledTimes(2);
 
-            expect(saveSpy).toHaveBeenNthCalledWith(1, { handle: {
-                policy: policyId,
-                hex: '7465737431323334',
-                image: 'ifps://some_hash_test1234',
-                name: 'test1234',
-                og_number: 0,
-                utxo: 'some_id#0',
-                version: 0,
-                handle_type: HandleType.HANDLE,
-                lovelace: 1,
-                sub_characters: undefined,
-                sub_length: undefined,
-                sub_numeric_modifiers: undefined,
-                sub_rarity: undefined,
-                amount: 1,
-                characters: 'letters,numbers',
-                created_slot_number: 0,
-                datum: undefined,
-                has_datum: false,
-                numeric_modifiers: '',
-                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-                rarity: 'basic',
-                resolved_addresses: {
-                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
-                },
-                script: undefined,
-                standard_image: 'ifps://some_hash_test1234',
-                updated_slot_number: 0
-            }});
-    
-            expect(saveSpy).toHaveBeenNthCalledWith(2, { handle: {
-                hex: '74657374343536',
-                image: '',
-                name: 'test456',
-                og_number: 0,
-                utxo: 'some_id#0',
-                policy: policyId,
-                version: 0,
-                handle_type: HandleType.HANDLE,
-                lovelace: 1,
-                sub_characters: undefined,
-                sub_length: undefined,
-                sub_numeric_modifiers: undefined,
-                sub_rarity: undefined,
-                amount: 1,
-                characters: 'letters,numbers',
-                created_slot_number: 0,
-                datum: undefined,
-                has_datum: false,
-                numeric_modifiers: '',
-                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-                rarity: 'common',
-                resolved_addresses: {
-                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
-                },
-                script: undefined,
-                standard_image: '',
-                updated_slot_number: 0
-            }});
-    
-            expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
-                tipBlockHash: 'some_hash',
-                currentBlockHash: 'some_block_hash',
-                currentSlot: 0,
-                lastSlot: 0
-            });
-    
-            expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
+        expect(saveSpy).toHaveBeenNthCalledWith(1, { handle: {
+            policy: policyId,
+            hex: '7465737431323334',
+            image: 'ifps://some_hash_test1234',
+            name: 'test1234',
+            og_number: 0,
+            utxo: 'some_id#0',
+            version: 0,
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            amount: 1,
+            characters: 'letters,numbers',
+            created_slot_number: 0,
+            datum: undefined,
+            has_datum: false,
+            numeric_modifiers: '',
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            script: undefined,
+            standard_image: 'ifps://some_hash_test1234',
+            updated_slot_number: 0,
+            default_in_wallet: '',
+            holder: '',
+            holder_type: '',
+            image_hash: '',
+            length: 8,
+            standard_image_hash: '',
+            svg_version: '0'
+        }});
+
+        expect(saveSpy).toHaveBeenNthCalledWith(2, { handle: {
+            hex: '74657374343536',
+            image: '',
+            name: 'test456',
+            og_number: 0,
+            utxo: 'some_id#0',
+            policy: policyId,
+            version: 0,
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            amount: 1,
+            characters: 'letters,numbers',
+            created_slot_number: 0,
+            datum: undefined,
+            has_datum: false,
+            numeric_modifiers: '',
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            rarity: 'common',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            script: undefined,
+            standard_image: '',
+            updated_slot_number: 0,
+            default_in_wallet: '',
+            holder: '',
+            holder_type: '',
+            image_hash: '',
+            length: 7,
+            standard_image_hash: '',
+            svg_version: '0'
+        }});
+
+        expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
+            tipBlockHash: 'some_hash',
+            currentBlockHash: 'some_block_hash',
+            currentSlot: 0,
+            lastSlot: 0
         });
+
+        expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
 
     });
 
-    it('Should save datum', () => {
+    it('Should save datum', async () => {
         const datum = 'a2some_datum';
         const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
 
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        Promise.resolve(ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, datum }), tip })).then(() => {
-            expect(saveSpy).toHaveBeenCalledWith({handle: {
-                resolved_addresses: {
-                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
-                },
-                policy: policyId,
-                hex: '7465737431323334',
-                image: 'ifps://some_hash_test1234',
-                name: 'test1234',
-                og_number: 0,
-                utxo: 'some_id#0',
-                datum,
-                version: 0,
-                handle_type: HandleType.HANDLE,
-                lovelace: 1,
-                sub_characters: undefined,
-                sub_length: undefined,
-                sub_numeric_modifiers: undefined,
-                sub_rarity: undefined,
-                amount: 1,
-                characters: 'letters,numbers',
-                created_slot_number: 0,
-                has_datum: true,
-                numeric_modifiers: '',
-                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-                rarity: 'basic',
-                script: undefined,
-                standard_image: 'ifps://some_hash_test1234',
-                updated_slot_number: 0
-            }});
-        });
+        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, datum }), tip })
+        expect(saveSpy).toHaveBeenCalledWith({handle: {
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            policy: policyId,
+            hex: '7465737431323334',
+            image: 'ifps://some_hash_test1234',
+            name: 'test1234',
+            og_number: 0,
+            utxo: 'some_id#0',
+            datum,
+            version: 0,
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            amount: 1,
+            characters: 'letters,numbers',
+            created_slot_number: 0,
+            has_datum: true,
+            numeric_modifiers: '',
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            rarity: 'basic',
+            script: undefined,
+            standard_image: 'ifps://some_hash_test1234',
+            updated_slot_number: 0,
+            default_in_wallet: '',
+            holder: '',
+            holder_type: '',
+            standard_image_hash: '',
+            svg_version: '0',
+            image_hash: '',
+            length: 8
+        }});
     });
 
     it('Should save script', async () => {
@@ -537,51 +556,58 @@ describe('processBlock Tests', () => {
         });
     });
 
-    it('should process as NFT Sub handle', () => {
-        const handleName = `sub@hndl`;
+    it('should process as NFT Sub handle', async () => {
+        const handleName = 'sub@hndl';
         const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
 
         const saveMintedHandleSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        Promise.resolve(ogmios['processBlock']({
+        await ogmios['processBlock']({
             txBlock: txBlock({
                 policy: policyId,
                 handleHexName,
                 isMint: true
             }) as BlockPraos,
             tip
-        })).then(() => {
-            expect(saveMintedHandleSpy).toHaveBeenCalledWith({handle: {
-                resolved_addresses: {
-                    ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
-                },
-                policy: policyId,
-                datum: undefined,
-                hex: handleHexName,
-                image: '',
-                name: handleName,
-                og_number: 0,
-                script: undefined,
-                handle_type: HandleType.NFT_SUBHANDLE,
-                utxo: 'some_id#0',
-                version: 0,
-                lovelace: 1,
-                sub_characters: undefined,
-                sub_length: undefined,
-                sub_numeric_modifiers: undefined,
-                sub_rarity: undefined,
-                amount: 1,
-                characters: 'letters',
-                created_slot_number: 0,
-                has_datum: false,
-                numeric_modifiers: '',
-                payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
-                rarity: 'basic',
-                standard_image: '',
-                updated_slot_number: 0
-            }});
-        });
+        })
+        
+        expect(saveMintedHandleSpy).toHaveBeenCalledWith({handle: {
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            policy: policyId,
+            datum: undefined,
+            hex: handleHexName,
+            image: '',
+            name: handleName,
+            og_number: 0,
+            script: undefined,
+            handle_type: HandleType.NFT_SUBHANDLE,
+            utxo: 'some_id#0',
+            version: 0,
+            lovelace: 1,
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0,
+            has_datum: false,
+            numeric_modifiers: '',
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            rarity: 'basic',
+            standard_image: '',
+            updated_slot_number: 0,
+            standard_image_hash: '',
+            sub_characters: 'letters',
+            sub_length: 3,
+            sub_numeric_modifiers: '',
+            sub_rarity: 'rare',
+            svg_version: '0',
+            default_in_wallet: '',
+            holder: '',
+            holder_type: '',
+            image_hash: '',
+            length: 8
+        }});
     });
 
     it('Should process virtual sub handle', async () => {

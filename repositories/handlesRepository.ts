@@ -35,7 +35,6 @@ export class HandlesRepository {
 
     public isCaughtUp(): boolean {
         const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.provider.getMetrics();
-        //console.log('lastSlot', lastSlot, 'currentSlot', currentSlot, 'currentBlockHash', currentBlockHash, 'tipBlockHash', tipBlockHash);
         return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
@@ -359,7 +358,7 @@ export class HandlesRepository {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
-        const handle = existingHandle ?? await this._buildHandle({name, hex, policy}, address, slotNumber, data);
+        const handle = existingHandle ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
 
@@ -380,7 +379,6 @@ export class HandlesRepository {
                 }
                 // check if existing handle has a utxo. If it does, we may have a double mint
                 if (isMintTx && existingHandle?.utxo && slotNumber >= (handle.updated_slot_number ?? handle.created_slot_number ?? 0)) {
-                    console.log('SLOTS', handle.updated_slot_number, handle.created_slot_number, slotNumber)
                     handle.amount = (handle.amount ?? 0) + 1;
                     Logger.log({ message: `POSSIBLE DOUBLE MINT!!!\n UTxO already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
                 }
@@ -458,6 +456,10 @@ export class HandlesRepository {
                     utxo: utxoDetails
                 }                
                 handle.updated_slot_number = slotNumber;
+                handle.resolved_addresses = {
+                    ...(existingHandle?.resolved_addresses ?? {}),
+                    ada: existingHandle?.resolved_addresses?.ada ?? ''
+                }
                 break;
             default:
                 Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
@@ -468,7 +470,7 @@ export class HandlesRepository {
     }
 
     public async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
-        const updatedHandle: StoredHandle = JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v)));
+        const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
         const {
             name,
             rarity,
@@ -618,28 +620,49 @@ export class HandlesRepository {
         return array;
     }
 
-    private async _buildHandle(handle: Partial<StoredHandle>, address: string, slotNumber: number, data?: IHandleMetadata): Promise<Partial<StoredHandle>> {
-        const {name} = handle;
-        handle.rarity = getRarity(name!);
-        handle.characters = buildCharacters(name!);
-        handle.numeric_modifiers = buildNumericModifiers(name!);
-        handle.created_slot_number = slotNumber;
-        handle.updated_slot_number = slotNumber;
-        handle.payment_key_hash = (await getPaymentKeyHash(address))!;
-        handle.handle_type = name!.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE;
-        handle.image = data?.image ?? '';
-        handle.standard_image = data?.image ?? '';
-        handle.version = ((data as any)?.core ?? data)?.version ?? 0;
-        handle.sub_characters = data?.sub_characters;
-        handle.sub_length = data?.sub_length;
-        handle.sub_numeric_modifiers = data?.sub_numeric_modifiers;
-        handle.sub_rarity = data?.sub_rarity;
-        handle.resolved_addresses = {
-            ada: address
+    private async _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): Promise<StoredHandle> {
+        const {name, hex, policy} = handle;
+        if (!name || !hex || !policy) {
+            throw new Error('_buildHandle: "name", "hex", and "policy" are required properties');
         }
-        handle.amount = 1;
-        handle.og_number = 0;
-        return handle;
+        if (!hex.endsWith(Buffer.from(name).toString('hex'))) {
+            throw new Error('_buildHandle: invalid hex for Handle name');
+        }
+        const address = handle.resolved_addresses?.ada;
+        const slotNumber = handle.updated_slot_number ?? (handle.created_slot_number ?? 0);
+
+        // calculated
+        handle.length = name.length;
+        handle.rarity = getRarity(name);
+        handle.characters = buildCharacters(name);
+        handle.numeric_modifiers = buildNumericModifiers(name);
+        handle.created_slot_number = (handle.created_slot_number ?? slotNumber);
+        handle.updated_slot_number = (handle.updated_slot_number ?? slotNumber);
+        handle.payment_key_hash = address ? (await getPaymentKeyHash(address))! : '';
+        handle.handle_type = handle.handle_type ?? (name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE);
+        handle.image = data?.image ?? (handle.image ?? '');
+        handle.standard_image = data?.image ?? handle.standard_image ?? handle.image ?? '';
+        handle.version = Number(((data as any)?.core ?? data)?.version ?? (handle.version ?? 0));
+        handle.sub_characters = name.includes('@') ? buildCharacters(name.split('@')[0]) : undefined;
+        handle.sub_length = name.includes('@') ? name.split('@')[0].length : undefined;
+        handle.sub_numeric_modifiers = name.includes('@') ? buildNumericModifiers(name.split('@')[0]) : undefined;
+        handle.sub_rarity = name.includes('@') ? getRarity(name.split('@')[0]) : undefined;
+        handle.datum = isDatumEndpointEnabled() ? handle.datum ?? undefined : undefined;
+        handle.has_datum = !!handle.datum;
+        
+        // defaults
+        handle.amount = handle.amount ?? 1;
+        handle.og_number = Number(handle.og_number ?? 0);
+        handle.standard_image_hash = handle.standard_image_hash ?? handle.image_hash ?? '';
+        handle.image_hash = handle.image_hash ?? '';
+        handle.holder = handle.holder ?? '';
+        handle.holder_type = handle.holder_type ?? '';
+        handle.default_in_wallet = handle.default_in_wallet ?? '';
+        handle.utxo = handle.utxo ?? '';
+        handle.lovelace = Number(handle.lovelace ?? 0);
+        handle.has_datum = handle.has_datum ?? false;
+        handle.svg_version = handle.svg_version ?? '0';
+        return handle as StoredHandle;
     }
 
     private _buildHandleHistory(newHandle: Partial<StoredHandle>, oldHandle?: Partial<StoredHandle>, testMode = true): HandleHistory | null {
@@ -816,6 +839,7 @@ export class HandlesRepository {
     // Used for unit testing
     Internal = {
         buildHandleHistory: this._buildHandleHistory.bind(this),
+        buildPersonalization: this._buildPersonalization.bind(this),
         buildHandle: this._buildHandle.bind(this),
         saveSlotHistory: this._saveSlotHistory.bind(this)
     }

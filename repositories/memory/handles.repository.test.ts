@@ -1,4 +1,4 @@
-import { AssetNameLabel, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, SaveMintingTxInput } from '@koralabs/kora-labs-common';
+import { HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import { MemoryHandlesProvider } from '.';
 import * as config from '../../config';
 import { HandlesRepository } from '../handlesRepository';
@@ -12,10 +12,10 @@ describe('MemoryHandlesProvider Tests', () => {
         amount: 1,
         bg_image: '',
         characters: 'letters',
-        created_slot_number: 8,
+        created_slot_number: 0,
         default_in_wallet: 'taco',
         has_datum: false,
-        hex: '0000000076407461636f',
+        hex: Buffer.from('0000000076407461636f').toString('utf-8'),
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         holder_type: 'wallet',
         image: '',
@@ -31,7 +31,7 @@ describe('MemoryHandlesProvider Tests', () => {
             validated_by: ''
         },
         pfp_image: '',
-        rarity: 'common',
+        rarity: Rarity.common,
         reference_token: {
             address: '',
             datum: '',
@@ -45,7 +45,7 @@ describe('MemoryHandlesProvider Tests', () => {
         standard_image: '',
         standard_image_hash: '',
         svg_version: '',
-        handle_type: 'virtual_subhandle',
+        handle_type: HandleType.VIRTUAL_SUBHANDLE,
         updated_slot_number: 8,
         last_update_address: '',
         utxo: '#0',
@@ -57,75 +57,11 @@ describe('MemoryHandlesProvider Tests', () => {
 
     beforeAll(async () => {
         const saves = handlesFixture.map(async (handle) => {
-            const {
-                hex,
-                standard_image: image,
-                name,
-                og_number,
-                utxo,
-                lovelace,
-                updated_slot_number: slotNumber,
-                resolved_addresses: { ada: adaAddress },
-                datum,
-                image_hash,
-                svg_version,
-                handle_type,
-                last_update_address
-            } = handle;
-            return repo.saveMintedHandle({
-                adaAddress,
-                hex,
-                image,
-                name,
-                og_number,
-                slotNumber,
-                utxo,
-                lovelace,
-                datum,
-                image_hash,
-                svg_version,
-                handle_type,
-                last_update_address, 
-                policy
-            });
+            return repo.save({handle});
         });
 
         saves.push(
-            repo.savePersonalizationChange({
-                policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
-                name: 'v@taco',
-                hex: `${AssetNameLabel.LBL_000}76407461636f`,
-                personalization: {
-                    validated_by: '',
-                    trial: false,
-                    nsfw: false
-                },
-                reference_token: {
-                    tx_id: '',
-                    index: 0,
-                    lovelace: 0,
-                    datum: '',
-                    address: ''
-                },
-                personalizationDatum: {
-                    standard_image: '',
-                    image_hash: '',
-                    standard_image_hash: '',
-                    default: false,
-                    validated_by: '',
-                    trial: false,
-                    nsfw: false,
-                    last_update_address: '',
-                    svg_version: '',
-                    agreed_terms: '',
-                    migrate_sig_required: false,
-                    resolved_addresses: {
-                        ada: '0x009a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca'
-                    }
-                },
-                slotNumber: 8,
-                metadata: null
-            })
+            repo.save({handle: await repo.Internal.buildHandle(expectedVirtualHandle)})
         );
         await Promise.all(saves);
     });
@@ -220,7 +156,7 @@ describe('MemoryHandlesProvider Tests', () => {
         it('should get all handle names', async () => {
             jest.spyOn(MemoryHandlesProvider.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel({});
-            const result = await repo.getAllHandleNames(search, 'asc');
+            const result = repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
         });
 
@@ -229,7 +165,7 @@ describe('MemoryHandlesProvider Tests', () => {
             const search = new HandleSearchModel({
                 length: '4'
             });
-            const result = await repo.getAllHandleNames(search, 'asc');
+            const result = repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['taco']);
         });
 
@@ -238,17 +174,17 @@ describe('MemoryHandlesProvider Tests', () => {
             const search = new HandleSearchModel({
                 length: '4-7'
             });
-            const result = await repo.getAllHandleNames(search, 'asc');
+            const result = repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['burrito', 'taco', 'v@taco']);
         });
 
         it('should sort handles randomly', async () => {
             jest.spyOn(MemoryHandlesProvider.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
             const search = new HandleSearchModel();
-            const result1 = await repo.getAllHandleNames(search, 'random');
-            const result2 = await repo.getAllHandleNames(search, 'random');
-            const result3 = await repo.getAllHandleNames(search, 'random');
-            const result4 = await repo.getAllHandleNames(search, 'random');
+            const result1 = repo.getAllHandleNames(search, 'random');
+            const result2 = repo.getAllHandleNames(search, 'random');
+            const result3 = repo.getAllHandleNames(search, 'random');
+            const result4 = repo.getAllHandleNames(search, 'random');
             const noWayTheyreEqual = [result2, result3, result4].every((r) => r == result1);
             expect(noWayTheyreEqual).toEqual(false);
         });
@@ -256,21 +192,21 @@ describe('MemoryHandlesProvider Tests', () => {
         it('should remove handles without a UTxO', async () => {
             const newHandle = await repo.Internal.buildHandle({
                 policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
-                hex: 'new-handle-hex',
+                hex: Buffer.from('new-handle').toString('hex'),
                 name: 'new-handle',
-                adaAddress: '',
                 utxo: '',
                 lovelace: 0,
                 og_number: 0,
                 image: '',
-                slotNumber: 0,
+                updated_slot_number: 0,
                 datum: '',
                 image_hash: '',
                 svg_version: '',
-                handle_type: HandleType.HANDLE
+                handle_type: HandleType.HANDLE,
+                resolved_addresses: {ada: ''}
             });
             const handles = [...handlesFixture, newHandle];
-            jest.spyOn(MemoryHandlesProvider.prototype, 'getAllHandles').mockReturnValue(handles);
+            jest.spyOn(MemoryHandlesProvider.prototype, 'getAllHandles').mockReturnValue(handles as StoredHandle[]);
             const search = new HandleSearchModel();
             const result = repo.getAllHandleNames(search, 'asc');
             expect(result).toEqual(['barbacoa', 'burrito', 'taco']);
@@ -352,46 +288,46 @@ describe('MemoryHandlesProvider Tests', () => {
         const datum = 'a2some2key6another2key';
         beforeAll(async () => {
             jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
-            const saveHandleInput: SaveMintingTxInput = {
-                hex: 'salsa-hex',
+            const handle = await repo.Internal.buildHandle({
+                hex: Buffer.from('salsa').toString('hex'),
                 name: 'salsa',
-                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 image: '',
-                slotNumber: 0,
                 utxo: 'test_tx#0',
                 lovelace: 0,
                 datum,
                 image_hash: '',
                 svg_version: '',
                 handle_type: HandleType.HANDLE,
-                policy
-            };
+                policy,
+                resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
+                updated_slot_number: 0
+            });
             await Promise.all([
-                repo.saveMintedHandle(saveHandleInput),
-                repo.saveMintedHandle({
-                    ...saveHandleInput,
-                    hex: 'pollo-verde-hex',
+                repo.save({handle}),
+                repo.save({handle: {
+                    ...handle,
+                    hex: Buffer.from('pollo-verde').toString('hex'),
                     name: 'pollo-verde',
                     utxo: ''
-                })
+                }})
             ]);
         });
 
-        it('should not get datum if has_datum is false', async () => {
-            const result = await repo.getHandleDatumByName('barbacoa');
+        it('should not get datum if has_datum is false', () => {
+            const result = repo.getHandleDatumByName('barbacoa');
 
             expect(result).toEqual(null);
         });
 
-        it('should get handle datum by name', async () => {
-            const result = await repo.getHandleDatumByName('salsa');
+        it('should get handle datum by name', () => {
+            const result = repo.getHandleDatumByName('salsa');
             expect(result).toEqual(datum);
         });
 
-        it('should not find handle when utxo is empty (100 before 222 token)', async () => {
+        it('should not find handle when utxo is empty (100 before 222 token)', () => {
             try {
-                await repo.getHandleDatumByName('pollo-verde');
+                repo.getHandleDatumByName('pollo-verde');
                 throw new Error('expected error');
             } catch (error: any) {
                 expect(error.message).toEqual('Not found');
@@ -403,27 +339,27 @@ describe('MemoryHandlesProvider Tests', () => {
         const rootHandleName = 'chili-colorado';
 
         beforeAll(async () => {
-            const rootHandleInput: SaveMintingTxInput = {
-                hex: 'chili-colorado-hex',
+            const handle = await repo.Internal.buildHandle({
+                hex: Buffer.from(rootHandleName).toString('hex'),
                 name: rootHandleName,
-                adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 og_number: 0,
                 image: '',
-                slotNumber: 0,
                 utxo: 'test_tx#0',
                 lovelace: 0,
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',
                 handle_type: HandleType.HANDLE,
-                policy
-            };
-            await Promise.all([repo.saveMintedHandle(rootHandleInput)]);
+                policy,
+                resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
+                updated_slot_number: 0
+            });
+            await Promise.all([repo.save({handle})]);
         });
 
-        it('should not get subhandle settings if handle does not exist', async () => {
+        it('should not get subhandle settings if handle does not exist', () => {
             try {
-                await repo.getSubHandleSettings('nope@handle');
+                repo.getSubHandleSettings('nope@handle');
                 throw new Error('expected error');
             } catch (error: any) {
                 expect(error.message).toEqual('Not found');
@@ -433,14 +369,19 @@ describe('MemoryHandlesProvider Tests', () => {
         it('should get subhandle settings by name', async () => {
             const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
             const settings = 'abc';
-            await repo.saveSubHandleSettingsChange({
-                name: rootHandleName,
-                utxoDetails,
-                settingsDatum: settings,
-                slotNumber: 0
-            });
+            let handle = repo.get(rootHandleName)!;
+            handle = await repo.Internal.buildHandle({
+                ...handle,
+                subhandle_settings: {
+                    utxo: utxoDetails,
+                    settings
+                },
+                updated_slot_number: 0,
+                resolved_addresses: {ada: ''}
+            })
+            await repo.save({handle});
 
-            const result = await repo.getSubHandleSettings(rootHandleName);
+            const result = repo.getSubHandleSettings(rootHandleName);
             expect(result).toEqual({
                 utxo: utxoDetails,
                 settings
@@ -453,22 +394,22 @@ describe('MemoryHandlesProvider Tests', () => {
         const subHandle = `taco@${rootHandleName}`;
 
         beforeAll(async () => {
-            const subHandleInput: SaveMintingTxInput = {
-                hex: `${subHandle}-hex`,
+            const handle = await repo.Internal.buildHandle({
+                hex: Buffer.from(subHandle).toString('hex'),
                 name: subHandle,
-                adaAddress: `addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q`,
                 og_number: 0,
                 image: '',
-                slotNumber: 0,
                 utxo: 'test_tx#0',
                 lovelace: 0,
                 datum: 'a2some2key6another2key',
                 image_hash: '',
                 svg_version: '',
                 handle_type: HandleType.NFT_SUBHANDLE,
-                policy
-            };
-            await Promise.all([repo.saveMintedHandle(subHandleInput)]);
+                policy,
+                resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
+                updated_slot_number: 0
+            });
+            await Promise.all([repo.save({handle})]);
         });
 
         it('should get subhandles for root handle', async () => {
