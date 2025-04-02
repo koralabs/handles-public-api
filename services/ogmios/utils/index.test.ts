@@ -137,6 +137,9 @@ describe('Utils Tests', () => {
         });
 
         it('should log a notification and kill the process', () => {
+            // This is needed since Jest will error out if console.error is called
+            const original = console.error;
+            console.error = jest.fn();
             const loggerSpy = jest.spyOn(Logger, 'log');
             jest.spyOn(v8, 'getHeapStatistics').mockReturnValue(buildHeapInfo(2097815296, 2197815296));
             memoryWatcher();
@@ -145,6 +148,7 @@ describe('Utils Tests', () => {
                 event: 'memoryWatcher.limit.reached',
                 message: 'Memory usage has reached the limit (95%)'
             });
+            console.error = original
         });
 
         it('should log a warning', () => {

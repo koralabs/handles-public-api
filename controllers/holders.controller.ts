@@ -1,4 +1,4 @@
-import { HolderPaginationModel, IGetAllHoldersQueryParams, IGetHolderAddressDetailsRequest } from '@koralabs/kora-labs-common';
+import { HolderPaginationModel, HttpException, IGetAllHoldersQueryParams, IGetHolderAddressDetailsRequest } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
@@ -39,8 +39,12 @@ class HoldersController {
             const holderAddress = req.params.address;
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
             const details = handleRepo.getHolder(holderAddress);
-
-            res.status(handleRepo.currentHttpStatus()).json(details);
+            if (!details) {
+                throw new HttpException(404, 'Not found');
+            }
+            else {
+                res.status(handleRepo.currentHttpStatus()).json(details);
+            }
         } catch (error) {
             next(error);
         }

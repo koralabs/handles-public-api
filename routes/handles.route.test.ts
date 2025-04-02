@@ -90,13 +90,13 @@ jest.mock('../repositories/handlesRepository', () => ({
                 }
             ] }
         },
-        getHolder: () => {
-            return {
-                handles: [],
-                defaultHandle: '',
-                manuallySet: false,
-                type: 'handle',
-                knownOwnerName: ''
+        getHolder: (key: string) => {
+            if (key !== 'nope') {
+                return {
+                    handles: ['burritos'],
+                    default_handle: 'burritos',
+                    manually_set: false
+                }
             }
         },
         getAll: () => {
@@ -474,7 +474,7 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /holders/:address', () => {
-        it('should throw error if address does not exist', async () => {
+        it('should return 404 if holder doesn\'t exist', async () => {
             const response = await request(app?.getServer()).get('/holders/nope');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Not found');

@@ -358,7 +358,7 @@ export class HandlesRepository {
         const { hex, name } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
-        const handle = existingHandle ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        const handle = structuredClone(existingHandle) ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
 
@@ -436,6 +436,7 @@ export class HandlesRepository {
                 if (assetLabel == '000') {
                     handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
                     handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
+                    handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
                 }
                 break;
             }
@@ -462,7 +463,7 @@ export class HandlesRepository {
                 }
                 break;
             default:
-                Logger.log({ message: `unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
+                Logger.log({ message: `Unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
         }
         
         await this.save({ handle: handle as StoredHandle, oldHandle: existingHandle });
@@ -471,6 +472,7 @@ export class HandlesRepository {
 
     public async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
         const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
+
         const {
             name,
             rarity,

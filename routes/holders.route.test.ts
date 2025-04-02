@@ -4,8 +4,8 @@ import App from '../app';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
         getHolderAddressDetails: (key: string) => {
             if (key === 'nope') {
                 throw new HttpException(404, 'Not found');
@@ -29,13 +29,19 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             ];
         },
+        getHolder: (key: string) => {
+            if (key !== 'nope') {
+                return {
+                    handles: ['burritos'],
+                    default_handle: 'burritos',
+                    manually_set: false
+                }
+            }
+        },
         currentHttpStatus: () => {
             return 200;
         }
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
 
 afterAll(async () => {

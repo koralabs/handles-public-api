@@ -670,20 +670,20 @@ describe('HandleStore tests', () => {
                 image_hash: '0x123',
                 standard_image_hash: '0x123',
                 svg_version: '1.0.0',
-                standard_image: '',
+                standard_image: 'ipfs://123',
                 last_update_address: '',
                 resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
             })});
 
             expect(HandleStore.handles.get('sour-cream')).toEqual({
-                bg_image: '',
+                bg_image: 'todo',
                 characters: 'letters,special',
                 created_slot_number: 200,
                 default_in_wallet: '',
                 last_update_address: '',
                 has_datum: false,
                 hex: Buffer.from('sour-cream').toString('hex'),
-                holder: '',
+                holder: '0xaaaa',
                 length: 10,
                 name: 'sour-cream',
                 image: 'ipfs://123',
@@ -695,9 +695,9 @@ describe('HandleStore tests', () => {
                 standard_image_hash: '0x123',
                 personalization: designerUpdates,
                 reference_token: defaultReferenceToken,
-                pfp_image: '',
+                pfp_image: 'todo',
                 rarity: 'basic',
-                resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
+                resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 updated_slot_number: 200,
                 utxo: '',
                 lovelace: 0,
@@ -1345,8 +1345,8 @@ describe('HandleStore tests', () => {
                 updated_slot_number: 300
             })});
 
-            const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-            const settings = 'abc';
+            const settings = 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168';
+            const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: settings, index: 0, lovelace: 1, tx_id: 'some_id' };
 
             let handle = repo.get('shrimp-taco')
             await repo.save({handle: await repo.Internal.buildHandle({
@@ -1656,12 +1656,16 @@ describe('HandleStore tests', () => {
         });
 
         it('Should log an error if handle is not found', async () => {
+            // This is needed since jest will fail the test if console.error is called
+            const original = console.error
+            console.error = jest.fn()
+
             const loggerSpy = jest.spyOn(Logger, 'log');
 
             const address = 'addr123_new';
             await repo.processScannedHandleInfo({
                 address,
-                assetName: Buffer.from('not-a-handle').toString('hex'),
+                assetName: `${klc.AssetNameLabel.LBL_222}${Buffer.from('not-a-handle').toString('hex')}`,
                 isMintTx: false,
                 lovelace: 0,
                 slotNumber: 0,
@@ -1673,6 +1677,7 @@ describe('HandleStore tests', () => {
                 event: 'saveHandleUpdate.noHandleFound',
                 message: 'Handle was updated but there is no existing handle in storage with name: not-a-handle'
             });
+            console.error = original;
         });
     });
 

@@ -20,8 +20,8 @@ const getStats = (): IApiMetricsViewModel => ({
     schema_version: 1
 });
 const caughtUp = jest.fn().mockReturnValue(true);
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
         getHandleByName: (handleName: string) => {
             if (['nope'].includes(handleName)) return null;
 
@@ -39,7 +39,7 @@ jest.mock('../ioc/main.registry', () => ({
         getAllHandleNames: () => {
             return ['burritos', 'tacos', 'barbacoa'];
         },
-        getHandleStats: () => {
+        getMetrics: () => {
             const stats = getStats();
             return stats;
         },
@@ -47,10 +47,7 @@ jest.mock('../ioc/main.registry', () => ({
             return 200;
         },
         isCaughtUp: () => caughtUp()
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
 
 afterAll(async () => {

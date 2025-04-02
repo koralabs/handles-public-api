@@ -13,7 +13,7 @@ jest.mock('../../config/index', () => ({
 
 describe('processBlock Tests', () => {
     afterEach(() => {
-        jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
     beforeEach(() => {
         HandleStore.handles.clear();
@@ -329,55 +329,93 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, script }), tip });
-
-        expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            policy: policyId,
+        const savedHandle = {
+            amount: 1,
+            characters: 'letters,numbers',
+            created_slot_number: 0,
+            datum: undefined,
+            default_in_wallet: '',
+            handle_type: 'handle',
+            has_datum: false,
             hex: '7465737431323334',
+            holder: '',
+            holder_type: '',
             image: 'ifps://some_hash_test1234',
-            name: 'test1234',
-            og_number: 0,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            script: {
-                type: 'plutus_v2',
-                cbor: 'a2some_cbor'
-            },
-            version: 0,
-            handle_type: HandleType.HANDLE,
+            image_hash: '',
+            length: 8,
             lovelace: 1,
+            name: 'test1234',
+            numeric_modifiers: '',
+            og_number: 0,
+            payment_key_hash:
+              '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            script: { cbor: 'a2some_cbor', type: 'plutus_v2' },
+            standard_image: 'ifps://some_hash_test1234',
+            standard_image_hash: '',
             sub_characters: undefined,
             sub_length: undefined,
             sub_numeric_modifiers: undefined,
             sub_rarity: undefined,
-            datum: undefined
-        });
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
+            version: 0
+        }
+        expect(saveSpy).toHaveBeenCalledWith({handle: savedHandle});
     });
 
     it('Should update a handle when it is not a mint', async () => {
-        const newAddress = 'addr456';
+        const newAddress = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc98p';
         const saveHandleUpdateSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         jest.spyOn(HandlesRepository.prototype, 'setMetrics');
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
-        jest.spyOn(HandlesRepository.prototype, 'get').mockReturnValue(expectedItem);
 
+        await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, address: newAddress, isMint: true }), tip });
         await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, address: newAddress, isMint: false }), tip });
-
-        expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
-            adaAddress: newAddress,
-            policy: policyId,
-            hex: hexName,
-            name,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            handle_type: HandleType.HANDLE,
+        const savedHandle = {
+            amount: 1,
+            characters: 'letters,numbers',
+            created_slot_number: 0,
             datum: undefined,
-            lovelace: 1,
-            script: undefined,
+            default_in_wallet: 'test1234',
+            drep: undefined,
+            handle_type: 'handle',
+            has_datum: false,
+            hex: '7465737431323334',
+            holder:
+              'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc98p',
+            holder_type: 'other',
             image: 'ifps://some_hash_test1234',
+            image_hash: '',
+            length: 8,
+            lovelace: 1,
+            name: 'test1234',
+            numeric_modifiers: '',
             og_number: 0,
+            payment_key_hash: null,
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc98p'
+            },
+            script: undefined,
+            standard_image: 'ifps://some_hash_test1234',
+            standard_image_hash: '',
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
             version: 0
-        });
+        }
+        expect(saveHandleUpdateSpy).toHaveBeenNthCalledWith(2, {handle: savedHandle, oldHandle: savedHandle});
     });
 
     it('Should not save anything if policyId does not match', async () => {
@@ -401,24 +439,37 @@ describe('processBlock Tests', () => {
             tip
         });
 
-        expect(saveSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
-            policy: policyId,
-            datum: undefined,
-            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
+        expect(saveSpy).toHaveBeenCalledWith({handle: {
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0,
+            default_in_wallet: '',
+            handle_type: 'handle',
+            has_datum: false,
+            hex: '000de1406275727269746f73',
+            holder: '',
+            holder_type: '',
             image: '',
-            name: handleName,
-            og_number: 0,
-            slotNumber: 0,
-            utxo: 'some_id#0',
-            version: 0,
-            handle_type: HandleType.HANDLE,
+            image_hash: '',
+            length: 8,
             lovelace: 1,
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined
-        });
+            name: 'burritos',
+            numeric_modifiers: '',
+            og_number: 0,
+            payment_key_hash:
+              '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            standard_image: '',
+            standard_image_hash: '',
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
+            version: 0
+        }});
     });
 
     it('Should process 222 update', async () => {
@@ -428,25 +479,88 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({
+            txBlock: txBlock({ policy: policyId, handleHexName, isMint: true }) as BlockPraos,
+            tip
+        });
+
+        await ogmios['processBlock']({
             txBlock: txBlock({ policy: policyId, handleHexName, isMint: false }) as BlockPraos,
             tip
         });
 
-        expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
-            adaAddress: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
+        expect(saveHandleUpdateSpy).toHaveBeenCalledWith({handle: {
             policy: policyId,
             datum: undefined,
             hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
             name: 'burritos',
-            slotNumber: 0,
             utxo: 'some_id#0',
             handle_type: HandleType.HANDLE,
             lovelace: 1,
             script: undefined,
             image: '',
             og_number: 0,
-            version: 0
-        });
+            version: 0,
+            standard_image: '',
+            standard_image_hash: '',
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            svg_version: '0',
+            updated_slot_number: 0,
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            numeric_modifiers: '',
+            image_hash: '',
+            length: 8,
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
+            has_datum: false,
+            default_in_wallet: 'burritos',
+            drep: undefined,
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0
+        }, oldHandle: {
+            policy: policyId,
+            datum: undefined,
+            hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
+            name: 'burritos',
+            utxo: 'some_id#0',
+            handle_type: HandleType.HANDLE,
+            lovelace: 1,
+            script: undefined,
+            image: '',
+            og_number: 0,
+            version: 0,
+            standard_image: '',
+            standard_image_hash: '',
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            svg_version: '0',
+            updated_slot_number: 0,
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            numeric_modifiers: '',
+            image_hash: '',
+            length: 8,
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
+            has_datum: false,
+            default_in_wallet: 'burritos',
+            drep: undefined,
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0
+        }});
     });
 
     it('Should process 100 asset class tokens', async () => {
@@ -457,9 +571,17 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
-        const cbor =
-            'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b24e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400527265736f6c7665645f616464726573736573a34361646142abcd436274634f7133736b64736b6a6b656a326b6e644365746849333234656b646a6b3345747269616c00446e73667700ff';
-
+        const cbor = 'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b24e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400527265736f6c7665645f616464726573736573a34361646142abcd436274634f7133736b64736b6a6b656a326b6e644365746849333234656b646a6b3345747269616c00446e73667700ff';
+        // Once to mint the Handle
+        await ogmios['processBlock']({
+            txBlock: txBlock({
+                policy: policyId,
+                handleHexName: `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`,
+                isMint: true
+            }),
+            tip
+        });
+        // then the 100 update
         await ogmios['processBlock']({
             txBlock: txBlock({
                 policy: policyId,
@@ -469,63 +591,70 @@ describe('processBlock Tests', () => {
             }),
             tip
         });
-
-        expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
-            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
-            hex: '000643b06275727269746f73',
-            metadata: {
-                characters: 'letters,numbers,special',
-                image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-                length: 12,
-                mediaType: 'image/jpeg',
-                name: 'test_sc_0001',
-                numeric_modifiers: '',
-                og: false,
-                og_number: 0,
-                rarity: 'basic',
-                version: 1
-            },
+        const savedHandle =  {
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0,
+            default_in_wallet: 'burritos',
+            handle_type: 'handle',
+            has_datum: false,
+            hex: '000de1406275727269746f73',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
+            image: '',
+            image_hash: '',
+            length: 8,
+            lovelace: 1,
             name: 'burritos',
-            personalization: {
-                designer: { test: 'data' },
-                socials: { test: 'data' },
-                validated_by: '0x',
-                trial: false,
-                nsfw: false
+            numeric_modifiers: '',
+            og_number: 0,
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
             },
+            standard_image: '',
+            standard_image_hash: '',
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
+            version: 0
+        }
+        expect(savePersonalizationChangeSpy).toHaveBeenNthCalledWith(2, {handle: {
+            ...savedHandle,
             reference_token: {
-                datum: cbor,
-                index: 0,
-                lovelace: 1,
-                tx_id: 'some_id',
-                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', 
+                datum: 'd8799faa426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f646966696572734001b24e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f726571756972656400527265736f6c7665645f616464726573736573a34361646142abcd436274634f7133736b64736b6a6b656a326b6e644365746849333234656b646a6b3345747269616c00446e73667700ff', 
+                index: 0, 
+                lovelace: 1, 
+                tx_id: 'some_id'
             },
-            personalizationDatum: {
-                agreed_terms: '',
-                bg_image: '',
-                default: false,
-                designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
-                image_hash: '0xabcd',
-                last_update_address: '0xabcd',
-                migrate_sig_required: false,
+            personalization: {
+                designer: {
+                    test: 'data'
+                },
                 nsfw: false,
-                pfp_image: '',
-                portal: '',
-                socials: 'ipfs://QmVm58ioUUuJsgSLGL5zmcZbqMeMcUX2Q8PVxwBCnSTBDv',
-                standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-                standard_image_hash: '0xabcd',
-                svg_version: '1.0.0',
-                resolved_addresses: {
-                    ada: '0xabcd',
-                    btc: 'q3skdskjkej2knd',
-                    eth: '324ekdjk3'
+                socials: {
+                    test: 'data'
                 },
                 trial: false,
-                validated_by: '0x',
-                vendor: ''
+                validated_by: '0x'
             },
-            slotNumber: 0
-        });
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
+                btc: 'q3skdskjkej2knd',
+                eth: '324ekdjk3'
+            },
+            image_hash: '0xabcd',
+            last_update_address: '0xabcd',
+            pfp_image: '',
+            pz_enabled: false,
+            standard_image_hash: '0xabcd',
+            svg_version: '1.0.0',
+            bg_image: '',
+            standard_image: ''
+        }, oldHandle: savedHandle});
     });
 
     it('Should process 001 SubHandle settings token', async () => {
@@ -538,6 +667,17 @@ describe('processBlock Tests', () => {
 
         const cbor = '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff';
 
+        // Once to get the handle in the store
+        await ogmios['processBlock']({
+            txBlock: txBlock({
+                policy: policyId,
+                handleHexName: `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`,
+                isMint: true
+            }),
+            tip
+        });
+
+        // And now the sub handle settings
         await ogmios['processBlock']({
             txBlock: txBlock({
                 policy: policyId,
@@ -547,13 +687,50 @@ describe('processBlock Tests', () => {
             }),
             tip
         });
-
-        expect(saveSubHandleSettingsChangeSpy).toHaveBeenCalledWith({
+        const savedHandle = {
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0,
+            default_in_wallet: 'burritos',
+            handle_type: 'handle',
+            has_datum: false,
+            hex: '000de1406275727269746f73',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
+            image: '',
+            image_hash: '',
+            length: 8,
+            lovelace: 1,
             name: 'burritos',
-            utxoDetails: { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff', index: 0, lovelace: 1, tx_id: 'some_id' },
-            settingsDatum: cbor,
-            slotNumber: 0
-        });
+            numeric_modifiers: '',
+            og_number: 0,
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            standard_image: '',
+            standard_image_hash: '',
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
+            version: 0
+        }
+        expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, {handle: {
+            ...savedHandle,
+            subhandle_settings: {
+                settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff',
+                utxo: {
+                    address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
+                    datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff',
+                    index: 0,
+                    lovelace: 1,
+                    tx_id: 'some_id'
+                }
+            }
+        }, 
+        oldHandle: savedHandle});
     });
 
     it('should process as NFT Sub handle', async () => {
@@ -618,8 +795,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
-        const cbor =
-            'd8799fae426f6700496f675f6e756d62657200446e616d654c746573745f73635f3030303145696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a456865415969563648756562367141466c656e6774680c467261726974794562617369634776657273696f6e01496d65646961547970654a696d6167652f6a7065674a63686172616374657273576c6574746572732c6e756d626572732c7370656369616c516e756d657269635f6d6f64696669657273404a7375625f6c656e677468044a7375625f7261726974794562617369634e7375625f6368617261637465727340557375625f6e756d657269635f6d6f646966696572734001b14e7374616e646172645f696d6167655835697066733a2f2f516d563965334e6e58484b71386e6d7a42337a4c725065784e677252346b7a4568654159695636487565623671414862675f696d61676540497066705f696d6167654046706f7274616c404864657369676e65725835697066733a2f2f516d636b79584661486e51696375587067527846564b353251784d524e546d364e686577465055564e5a7a3148504676656e646f72404764656661756c7400536c6173745f7570646174655f6164647265737342abcd47736f6369616c735835697066733a2f2f516d566d3538696f5555754a7367534c474c357a6d635a62714d654d6355583251385056787742436e53544244764a696d6167655f6861736842abcd537374616e646172645f696d6167655f6861736842abcd4b7376675f76657273696f6e45312e302e304c76616c6964617465645f6279404c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff';
+        const cbor = 'D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B24E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A3631386532323564623935383935653738303439363538396238396463366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700FF';
 
         await ogmios['processBlock']({
             txBlock: txBlock({
@@ -631,60 +807,66 @@ describe('processBlock Tests', () => {
             tip
         });
 
-        expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
-            hex: handleHexName,
-            metadata: {
-                characters: 'letters,numbers,special',
-                image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-                length: 12,
-                mediaType: 'image/jpeg',
-                name: 'test_sc_0001',
-                numeric_modifiers: '',
-                og: false,
-                og_number: 0,
-                rarity: 'basic',
-                version: 1,
-                sub_characters: '',
-                sub_length: 4,
-                sub_numeric_modifiers: '',
-                sub_rarity: 'basic'
-            },
+        expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({handle: {
+            amount: 1,
+            bg_asset: undefined,
+            bg_image: '',
+            pfp_asset: undefined,
+            pfp_image: '',
+            characters: 'letters',
+            created_slot_number: 0,
+            datum: undefined,
+            default_in_wallet: '',
+            handle_type: 'virtual_subhandle',
+            has_datum: false,
+            holder: '',
+            holder_type: '',
+            id_hash: undefined,
+            image: '',
+            image_hash: '0xabcd',
+            last_edited_time: undefined,
+            last_update_address: '0xabcd',
+            lovelace: 0,
+            name: 'virtual@hndl',
+            original_address: undefined,
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            hex: '000000007669727475616c40686e646c',
+            length: 12,
+            numeric_modifiers: '',
+            og_number: 0,
             policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
-            name: handleName,
-            personalization: {
-                designer: { test: 'data' },
-                socials: { test: 'data' },
-                validated_by: '0x',
-                trial: false,
-                nsfw: false
-            },
+            pz_enabled: false,
+            rarity: 'basic',
             reference_token: {
+                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                 datum: cbor,
                 index: 0,
                 lovelace: 1,
-                tx_id: 'some_id',
-                address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+                tx_id: 'some_id'
             },
-            personalizationDatum: {
-                agreed_terms: '',
-                bg_image: '',
-                default: false,
-                designer: 'ipfs://QmckyXFaHnQicuXpgRxFVK52QxMRNTm6NhewFPUVNZz1HP',
-                image_hash: '0xabcd',
-                last_update_address: '0xabcd',
-                migrate_sig_required: false,
-                nsfw: false,
-                pfp_image: '',
-                portal: '',
-                socials: 'ipfs://QmVm58ioUUuJsgSLGL5zmcZbqMeMcUX2Q8PVxwBCnSTBDv',
-                standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
-                standard_image_hash: '0xabcd',
-                svg_version: '1.0.0',
+            resolved_addresses:  {
+                ada: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6'
+            },
+            standard_image: '',
+            standard_image_hash: '0xabcd',
+            sub_characters: 'letters',
+            sub_length: 7,
+            sub_numeric_modifiers: '',
+            sub_rarity: 'common',
+            svg_version: '1.0.0',
+            updated_slot_number: 0,
+            utxo: 'some_id#0',
+            version: 0,
+            virtual: undefined,
+            personalization: {
+                designer: {test: 'data'},
+                socials: {test: 'data'},
                 trial: false,
-                validated_by: '0x',
-                vendor: ''
-            },
-            slotNumber: 0
+                nsfw: false,
+                validated_by: '0x'
+            }
+        }
+
         });
     });
 
