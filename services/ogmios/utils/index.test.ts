@@ -1,6 +1,6 @@
 import { AssetNameLabel, buildNumericModifiers, getRarity, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
-import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher, stringifyBlock } from '.';
+import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher } from '.';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 
@@ -108,13 +108,6 @@ describe('Utils Tests', () => {
         it('should return legendary rarity', () => {
             const rarity = getRarity('.');
             expect(rarity).toEqual('legendary');
-        });
-    });
-
-    describe('stringifyBlock', () => {
-        it('should stringify with a big int', () => {
-            const burritos = stringifyBlock({ burritos: BigInt(1) });
-            expect(burritos).toEqual('{"burritos":"1"}');
         });
     });
 

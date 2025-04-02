@@ -378,8 +378,8 @@ export class HandlesRepository {
                     return;
                 }
                 // check if existing handle has a utxo. If it does, we may have a double mint
-                if (isMintTx && existingHandle?.utxo && slotNumber >= (handle.updated_slot_number ?? handle.created_slot_number ?? 0)) {
-                    handle.amount = (handle.amount ?? 0) + 1;
+                if (isMintTx && existingHandle?.utxo) {
+                    handle.amount = (handle.amount ?? 1) + 1;
                     Logger.log({ message: `POSSIBLE DOUBLE MINT!!!\n UTxO already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
                 }
                 handle.script = script;
@@ -471,8 +471,8 @@ export class HandlesRepository {
     }
 
     public async save({ handle, oldHandle, saveHistory = true }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) {
-        const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
-
+        //const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
+        const updatedHandle = handle;
         const {
             name,
             rarity,

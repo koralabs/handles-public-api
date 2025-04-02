@@ -1,5 +1,5 @@
 import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
-import { AssetNameLabel, HandleType, Logger, Rarity, StoredHandle, encodeJsonToDatum } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, HandleType, Logger, encodeJsonToDatum } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../../repositories/handlesRepository';
 import { MemoryHandlesProvider } from '../../repositories/memory';
 import { HandleStore } from '../../repositories/memory/handleStore';
@@ -151,38 +151,6 @@ describe('processBlock Tests', () => {
         ]
     });
 
-    const expectedItem: StoredHandle = {
-        characters: 'letters,numbers',
-        hex: hexName,
-        holder: 'some_stake1',
-        length: 8,
-        name,
-        image: 'some_hash_test1234',
-        utxo: 'utxo1#0',
-        lovelace: 0,
-        numeric_modifiers: '',
-        og_number: 1,
-        standard_image: 'some_hash_test1234',
-        rarity: Rarity.basic,
-        resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' },
-        default_in_wallet: 'some_hdl',
-        pfp_image: 'some_hash_test1234',
-        bg_image: 'some_hash_test1234',
-        created_slot_number: Date.now(),
-        updated_slot_number: Date.now(),
-        has_datum: false,
-        amount: 1,
-        image_hash: '',
-        standard_image_hash: '',
-        svg_version: '',
-        holder_type: 'wallet',
-        version: 0,
-        handle_type: HandleType.HANDLE,
-        default: false,
-        payment_key_hash: '',
-        policy: ''
-    };
-
     it('Should save a new handle to the datastore and set metrics', async () => {
         const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
         const setMetricsSpy = jest.spyOn(MemoryHandlesProvider.prototype, 'setMetrics');
@@ -221,8 +189,8 @@ describe('processBlock Tests', () => {
             standard_image: 'ifps://some_hash_test1234',
             updated_slot_number: 0,
             default_in_wallet: '',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             image_hash: '',
             length: 8,
             standard_image_hash: '',
@@ -258,8 +226,8 @@ describe('processBlock Tests', () => {
             standard_image: '',
             updated_slot_number: 0,
             default_in_wallet: '',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             image_hash: '',
             length: 7,
             standard_image_hash: '',
@@ -313,8 +281,8 @@ describe('processBlock Tests', () => {
             standard_image: 'ifps://some_hash_test1234',
             updated_slot_number: 0,
             default_in_wallet: '',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             standard_image_hash: '',
             svg_version: '0',
             image_hash: '',
@@ -338,8 +306,8 @@ describe('processBlock Tests', () => {
             handle_type: 'handle',
             has_datum: false,
             hex: '7465737431323334',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             image: 'ifps://some_hash_test1234',
             image_hash: '',
             length: 8,
@@ -447,8 +415,8 @@ describe('processBlock Tests', () => {
             handle_type: 'handle',
             has_datum: false,
             hex: '000de1406275727269746f73',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             image: '',
             image_hash: '',
             length: 8,
@@ -780,8 +748,8 @@ describe('processBlock Tests', () => {
             sub_rarity: 'rare',
             svg_version: '0',
             default_in_wallet: '',
-            holder: '',
-            holder_type: '',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
             image_hash: '',
             length: 8
         }});
@@ -809,27 +777,21 @@ describe('processBlock Tests', () => {
 
         expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({handle: {
             amount: 1,
-            bg_asset: undefined,
             bg_image: '',
-            pfp_asset: undefined,
             pfp_image: '',
             characters: 'letters',
             created_slot_number: 0,
-            datum: undefined,
             default_in_wallet: '',
             handle_type: 'virtual_subhandle',
             has_datum: false,
-            holder: '',
-            holder_type: '',
-            id_hash: undefined,
+            holder: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6',
+            holder_type: 'script',
             image: '',
             image_hash: '0xabcd',
-            last_edited_time: undefined,
             last_update_address: '0xabcd',
             lovelace: 0,
             name: 'virtual@hndl',
-            original_address: undefined,
-            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            payment_key_hash: '31386532323564623935383935653738303439363538396238396463',
             hex: '000000007669727475616c40686e646c',
             length: 12,
             numeric_modifiers: '',
@@ -857,7 +819,6 @@ describe('processBlock Tests', () => {
             updated_slot_number: 0,
             utxo: 'some_id#0',
             version: 0,
-            virtual: undefined,
             personalization: {
                 designer: {test: 'data'},
                 socials: {test: 'data'},

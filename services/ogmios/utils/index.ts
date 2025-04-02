@@ -81,8 +81,6 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
     };
 };
 
-export const stringifyBlock = (metadata: any) => JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
-
 export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
     let ogmiosResults = null;
     try {

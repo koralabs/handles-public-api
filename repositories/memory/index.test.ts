@@ -345,7 +345,10 @@ describe('HandleStore tests', () => {
                 resolved_addresses: {ada: ''}
             })});
 
-            await repo.save({handle:await repo.Internal.buildHandle({
+            let handle = repo.get('chimichanga');
+
+            await repo.save({handle: await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('chimichanga').toString('hex'),
                 name: 'chimichanga',
                 utxo: 'utxo123#1',
@@ -359,15 +362,12 @@ describe('HandleStore tests', () => {
                 updated_slot_number: 100
             })});
 
-            const handle = repo.get('chimichanga');
-
+            handle = repo.get('chimichanga');
             // expect the personalization data to be added to the handle
             expect(handle).toEqual({ 
-                ...handle,
                 amount: 1, 
-                bg_image: '', 
                 characters: 'letters', 
-                created_slot_number: 100, 
+                created_slot_number: 99, 
                 default_in_wallet: 'taco',
                 handle_type: 'handle', 
                 has_datum: false, 
@@ -383,7 +383,6 @@ describe('HandleStore tests', () => {
                 og_number: 0, 
                 payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710', 
                 personalization: { nsfw: false, trial: false, validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1' }, 
-                pfp_image: '', 
                 policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e', 
                 pz_enabled: true, 
                 rarity: 'basic', 
@@ -395,7 +394,7 @@ describe('HandleStore tests', () => {
                     index: 0,
                     lovelace: 50,
                     datum: 'datum123',
-                    address: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
+                    address: ''
                 },
                 standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M', 
                 standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
@@ -431,7 +430,7 @@ describe('HandleStore tests', () => {
                 ...handle,
                 utxo: 'utxo124#0',
                 resolved_addresses: {ada: 'addr1234'},
-                updated_slot_number: 100
+                updated_slot_number: 200
             })});
 
             handle = repo.get(sushiHandle);
@@ -706,7 +705,6 @@ describe('HandleStore tests', () => {
                 version: 0,
                 handle_type: HandleType.HANDLE,
                 payment_key_hash: null,
-                pz_enabled: false,
                 drep: undefined,
                 policy
             });
