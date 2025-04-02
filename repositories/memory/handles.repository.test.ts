@@ -57,11 +57,11 @@ describe('MemoryHandlesProvider Tests', () => {
 
     beforeAll(async () => {
         const saves = handlesFixture.map(async (handle) => {
-            return repo.save({handle});
+            return repo.save(handle);
         });
 
         saves.push(
-            repo.save({handle: await repo.Internal.buildHandle(expectedVirtualHandle)})
+            repo.save(await repo.Internal.buildHandle(expectedVirtualHandle))
         );
         await Promise.all(saves);
     });
@@ -304,13 +304,13 @@ describe('MemoryHandlesProvider Tests', () => {
                 updated_slot_number: 0
             });
             await Promise.all([
-                repo.save({handle}),
-                repo.save({handle: {
+                repo.save(handle),
+                repo.save({
                     ...handle,
                     hex: Buffer.from('pollo-verde').toString('hex'),
                     name: 'pollo-verde',
                     utxo: ''
-                }})
+                })
             ]);
         });
 
@@ -354,7 +354,7 @@ describe('MemoryHandlesProvider Tests', () => {
                 resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
                 updated_slot_number: 0
             });
-            await Promise.all([repo.save({handle})]);
+            await Promise.all([repo.save(handle)]);
         });
 
         it('should not get subhandle settings if handle does not exist', () => {
@@ -379,7 +379,7 @@ describe('MemoryHandlesProvider Tests', () => {
                 updated_slot_number: 0,
                 resolved_addresses: {ada: ''}
             })
-            await repo.save({handle});
+            await repo.save(handle);
 
             const result = repo.getSubHandleSettings(rootHandleName);
             expect(result).toEqual({
@@ -409,7 +409,7 @@ describe('MemoryHandlesProvider Tests', () => {
                 resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
                 updated_slot_number: 0
             });
-            await Promise.all([repo.save({handle})]);
+            await Promise.all([repo.save(handle)]);
         });
 
         it('should get subhandles for root handle', async () => {

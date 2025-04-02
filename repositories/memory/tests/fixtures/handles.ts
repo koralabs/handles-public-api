@@ -179,7 +179,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
                 updated_slot_number: i
             });
             if (saveToHandleStore) {
-                await repo.save({ handle });
+                await repo.save(handle);
             }
             handles.push(handle);
         }
@@ -232,7 +232,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                         resolved_addresses: {ada: createRandomAddress()},
                         updated_slot_number: beginningSlot + i
                     });
-                    await repo.save({ handle: newHandle });
+                    await repo.save(newHandle);
                 }
                 break;
             }
@@ -245,12 +245,14 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
                     resolved_addresses: { ada: createRandomAddress() },
                     updated_slot_number: beginningSlot + i
                 } as StoredHandle;
-                await repo.save({ handle, oldHandle });
+                await repo.save(handle, oldHandle);
                 break;
             }
             case 2: { // remove
                 const handleNames = repo.getAllHandleNames({} as HandleSearchModel);
-                await repo.removeHandle(handleNames[Math.floor(Math.random() * handleNames.length)], beginningSlot + i);
+                const handle = repo.get(handleNames[Math.floor(Math.random() * handleNames.length)]);
+                if (handle)
+                    await repo.removeHandle(handle, beginningSlot + i);
                 break;
             }
         }

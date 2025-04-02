@@ -1,6 +1,6 @@
-import { IHandle } from '@koralabs/kora-labs-common';
+import { StoredHandle } from '@koralabs/kora-labs-common';
 
-const sortOGHandle = (handles: IHandle[]): IHandle | null => {
+export const sortOGHandle = (handles: StoredHandle[]): StoredHandle | null => {
     // filter by OG
     const ogHandles = handles.filter((handle) => handle.og_number);
     if (ogHandles.length > 0) {
@@ -12,8 +12,8 @@ const sortOGHandle = (handles: IHandle[]): IHandle | null => {
     return null;
 };
 
-const sortedByLength = (handles: IHandle[]): IHandle[] => {
-    const groupedHandles = handles.reduce<Record<string, IHandle[]>>((acc, handle) => {
+export const sortedByLength = (handles: StoredHandle[]): StoredHandle[] => {
+    const groupedHandles = handles.reduce<Record<string, StoredHandle[]>>((acc, handle) => {
         const length = handle.name.length;
         if (!acc[length]) {
             acc[length] = [];
@@ -29,9 +29,9 @@ const sortedByLength = (handles: IHandle[]): IHandle[] => {
     return groupedHandles[firstKey] ?? [];
 };
 
-const sortByUpdatedSlotNumber = (handles: IHandle[]): IHandle[] => {
+export const sortByUpdatedSlotNumber = (handles: StoredHandle[]): StoredHandle[] => {
     // group handles by updated_slot_number
-    const groupedHandles = handles.reduce<Record<string, IHandle[]>>((acc, handle) => {
+    const groupedHandles = handles.reduce<Record<string, StoredHandle[]>>((acc, handle) => {
         const updatedSlotNumber = handle.updated_slot_number;
         if (!acc[updatedSlotNumber]) {
             acc[updatedSlotNumber] = [];
@@ -47,25 +47,9 @@ const sortByUpdatedSlotNumber = (handles: IHandle[]): IHandle[] => {
     return groupedHandles[firstKey] ?? [];
 };
 
-const sortAlphabetically = (handles: IHandle[]): IHandle => {
+export const sortAlphabetically = (handles: StoredHandle[]): StoredHandle => {
     const sortedHandles = [...handles];
     sortedHandles.sort((a, b) => a.name.localeCompare(b.name));
     return sortedHandles[0];
 };
 
-export const getDefaultHandle = (handles: IHandle[]): IHandle => {
-    // OG if no default set
-    const ogHandle = sortOGHandle(handles);
-    if (ogHandle) return ogHandle;
-
-    // filter shortest length from handles
-    const sortedHandlesByLength = sortedByLength(handles);
-    if (sortedHandlesByLength.length == 1) return sortedHandlesByLength[0];
-
-    //Latest slot number if same length
-    const sortedHandlesBySlot = sortByUpdatedSlotNumber(sortedHandlesByLength);
-    if (sortedHandlesBySlot.length == 1) return sortedHandlesBySlot[0];
-
-    //Alphabetical if minted same time
-    return sortAlphabetically(sortedHandlesBySlot);
-};

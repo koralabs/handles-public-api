@@ -10,7 +10,7 @@ describe('rewindChangesToSlot', () => {
         // populate storage
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            await repo.save({ handle });
+            await repo.save(handle);
         }
 
         // set the slotHistoryIndex
@@ -20,7 +20,7 @@ describe('rewindChangesToSlot', () => {
     afterEach(() => {
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            repo.removeHandle(handle.name, 0);
+            repo.removeHandle(handle, 0);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -68,7 +68,7 @@ describe('rewindChangesToSlot', () => {
         const lastSlot = 10;
         jest.spyOn(repo, 'setMetrics').mockImplementation();
 
-        await repo.removeHandle('taco', 5);
+        await repo.removeHandle(repo.get('taco')!, 5);
 
         await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 

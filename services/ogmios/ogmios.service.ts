@@ -140,7 +140,9 @@ class OgmiosService {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity === BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
-                            await this.handlesRepo.removeHandle(name, currentSlot);
+                            const handle = this.handlesRepo.get(name);
+                            if (!handle) continue;
+                            await this.handlesRepo.removeHandle(handle, currentSlot);
                         }
                     }
                 }

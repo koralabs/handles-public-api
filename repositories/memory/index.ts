@@ -5,6 +5,7 @@ import { Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../config';
 import { memoryWatcher } from '../../services/ogmios/utils';
+import { RewoundHandle } from '../handlesRepository';
 import { HandleStore } from './handleStore';
 
 export class MemoryHandlesProvider implements IHandlesProvider {
@@ -438,7 +439,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    public async getStartingPoint(save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, failed = false) {
+    public async getStartingPoint(save: (handle: StoredHandle) => Promise<void>, failed = false) {
         if (!this._files) {
             return null;
         }
@@ -459,7 +460,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    private async prepareHandlesStorage(save: ({ handle, oldHandle, saveHistory }: { handle: StoredHandle; oldHandle?: StoredHandle; saveHistory?: boolean }) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
+    private async prepareHandlesStorage(save: (handle: StoredHandle) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
@@ -471,7 +472,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
                 ...handle
             };
             // delete the personalization object from the handle so we don't double store it
-            await save({ handle: newHandle, saveHistory: false });
+            await save(new RewoundHandle(newHandle));
         }
 
         // save the slot history to the store
