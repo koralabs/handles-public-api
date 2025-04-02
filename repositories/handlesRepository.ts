@@ -209,7 +209,8 @@ export class HandlesRepository {
 
     public updateHolderIndex(handle?: StoredHandle, oldHandle?: StoredHandle) {
         if (oldHandle) {
-            const oldHolder = this.provider.getValueFromIndex(IndexNames.HOLDER, oldHandle?.resolved_addresses.ada!) as Holder
+            const oldHolderInfo = buildHolderInfo(oldHandle.resolved_addresses.ada);
+            const oldHolder = this.provider.getValueFromIndex(IndexNames.HOLDER, oldHolderInfo.address) as Holder
             if (oldHolder) {
                 oldHolder.handles.delete(oldHandle.name);
                 if (oldHolder.handles.size === 0) {
@@ -254,15 +255,15 @@ export class HandlesRepository {
         // default. If neither, then run this.getDefaultHandle algo
         holder.defaultHandle = handle.default ? handle.name : holder.manuallySet ? holder.defaultHandle : this.getDefaultHandle(holder.handles)?.name ?? '';
 
-        handle.holder = holderInfo.address;
+        handle.holder = address;
         handle.holder_type = holder.type;
         delete handle.default; // This is a temp property not meant to save to the handle
 
         this.provider.setValueOnIndex(IndexNames.HOLDER, address, holder);
         
-        if (holderInfo.address && holderInfo.address != '') {
+        if (address && address != '') {
             // This could return null if it is a pre-Shelley address (not bech32)
-            const decodedAddress = decodeAddress(holderInfo.address);
+            const decodedAddress = decodeAddress(address);
             const oldDecodedAddress = decodeAddress(`${oldHandle?.holder}`);
             if (decodedAddress) {
                 if (oldDecodedAddress) {
