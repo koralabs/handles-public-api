@@ -51,7 +51,7 @@ export class HandleStore {
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 39;
+    static storageSchemaVersion = 42;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -286,7 +286,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time, policy }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -331,7 +331,8 @@ export class HandleStore {
             id_hash,
             pz_enabled,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
-            last_edited_time
+            last_edited_time,
+            policy
         };
 
         return newHandle;
@@ -392,15 +393,8 @@ export class HandleStore {
 
             // if there is no utxo, it means we already received a 100 token.
             const inputWithExistingHandle: SaveMintingTxInput = {
-                ...input,
-                image: existingHandle.image,
-                og_number: existingHandle.og_number,
-                version: existingHandle.version,
-                personalization: existingHandle.personalization,
-                last_update_address: existingHandle.last_update_address,
-                pz_enabled: existingHandle.pz_enabled,
-                last_edited_time: existingHandle.last_edited_time,
-                id_hash: existingHandle.id_hash
+                ...existingHandle,
+                ...input
             };
             const builtHandle = await HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });
@@ -411,7 +405,7 @@ export class HandleStore {
         await HandleStore.save({ handle: newHandle });
     };
 
-    static saveHandleUpdate = async ({ name, adaAddress, utxo, slotNumber, datum, script }: SaveWalletAddressMoveInput) => {
+    static saveHandleUpdate = async ({ name, adaAddress, utxo, lovelace, slotNumber, datum, script }: SaveWalletAddressMoveInput) => {
         const existingHandle = HandleStore.get(name);
         if (!existingHandle) {
             Logger.log({
@@ -422,9 +416,10 @@ export class HandleStore {
             return;
         }
 
-        const updatedHandle = {
+        const updatedHandle: StoredHandle = {
             ...existingHandle,
             utxo,
+            lovelace,
             resolved_addresses: { ...existingHandle.resolved_addresses, ada: adaAddress },
             updated_slot_number: slotNumber,
             has_datum: !!datum,
@@ -438,7 +433,7 @@ export class HandleStore {
         });
     };
 
-    static async savePersonalizationChange({ name, hex, personalization, reference_token, personalizationDatum, slotNumber, metadata }: SavePersonalizationInput) {
+    static async savePersonalizationChange({ name, hex, personalization, reference_token, policy, personalizationDatum, slotNumber, metadata }: SavePersonalizationInput) {
         const image = metadata?.image ?? '';
         const version = metadata?.version ?? 0;
         const og_number = metadata?.og_number ?? 0;
@@ -486,6 +481,7 @@ export class HandleStore {
                 original_address: personalizationDatum?.original_address,
                 id_hash: personalizationDatum?.id_hash,
                 lovelace: 0,
+                policy,
                 pz_enabled: personalizationDatum?.pz_enabled ?? false,
                 last_edited_time: personalizationDatum?.last_edited_time
             };
@@ -782,13 +778,12 @@ export class HandleStore {
         }
     }
 
-    static async prepareHandlesStorage(loadS3 = true): Promise<{ slot: number; hash: string; } | null> {
+    static async getFilesContent() {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-        const files = [HandleStore.getFile<IHandleFileContent>(this.storageFilePath)];
-        if (loadS3) {
-            files.push(HandleStore.getFileOnline<IHandleFileContent>(fileName));
-        }
-        const [localHandles, externalHandles] = await Promise.all(files);
+        const [localHandles, externalHandles] = await Promise.all([
+            HandleStore.getFile<IHandleFileContent>(this.storageFilePath), 
+            HandleStore.getFileOnline<IHandleFileContent>(fileName)
+        ]);
 
         const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? localHandles : null;
         const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? externalHandles : null;
@@ -803,54 +798,49 @@ export class HandleStore {
             return null;
         }
 
-        const buildFilesContent = (content: IHandleFileContent, isNew = false) => {
+        const buildFilesContent = (content: IHandleFileContent) => {
             return {
                 handles: content.handles,
                 history: content.history,
                 slot: content.slot,
                 schemaVersion: content.schemaVersion ?? 0,
-                hash: content.hash,
-                isNew
+                hash: content.hash
             };
         };
 
-        let filesContent: {
-            handles: Record<string, StoredHandle>;
-            history: [number, ISlotHistoryIndex][];
-            slot: number;
-            schemaVersion: number;
-            hash: string;
-            isNew: boolean;
-        } | null = null;
-
         // only the local file exists
         if (localContent && !externalContent) {
-            filesContent = buildFilesContent(localContent);
+            return [buildFilesContent(localContent)];
         }
 
         // only the external file exists
         if (externalContent && !localContent) {
-            filesContent = buildFilesContent(externalContent, true);
+            return [buildFilesContent(externalContent)];
         }
 
         // both files exist and we need to compare them to see which one to use.
+
         if (externalContent && localContent) {
+            const externalFilesContent = buildFilesContent(externalContent);
+            const localFilesContent = buildFilesContent(localContent);
             // check to see if the local file slot is greater than the external file
             // if so, use the local file otherwise use the external file
             if (localContent.slot > externalContent.slot) {
-                filesContent = buildFilesContent(localContent);
+                return [localFilesContent, externalFilesContent]
             } else {
-                filesContent = buildFilesContent(externalContent, true);
+                return [externalFilesContent, localFilesContent]
             }
+
+
         }
 
         // At this point, we should have a valid filesContent object.
         // If we don't perform this check we'd have to use a large ternary operator which is pretty ugly
-        if (!filesContent) {
-            return null;
-        }
+        return null;
+    }
 
-        const { handles, slot, hash, history, isNew } = filesContent;
+    static async prepareHandlesStorage(filesContent: IHandleFileContent): Promise<void> {
+        const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
         const keys = Object.keys(handles ?? {});
@@ -868,13 +858,6 @@ export class HandleStore {
         HandleStore.slotHistoryIndex = new Map(history);
 
         Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
-
-        // if the file contents are new (from the external source), save the handles and history to the store.
-        if (isNew) {
-            await HandleStore.saveHandlesFile(slot, hash);
-        }
-
-        return { slot, hash };
     }
 
     static eraseStorage() {

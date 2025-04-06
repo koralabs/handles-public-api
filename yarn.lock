@@ -656,10 +656,10 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@koralabs/kora-labs-common@5.1.13":
-  version "5.1.13"
-  resolved "https://registry.npmjs.org/@koralabs/kora-labs-common/-/kora-labs-common-5.1.13.tgz"
-  integrity sha512-PLGuUVzy16gc0Yu2mpLDeFO6bhB72eQqkZgvBUCINr4SDdvbYhhkM+TkEXrqUCp104gkOBV5R4C/XO/Nc8D1vg==
+"@koralabs/kora-labs-common@5.1.35":
+  version "5.1.35"
+  resolved "https://registry.npmjs.org/@koralabs/kora-labs-common/-/kora-labs-common-5.1.35.tgz"
+  integrity sha512-G77KB2+19l2KIPyKHvYCIURacWfR5TNOLSVfVcyoXJ7cDltxwjqUgJGCKUSXttLRESt9eccf9Fh/4C+xSae7CA==
   dependencies:
     bech32 "^2.0.0"
     blakejs "^1.2.1"

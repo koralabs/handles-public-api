@@ -167,9 +167,12 @@ export interface ProcessOwnerTokenInput {
     script?: { type: string; cbor: string };
     handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
+    policy: string;
 }
 
 export interface IBlockProcessor {
     initialize: (dynamicRegistry: IRegistry) => Promise<IBlockProcessor>;
     processBlock: (response: NextBlockResponse) => Promise<void>;
+    loadIndexes: () => Promise<void>;
+    resetIndexes: () => Promise<void>;
 }

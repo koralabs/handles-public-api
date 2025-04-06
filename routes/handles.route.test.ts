@@ -27,7 +27,8 @@ jest.mock('../ioc/main.registry', () => ({
                     resolved_addresses: {
                         ada: 'addr1'
                     },
-                    utxo: 'utxo#0'
+                    utxo: 'utxo#0',
+                    policy: 'f0ff'
                 };
             }
 
@@ -38,6 +39,7 @@ jest.mock('../ioc/main.registry', () => ({
             return {
                 name: handleName,
                 utxo: 'utxo#0',
+                policy: 'f0ff',
                 resolved_addresses: {
                     ada: 'addr1'
                 },
@@ -69,6 +71,7 @@ jest.mock('../ioc/main.registry', () => ({
                     {
                         name: 'burritos',
                         utxo: 'utxo#0',
+                        policy: 'f0ff',
                         personalization: {
                             p: 'z'
                         },
@@ -170,7 +173,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
         });
 
         it('should throw error if characters is invalid', async () => {
@@ -245,7 +248,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).post('/handles/list?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
         });
 
         it('should fail if handles is not an array', async () => {
@@ -262,7 +265,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).post('/handles/list').set('Content-Type', 'application/json').send(['burritos']);
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
         });
 
         it('should throw error if characters is invalid', async () => {
@@ -322,13 +325,13 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff' });
         });
 
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: '1', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0' });
+            expect(response.body).toEqual({ name: '1', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff' });
         });
 
         it('should return legendary message when handle does not exist', async () => {
