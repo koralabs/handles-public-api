@@ -94,7 +94,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 40;
+    private _storageSchemaVersion = 42;
     private metrics: IApiMetrics = {
         firstSlot: 0,
         lastSlot: 0,

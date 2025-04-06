@@ -113,7 +113,7 @@ class App {
         }
     }
 
-    private async resetBlockProcessors() {        
+    private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
         const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
         handlesRepo.rollBackToGenesis();
