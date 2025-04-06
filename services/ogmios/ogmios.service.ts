@@ -1,7 +1,7 @@
 import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
 import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
 import { BlockPraos, NextBlockResponse, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { checkNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, checkNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
 import * as url from 'url';
 import { OGMIOS_HOST } from '../../config';
@@ -217,7 +217,7 @@ class OgmiosService {
         // is CIP67 is false OR is CIP67 is true and label is 222
         const { isCip67, assetLabel } = checkNameLabel(assetName);
         if (isCip67) {
-            if (assetLabel === '222') {
+            if (assetLabel === AssetNameLabel.LBL_222) {
                 return assetNameInMintAssets;
             }
             return false;

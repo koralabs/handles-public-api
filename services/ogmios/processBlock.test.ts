@@ -25,6 +25,7 @@ describe('processBlock Tests', () => {
         height: 0
     };
 
+    const defaultAddress = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q';
     const policyId = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
     const hexName = '7465737431323334';
     const name = 'test1234';
@@ -47,7 +48,7 @@ describe('processBlock Tests', () => {
         }
     });
 
-    const txBlock = ({ address = 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0, additionalAssets = {} }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number, additionalAssets?: { [key: string]: bigint } } ): BlockPraos => ({
+    const txBlock = ({ address = defaultAddress, policy = policyId, handleHexName = hexName, handleName = name, isMint = true, datum = undefined, script = undefined, isBurn = false, slot = 0, additionalAssets = {} }: { address?: string | undefined; policy?: string | undefined; handleHexName?: string | undefined; handleName?: string | undefined; isMint?: boolean | undefined; datum?: string; script?: Script; isBurn?: boolean; slot?: number, additionalAssets?: { [key: string]: bigint } } ): BlockPraos => ({
         ancestor: 'test',
         era: 'babbage',
         type: 'praos',
@@ -160,7 +161,7 @@ describe('processBlock Tests', () => {
 
         expect(saveSpy).toHaveBeenCalledTimes(2);
 
-        expect(saveSpy).toHaveBeenNthCalledWith(1, { handle: {
+        expect(saveSpy).toHaveBeenNthCalledWith(1, { 
             policy: policyId,
             hex: '7465737431323334',
             image: 'ifps://some_hash_test1234',
@@ -195,9 +196,9 @@ describe('processBlock Tests', () => {
             length: 8,
             standard_image_hash: '',
             svg_version: '0'
-        }});
+        }, undefined);
 
-        expect(saveSpy).toHaveBeenNthCalledWith(2, { handle: {
+        expect(saveSpy).toHaveBeenNthCalledWith(2, {
             hex: '74657374343536',
             image: '',
             name: 'test456',
@@ -232,7 +233,7 @@ describe('processBlock Tests', () => {
             length: 7,
             standard_image_hash: '',
             svg_version: '0'
-        }});
+        }, undefined);
 
         expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
             tipBlockHash: 'some_hash',
@@ -252,7 +253,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
         await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, datum }), tip })
-        expect(saveSpy).toHaveBeenCalledWith({handle: {
+        expect(saveSpy).toHaveBeenCalledWith({
             resolved_addresses: {
                 ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
             },
@@ -287,7 +288,7 @@ describe('processBlock Tests', () => {
             svg_version: '0',
             image_hash: '',
             length: 8
-        }});
+        }, undefined);
     });
 
     it('Should save script', async () => {
@@ -334,7 +335,7 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             version: 0
         }
-        expect(saveSpy).toHaveBeenCalledWith({handle: savedHandle});
+        expect(saveSpy).toHaveBeenCalledWith(savedHandle, undefined);
     });
 
     it('Should update a handle when it is not a mint', async () => {
@@ -349,9 +350,7 @@ describe('processBlock Tests', () => {
             amount: 1,
             characters: 'letters,numbers',
             created_slot_number: 0,
-            datum: undefined,
             default_in_wallet: 'test1234',
-            drep: undefined,
             handle_type: 'handle',
             has_datum: false,
             hex: '7465737431323334',
@@ -371,19 +370,14 @@ describe('processBlock Tests', () => {
             resolved_addresses: {
                 ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc98p'
             },
-            script: undefined,
             standard_image: 'ifps://some_hash_test1234',
             standard_image_hash: '',
-            sub_characters: undefined,
-            sub_length: undefined,
-            sub_numeric_modifiers: undefined,
-            sub_rarity: undefined,
             svg_version: '0',
             updated_slot_number: 0,
             utxo: 'some_id#0',
             version: 0
         }
-        expect(saveHandleUpdateSpy).toHaveBeenNthCalledWith(2, {handle: savedHandle, oldHandle: savedHandle});
+        expect(saveHandleUpdateSpy).toHaveBeenNthCalledWith(2, savedHandle, savedHandle);
     });
 
     it('Should not save anything if policyId does not match', async () => {
@@ -407,7 +401,7 @@ describe('processBlock Tests', () => {
             tip
         });
 
-        expect(saveSpy).toHaveBeenCalledWith({handle: {
+        expect(saveSpy).toHaveBeenCalledWith({
             amount: 1,
             characters: 'letters',
             created_slot_number: 0,
@@ -437,7 +431,7 @@ describe('processBlock Tests', () => {
             updated_slot_number: 0,
             utxo: 'some_id#0',
             version: 0
-        }});
+        }, undefined);
     });
 
     it('Should process 222 update', async () => {
@@ -456,7 +450,7 @@ describe('processBlock Tests', () => {
             tip
         });
 
-        expect(saveHandleUpdateSpy).toHaveBeenCalledWith({handle: {
+        expect(saveHandleUpdateSpy).toHaveBeenCalledWith({
             policy: policyId,
             datum: undefined,
             hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
@@ -492,7 +486,7 @@ describe('processBlock Tests', () => {
             amount: 1,
             characters: 'letters',
             created_slot_number: 0
-        }, oldHandle: {
+        }, {
             policy: policyId,
             datum: undefined,
             hex: `${AssetNameLabel.LBL_222}6275727269746f73`,
@@ -528,7 +522,7 @@ describe('processBlock Tests', () => {
             amount: 1,
             characters: 'letters',
             created_slot_number: 0
-        }});
+        });
     });
 
     it('Should process 100 asset class tokens', async () => {
@@ -589,7 +583,7 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             version: 0
         }
-        expect(savePersonalizationChangeSpy).toHaveBeenNthCalledWith(2, {handle: {
+        expect(savePersonalizationChangeSpy).toHaveBeenNthCalledWith(2, {
             ...savedHandle,
             reference_token: {
                 address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', 
@@ -622,7 +616,7 @@ describe('processBlock Tests', () => {
             svg_version: '1.0.0',
             bg_image: '',
             standard_image: ''
-        }, oldHandle: savedHandle});
+        }, savedHandle);
     });
 
     it('Should process 001 SubHandle settings token', async () => {
@@ -685,7 +679,7 @@ describe('processBlock Tests', () => {
             utxo: 'some_id#0',
             version: 0
         }
-        expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, {handle: {
+        expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, {
             ...savedHandle,
             subhandle_settings: {
                 settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff',
@@ -698,7 +692,7 @@ describe('processBlock Tests', () => {
                 }
             }
         }, 
-        oldHandle: savedHandle});
+        savedHandle);
     });
 
     it('should process as NFT Sub handle', async () => {
@@ -717,7 +711,7 @@ describe('processBlock Tests', () => {
             tip
         })
         
-        expect(saveMintedHandleSpy).toHaveBeenCalledWith({handle: {
+        expect(saveMintedHandleSpy).toHaveBeenCalledWith({
             resolved_addresses: {
                 ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
             },
@@ -752,7 +746,7 @@ describe('processBlock Tests', () => {
             holder_type: 'wallet',
             image_hash: '',
             length: 8
-        }});
+        }, undefined);
     });
 
     it('Should process virtual sub handle', async () => {
@@ -763,7 +757,7 @@ describe('processBlock Tests', () => {
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
         jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
-        const cbor = 'D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B24E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A3631386532323564623935383935653738303439363538396238396463366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700FF';
+        const cbor = 'D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B34E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A3631386532323564623935383935653738303439363538396238396463366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700477669727475616CA24C657870697265735F74696D65014B7075626C69635F6D696E7400FF';
 
         await ogmios['processBlock']({
             txBlock: txBlock({
@@ -775,7 +769,7 @@ describe('processBlock Tests', () => {
             tip
         });
 
-        expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({handle: {
+        expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
             amount: 1,
             bg_image: '',
             pfp_image: '',
@@ -825,10 +819,12 @@ describe('processBlock Tests', () => {
                 trial: false,
                 nsfw: false,
                 validated_by: '0x'
+            },
+            virtual: {
+                expires_time: 1,
+                public_mint: false
             }
-        }
-
-        });
+        }, undefined);
     });
 
     it('Should validate datum', async () => {
@@ -885,12 +881,49 @@ describe('processBlock Tests', () => {
         const burnHandleSpy = jest.spyOn(HandlesRepository.prototype, 'removeHandle').mockImplementation();
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
+        await repo.save(await repo.Internal.buildHandle({name: handleName, hex: handleHexName, policy: policyId, resolved_addresses: {ada: defaultAddress}}))
+
         await ogmios['processBlock']({
             txBlock: txBlock({ policy: policyId, handleHexName, isBurn: true, slot }),
             tip
         });
 
-        expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
+        expect(burnHandleSpy).toHaveBeenCalledWith({
+            amount: 1,
+            characters: 'letters',
+            created_slot_number: 0,
+            datum: undefined,
+            default_in_wallet: 'burritos',
+            drep: undefined,
+            handle_type: 'handle',
+            has_datum: false,
+            hex: '000643b06275727269746f73',
+            holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
+            holder_type: 'wallet',
+            image: '',
+            image_hash: '',
+            length: 8,
+            lovelace: 0,
+            name: 'burritos',
+            numeric_modifiers: '',
+            og_number: 0,
+            payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388',
+            policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
+            rarity: 'basic',
+            resolved_addresses: {
+                ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
+            },
+            standard_image: '',
+            standard_image_hash: '',
+            sub_characters: undefined,
+            sub_length: undefined,
+            sub_numeric_modifiers: undefined,
+            sub_rarity: undefined,
+            svg_version: '0',
+            updated_slot_number: 0,
+            utxo: '',
+            version: 0
+        }, slot);
     });
 
     describe('isValidDatum tests', () => {

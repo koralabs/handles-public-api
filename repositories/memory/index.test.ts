@@ -1,5 +1,5 @@
 import * as klc from '@koralabs/kora-labs-common';
-import { delay, HandleType, IHandleMetadata, IPersonalization, IPzDatumConvertedUsingSchema, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
+import { delay, HandleType, IHandleMetadata, IPersonalization, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
 import { unlinkSync, writeFileSync } from 'fs';
 import { MemoryHandlesProvider } from '.';
 import * as config from '../../config';
@@ -232,7 +232,7 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 last_update_address: '',
                 id_hash: '0x0fed83b6268892be468965a7fa0705ff22014c4b78a6ba82b4d65fe395d6d5ee9f',
-                resolved_addresses: { ada: '0x123', btc: '2213kjsjkn', eth: 'sad2wsad' }
+                resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' }
             }, {
                 name: 'chimichanga',
                 image: 'ipfs://123',
@@ -246,6 +246,7 @@ describe('HandleStore tests', () => {
                 version: 0,
                 handle_type: HandleType.HANDLE
             }));
+
             let handle = repo.get('chimichanga');
             await repo.save(await repo.Internal.buildHandle({
                 ...handle,
@@ -253,7 +254,7 @@ describe('HandleStore tests', () => {
                 image_hash: '0xtodo',
                 resolved_addresses: {ada:'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 100
-            }));
+            }), handle!);
 
             handle = repo.get('chimichanga');
 
@@ -270,13 +271,10 @@ describe('HandleStore tests', () => {
                     {
                         chimichanga: {
                             new: {
-                                created_slot_number: 100,
-                                default_in_wallet: '',
                                 resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
                                 updated_slot_number: 100,
                                 utxo: 'utxo123#0',
                                 image_hash: '0xtodo',
-                                standard_image_hash: '0xtodo',
                                 holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
                                 holder_type: 'wallet',
                                 payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710',
@@ -289,13 +287,10 @@ describe('HandleStore tests', () => {
                                 }
                             },
                             old: {
-                                created_slot_number: 99,
-                                default_in_wallet: 'chimichanga',
                                 resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
                                 updated_slot_number: 99,
                                 utxo: '',
                                 image_hash: '0x123',
-                                standard_image_hash: '0x123',
                                 holder: '',
                                 holder_type: 'other',
                                 payment_key_hash: null
@@ -405,37 +400,6 @@ describe('HandleStore tests', () => {
             });
         });
 
-        it('Should property update the amount property when another mint happens', async () => {
-            const sushiHandle = 'sushi';
-            const sushiHex = Buffer.from('sushi').toString('hex');
-            await repo.save(await repo.Internal.buildHandle({
-                hex: sushiHex,
-                name: sushiHandle,
-                og_number: 0,
-                utxo: 'utxo123#0',
-                policy,
-                lovelace: 0,
-                image: 'ipfs://123',
-                datum: 'datum123',
-                image_hash: '0x123',
-                svg_version: '1.0.0',
-                handle_type: HandleType.HANDLE,
-                resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                updated_slot_number: 100
-            }));
-
-            let handle = repo.get(sushiHandle);
-            await repo.save(await repo.Internal.buildHandle({
-                ...handle,
-                utxo: 'utxo124#0',
-                resolved_addresses: {ada: 'addr1234'},
-                updated_slot_number: 200
-            }));
-
-            handle = repo.get(sushiHandle);
-            expect(handle?.amount).toEqual(2);
-        });
-
         it('Should save an NFT Sub Handle', async () => {
             const subHandleName = 'sub@hndl';
             await repo.save(await repo.Internal.buildHandle({
@@ -509,7 +473,9 @@ describe('HandleStore tests', () => {
 
     describe('savePersonalizationChange tests', () => {
         it('Should update personalization data', async () => {
+            let handle = repo.get('nacho-cheese');
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('nacho-cheese').toString('hex'),
                 name: 'nacho-cheese',
                 og_number: 0,
@@ -523,7 +489,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: false,
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 100
-            }));
+            }), handle!);
 
             const personalizationUpdates: IPersonalization = {
                 designer: {
@@ -540,30 +506,30 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            handle = repo.get('nacho-cheese');
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('nacho-cheese').toString('hex'),
                 name: 'nacho-cheese',
                 personalization: personalizationUpdates,
                 reference_token: defaultReferenceToken,
                 policy,
-                image: 'ipfs://123',
+                image: 'ipfs://1234',
                 og_number: 0,
                 version: 0,
                 handle_type: HandleType.HANDLE,
                 pfp_image: 'todo',
                 bg_image: 'todo',
                 image_hash: '0x123',
-                standard_image_hash: '0x123',
                 svg_version: '1.0.0',
-                standard_image: '',
                 last_update_address: '0x444',
-                resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
+                resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g', btc: '2213kjsjkn', eth: 'sad2wsad' },
                 pz_enabled: false,
                 last_edited_time: 123,
                 updated_slot_number: 200
-            }));
+            }), handle!);
 
-            const handle = repo.get('nacho-cheese');
+            handle = repo.get('nacho-cheese');
             expect(handle?.default_in_wallet).toEqual('taco');
             expect(handle?.pfp_image).toEqual('todo');
             expect(handle?.bg_image).toEqual('todo');
@@ -594,7 +560,6 @@ describe('HandleStore tests', () => {
                         'nacho-cheese': {
                             new: {
                                 bg_image: 'todo',
-                                default: false,
                                 personalization: {
                                     designer: {
                                         bg_border_color: '0xtodo',
@@ -617,17 +582,15 @@ describe('HandleStore tests', () => {
                                     eth: 'sad2wsad'
                                 },
                                 updated_slot_number: 200,
-                                last_edited_time: 123
+                                last_edited_time: 123,
+                                image: 'ipfs://1234'
                             },
                             old: {
-                                bg_image: '',
-                                personalization: undefined,
-                                reference_token: undefined,
-                                pfp_image: '',
                                 resolved_addresses: {
                                     ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
                                 },
-                                updated_slot_number: 100
+                                updated_slot_number: 100,
+                                image: 'ipfs://123'
                             }
                         }
                     }
@@ -737,7 +700,9 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            let handle = repo.get(handleName);
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -756,10 +721,11 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 last_update_address: '',
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                updated_slot_number: 200
-            }));
+                updated_slot_number: 200,
+                default: true
+            }), handle!);
 
-            const handle = repo.get(handleName);
+            handle = repo.get(handleName);
 
             // Expect the personalization data to be set
             // Expect the default_in_wallet to be set (this uses the getter in the repo.get)
@@ -783,7 +749,9 @@ describe('HandleStore tests', () => {
         it('Should save default handle and history correctly when saving multiple times', async () => {
             const handleName = 'pork-belly';
             const handleHex = Buffer.from(handleName).toString('hex');
+            let handle = repo.get(handleName);
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: handleHex,
                 name: handleName,
                 og_number: 0,
@@ -797,7 +765,7 @@ describe('HandleStore tests', () => {
                 pz_enabled: false,
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 100
-            }));
+            }), handle!);
 
             const personalizationUpdates: IPersonalization = {
                 socials: [
@@ -815,7 +783,9 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            handle = repo.get(handleName);
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdates,
@@ -834,10 +804,11 @@ describe('HandleStore tests', () => {
                 version: 0,
                 handle_type: HandleType.HANDLE,
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                updated_slot_number: 200
-            }));
+                updated_slot_number: 200,
+                default: true
+            }), handle!);
 
-            const handle = repo.get(handleName);
+            handle = repo.get(handleName);
             expect(handle?.personalization).toEqual(personalizationUpdates);
             expect(handle?.default_in_wallet).toEqual(handleName);
 
@@ -851,6 +822,7 @@ describe('HandleStore tests', () => {
             };
 
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: handleHex,
                 name: handleName,
                 personalization: newPersonalizationUpdates,
@@ -869,14 +841,15 @@ describe('HandleStore tests', () => {
                 last_update_address: '0x333',
                 pz_enabled: false,
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                updated_slot_number: 300
-            }));
+                updated_slot_number: 300,
+                default: true
+            }), handle!);
 
-            const updatedHandle = repo.get(handleName);
-            expect(updatedHandle?.personalization).toEqual(newPersonalizationUpdates);
+            handle = repo.get(handleName);
+            expect(handle?.personalization).toEqual(newPersonalizationUpdates);
 
             // Default in wallet should not change because it was not updated or removed.
-            expect(updatedHandle?.default_in_wallet).toEqual(handleName);
+            expect(handle?.default_in_wallet).toEqual(handleName);
             const personalizationUpdatesWithDefaultWalletChange: IPersonalization = {
                 designer: {
                     font_shadow_color: '0x111'
@@ -887,6 +860,7 @@ describe('HandleStore tests', () => {
             };
 
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: handleHex,
                 name: handleName,
                 personalization: personalizationUpdatesWithDefaultWalletChange,
@@ -906,13 +880,13 @@ describe('HandleStore tests', () => {
                 pz_enabled: false,
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 400
-            }));
+            }), handle!);
 
-            const finalHandle = repo.get(handleName);
-            expect(finalHandle?.personalization).toEqual(personalizationUpdatesWithDefaultWalletChange);
+            handle = repo.get(handleName);
+            expect(handle?.personalization).toEqual(personalizationUpdatesWithDefaultWalletChange);
 
             // Default should be changed because we removed it.
-            expect(finalHandle?.default_in_wallet).toEqual('taco');
+            expect(handle?.default_in_wallet).toEqual('taco');
 
             // expect the first to be old null, meaning it was minted
             expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([100, { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }]);
@@ -943,8 +917,6 @@ describe('HandleStore tests', () => {
                             updated_slot_number: 200
                         },
                         old: {
-                            bg_image: '',
-                            pfp_image: '',
                             image: '',
                             personalization: undefined,
                             reference_token: undefined,
@@ -991,7 +963,6 @@ describe('HandleStore tests', () => {
                 {
                     'pork-belly': {
                         new: {
-                            default: false,
                             personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
                             last_update_address: '0x444',
                             updated_slot_number: 400
@@ -1024,7 +995,10 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
+            let handle = repo.get('taco');
+
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('taco').toString('hex'),
                 name: 'taco',
                 personalization: tacoPzUpdate,
@@ -1043,10 +1017,12 @@ describe('HandleStore tests', () => {
                 last_update_address: '',
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 100
-            }));
+            }), handle!);
 
-            const tacoHandle = repo.get('taco');
-            expect(tacoHandle?.default_in_wallet).toEqual('taco');
+            handle = repo.get('taco');
+            expect(handle?.default_in_wallet).toEqual('taco');
+            
+            handle = repo.get('burrito');
             const burritoPzUpdate: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
@@ -1055,8 +1031,8 @@ describe('HandleStore tests', () => {
                 trial: false,
                 nsfw: false
             };
-
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('burrito').toString('hex'),
                 name: 'burrito',
                 personalization: burritoPzUpdate,
@@ -1075,10 +1051,12 @@ describe('HandleStore tests', () => {
                 last_update_address: '',
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 200
-            }));
+            }), handle!);
 
-            const burritoHandle = repo.get('burrito');
-            expect(burritoHandle?.default_in_wallet).toEqual('taco');
+            handle = repo.get('burrito');
+            expect(handle?.default_in_wallet).toEqual('taco');
+            
+            handle = repo.get('barbacoa');
             const barbacoaPzUpdate: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
@@ -1089,6 +1067,7 @@ describe('HandleStore tests', () => {
             };
 
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('barbacoa').toString('hex'),
                 name: 'barbacoa',
                 personalization: barbacoaPzUpdate,
@@ -1106,11 +1085,14 @@ describe('HandleStore tests', () => {
                 standard_image: '',
                 last_update_address: '',
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                updated_slot_number: 300
-            }));
+                updated_slot_number: 300,
+                default: true
+            }), handle!);
 
-            const barbacoaHandle = repo.get('barbacoa');
-            expect(barbacoaHandle?.default_in_wallet).toEqual('barbacoa');
+            handle = repo.get('barbacoa');
+            expect(handle?.default_in_wallet).toEqual('barbacoa');
+            
+            handle = repo.get('taco');
             const tacoPzUpdate2: IPersonalization = {
                 designer: {
                     font_shadow_color: '0xaaa'
@@ -1121,6 +1103,7 @@ describe('HandleStore tests', () => {
             };
 
             await repo.save(await repo.Internal.buildHandle({
+                ...handle,
                 hex: Buffer.from('taco').toString('hex'),
                 name: 'taco',
                 personalization: tacoPzUpdate2,
@@ -1139,7 +1122,7 @@ describe('HandleStore tests', () => {
                 last_update_address: '',
                 resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
                 updated_slot_number: 400
-            }));
+            }), handle!);
 
             const tacoHandle2 = repo.get('taco');
             expect(tacoHandle2?.default_in_wallet).toEqual('barbacoa');
@@ -1203,8 +1186,6 @@ describe('HandleStore tests', () => {
         });
 
         it('should save details for virtual handle', async () => {
-            const bech32FromHexSpy = jest.spyOn(klc, 'bech32FromHex');
-
             const handleName = 'virtual@hndl';
             const handleHex = '000000007669727475616c40686e646c';
 
@@ -1235,33 +1216,6 @@ describe('HandleStore tests', () => {
                 sub_numeric_modifiers: 'numbers'
             };
 
-            const personalizationDatum: IPzDatumConvertedUsingSchema = {
-                virtual: {
-                    expires_time: 1,
-                    public_mint: false
-                },
-                resolved_addresses: {
-                    ada: '0x000b7436f6c86f362580f313cfef7916ac2b8769483741c452f410b4e5557ddf7f3475194f6d41ce9449230a344d5500cef9864d3676fb140a'
-                },
-                default: false,
-                pfp_image: 'todo',
-                bg_image: 'todo',
-                image_hash: '0x123',
-                standard_image_hash: '0x123',
-                svg_version: '1.0.0',
-                standard_image: '',
-                portal: '',
-                designer: '',
-                socials: '',
-                vendor: '',
-                last_update_address: '',
-                validated_by: '',
-                trial: false,
-                nsfw: false,
-                agreed_terms: '',
-                migrate_sig_required: false
-            };
-
             await repo.save(await repo.Internal.buildHandle({
                 hex: handleHex,
                 name: handleName,
@@ -1284,34 +1238,15 @@ describe('HandleStore tests', () => {
                     public_mint: false
                 },
                 resolved_addresses: {ada: 'addr_test1qq9hgdhkephnvfvq7vfulmmez6kzhpmffqm5r3zj7sgtfe240h0h7dr4r98k6swwj3yjxz35f42spnhesexnvahmzs9qzkg9d7'},
-                updated_slot_number: 300
+                updated_slot_number: 300,
+                utxo: `${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`
             }));
 
             const virtualSubHandle = repo.get(handleName);
             expect(virtualSubHandle?.personalization).toEqual(personalizationUpdates);
 
-            // expect virtual sub handle utxo to be the utxo of the reference token
-            expect(virtualSubHandle?.utxo).toEqual(`${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`);
-
-            // expect the ada address to be the bech32 encoded version of the reference token address
-            expect(bech32FromHexSpy).toHaveBeenCalledWith(personalizationDatum.resolved_addresses?.ada?.replace('0x', ''), true);
-
-            expect(virtualSubHandle?.handle_type).toEqual(HandleType.VIRTUAL_SUBHANDLE);
-
-            expect(virtualSubHandle?.virtual).toEqual({ expires_time: 1, public_mint: false });
-
-            const newReferenceToken: IReferenceToken = {
-                ...defaultReferenceToken,
-                tx_id: 'abc123',
-                index: 1
-            };
-
             await repo.save(await repo.Internal.buildHandle({
-                hex: handleHex,
-                policy,
-                personalization: personalizationUpdates,
-                reference_token: newReferenceToken,
-                resolved_addresses: {ada: 'addr_test1qq9hgdhkephnvfvq7vfulmmez6kzhpmffqm5r3zj7sgtfe240h0h7dr4r98k6swwj3yjxz35f42spnhesexnvahmzs9qzkg9d7'},
+                ...virtualSubHandle,
                 updated_slot_number: 400,
                 virtual: {
                     expires_time: 2,
@@ -1321,7 +1256,6 @@ describe('HandleStore tests', () => {
 
             const updatedVirtualSubHandle = repo.get(handleName);
             expect(updatedVirtualSubHandle?.virtual).toEqual({ expires_time: 2, public_mint: false });
-            expect(updatedVirtualSubHandle?.utxo).toEqual(`${newReferenceToken.tx_id}#${newReferenceToken.index}`);
         });
     });
 
@@ -1339,7 +1273,7 @@ describe('HandleStore tests', () => {
                 svg_version: '1.0.0',
                 handle_type: HandleType.HANDLE,
                 resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                updated_slot_number: 300
+                updated_slot_number: 100
             }));
 
             const settings = 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168';
@@ -1356,7 +1290,7 @@ describe('HandleStore tests', () => {
                     utxo: utxoDetails
                 },
                 updated_slot_number: 200
-            }));
+            }), handle!);
 
             handle = repo.get('shrimp-taco');
             expect(handle?.subhandle_settings).toEqual({
@@ -1422,7 +1356,7 @@ describe('HandleStore tests', () => {
                     utxo: utxoDetails
                 },
                 updated_slot_number: 200
-            }));
+            }), handle!);
 
             handle = repo.get(handleName);
             expect(handle?.subhandle_settings).toEqual({
@@ -1440,10 +1374,11 @@ describe('HandleStore tests', () => {
                     utxo: utxoDetails
                 },
                 updated_slot_number: 300
-            }));
+            }), handle!);
 
             const finalSettings = 'ghi';
 
+            handle = repo.get(handleName);
             await repo.save(await repo.Internal.buildHandle({
                 ...handle,
                 name: handleName,
@@ -1452,7 +1387,7 @@ describe('HandleStore tests', () => {
                     utxo: utxoDetails
                 },
                 updated_slot_number: 400
-            }));
+            }), handle!);
 
             // expect the first to be old null, meaning it was minted
             expect(Array.from(HandleStore.slotHistoryIndex)[3]).toEqual([100, { [handleName]: { new: { name: handleName }, old: null } }]);
@@ -1530,17 +1465,6 @@ describe('HandleStore tests', () => {
             const updatedStakeKey = 'stake_test1urcr464g6xz4hn2ypnd4tulcnnjq38sg5e5rmdwa6tspwuqn7lhlg';
             const address = 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g';
             const newAddress = 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746';
-            jest.spyOn(klc, 'buildHolderInfo')
-                .mockReturnValueOnce({
-                    address: stakeKey,
-                    type: 'wallet',
-                    knownOwnerName: ''
-                })
-                .mockReturnValueOnce({
-                    address: updatedStakeKey,
-                    type: 'wallet',
-                    knownOwnerName: ''
-                });
 
             await repo.save(await repo.Internal.buildHandle({
                 hex: handleHex,
@@ -1567,25 +1491,25 @@ describe('HandleStore tests', () => {
 
             await repo.save(await repo.Internal.buildHandle({
                 ...existingHandle,
-                lovelace: 0,
+                lovelace: 10,
                 hex: handleHex,
                 name: handleName,
                 utxo: 'utxo_salsa2#0',
                 policy,
                 resolved_addresses: {ada: newAddress},
-                updated_slot_number: 200
-            }));
+                updated_slot_number: 200,
+                datum: undefined
+            }), existingHandle!);
 
             const handle = repo.get(handleName);
             expect(handle).toEqual({
                 amount: 1,
                 holder: updatedStakeKey,
                 characters: 'letters',
-                datum: 'a2datum_salsa',
                 hex: handleHex,
                 utxo: 'utxo_salsa2#0',
                 policy,
-                lovelace: 0,
+                lovelace: 10,
                 length: 5,
                 name: 'salsa',
                 image: 'ipfs://123',
@@ -1599,7 +1523,7 @@ describe('HandleStore tests', () => {
                 resolved_addresses: { ada: newAddress },
                 created_slot_number: expect.any(Number),
                 updated_slot_number: expect.any(Number),
-                has_datum: true,
+                has_datum: false,
                 holder_type: 'wallet',
                 version: 0,
                 handle_type: HandleType.HANDLE,

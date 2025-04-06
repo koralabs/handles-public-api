@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, checkNameLabel, decodeAddress, decodeCborToJson, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, diff, EMPTY, ExcludesFalse, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -10,10 +10,21 @@ import { sortAlphabetically, sortByUpdatedSlotNumber, sortedByLength, sortOGHand
 const blackListedIpfsCids: string[] = [];
 const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
 
+/********** RewoundHandle IS USED TO FLAG THE HANDLE TO AVOID SAVING SLOT HISTORY ********************/
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export interface RewoundHandle extends StoredHandle {}
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class RewoundHandle implements RewoundHandle {
+    constructor(handle: StoredHandle) {
+        Object.assign(this, handle);
+    }
+}
+
+/********** UpdatedOwnerHandle IS USED TO FLAG THE HANDLE FOR HOLDER LOGIC ***************************/
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export interface UpdatedOwnerHandle extends StoredHandle {}
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export class UpdatedOwnerHandle implements UpdatedOwnerHandle {
     constructor(handle: StoredHandle) {
         Object.assign(this, handle);
     }
@@ -203,27 +214,34 @@ export class HandlesRepository {
         }, []);
     }
 
+    public getHandlesByNames(names: string[] | Set<string>): StoredHandle[] {
+        return Array.from(names).map(n => this.get(n)).filter(ExcludesFalse);
+    }
+
     public setMetrics(metrics: IApiMetrics): void {
         this.provider.setMetrics(metrics);
     }
 
-    public updateHolderIndex(handle?: StoredHandle, oldHandle?: StoredHandle) {
+    public updateHolder(handle?: StoredHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
+        let newDefault: boolean | undefined = undefined;
+        let oldDefault: boolean | undefined = undefined;
         if (oldHandle) {
             const oldHolderInfo = buildHolderInfo(oldHandle.resolved_addresses.ada);
             const oldHolder = this.provider.getValueFromIndex(IndexNames.HOLDER, oldHolderInfo.address) as Holder
             if (oldHolder) {
+                oldDefault = oldHolder.manuallySet && oldHolder.defaultHandle == oldHandle.name;
                 oldHolder.handles.delete(oldHandle.name);
                 if (oldHolder.handles.size === 0) {
-                    this.provider.removeKeyFromIndex(IndexNames.HOLDER, oldHandle.resolved_addresses.ada);
+                    this.provider.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
                 } else {
                     oldHolder.manuallySet = oldHolder.manuallySet && oldHolder.defaultHandle != oldHandle.name;
-                    oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(oldHolder.handles)?.name ?? '';
-                    this.provider.setValueOnIndex(IndexNames.HOLDER, oldHandle.resolved_addresses.ada, oldHolder);
+                    oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(this.getHandlesByNames(oldHolder.handles))?.name ?? '';
+                    this.provider.setValueOnIndex(IndexNames.HOLDER, oldHolderInfo.address, oldHolder);
                 }
             }
         }
 
-        if (!handle) return;
+        if (!handle) return {newDefault, oldDefault};
 
         const holderInfo = buildHolderInfo(handle.resolved_addresses.ada);
         const { address, knownOwnerName, type } = holderInfo;
@@ -244,19 +262,51 @@ export class HandlesRepository {
         // if by this point, we have no handles, we need to remove the holder address from the index
         if (holder.handles.size === 0) {
             this.provider.removeKeyFromIndex(IndexNames.HOLDER, address);
-            return;
+            return {newDefault, oldDefault};
         }
-        // Set manuallySet to the incoming Handle if isDefault. If the incoming handleName is the same as the
-        // current holder default, then we might be turning it off (unsetting it as default)
-        holder.manuallySet = handle.default || (holder.manuallySet && holder.defaultHandle != handle.name);
+
+        const wasPreviouslyManuallySetToDefault = holder.manuallySet && holder.defaultHandle == handle.name;
+        if (!(handle instanceof UpdatedOwnerHandle)) {    
+            // handle.default can only be set when it is the Reference Token (or virtual), not UpdatedOwnerHandle
+            
+            // Set manuallySet to the incoming Handle if isDefault. If the incoming handleName is the same as the
+            // current holder default, then we are turning it off (unsetting it as default)
+            if (handle.default) {
+                holder.manuallySet = true;
+            }
+            else {
+                if (wasPreviouslyManuallySetToDefault) {
+                    holder.manuallySet = false;
+                }                
+            }
+        }
+        else {
+            // set it to true if it is the current manually set handle for the holder
+            handle.default = wasPreviouslyManuallySetToDefault;
+        }
+
+        if (handle.default) {
+            holder.manuallySet = true;
+        }
+        else {
+            if (wasPreviouslyManuallySetToDefault) {
+                holder.manuallySet = false; // This might not be true if this came from a tx that was an owner token
+            }                
+        }
 
         // get the default handle or use the defaultName provided (this is used during personalization)
         // Set defaultHandle to incoming if isDefault, otherwise if manuallySet, then keep the current
         // default. If neither, then run this.getDefaultHandle algo
-        holder.defaultHandle = handle.default ? handle.name : holder.manuallySet ? holder.defaultHandle : this.getDefaultHandle(holder.handles)?.name ?? '';
+        holder.defaultHandle = (() => {
+            if (handle.default) {return handle.name}
+            else {
+                if (holder.manuallySet) return holder.defaultHandle; 
+                else return this.getDefaultHandle([handle, ...this.getHandlesByNames(holder.handles)])?.name ?? ''}
+        })();
 
         handle.holder = address;
         handle.holder_type = holder.type;
+        newDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
         this.provider.setValueOnIndex(IndexNames.HOLDER, address, holder);
@@ -275,6 +325,7 @@ export class HandlesRepository {
                 this.provider.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashofStakeKeyHash, handle.name);
             }
         }
+        return {newDefault, oldDefault};
     }
 
     public rollBackToGenesis(): void {
@@ -313,8 +364,7 @@ export class HandlesRepository {
             }
     
             // remove the stake key index
-            this.provider.removeValueFromIndexedSet(IndexNames.HOLDER, handle.holder, handleName);
-            this.updateHolderIndex(undefined, handle);
+            this.updateHolder(undefined, handle);
 
         } else {
             const updatedHandle = { ...handle, amount };
@@ -380,11 +430,10 @@ export class HandlesRepository {
     
     public async processScannedHandleInfo(scannedHandleInfo: ScannedHandleInfo): Promise<void> {
         const {assetName, utxo, lovelace, datum, address, policy, slotNumber, script, metadata, isMintTx} = scannedHandleInfo
-        const { isCip67, assetLabel } = checkNameLabel(assetName);
-        const { hex, name } = getHandleNameFromAssetName(assetName);
+        const { hex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
-        const handle = structuredClone(existingHandle) ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        let handle = structuredClone(existingHandle) ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
 
@@ -398,7 +447,8 @@ export class HandlesRepository {
 
         switch (assetLabel) {
             case null:
-            case '222':
+            case AssetNameLabel.NONE:
+            case AssetNameLabel.LBL_222:
                 if (!existingHandle && !isMintTx) {
                     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
                     return;
@@ -415,9 +465,10 @@ export class HandlesRepository {
                 handle.utxo = utxo;
                 handle.updated_slot_number = slotNumber;
                 handle.resolved_addresses!.ada = address;
+                handle = new UpdatedOwnerHandle(handle);
                 break;
-            case '100':
-            case '000':
+            case AssetNameLabel.LBL_100:
+            case AssetNameLabel.LBL_000:
             {
                 if (!datum) {
                     Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
@@ -459,14 +510,14 @@ export class HandlesRepository {
                 handle.id_hash = personalizationDatum?.id_hash
                 handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
                 handle.last_edited_time = personalizationDatum?.last_edited_time
-                if (assetLabel == '000') {
+                if (assetLabel == AssetNameLabel.LBL_000) {
                     handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
                     handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
                     handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
                 }
                 break;
             }
-            case '001':
+            case AssetNameLabel.LBL_001:
                 if (!existingHandle) {
                     // There should always be an existing root handle for a subhandle
                     Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });
@@ -496,7 +547,7 @@ export class HandlesRepository {
 
     }
 
-    public async save(handle: StoredHandle | RewoundHandle, oldHandle?: StoredHandle) {
+    public async save(handle: StoredHandle | RewoundHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
         //const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
         const {
             name,
@@ -514,7 +565,7 @@ export class HandlesRepository {
         handle.payment_key_hash = payment_key_hash;
         handle.drep = buildDrep(ada, handle.id_hash?.replace('0x', ''));
 
-        this.updateHolderIndex(handle, oldHandle);
+        const {newDefault, oldDefault} = this.updateHolder(handle, oldHandle);
 
         // Set the main index (SAVES THE HANDLE)
         this.provider.setHandle(name, handle);
@@ -538,7 +589,7 @@ export class HandlesRepository {
         this.provider.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
 
         if (!(handle instanceof RewoundHandle)) {
-            const history = this._buildHandleHistory(handle, oldHandle);
+            const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
             if (history)
                 this._saveSlotHistory({
                     handleHistory: history,
@@ -548,13 +599,7 @@ export class HandlesRepository {
         }
     }
 
-    public getDefaultHandle(handleNames: string[] | Set<string>): StoredHandle {
-        // convert handle names to handle objects while also cleaning up removed Handles
-        const handles: StoredHandle[] = [];
-        handleNames.forEach((h: string) => {
-            const handle = this.get(h);
-            if (handle) handles.push(handle);
-        });
+    public getDefaultHandle(handles: StoredHandle[]): StoredHandle {
 
         // OG if no default set
         const ogHandle = sortOGHandle(handles);

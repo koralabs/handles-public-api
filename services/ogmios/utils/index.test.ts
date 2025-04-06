@@ -157,30 +157,48 @@ describe('Utils Tests', () => {
     });
 
     describe('getHandleNameFromAssetName', () => {
-        const expectedHandle = { hex: '6275727269746f', name: 'burrito' };
+        const asset1 = '6275727269746f'
+        const expectedHandle = { name: 'burrito', isCip67: false, assetLabel: AssetNameLabel.NONE };
         it('should return handle name from hex', () => {
-            const handle = getHandleNameFromAssetName('6275727269746f');
-            expect(handle).toEqual(expectedHandle);
+            const handle = getHandleNameFromAssetName(asset1);
+            expect(handle).toEqual({
+                ...expectedHandle,
+                hex: asset1,
+                assetName: asset1
+            });
         });
 
         it('should return handle name from policyId.hex', () => {
-            const handle = getHandleNameFromAssetName('f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.6275727269746f');
-            expect(handle).toEqual(expectedHandle);
+            const asset2 = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.6275727269746f';
+            const handle = getHandleNameFromAssetName(asset2);
+            expect(handle).toEqual({
+                ...expectedHandle,
+                hex: '6275727269746f',
+                assetName: asset2
+            });
         });
 
         it('should strip off 222 asset name label and return handle name', () => {
-            const handle = getHandleNameFromAssetName(`f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_222}6275727269746f`);
+            const asset = `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_222}6275727269746f`;
+            const handle = getHandleNameFromAssetName(asset);
             expect(handle).toEqual({
+                assetLabel: AssetNameLabel.LBL_222,
+                assetName: asset,
                 hex: `${AssetNameLabel.LBL_222}6275727269746f`,
-                name: 'burrito'
+                name: 'burrito',
+                isCip67: true
             });
         });
 
         it('should strip off 100 asset name label and return handle name', () => {
-            const handle = getHandleNameFromAssetName(`f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_100}6275727269746f`);
+            const asset = `f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a.${AssetNameLabel.LBL_100}6275727269746f`;
+            const handle = getHandleNameFromAssetName(asset);
             expect(handle).toEqual({
-                hex: `${AssetNameLabel.LBL_100}6275727269746f`,
-                name: 'burrito'
+                assetLabel: AssetNameLabel.LBL_100,
+                assetName: asset,
+                hex: `${AssetNameLabel.LBL_222}6275727269746f`,
+                name: 'burrito',
+                isCip67: true
             });
         });
     });

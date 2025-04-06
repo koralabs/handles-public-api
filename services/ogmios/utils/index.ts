@@ -1,5 +1,4 @@
-import { AssetNameLabel, LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { Buffer } from 'buffer';
+import { AssetNameLabel, checkNameLabel, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import v8 from 'v8';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
@@ -65,19 +64,24 @@ export const buildOnChainObject = <T>(cborData: any): T | null => {
     }
 };
 
-export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string } => {
-    let hex = `${assetName}`;
-
+export const getHandleNameFromAssetName = (asset: string): { name: string; hex: string, isCip67: boolean, assetLabel: AssetNameLabel, assetName: string } => {
+    let hex = `${asset}`;
+    
     // check if asset name has a period. If so, it includes the policyId
     if (hex.includes('.')) {
         hex = hex.split('.')[1];
     }
-
-    const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
+    const {isCip67, name, assetLabel} = checkNameLabel(hex)
+    if (isCip67) {
+        hex = `${assetLabel == AssetNameLabel.LBL_000 ? assetLabel : AssetNameLabel.LBL_222}${hex.replace(assetLabel ?? '', '')}`
+    }
 
     return {
-        name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
-        hex
+        name,
+        hex,
+        isCip67,
+        assetLabel,
+        assetName: asset
     };
 };
 
