@@ -26,7 +26,7 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
             const imported = await import(`${folderPath}/${f}`);
             try {
                 return new imported.default();
-            } catch (error) {
+            } catch {
                 return imported.default;
             }
         })

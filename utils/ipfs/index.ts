@@ -1,7 +1,7 @@
 import { LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { decodeCborToJson } from '@koralabs/kora-labs-common/utils/cbor';
-import { requestIpfs } from './requestIpfs';
 import { getIpfsGateway } from '../../config';
+import { requestIpfs } from './requestIpfs';
 
 export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise<any> => {
     let ipfsGateway = getIpfsGateway();
@@ -23,6 +23,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
         if (cbor) {
             try {
                 const json = await decodeCborToJson({ cborString: cbor, schema });
+                // eslint-disable-next-line no-prototype-builtins
                 if (json.hasOwnProperty('constructor_0')) {
                     const [data] = json.constructor_0;
                     return data;

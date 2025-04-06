@@ -3,9 +3,9 @@ openapi: 3.0.3
 info:
   title: Handles Public API
   description: ADA Handle Public API
-  termsOfService: https://mint.handle.me/tou
+  termsOfService: https://handle.me/#tou
   contact:
-    email: hello@adahandle.com
+    email: hello@koralabs.io
   version: "{{version}}"
 servers:
 - url: https://api.handle.me
@@ -119,6 +119,12 @@ paths:
         required: false
         schema:
           type: string
+      - name: hex
+        in: query
+        description: Set to `true` if the search is in hex form
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: Successful and up to date
@@ -386,7 +392,7 @@ paths:
           description: Handle not found
       security:
       - api-key: []
-  "/handles/{handle}/subhandle_settings":
+  "/handles/{handle}/subhandle-settings":
     get:
       tags:
       - handles
@@ -422,7 +428,7 @@ paths:
           description: Handle not found
       security:
       - api-key: []
-  "/handles/{handle}/subhandle_settings/utxo":
+  "/handles/{handle}/subhandle-settings/utxo":
     get:
       tags:
       - handles

@@ -1,17 +1,38 @@
-import { AssetNameLabel, HandleType, IHandleStats, diff, getDateStringFromSlot, getElapsedTime, 
-    LogCategory, Logger, AddressDetails, getAddressHolderDetails, bech32FromHex, getPaymentKeyHash,
-    IHandleFileContent, IHandleStoreMetrics, SaveMintingTxInput, SavePersonalizationInput, 
-    SaveWalletAddressMoveInput, HolderAddressIndex, ISlotHistoryIndex, HandleHistory, StoredHandle, 
-    SaveSubHandleSettingsInput, 
-    IPersonalizedHandle} from '@koralabs/kora-labs-common';
+import {
+    AddressDetails,
+    AssetNameLabel,
+    bech32FromHex,
+    buildCharacters,
+    buildDrep,
+    buildNumericModifiers,
+    decodeAddress,
+    diff,
+    getAddressHolderDetails,
+    getDateStringFromSlot, getElapsedTime,
+    getPaymentKeyHash,
+    getRarity,
+    HandleHistory,
+    HandleType,
+    HolderAddressIndex,
+    IHandleFileContent,
+    IHandleStats,
+    IHandleStoreMetrics,
+    ISlotHistoryIndex,
+    LogCategory, Logger,
+    SaveMintingTxInput, SavePersonalizationInput,
+    SaveSubHandleSettingsInput,
+    SaveWalletAddressMoveInput,
+    StoredHandle
+} from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
-import { inflate } from 'zlib';
-import { promisify } from 'util';
+import * as crypto from 'crypto';
 import fs from 'fs';
+import { promisify } from 'util';
 import { Worker } from 'worker_threads';
-import { isDatumEndpointEnabled, NETWORK, NODE_ENV, DISABLE_HANDLES_SNAPSHOT } from '../../../config';
-import { buildCharacters, buildNumericModifiers, getRarity } from '../../../services/ogmios/utils';
+import { inflate } from 'zlib';
+import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../../config';
 import { getDefaultHandle } from '../../../utils/getDefaultHandle';
+
 
 export class HandleStore {
     // Indexes
@@ -23,13 +44,14 @@ export class HandleStore {
     static ogIndex = new Map<string, Set<string>>();
     static charactersIndex = new Map<string, Set<string>>();
     static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    static hashOfStakeKeyHashIndex = new Map<string, Set<string>>();
     static addressesIndex = new Map<string, Set<string>>();
     static numericModifiersIndex = new Map<string, Set<string>>();
     static lengthIndex = new Map<string, Set<string>>();
 
     static twelveHourSlot = 43200; // value comes from the securityParam here: https://cips.cardano.org/cips/cip9/#nonupdatableparameters then converted to slots
     static storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    static storageSchemaVersion = 38;
+    static storageSchemaVersion = 39;
     static metrics: IHandleStoreMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -52,7 +74,7 @@ export class HandleStore {
 
     static getByHex(hex: string): StoredHandle | null {
         let handle: StoredHandle | null = null;
-        for (let [key, value] of HandleStore.handles.entries()) {
+        for (const [ , value] of HandleStore.handles.entries()) {
             if (value.hex === hex) handle = value;
             break;
         }
@@ -108,10 +130,11 @@ export class HandleStore {
         } = updatedHandle;
 
         const holder = getAddressHolderDetails(ada);
-        updatedHandle.holder = holder.address;
-        updatedHandle.holder_type = holder.type;
         const payment_key_hash = (await getPaymentKeyHash(ada))!;
         updatedHandle.payment_key_hash = payment_key_hash;
+        updatedHandle.drep = buildDrep(ada, updatedHandle.id_hash?.replace('0x', ''));
+        updatedHandle.holder = holder.address;
+        updatedHandle.holder_type = holder.type;
         const handleDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -128,7 +151,6 @@ export class HandleStore {
         this.addIndexSet(this.ogIndex, `${ogFlag}`, name);
         this.addIndexSet(this.charactersIndex, characters, name);
         this.addIndexSet(this.paymentKeyHashesIndex, payment_key_hash, name);
-        this.addIndexSet(this.addressesIndex, ada, name);
         this.addIndexSet(this.numericModifiersIndex, numeric_modifiers, name);
         this.addIndexSet(this.lengthIndex, `${length}`, name);
 
@@ -137,8 +159,28 @@ export class HandleStore {
             this.addIndexSet(this.subHandlesIndex, rootHandle, name);
         }
 
+        if (holder.address && holder.address != '') {
+            // This could return null if it is a pre-Shelley address (not bech32)
+            const decodedAddress = decodeAddress(holder.address);
+            const oldDecodedAddress = decodeAddress(`${oldHandle?.holder}`);
+            if (decodedAddress) {
+                if (oldDecodedAddress) {
+                    // if there is an old stake key hash, remove it from the index
+                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress.slice(2), 'hex').digest('hex')
+                    this.hashOfStakeKeyHashIndex.get(oldHashofStakeKeyHash)?.delete(name);                    
+                }
+                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
+                this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
+            }
+        }
+
+        this.addressesIndex.get(oldHandle?.resolved_addresses.ada!)?.delete(name); 
+        this.addIndexSet(this.addressesIndex, ada, name);
+
+        // This is commented out for now as we might not need it since the history gets cleaned up on every call
+        // const isWithinMaxSlot = this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
         const isWithinMaxSlot = true;
-        this.metrics.lastSlot && this.metrics.currentSlot && this.metrics.lastSlot - this.metrics.currentSlot < this.twelveHourSlot;
+
         if (saveHistory && isWithinMaxSlot) {
             const history = HandleStore.buildHandleHistory(updatedHandle, oldHandle);
             if (history)
@@ -244,7 +286,7 @@ export class HandleStore {
         this.holderAddressIndex.set(holderAddress, holder);
     }
 
-    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> => {
+    static buildHandle = async ({ hex, name, adaAddress, og_number, image, slotNumber, utxo, lovelace, datum, script, amount = 1, bg_image = '', pfp_image = '', svg_version = '', version = 0, image_hash = '', handle_type = HandleType.HANDLE, resolved_addresses, personalization, reference_token, last_update_address, sub_characters, sub_length, sub_numeric_modifiers, sub_rarity, virtual, original_address, id_hash, pz_enabled, last_edited_time }: SaveMintingTxInput): Promise<StoredHandle> => {
         const newHandle: StoredHandle = {
             name,
             hex,
@@ -286,6 +328,7 @@ export class HandleStore {
             sub_rarity,
             virtual,
             original_address,
+            id_hash,
             pz_enabled,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
             last_edited_time
@@ -341,7 +384,7 @@ export class HandleStore {
         const existingHandle = HandleStore.get(input.name);
         if (existingHandle) {
             // check if existing handle has a utxo. If it does, we may have a double mint
-            if (!!existingHandle.utxo) {
+            if (existingHandle.utxo) {
                 const updatedHandle = { ...existingHandle, amount: existingHandle.amount + 1 };
                 await HandleStore.save({ handle: updatedHandle, oldHandle: existingHandle });
                 return;
@@ -356,7 +399,8 @@ export class HandleStore {
                 personalization: existingHandle.personalization,
                 last_update_address: existingHandle.last_update_address,
                 pz_enabled: existingHandle.pz_enabled,
-                last_edited_time: existingHandle.last_edited_time
+                last_edited_time: existingHandle.last_edited_time,
+                id_hash: existingHandle.id_hash
             };
             const builtHandle = await HandleStore.buildHandle(inputWithExistingHandle);
             await HandleStore.save({ handle: builtHandle, oldHandle: existingHandle });
@@ -409,11 +453,11 @@ export class HandleStore {
         // but to be safe, we'll remove the ada address from the resolved addresses
         const addresses = personalizationDatum?.resolved_addresses
             ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                  if (key !== 'ada') {
-                      acc[key] = value as string;
-                  }
-                  return acc;
-              }, {})
+                if (key !== 'ada') {
+                    acc[key] = value as string;
+                }
+                return acc;
+            }, {})
             : {};
 
         const existingHandle = HandleStore.get(name);
@@ -440,6 +484,7 @@ export class HandleStore {
                 virtual,
                 last_update_address: personalizationDatum?.last_update_address,
                 original_address: personalizationDatum?.original_address,
+                id_hash: personalizationDatum?.id_hash,
                 lovelace: 0,
                 pz_enabled: personalizationDatum?.pz_enabled ?? false,
                 last_edited_time: personalizationDatum?.last_edited_time
@@ -473,6 +518,7 @@ export class HandleStore {
             last_update_address: personalizationDatum?.last_update_address,
             virtual,
             original_address: personalizationDatum?.original_address,
+            id_hash: personalizationDatum?.id_hash,
             pz_enabled: personalizationDatum?.pz_enabled ?? false,
             last_edited_time: personalizationDatum?.last_edited_time,
             payment_key_hash: (await getPaymentKeyHash(adaAddress))!,
@@ -497,7 +543,7 @@ export class HandleStore {
                 category: LogCategory.NOTIFY
             });
 
-            throw new Error(message);
+            throw new Error(message);  
         }
 
         const updatedHandle: StoredHandle = {
@@ -611,19 +657,19 @@ export class HandleStore {
     }
 
     static isCaughtUp(): boolean {
-        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1', networkSync = 0 } = this.metrics;
+        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.metrics;
         //console.log('lastSlot', lastSlot, 'currentSlot', currentSlot, 'currentBlockHash', currentBlockHash, 'tipBlockHash', tipBlockHash);
-        return networkSync == 1 && lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
+        return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
-    static async saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): Promise<boolean> {
+    static saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
         const handles = {
             ...this.convertMapsToObjects(this.handles)
         };
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${this.handles.size} handles & ${history.length} history entries`);
-        const result = await HandleStore.saveFileContents({
+        const result = HandleStore.saveFileContents({
             content: { handles, history },
             storagePath,
             slot,
@@ -633,9 +679,9 @@ export class HandleStore {
         return result;
     }
 
-    static async saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): Promise<boolean> {
+    static saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): boolean {
         try {
-            const worker = new Worker('./workers/saveFile.worker.js', {
+            const worker = new Worker('./workers/handleStore.worker.js', {
                 workerData: {
                     content,
                     storagePath,
@@ -650,15 +696,15 @@ export class HandleStore {
             });
             worker.on('error', (msg) => {
                 Logger.log({
-                    message: `Error calling lockfile worker: ${msg}`,
-                    event: 'saveFileContents.errorSavingFile',
+                    message: `Error calling lockfile worker for handleStore: ${msg}`,
+                    event: 'saveFileContents.errorSavingHandleStoreFile',
                     category: LogCategory.INFO
                 });
             });
         } catch (error: any) {
             Logger.log({
-                message: `Error calling lockfile worker: ${error.message}`,
-                event: 'saveFileContents.errorSavingFile',
+                message: `Error calling lockfile worker for handleStore: ${error.message}`,
+                event: 'saveFileContents.errorSavingHandleStoreFile',
                 category: LogCategory.INFO
             });
             return false;
@@ -674,7 +720,7 @@ export class HandleStore {
             }
 
             return false;
-        } catch (error) {
+        } catch {
             return false;
         }
     }
@@ -736,10 +782,7 @@ export class HandleStore {
         }
     }
 
-    static async prepareHandlesStorage(loadS3 = true): Promise<{
-        slot: number;
-        hash: string;
-    } | null> {
+    static async prepareHandlesStorage(loadS3 = true): Promise<{ slot: number; hash: string; } | null> {
         const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
         const files = [HandleStore.getFile<IHandleFileContent>(this.storageFilePath)];
         if (loadS3) {
@@ -747,10 +790,11 @@ export class HandleStore {
         }
         const [localHandles, externalHandles] = await Promise.all(files);
 
-        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) >= this.storageSchemaVersion ? localHandles : null;
+        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? localHandles : null;
+        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.storageSchemaVersion ? externalHandles : null;
 
         // If we don't have any valid files, return null
-        if (!externalHandles && !localContent) {
+        if (!externalContent && !localContent) {
             Logger.log({
                 message: 'No valid files found',
                 category: LogCategory.INFO,
@@ -780,31 +824,28 @@ export class HandleStore {
         } | null = null;
 
         // only the local file exists
-        if (localContent && !externalHandles) {
+        if (localContent && !externalContent) {
             filesContent = buildFilesContent(localContent);
         }
 
         // only the external file exists
-        if (externalHandles && !localContent) {
-            filesContent = buildFilesContent(externalHandles, true);
+        if (externalContent && !localContent) {
+            filesContent = buildFilesContent(externalContent, true);
         }
 
         // both files exist and we need to compare them to see which one to use.
-        if (externalHandles && localContent) {
-            if (
-                // check to see if the local file slot and schema version are greater than the external file
-                // if so, use the local file otherwise use the external file
-                localContent.slot > externalHandles.slot &&
-                (localContent.schemaVersion ?? 0) >= (externalHandles.schemaVersion ?? 0)
-            ) {
+        if (externalContent && localContent) {
+            // check to see if the local file slot is greater than the external file
+            // if so, use the local file otherwise use the external file
+            if (localContent.slot > externalContent.slot) {
                 filesContent = buildFilesContent(localContent);
             } else {
-                filesContent = buildFilesContent(externalHandles, true);
+                filesContent = buildFilesContent(externalContent, true);
             }
         }
 
         // At this point, we should have a valid filesContent object.
-        // If we don't perform this check we'd have to use a large terinary operator which is pretty ugly
+        // If we don't perform this check we'd have to use a large ternary operator which is pretty ugly
         if (!filesContent) {
             return null;
         }
@@ -869,7 +910,7 @@ export class HandleStore {
         const orderedHistoryIndex = [...this.slotHistoryIndex.entries()].sort((a, b) => b[0] - a[0]);
         let handleUpdates = 0;
         let handleDeletes = 0;
-        let rewoundHandles = [];
+        const rewoundHandles = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {

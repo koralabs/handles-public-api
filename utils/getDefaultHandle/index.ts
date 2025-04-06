@@ -60,11 +60,11 @@ export const getDefaultHandle = (handles: IHandle[]): IHandle => {
 
     // filter shortest length from handles
     const sortedHandlesByLength = sortedByLength(handles);
-    if (sortedHandlesByLength.length == 1) sortedHandlesByLength[0];
+    if (sortedHandlesByLength.length == 1) return sortedHandlesByLength[0];
 
     //Latest slot number if same length
     const sortedHandlesBySlot = sortByUpdatedSlotNumber(sortedHandlesByLength);
-    if (sortedHandlesBySlot.length == 1) sortedHandlesBySlot[0];
+    if (sortedHandlesBySlot.length == 1) return sortedHandlesBySlot[0];
 
     //Alphabetical if minted same time
     return sortAlphabetically(sortedHandlesBySlot);

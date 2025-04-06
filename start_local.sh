@@ -26,3 +26,5 @@ else
         echo 'local-omgios already running...'
     fi
 fi
+
+cp ../api.handle.me/workers/* ./workers/ 

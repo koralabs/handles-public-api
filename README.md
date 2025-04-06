@@ -61,6 +61,8 @@ All of the options below can be passed into the container using `-e ENV_VAR=valu
 
 > `DISABLE_HANDLES_SNAPSHOT=true` By default, the container will try and download a Handles snapshot from S3 to reduce spin-up time. Use this option to skip the snapshot download and start the Ogmios Handles scan from origin. **🚩WARNING:** this can take a few hours.
 
+> `CONFIG_FILES_BASE_URL='https://book.world.dev.cardano.org/environments'` A URL where the config, topology, and genesis files can be found. It should have the same folder structure as the default. 
+
 &nbsp;
 
 ## NOTES

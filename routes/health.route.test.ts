@@ -19,38 +19,38 @@ const getStats = (): IHandleStats => ({
     current_block_hash: '',
     schema_version: 1
 });
-let caughtUp = jest.fn().mockReturnValue(true);
+const caughtUp = jest.fn().mockReturnValue(true);
 jest.mock('../ioc/main.registry', () => ({
-        ['handlesRepo']: jest.fn().mockReturnValue({
-            getHandleByName: (handleName: string) => {
-                if (['nope'].includes(handleName)) return null;
+    ['handlesRepo']: jest.fn().mockReturnValue({
+        getHandleByName: (handleName: string) => {
+            if (['nope'].includes(handleName)) return null;
 
-                return {
-                    handle: handleName
-                };
-            },
-            getAll: () => {
-                return [
-                    {
-                        handle: 'burritos'
-                    }
-                ];
-            },
-            getAllHandleNames: () => {
-                return ['burritos', 'tacos', 'barbacoa'];
-            },
-            getHandleStats: () => {
-                const stats = getStats();
-                return stats;
-            },
-            currentHttpStatus: () => {
-                return 200;
-            },
-            isCaughtUp: () => caughtUp()
-        }),
-        ['apiKeysRepo']: jest.fn().mockReturnValue({
-            get: (key: string) => key === 'valid-key'
-        })
+            return {
+                handle: handleName
+            };
+        },
+        getAll: () => {
+            return [
+                {
+                    handle: 'burritos'
+                }
+            ];
+        },
+        getAllHandleNames: () => {
+            return ['burritos', 'tacos', 'barbacoa'];
+        },
+        getHandleStats: () => {
+            const stats = getStats();
+            return stats;
+        },
+        currentHttpStatus: () => {
+            return 200;
+        },
+        isCaughtUp: () => caughtUp()
+    }),
+    ['apiKeysRepo']: jest.fn().mockReturnValue({
+        get: (key: string) => key === 'valid-key'
+    })
 }));
 
 afterAll(async () => {
