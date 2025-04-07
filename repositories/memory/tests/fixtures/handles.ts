@@ -1,10 +1,12 @@
-import { HandleType, HolderAddressIndex, ISlotHistoryIndex, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
+import { HandleSearchModel, HandleType, Holder, ISlotHistory, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
-import { HandleStore } from '../../HandleStore';
+import { MemoryHandlesProvider } from '../..';
+import { HandlesRepository } from '../../../handlesRepository';
+const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 export const handlesFixture: StoredHandle[] = [
     {
-        hex: 'barbacoa-hex',
+        hex: '6261726261636f61',
         name: 'barbacoa',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -12,7 +14,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 8,
         og_number: 0,
         utxo: 'utxo1#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.basic,
         characters: 'letters',
@@ -37,7 +39,7 @@ export const handlesFixture: StoredHandle[] = [
         payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
-        hex: 'burrito-hex',
+        hex: '6275727269746f',
         name: 'burrito',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -45,7 +47,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 7,
         og_number: 0,
         utxo: 'utxo2#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
@@ -70,7 +72,7 @@ export const handlesFixture: StoredHandle[] = [
         payment_key_hash: '9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388'
     },
     {
-        hex: 'taco-hex',
+        hex: '7461636f',
         name: 'taco',
         holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
         image: '',
@@ -78,7 +80,7 @@ export const handlesFixture: StoredHandle[] = [
         length: 4,
         og_number: 0,
         utxo: 'utxo3#0',
-        policy: 'f0ff',
+        policy,
         lovelace: 0,
         rarity: Rarity.common,
         characters: 'letters',
@@ -104,9 +106,10 @@ export const handlesFixture: StoredHandle[] = [
     }
 ];
 
-export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
-    0: {},
-    1: {
+// @ts-expect-error
+export const slotHistoryFixture: Map<number, ISlotHistory> = new Map([
+    [0, {}],
+    [1, {
         barbacoa: {
             old: null
         },
@@ -116,25 +119,25 @@ export const slotHistoryFixture: Record<number, ISlotHistoryIndex> = {
         taco: {
             old: null
         }
-    },
-    2: {
+    }],
+    [2, {
         barbacoa: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    },
-    3: {
+    }],
+    [3, {
         burrito: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    },
-    4: {
+    }],
+    [4, {
         barbacoa: {
             old: { resolved_addresses: { ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q' } }
         }
-    }
-};
+    }]
+]);
 
-export const holdersFixture = new Map<string, HolderAddressIndex>([
+export const holdersFixture = new Map<string, Holder>([
     [
         'addr1',
         {
@@ -158,24 +161,25 @@ export const holdersFixture = new Map<string, HolderAddressIndex>([
 ]);
 
 export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
+    const repo = new HandlesRepository(new MemoryHandlesProvider());
     const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
-        if (!HandleStore.get(handleName)) {
-            const handle = await HandleStore.buildHandle({
-                adaAddress: createRandomAddress(),
+        if (!repo.get(handleName)) {
+            const handle = await repo.Internal.buildHandle({
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
-                policy: 'f0ff',
+                policy,
                 image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                 og_number: Math.floor(Math.random() * 2438),
-                slotNumber: i,
                 handle_type: HandleType.HANDLE,
                 utxo: createRandomUtxo(),
-                lovelace: 0
+                lovelace: 0,
+                resolved_addresses: {ada: createRandomAddress()},
+                updated_slot_number: i
             });
             if (saveToHandleStore) {
-                await HandleStore.save({ handle });
+                await repo.save(handle);
             }
             handles.push(handle);
         }
@@ -210,41 +214,47 @@ export const createRandomHandleName = (): string => {
 };
 
 export const performRandomHandleUpdates = async (count: number, beginningSlot = 0) => {
+    const repo = new HandlesRepository(new MemoryHandlesProvider());
     for (let i = 0; i < count; i++) {
         switch (i % 3) {
             case 0: { // add
                 const handleName = createRandomHandleName();
-                if (!HandleStore.get(handleName)) {
-                    const newHandle = await HandleStore.buildHandle({
-                        adaAddress: createRandomAddress(),
+                if (!repo.get(handleName)) {
+                    const newHandle = await repo.Internal.buildHandle({
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
-                        policy: 'f0ff',
+                        policy,
                         image: `ipfs://${Buffer.from(handleName).toString('hex')}`,
                         og_number: Math.floor(Math.random() * 2438),
-                        slotNumber: beginningSlot + i,
                         handle_type: HandleType.HANDLE,
                         utxo: createRandomUtxo(),
-                        lovelace: 0
+                        lovelace: 0,
+                        resolved_addresses: {ada: createRandomAddress()},
+                        updated_slot_number: beginningSlot + i
                     });
-                    await HandleStore.save({ handle: newHandle });
+                    await repo.save(newHandle);
                 }
                 break;
             }
             case 1: { // update
-                const oldHandle = HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)];
+                const handleNames = repo.getAllHandleNames({} as HandleSearchModel);
+                const oldHandle = repo.get(handleNames[Math.floor(Math.random() * handleNames.length)]) ?? undefined;
                 const handle = {
                     ...oldHandle,
                     utxo: createRandomUtxo(),
                     resolved_addresses: { ada: createRandomAddress() },
                     updated_slot_number: beginningSlot + i
-                };
-                await HandleStore.save({ handle, oldHandle });
+                } as StoredHandle;
+                await repo.save(handle, oldHandle);
                 break;
             }
-            case 2: // remove
-                await HandleStore.burnHandle(HandleStore.getHandles()[Math.floor(Math.random() * HandleStore.getHandles().length)].name, beginningSlot + i);
+            case 2: { // remove
+                const handleNames = repo.getAllHandleNames({} as HandleSearchModel);
+                const handle = repo.get(handleNames[Math.floor(Math.random() * handleNames.length)]);
+                if (handle)
+                    await repo.removeHandle(handle, beginningSlot + i);
                 break;
+            }
         }
     }
 };

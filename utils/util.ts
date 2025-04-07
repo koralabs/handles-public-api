@@ -32,6 +32,3 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
         })
     );
 };
-
-
-

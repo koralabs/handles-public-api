@@ -1,8 +1,10 @@
-import { HandleStore } from '.';
-import { handlesFixture } from '../tests/fixtures/handles';
+import { MemoryHandlesProvider } from '.';
+import { HandlesRepository } from '../handlesRepository';
+import { handlesFixture } from './tests/fixtures/handles';
 
 describe('buildHandleHistory', () => {
-    it('should log the correct old and new value', () => {
+    const repo = new HandlesRepository(new MemoryHandlesProvider);
+    it('should log the correct old and new value', async () => {
         const newHandle = {
             ...handlesFixture[0],
             resolved_addresses: {
@@ -11,7 +13,7 @@ describe('buildHandleHistory', () => {
         };
         const oldHandle = handlesFixture[0];
 
-        const history = HandleStore.buildHandleHistory(newHandle, oldHandle);
+        const history = await repo.Internal.buildHandleHistory(newHandle, oldHandle);
 
         expect(history).toEqual({
             new: {
@@ -24,7 +26,7 @@ describe('buildHandleHistory', () => {
     });
 
     it('should not add history if nothing changes', () => {
-        const history = HandleStore.buildHandleHistory(handlesFixture[0], handlesFixture[0]);
+        const history = repo.Internal.buildHandleHistory(handlesFixture[0], handlesFixture[0]);
 
         expect(history).toEqual(null);
     });

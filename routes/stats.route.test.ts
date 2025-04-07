@@ -3,19 +3,19 @@ import App from '../app';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
-        getTotalHandlesStats: () => {
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
+        getMetrics: () => {
             return {
                 total_handles: 10,
                 total_holders: 5
             };
         },
-        currentHttpStatus: () => 200
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+        currentHttpStatus: () => {
+            return 200;
+        },
+        isCaughtUp: () => jest.fn().mockReturnValue(true)
+    }))
 }
 ));
 

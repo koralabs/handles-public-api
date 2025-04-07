@@ -6,8 +6,8 @@ import * as config from '../config';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
         getHandleByName: (handleName: string) => {
             if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
@@ -63,6 +63,41 @@ jest.mock('../ioc/main.registry', () => ({
                     cbor: 'a247'
                 }
             };
+        },
+        getAllHandles: () => {
+            return [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    policy: 'f0ff',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ]
+        },
+        search: () => {
+            return { searchTotal: 1, handles: [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    policy: 'f0ff',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ] }
+        },
+        getHolder: (key: string) => {
+            if (key !== 'nope') {
+                return {
+                    handles: ['burritos'],
+                    default_handle: 'burritos',
+                    manually_set: false
+                }
+            }
         },
         getAll: () => {
             return {
@@ -127,18 +162,36 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             };
         },
-        getSubHandles: (handleName: string) => {
+        getSubHandlesByRootHandle: (handleName: string) => {
             return [
                 { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
                 { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
                 { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
             ];
+        },
+        getMetrics: () => {
+            return {
+                firstSlot: 0,
+                lastSlot: 0,
+                currentSlot: 0,
+                elapsedOgmiosExec: 0,
+                elapsedBuildingExec: 0,
+                firstMemoryUsage: 0,
+                currentBlockHash: '',
+                tipBlockHash: '',
+                memorySize: 0,
+                networkSync: 0,
+                count: 0,
+                schemaVersion: 0
+            }
         }
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
+
+
+// ['apiKeysRepo']: jest.fn().mockReturnValue({
+//     get: (key: string) => key === 'valid-key'
+// })
 
 afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
@@ -421,7 +474,7 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /holders/:address', () => {
-        it('should throw error if address does not exist', async () => {
+        it('should return 404 if holder doesn\'t exist', async () => {
             const response = await request(app?.getServer()).get('/holders/nope');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Not found');

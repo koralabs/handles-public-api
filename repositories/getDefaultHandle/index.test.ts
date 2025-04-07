@@ -1,29 +1,36 @@
-import { getDefaultHandle } from './index';
+import { HandlesRepository } from '../handlesRepository';
+import { MemoryHandlesProvider } from '../memory';
 import { handles, handlesWithDifferentLengths, handlesWithDifferentSlotNumbers, ogHandles } from './fixtures/handles';
+const repo = new HandlesRepository(new MemoryHandlesProvider());
 
 describe('getDefaultHandle', () => {
     it('should sort OGs', () => {
-        const handle = getDefaultHandle(ogHandles);
+        // @ts-ignore
+        const handle = repo.getDefaultHandle(ogHandles);
         expect(handle).toEqual(ogHandles[0]);
     });
 
     it('should sort only one OG', () => {
-        const handle = getDefaultHandle([ogHandles[1]]);
+        // @ts-ignore
+        const handle = repo.getDefaultHandle([ogHandles[1]]);
         expect(handle).toEqual(ogHandles[1]);
     });
 
     it('should sort if there are multiple lengths', () => {
-        const handle = getDefaultHandle(handlesWithDifferentLengths);
+        // @ts-ignore
+        const handle = repo.getDefaultHandle(handlesWithDifferentLengths);
         expect(handle).toEqual(handlesWithDifferentLengths[1]);
     });
 
     it('should sort if there are multiple slot numbers', () => {
-        const handle = getDefaultHandle(handlesWithDifferentSlotNumbers);
+        // @ts-ignore
+        const handle = repo.getDefaultHandle(handlesWithDifferentSlotNumbers);
         expect(handle).toEqual(handlesWithDifferentSlotNumbers[2]);
     });
 
     it('should sort alphabetically', () => {
-        const handle = getDefaultHandle(handles);
+        // @ts-ignore
+        const handle = repo.getDefaultHandle(handles);
         expect(handle).toEqual(handles[1]);
     });
 });

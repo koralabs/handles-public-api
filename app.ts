@@ -1,5 +1,5 @@
 import { NextBlockResponse } from '@cardano-ogmios/schema';
-import { IHandleFileContent, IHandlesRepository, LogCategory, Logger, delay } from '@koralabs/kora-labs-common';
+import { Logger } from '@koralabs/kora-labs-common';
 import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
@@ -7,12 +7,11 @@ import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { parse } from 'yaml';
 import { CREDENTIALS, NODE_ENV, ORIGIN, PORT } from './config';
-import { handleEraBoundaries } from './config/constants';
 import { IBlockProcessor } from './interfaces/ogmios.interfaces';
 import { IRegistry } from './interfaces/registry.interface';
 import { DynamicLoadType } from './interfaces/util.interface';
 import errorMiddleware from './middlewares/error.middleware';
-import { LocalService } from './services/local/local.service';
+import { HandlesRepository } from './repositories/handlesRepository';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad } from './utils/util';
 
@@ -51,7 +50,7 @@ class App {
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         this.app.use(errorMiddleware);
-        this.initializeStorage();
+        this.initializeOgmios();
         return this;
     }
 
@@ -116,9 +115,9 @@ class App {
 
     private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
-        const handlesRepo = new this.registry.handlesRepo() as IHandlesRepository;
-        await handlesRepo.rollBackToGenesis();
-
+        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
+        handlesRepo.rollBackToGenesis();
+        
         if (this.blockProcessors.length > 0) {
             for (let i = 0; i < this.blockProcessors.length; i++) {
                 await this.blockProcessors[i].resetIndexes();
@@ -126,79 +125,14 @@ class App {
         }
     }
 
-    private async initializeStorage() {
+    private async initializeOgmios() {
         if (this.env === 'test') {
             return;
         }
 
-        if (this.env === 'local') {
-            const localService = new LocalService();
-            localService.startSync();
-            return;
-        }
-
-        const handlesRepo = new this.registry.handlesRepo() as IHandlesRepository;
-        // get s3 and EFS files
-        const files = (await handlesRepo.getFilesContent()) as IHandleFileContent[] | null;
-
-        const ogmiosService = new OgmiosService(this.registry.handlesRepo, this.processBlock.bind(this));
-
-        const isTrue = true
-        while (isTrue) {
-            try {
-                await ogmiosService.initialize();
-
-                if (!files) {
-                    await this.resetBlockProcessors();
-                    const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
-                    await ogmiosService.startSync(initialStartingPoint);
-                    break;
-                } else {
-                    const [firstFile] = files;
-                    try {
-                        await handlesRepo.prepareHandlesStorage(firstFile);
-                        await this.loadBlockProcessorIndexes();
-                        await ogmiosService.startSync({ slot: firstFile.slot, id: firstFile.hash });
-                        break;
-                    } catch (error: any) {
-                        Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
-                        // If error, try the other file's starting point
-                        if (error.code === 1000) {
-                            handlesRepo.destroy();
-                            if (files.length > 1) {
-                                const [secondFile] = files.slice(1);
-                                try {
-                                    await handlesRepo.prepareHandlesStorage(secondFile);
-                                    await this.loadBlockProcessorIndexes();
-                                    await ogmiosService.startSync({ slot: secondFile.slot, id: secondFile.hash });
-                                    break;
-                                } catch (error: any) {
-                                    Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.secondFileFailed' });
-                                    if (error.code === 1000) {
-                                        // this means the slot that came back from the files is bad
-                                        await this.resetBlockProcessors();
-                                        process.exit(2);
-                                    }
-
-                                    throw error;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (ogmiosService.client) ogmiosService.client.shutdown();
-            } catch (error: any) {
-                Logger.log({
-                    message: `Unable to connect Ogmios: ${error.message}`,
-                    category: LogCategory.ERROR,
-                    event: 'initializeStorage.failed.errorMessage'
-                });
-
-                if (ogmiosService.client) ogmiosService.client.shutdown();
-            }
-            await delay(30 * 1000);
-        }
+        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
+        const ogmiosService = new OgmiosService(handlesRepo, this.processBlock);
+        await ogmiosService.initialize(this.resetBlockProcessors, this.loadBlockProcessorIndexes);
     }
 
     private async initializeSwagger() {

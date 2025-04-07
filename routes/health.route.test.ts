@@ -1,13 +1,13 @@
+import { IApiMetricsViewModel } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
-import * as ogmiosUtils from '../services/ogmios/utils';
-import { IHandleStats } from '@koralabs/kora-labs-common';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
+import * as ogmiosUtils from '../services/ogmios/utils';
 
 jest.mock('../services/ogmios/ogmios.service');
 
 let percentage: string = '';
-const getStats = (): IHandleStats => ({
+const getStats = (): IApiMetricsViewModel => ({
     percentage_complete: percentage,
     current_memory_used: 0,
     memory_size: 0,
@@ -20,8 +20,8 @@ const getStats = (): IHandleStats => ({
     schema_version: 1
 });
 const caughtUp = jest.fn().mockReturnValue(true);
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
         getHandleByName: (handleName: string) => {
             if (['nope'].includes(handleName)) return null;
 
@@ -39,7 +39,7 @@ jest.mock('../ioc/main.registry', () => ({
         getAllHandleNames: () => {
             return ['burritos', 'tacos', 'barbacoa'];
         },
-        getHandleStats: () => {
+        getMetrics: () => {
             const stats = getStats();
             return stats;
         },
@@ -47,10 +47,7 @@ jest.mock('../ioc/main.registry', () => ({
             return 200;
         },
         isCaughtUp: () => caughtUp()
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
 
 afterAll(async () => {
