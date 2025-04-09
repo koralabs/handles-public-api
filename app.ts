@@ -22,6 +22,7 @@ class App {
     public startTimer: number;
     public registry: IRegistry;
     public blockProcessors: IBlockProcessor[] = [];
+    public handlesRepo: HandlesRepository | undefined;
 
     constructor() {
         this.app = express();
@@ -29,6 +30,7 @@ class App {
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
         this.startTimer = Date.now();
+        process.env.STORAGE_SCHEMA_VERSION = '42'
     }
 
     private _getDynamicLoadDirectories(): string[] {
@@ -50,6 +52,7 @@ class App {
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         this.app.use(errorMiddleware);
+        this.handlesRepo = new HandlesRepository(this.registry.handlesProvider()).initialize();
         this.initializeOgmios();
         return this;
     }
@@ -115,8 +118,7 @@ class App {
 
     private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
-        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
-        handlesRepo.rollBackToGenesis();
+        this.handlesRepo!.rollBackToGenesis();
         
         if (this.blockProcessors.length > 0) {
             for (let i = 0; i < this.blockProcessors.length; i++) {
@@ -126,12 +128,11 @@ class App {
     }
 
     private async initializeOgmios() {
-        if (this.env === 'test') {
+        if (process.env.READ_ONLY_STORE?.toLocaleLowerCase() == 'true'|| this.env === 'test') {
             return;
         }
 
-        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
-        const ogmiosService = new OgmiosService(handlesRepo, this.processBlock);
+        const ogmiosService = new OgmiosService(this.handlesRepo!, this.processBlock);
         await ogmiosService.initialize(this.resetBlockProcessors, this.loadBlockProcessorIndexes);
     }
 

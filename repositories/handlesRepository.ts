@@ -38,7 +38,8 @@ export class HandlesRepository {
     }
 
     public initialize() {
-        return this.provider.initialize();
+        this.provider.initialize();
+        return this;
     }
 
     public destroy(): void {

@@ -59,7 +59,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getSchemaVersion(): number {
-        return this._storageSchemaVersion;
+        return Number(process.env.STORAGE_SCHEMA_VERSION);
     }
 
     private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, Set<string> | Holder | ISlotHistory | StoredHandle> {
@@ -94,7 +94,6 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 42;
     private metrics: IApiMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -179,7 +178,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getAllHandles() {
-        return Array.from(HandleStore.handles).map(([handle]) => this.getHandle(handle) as StoredHandle);
+        return Array.from(HandleStore.handles).map(([,handle]) => this.returnHandleWithDefault(structuredClone(handle)) as StoredHandle);
     }
 
     private _getRootHandleSubHandles (rootHandle: string) {
@@ -286,7 +285,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
                     slot,
                     hash,
                     testDelay,
-                    storageSchemaVersion: this._storageSchemaVersion
+                    storageSchemaVersion: this.getSchemaVersion()
                 }
             });
             worker.on('message', (data) => {
@@ -357,17 +356,14 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         }
 
         try {
-            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this._storageSchemaVersion}/${fileName}`;
+            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getSchemaVersion()}/${fileName}`;
             Logger.log(`Fetching ${url}`);
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
                 const buff = await awsResponse.arrayBuffer();
-
-                const unZipPromise = promisify(inflate);
-
+                const unZipPromise = promisify(inflate);                
                 const result = await unZipPromise(buff);
                 const text = result.toString('utf8');
-
                 Logger.log(`Found ${url}`);
                 return JSON.parse(text) as T;
             }
@@ -387,8 +383,8 @@ export class MemoryHandlesProvider implements IHandlesProvider {
             this._getFileOnline<IHandleFileContent>(fileName)
         ]);
 
-        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this._storageSchemaVersion ? localHandles : null;
-        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this._storageSchemaVersion ? externalHandles : null;
+        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.getSchemaVersion() ? localHandles : null;
+        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.getSchemaVersion() ? externalHandles : null;
 
         // If we don't have any valid files, return null
         if (!externalContent && !localContent) {
@@ -500,7 +496,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         saveHandlesFile: this._saveHandlesFile.bind(this),
         getFile: this._getFile.bind(this),
         getRootHandleSubHandles: this._getRootHandleSubHandles.bind(this),
-        storageSchemaVersion: this._storageSchemaVersion,
+        storageSchemaVersion: this.getSchemaVersion(),
         getFileOnline: this._getFileOnline.bind(this),
         getFilesContent: this._getFilesContent.bind(this)
     }

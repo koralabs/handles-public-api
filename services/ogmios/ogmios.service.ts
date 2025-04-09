@@ -115,7 +115,6 @@ class OgmiosService {
 
     private async _resume(startingPoint: Point) {        
         await this.client!.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-        this.handlesRepo.initialize();
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
