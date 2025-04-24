@@ -169,7 +169,7 @@ export class HandleStore {
                     const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
                     this.hashOfStakeKeyHashIndex.get(oldHashofStakeKeyHash)?.delete(name);                    
                 }
-                const hashofStakeKeyHash = updatedHandle.id_hash ? updatedHandle.id_hash.slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
+                const hashofStakeKeyHash = updatedHandle.id_hash ? updatedHandle.id_hash.replace('0x', '').slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
                 this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
             }
         }

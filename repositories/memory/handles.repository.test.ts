@@ -344,6 +344,14 @@ describe('MemoryHandlesRepository Tests', () => {
         });
     });
 
+    describe('getHandlesByStakeKeyHashes', () => {
+        it('should get handles by stakeKeyHashes', async () => {
+            const repo = new MemoryHandlesRepository();
+            const result = repo.getHandlesByStakeKeyHashes(['e0f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca']);
+            expect(result).toEqual(['barbacoa', 'burrito', 'taco', 'v@taco']);
+        });
+    });
+
     describe('getHandleStats', () => {
         it('should get metrics', () => {
             const repo = new MemoryHandlesRepository();
