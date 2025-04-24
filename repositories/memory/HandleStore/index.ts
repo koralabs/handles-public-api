@@ -166,10 +166,10 @@ export class HandleStore {
             if (decodedAddress) {
                 if (oldDecodedAddress) {
                     // if there is an old stake key hash, remove it from the index
-                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress.slice(2), 'hex').digest('hex')
+                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
                     this.hashOfStakeKeyHashIndex.get(oldHashofStakeKeyHash)?.delete(name);                    
                 }
-                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
+                const hashofStakeKeyHash = updatedHandle.id_hash ? updatedHandle.id_hash.slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
                 this.addIndexSet(this.hashOfStakeKeyHashIndex, hashofStakeKeyHash, name);
             }
         }

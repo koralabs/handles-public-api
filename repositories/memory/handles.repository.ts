@@ -293,7 +293,9 @@ export class MemoryHandlesRepository implements IHandlesRepository {
             return array.length === 0 ? [this.EMPTY] : array;
         }
         ).concat(addresses.map((h) => {
-            const hashed = crypto.createHash('md5').update(Buffer.from(decodeAddress(h)!.slice(2), 'hex')).digest('hex');
+            const decodedAddress = decodeAddress(h);
+            if (!decodedAddress) return [this.EMPTY];
+            const hashed = crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex');
             const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
             return array.length === 0 ? [this.EMPTY] : array;
         })).flat() as string[];
@@ -301,7 +303,7 @@ export class MemoryHandlesRepository implements IHandlesRepository {
 
     public getHandlesByStakeKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
-            const hashed = crypto.createHash('md5').update(Buffer.from(h.slice(2), 'hex')).digest('hex');
+            const hashed = crypto.createHash('md5').update(h, 'hex').digest('hex');
             const array = Array.from(HandleStore.hashOfStakeKeyHashIndex.get(hashed!) ?? []);
             return array.length === 0 ? [this.EMPTY] : array;
         }).flat() as string[];
