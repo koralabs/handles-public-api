@@ -301,6 +301,107 @@ describe('HandleStore tests', () => {
             ]);
         });
 
+        // it('Should process drep handle update and match stake key', async () => {
+        //     const name = 'pollo-verde';
+        //     const walletAddress = 'addr_test1qpyc3jke4g0t6uemzetftnl0je0a5thy9k4jmpvycsas88yklyw6t0d3jt0zg9wnumgxftk9ft8wvjxzc6reltgllkss5nzat4';
+        //     const holder = klc.getAddressHolderDetails('addr_test1qpyc3jke4g0t6uemzetftnl0je0a5thy9k4jmpvycsas88yklyw6t0d3jt0zg9wnumgxftk9ft8wvjxzc6reltgllkss5nzat4');
+        //     const decodedAddress = klc.decodeAddress(holder.address);
+        //     const drepAddress = 'addr_test1vrx8sta8ea4t8snzctu23j5s0r0rmgjclwdcr49xm6yq7ps72ms45';
+
+        //     // Mint a Handle using one wallet
+        //     await HandleStore.saveMintedHandle({
+        //         hex: '000de140706F6C6C6F2D7665726465',
+        //         name,
+        //         adaAddress: walletAddress,
+        //         og_number: 0,
+        //         utxo: 'utxo123#0',
+        //         policy: 'f0ff',
+        //         lovelace: 0,
+        //         image: 'ipfs://123',
+        //         slotNumber: 100,
+        //         image_hash: '0xtodo',
+        //         svg_version: '1.0.0',
+        //         handle_type: HandleType.HANDLE
+        //     });
+
+        //     // Send the Handle to the DRep address
+        //     await HandleStore.saveHandleUpdate({
+        //         name,
+        //         adaAddress: drepAddress,
+        //         lovelace: 1,
+        //         policy: 'f0ff',
+        //         slotNumber: 100,
+        //         utxo: 'utxo123#0'
+        //     })
+
+        //     // set the datum hash for the DRep
+        //     const personalizationDatum: IPzDatumConvertedUsingSchema = {
+        //         default: false,
+        //         pfp_image: 'todo',
+        //         bg_image: 'todo',
+        //         image_hash: '0x123',
+        //         standard_image_hash: '0x123',
+        //         svg_version: '1.0.0',
+        //         standard_image: '',
+        //         portal: '',
+        //         designer: '',
+        //         socials: '',
+        //         vendor: '',
+        //         last_update_address: '',
+        //         validated_by: '',
+        //         resolved_addresses: { ada: '0x123', btc: '2213kjsjkn', eth: 'sad2wsad' },
+        //         trial: false,
+        //         nsfw: false,
+        //         agreed_terms: '',
+        //         migrate_sig_required: false,
+        //         pz_enabled: false,
+        //         id_hash: '0xbac2332809930da3350bd4507b83c95622f533eae327fe6e00d99178c11bee89f1'
+        //     };
+
+        //     await HandleStore.savePersonalizationChange({
+        //         hex: '000de140706F6C6C6F2D7665726465',
+        //         name,
+        //         slotNumber: 99,
+        //         personalization: {
+        //             validated_by: 'todo',
+        //             trial: false,
+        //             nsfw: false
+        //         },
+        //         reference_token: defaultReferenceToken,
+        //         personalizationDatum,
+        //         policy: 'f0ff',
+        //         metadata: {
+        //             name,
+        //             image: 'ipfs://123',
+        //             mediaType: 'image/jpeg',
+        //             og_number: 0,
+        //             rarity: 'todo',
+        //             length: 10,
+        //             characters: 'todo',
+        //             numeric_modifiers: 'todo',
+        //             version: 0,
+        //             og: 0,
+        //             handle_type: HandleType.HANDLE
+        //         }
+        //     });
+
+        //     const handle = HandleStore.get(name);
+
+        //     // expect the drep data to be set
+        //     expect(handle?.drep).toEqual({
+        //         type: 'drep',
+        //         cred: 'key',
+        //         hex: 'cc782fa7cf6ab3c262c2f8a8ca9078de3da258fb9b81d4a6de880f06',
+        //         cip_105: 'drep1e3uzlf70d2euyckzlz5v4yrcmc76yk8mnwqaffk73q8svy5ed4m',
+        //         cip_129: 'drep1ytx8sta8ea4t8snzctu23j5s0r0rmgjclwdcr49xm6yq7psdr0qyv'
+        //     });
+
+        //     // expect using the stake key to pull back the handle
+        //     const repo = new MemoryHandlesRepository();
+        //     const handles = repo.getHandlesByStakeKeyHashes([decodedAddress!]);
+        //     expect(handles).toEqual([name]);
+        // });
+
         it('Should process a demi handle which has the 100 token before the 222 token', async () => {
             const personalizationData: IPersonalization = {
                 validated_by: '0x4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e1',
