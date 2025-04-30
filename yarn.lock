@@ -763,10 +763,18 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koralabs/kora-labs-common@6.1.1":
-  version "6.1.1"
-  resolved "https://registry.yarnpkg.com/@koralabs/kora-labs-common/-/kora-labs-common-6.1.1.tgz#9f6e6cb23a52945f973811f5e0d45d29b96244f3"
-  integrity sha512-5kGVuh2iJm7CGg0BU4Tr2syjghLJmyVreHHsA07kB2D6PDIMKHF7gh57R2G3r3u76MV7CgYIdG1d9IzdjF3exQ==
+"@jridgewell/trace-mapping@0.3.9":
+  version "0.3.9"
+  resolved "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.9.tgz"
+  integrity sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==
+  dependencies:
+    "@jridgewell/resolve-uri" "^3.0.3"
+    "@jridgewell/sourcemap-codec" "^1.4.10"
+
+"@koralabs/kora-labs-common@5.1.41":
+  version "5.1.41"
+  resolved "https://registry.npmjs.org/@koralabs/kora-labs-common/-/kora-labs-common-5.1.41.tgz"
+  integrity sha512-5bck8GFihuW6fBv28oNWLDtaK6XD1ZiNDfyf+DC1AekXUvC38TiSnpyCgSR72R8YO1g6lLV2KYnu8rBlQggqqA==
   dependencies:
     bech32 "^2.0.0"
     blakejs "^1.2.1"

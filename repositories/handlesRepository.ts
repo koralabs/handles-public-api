@@ -128,7 +128,9 @@ export class HandlesRepository {
             return array.length === 0 ? [EMPTY] : array;
         }
         ).concat(addresses.map((h) => {
-            const hashed = crypto.createHash('md5').update(decodeAddress(h)!.slice(2), 'hex').digest('hex');
+            const decodedAddress = decodeAddress(h);
+            if (!decodedAddress) return [EMPTY];
+            const hashed = crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex');
             const array = Array.from(this.provider.getValuesFromIndexedSet(IndexNames.STAKE_KEY_HASH, hashed!) ?? []);
             return array.length === 0 ? [EMPTY] : array;
         })).flat() as string[];
@@ -318,10 +320,10 @@ export class HandlesRepository {
             if (decodedAddress) {
                 if (oldDecodedAddress) {
                     // if there is an old stake key hash, remove it from the index
-                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress.slice(2), 'hex').digest('hex')
+                    const oldHashofStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
                     this.provider.removeValueFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, oldHashofStakeKeyHash, handle.name);                    
                 }
-                const hashofStakeKeyHash = crypto.createHash('md5').update(decodedAddress.slice(2), 'hex').digest('hex')
+                const hashofStakeKeyHash = handle.id_hash ? handle.id_hash.replace('0x', '').slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
                 this.provider.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashofStakeKeyHash, handle.name);
             }
         }
