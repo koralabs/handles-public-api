@@ -8,13 +8,11 @@ import {
     IReferenceToken,
     ISearchBody,
     isEmpty,
-    ISubHandleSettings,
-    ISubHandleTypeSettings,
     parseAssetNameLabel,
     ProtectedWords,
     StoredHandle
 } from '@koralabs/kora-labs-common';
-import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import { decodeCborToJson, DefaultTextFormat } from '@koralabs/kora-labs-common/utils/cbor';
 import { NextFunction, Request, Response } from 'express';
 import { isDatumEndpointEnabled } from '../config';
 import { IRegistry } from '../interfaces/registry.interface';
@@ -24,7 +22,7 @@ import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.v
 import { HandlesRepository } from '../repositories/handlesRepository';
 
 class HandlesController {
-    private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
+    private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null; }> => {
         const handleName = req.params.handle;
         const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
         const asHex = req.query.hex == 'true';
@@ -55,7 +53,7 @@ class HandlesController {
 
     public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
+            const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, public_subhandles, sort, personalized } = req.query;
 
             const search = new HandleSearchModel({
                 characters,
@@ -66,6 +64,7 @@ class HandlesController {
                 holder_address,
                 personalized,
                 handle_type,
+                public_subhandles,
                 og
             });
 
@@ -324,60 +323,25 @@ class HandlesController {
 
     public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const {handle, code } = await HandlesController.getHandleFromRepo(req);
 
-            if (!handleData?.handle) {
+            if (!handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
-            const settings = handleRepo.getSubHandleSettings(handleData.handle.name);
-
-            if (!settings || !settings.settings) {
+            if (!handle.subhandle_settings) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            const { settings: settingsDatumString } = settings;
-
             if (req.headers?.accept?.startsWith('text/plain')) {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.status(handleRepo.currentHttpStatus()).send(settingsDatumString);
+                res.status(code).send(handle.subhandle_settings.utxo.datum);
                 return;
             }
 
-            const decodedSettings = await decodeCborToJson({ cborString: settingsDatumString, schema: subHandleSettingsDatumSchema });
-
-            if (!Array.isArray(decodedSettings)) {
-                res.status(400).send({ message: 'Invalid SubHandle settings' });
-                return;
-            }
-
-            const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
-                return {
-                    public_minting_enabled: typeSettings[0],
-                    pz_enabled: typeSettings[1],
-                    tier_pricing: typeSettings[2],
-                    default_styles: typeSettings[3],
-                    save_original_address: typeSettings[4]
-                };
-            };
-
-            const settingsDatum: ISubHandleSettings = {
-                nft: buildTypeSettings(decodedSettings[0]),
-                virtual: buildTypeSettings(decodedSettings[1]),
-                buy_down_price: decodedSettings[2],
-                buy_down_paid: decodedSettings[3],
-                buy_down_percent: decodedSettings[4],
-                agreed_terms: decodedSettings[5],
-                migrate_sig_required: decodedSettings[6],
-                payment_address: decodedSettings[7]
-            };
-
-            res.status(handleData.code).json({
-                settings: settingsDatum
-            });
+            res.status(code).json(handle.subhandle_settings);
         } catch (error) {
             next(error);
         }

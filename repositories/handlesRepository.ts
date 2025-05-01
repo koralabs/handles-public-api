@@ -1,6 +1,6 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, diff, EMPTY, ExcludesFalse, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
-import { designerSchema, handleDatumSchema, portalSchema, socialsSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, diff, EMPTY, ExcludesFalse, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
 import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
@@ -532,9 +532,9 @@ export class HandlesRepository {
                 }
 
                 handle.subhandle_settings = {
-                    settings: datum,
+                    ...(await this._parseSubHandleSettingsDatum(datum)),
                     utxo: utxoDetails
-                }                
+                }
                 handle.updated_slot_number = slotNumber;
                 handle.resolved_addresses = {
                     ...(existingHandle?.resolved_addresses ?? {}),
@@ -658,7 +658,7 @@ export class HandlesRepository {
             if (!holder_address) return [];
             const holder = this.provider.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
             return holder ? [...holder.handles] : [EMPTY];
-        })()
+        })();
 
         // filter out any empty arrays
         const filtered = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderArray, ogArray].filter((a) => a?.length)
@@ -690,6 +690,9 @@ export class HandlesRepository {
 
         if (searchModel.personalized) {
             array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
+        }
+        if (searchModel.public_subhandles) {
+            array = array.filter((handle) => handle.subhandle_settings?.nft?.public_minting_enabled || handle.subhandle_settings?.virtual?.public_minting_enabled);
         }
         return array;
     }
@@ -910,6 +913,32 @@ export class HandlesRepository {
         this.provider.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
 
+    private async _parseSubHandleSettingsDatum(datum: string) {
+        const decodedSettings = await decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
+
+        const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
+            return {
+                public_minting_enabled: typeSettings[0],
+                pz_enabled: typeSettings[1],
+                tier_pricing: typeSettings[2],
+                default_styles: typeSettings[3],
+                save_original_address: typeSettings[4]
+            };
+        };
+
+        const settings: ISubHandleSettings = {
+            nft: buildTypeSettings(decodedSettings[0]),
+            virtual: buildTypeSettings(decodedSettings[1]),
+            buy_down_price: decodedSettings[2],
+            buy_down_paid: decodedSettings[3],
+            buy_down_percent: decodedSettings[4],
+            agreed_terms: decodedSettings[5],
+            migrate_sig_required: decodedSettings[6],
+            payment_address: decodedSettings[7]
+        };
+
+        return settings
+    }
     // Used for unit testing
     Internal = {
         buildHandleHistory: this._buildHandleHistory.bind(this),
