@@ -1,6 +1,5 @@
 #!/bin/bash
-# DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
-# export NODE_OPTIONS=--max-old-space-size=12288
+export NODE_OPTIONS='--max-old-space-size=12288'
 export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}

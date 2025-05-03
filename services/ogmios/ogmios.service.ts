@@ -100,7 +100,7 @@ class OgmiosService {
                         }
                     }
                 }
-                if (this.client) this.client.shutdown();
+                if (this.client) await this.client.shutdown();
             } catch (error: any) {
                 Logger.log({
                     message: `Unable to connect Ogmios: ${error.message}`,
@@ -108,7 +108,7 @@ class OgmiosService {
                     event: 'initializeStorage.failed.errorMessage'
                 });
                 
-                if (this.client) this.client.shutdown();
+                if (this.client) await this.client.shutdown();
             }
             await delay(30 * 1000);
         }
@@ -267,10 +267,10 @@ class OgmiosService {
                     const intersection = await findIntersection(context, points || [await this.createPointFromCurrentTip(context)]);
                     ensureSocketIsOpen(socket);
                     socket.on('message', async (message: string) => {
-                        const response: Ogmios['NextBlockResponse'] = safeJSON.parse(message);
-                        if (this.isNextBlockResponse(response)) {
-                            await fastq
-                                .promise(async (response: Ogmios['NextBlockResponse']) => {
+                        await fastq
+                            .promise(async (res: string) => {
+                                const response: Ogmios['NextBlockResponse'] = safeJSON.parse(res);
+                                if (this.isNextBlockResponse(response)) {
                                     try {
                                         if (response.result.direction == 'forward') {
                                             this.handlesRepo.setMetrics({
@@ -318,13 +318,14 @@ class OgmiosService {
                                     } catch (error) {
                                         Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
                                     }
-                                }, 1)
-                                .push(response);
-                        }
-                        nextBlock(socket);
+                                }
+                                nextBlock(socket);
+                            }, 1)
+                            .push(message);
                     });
-
-                    nextBlock(socket);
+                    for (let i=1; i<=200; i++) {
+                        nextBlock(socket);
+                    }
                     return intersection;
                 }
             });

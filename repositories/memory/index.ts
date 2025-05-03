@@ -441,7 +441,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public async getStartingPoint(save: (handle: StoredHandle) => Promise<void>, failed = false) {
-        if (!this._files) {
+        if (!this._files || this._files.length === 0) {
             return null;
         }
 
