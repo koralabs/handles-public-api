@@ -9,6 +9,17 @@ import { RewoundHandle } from '../handlesRepository';
 import { HandleStore } from './handleStore';
 
 export class MemoryHandlesProvider implements IHandlesProvider {
+    private static metrics: IApiMetrics = {
+        firstSlot: 0,
+        lastSlot: 0,
+        currentSlot: 0,
+        elapsedOgmiosExec: 0,
+        elapsedBuildingExec: 0,
+        firstMemoryUsage: 0,
+        currentBlockHash: '',
+        memorySize: 0
+    };
+
     public getValueFromIndex (indexName: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
         return this.convertIndexNameToIndex(indexName)?.get(key);
     }
@@ -54,8 +65,8 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getMetrics(): IApiMetrics {
-        this.metrics.count = HandleStore.handles.size;
-        return this.metrics;
+        MemoryHandlesProvider.metrics.count = HandleStore.handles.size;
+        return MemoryHandlesProvider.metrics;
     }
 
     public getSchemaVersion(): number {
@@ -95,16 +106,6 @@ export class MemoryHandlesProvider implements IHandlesProvider {
 
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     private _storageSchemaVersion = 42;
-    private metrics: IApiMetrics = {
-        firstSlot: 0,
-        lastSlot: 0,
-        currentSlot: 0,
-        elapsedOgmiosExec: 0,
-        elapsedBuildingExec: 0,
-        firstMemoryUsage: 0,
-        currentBlockHash: '',
-        memorySize: 0
-    };
     intervals: NodeJS.Timeout[] = [];
 
     private storageFileName = `handles.json`;
@@ -113,7 +114,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     public async initialize(): Promise<IHandlesProvider> {
         if (this.intervals.length === 0) {
             const saveFilesInterval = setInterval(() => {
-                const { currentSlot, currentBlockHash } = this.metrics;
+                const { currentSlot, currentBlockHash } = MemoryHandlesProvider.metrics;
 
                 // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
                 // Once restarted, we should have a valid file to read from.
@@ -260,7 +261,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public setMetrics(metrics: IApiMetrics): void {
-        this.metrics = { ...this.metrics, ...metrics };
+        MemoryHandlesProvider.metrics = { ...MemoryHandlesProvider.metrics, ...metrics };
     }
 
     public rollBackToGenesis() {
@@ -279,7 +280,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
 
     private saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): boolean {
         try {
-            const worker = new Worker('./workers/this.worker.js', {
+            const worker = new Worker('./workers/handleStore.worker.js', {
                 workerData: {
                     content,
                     storagePath,
@@ -461,6 +462,8 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     private async prepareHandlesStorage(save: (handle: StoredHandle) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
+        const startTime = Date.now()
+        Logger.log('Preparing handles storage. Parsing file content...');
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
@@ -478,7 +481,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
 
-        Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
+        Logger.log(`Handle storage context parsed in ${(Date.now() - startTime)/1000}s at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
     }
 
     private eraseStorage() {

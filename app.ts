@@ -44,13 +44,13 @@ class App {
             Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
         });
         server.keepAliveTimeout = 61 * 1000;
+        this.initializeOgmios();
     }
 
     public async initialize() {
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         this.app.use(errorMiddleware);
-        this.initializeOgmios();
         return this;
     }
 
@@ -115,7 +115,7 @@ class App {
 
     private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
-        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
+        const handlesRepo = new HandlesRepository(new this.registry.handlesRepo());
         handlesRepo.rollBackToGenesis();
         
         if (this.blockProcessors.length > 0) {
@@ -130,9 +130,9 @@ class App {
             return;
         }
 
-        const handlesRepo = new HandlesRepository(this.registry.handlesRepo());
-        const ogmiosService = new OgmiosService(handlesRepo, this.processBlock);
-        await ogmiosService.initialize(this.resetBlockProcessors, this.loadBlockProcessorIndexes);
+        const handlesRepo = new HandlesRepository(new this.registry.handlesRepo());
+        const ogmiosService = new OgmiosService(handlesRepo, this.processBlock.bind(this));
+        await ogmiosService.initialize(this.resetBlockProcessors.bind(this), this.loadBlockProcessorIndexes.bind(this));
     }
 
     private async initializeSwagger() {

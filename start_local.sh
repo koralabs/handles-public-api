@@ -16,12 +16,10 @@ else
         echo 'starting local-ogmios...'
         docker run -d \
             --name local-ogmios \
-            -v ~/shared-docker/${NETWORK}/ipc:/ipc \
-            -v ~/shared-docker/${NETWORK}/db:/db \
             -p 1337:1337 \
             -e MODE=both \
             -e NETWORK=${NETWORK} \
-            koralabs/handles-api --include-transaction-cbor
+            koralabs/handles-api --include-transaction-cbor --log-level Warning
     else
         echo 'local-omgios already running...'
     fi

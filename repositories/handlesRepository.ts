@@ -37,8 +37,9 @@ export class HandlesRepository {
         this.provider = repo;
     }
 
-    public initialize() {
-        return this.provider.initialize();
+    public async initialize() {
+        await this.provider.initialize();
+        return this;
     }
 
     public destroy(): void {
@@ -550,7 +551,6 @@ export class HandlesRepository {
     }
 
     public async save(handle: StoredHandle | RewoundHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
-        //const updatedHandle: StoredHandle = await this._buildHandle(JSON.parse(JSON.stringify(handle, (k, v) => (typeof v === 'bigint' ? parseInt(v.toString() || '0') : v))));
         const {
             name,
             rarity,

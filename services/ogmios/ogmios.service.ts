@@ -37,35 +37,36 @@ class OgmiosService {
 
         const ogmiosUrl = new url.URL(OGMIOS_HOST);
 
-        const context: InteractionContext = await createInteractionContext(
-            (err) => console.error(err),
-            () => {
-                Logger.log({
-                    message: 'Connection closed.',
-                    category: LogCategory.WARN,
-                    event: 'OgmiosService.createInteractionContext.closeHandler'
-                });
-            },
-            {
-                connection: {
-                    host: ogmiosUrl.hostname,
-                    port: parseInt(ogmiosUrl.port)
-                }
-            }
-        );
-
-        this.client = await this.createLocalChainSyncClient(context);
-        
-        if (!this.client) {
-            throw new Error('Ogmios client is not initialized.');
-        }
+        await this.handlesRepo.initialize();
 
         // attempt ogmios resume (see if starting point exists or errors)
-        const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save);
+        const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));
+        console.log('firstStartingPoint', firstStartingPoint);
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
+            console.log('OgmiosService.initialize: Attempting to connect to Ogmios...');
             try {
+                if (!this.client) {
+                    const context: InteractionContext = await createInteractionContext(
+                        (err) => console.error(err),
+                        () => {
+                            Logger.log({
+                                message: 'Connection closed.',
+                                category: LogCategory.WARN,
+                                event: 'OgmiosService.createInteractionContext.closeHandler'
+                            });
+                        },
+                        {
+                            connection: {
+                                host: ogmiosUrl.hostname,
+                                port: parseInt(ogmiosUrl.port)
+                            }
+                        }
+                    );
+            
+                    this.client = await this.createLocalChainSyncClient(context);
+                }
                 if (!firstStartingPoint) {                    
                     const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
                     await reset();
@@ -115,7 +116,6 @@ class OgmiosService {
 
     private async _resume(startingPoint: Point) {        
         await this.client!.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
-        this.handlesRepo.initialize();
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
