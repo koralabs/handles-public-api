@@ -1,4 +1,4 @@
-import { Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -9,6 +9,12 @@ import { RewoundHandle } from '../handlesRepository';
 import { HandleStore } from './handleStore';
 
 export class MemoryHandlesProvider implements IHandlesProvider {
+    private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
+    private _storageSchemaVersion = 43;
+    intervals: NodeJS.Timeout[] = [];
+
+    private storageFileName = `handles.json`;
+    private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
     private static metrics: IApiMetrics = {
         firstSlot: 0,
         lastSlot: 0,
@@ -93,8 +99,6 @@ export class MemoryHandlesProvider implements IHandlesProvider {
                 return HandleStore.rarityIndex
             case IndexNames.SUBHANDLE:
                 return HandleStore.subHandlesIndex
-            case IndexNames.STAKE_KEY_HASH:
-                return HandleStore.addressesIndex
             case IndexNames.HANDLE:
                 return HandleStore.handles
             case IndexNames.HOLDER:
@@ -103,13 +107,6 @@ export class MemoryHandlesProvider implements IHandlesProvider {
                 return HandleStore.slotHistoryIndex
         }
     }
-
-    private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 42;
-    intervals: NodeJS.Timeout[] = [];
-
-    private storageFileName = `handles.json`;
-    private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
 
     public async initialize(): Promise<IHandlesProvider> {
         if (this.intervals.length === 0) {
@@ -139,7 +136,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
 
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
-        this._files = await this._getFilesContent();
+        this._files = []//await this._getFilesContent();
         return this;
     }
 
@@ -207,7 +204,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     public getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Holder[] {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items: Holder[] = [...HandleStore.holderIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.size - a.handles.size : a.handles.size - b.handles.size));
+        const items: Holder[] = [...HandleStore.holderIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.length - a.handles.length : a.handles.length - b.handles.length));
         const startIndex = (page - 1) * recordsPerPage;
         const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
@@ -221,7 +218,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         const { defaultHandle, manuallySet, handles, knownOwnerName, type } = holderAddressDetails;
 
         return {
-            total_handles: handles.size,
+            total_handles: handles.length,
             default_handle: defaultHandle,
             manually_set: manuallySet,
             address: key,
@@ -245,18 +242,17 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public memorySize() {
-        const object = {
-            ...this.convertMapsToObjects(HandleStore.handles),
-            ...this.convertMapsToObjects(HandleStore.rarityIndex),
-            ...this.convertMapsToObjects(HandleStore.ogIndex),
-            ...this.convertMapsToObjects(HandleStore.subHandlesIndex),
-            ...this.convertMapsToObjects(HandleStore.lengthIndex),
-            ...this.convertMapsToObjects(HandleStore.charactersIndex),
-            ...this.convertMapsToObjects(HandleStore.paymentKeyHashesIndex),
-            ...this.convertMapsToObjects(HandleStore.numericModifiersIndex),
-            ...this.convertMapsToObjects(HandleStore.addressesIndex)
-        };
-
+        const object = [
+            HandleStore.handles,
+            HandleStore.rarityIndex,
+            HandleStore.ogIndex,
+            HandleStore.subHandlesIndex,
+            HandleStore.lengthIndex,
+            HandleStore.charactersIndex,
+            HandleStore.paymentKeyHashesIndex,
+            HandleStore.numericModifiersIndex,
+            HandleStore.addressesIndex
+        ]
         return Buffer.byteLength(JSON.stringify(object));
     }
 
@@ -467,16 +463,9 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
-        const keys = Object.keys(handles ?? {});
-        for (let i = 0; i < keys.length; i++) {
-            const name = keys[i];
-            const handle = handles[name];
-            const newHandle = {
-                ...handle
-            };
-            // delete the personalization object from the handle so we don't double store it
-            await save(new RewoundHandle(newHandle));
-        }
+        await asyncForEach(Object.entries(handles), ([, handle]) => {
+            return save(new RewoundHandle(handle));
+        }, 1)
 
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);

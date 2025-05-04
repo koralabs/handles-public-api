@@ -141,7 +141,7 @@ export const holdersFixture = new Map<string, Holder>([
     [
         'addr1',
         {
-            handles: new Set(['']),
+            handles: [{name:'', og_number: 0, created_slot_number: 0}],
             defaultHandle: 'burritos',
             manuallySet: false,
             type: 'script',
@@ -151,7 +151,7 @@ export const holdersFixture = new Map<string, Holder>([
     [
         'addr2',
         {
-            handles: new Set(['7461636F73', '66616A69746173']),
+            handles: [{name: '7461636F73', og_number: 0, created_slot_number: 0}, {name: '66616A69746173', og_number: 0, created_slot_number: 0}],
             defaultHandle: 'tacos',
             manuallySet: false,
             type: 'wallet',

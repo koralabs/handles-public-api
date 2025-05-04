@@ -17,6 +17,7 @@ describe('processBlock Tests', () => {
     });
     beforeEach(() => {
         HandleStore.handles.clear();
+        HandleStore.holderIndex.clear();
     })
 
     const tip: Tip = {
@@ -682,7 +683,47 @@ describe('processBlock Tests', () => {
         expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, {
             ...savedHandle,
             subhandle_settings: {
-                settings: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff',
+                "agreed_terms": "addr_test1qpyc3jke4g0t6uemzetftnl0je0a5thy9k4jmpvycsas88yklyw6t0d3jt0zg9wnumgxftk9ft8wvjxzc6reltgllkss5nzat4",
+                "buy_down_paid": 0,
+                "buy_down_percent": "0x687474703a2f2f6c6f63616c686f73743a333030372f23746f75",
+                "buy_down_price": 0,
+                "migrate_sig_required": false,
+                "nft": {
+                  "default_styles": {
+                    "bg_image": "",
+                  },
+                  "public_minting_enabled": true,
+                  "pz_enabled": true,
+                  "save_original_address": false,
+                  "tier_pricing": [
+                    [
+                      1,
+                      200000000,
+                    ],
+                    [
+                      2,
+                      100000000,
+                    ],
+                    [
+                      3,
+                      50000000,
+                    ],
+                    [
+                      4,
+                      10000000,
+                    ],
+                  ],
+                },
+                "payment_address": undefined,
+                "virtual": {
+                "default_styles": {
+                  "bg_image": "",
+                },
+                "public_minting_enabled": false,
+                "pz_enabled": false,
+                "save_original_address": false,
+                "tier_pricing":  [],
+                },
                 utxo: {
                     address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q',
                     datum: '9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ff9f041a00989680ffffa14862675f696d6167654000ff9f000080a14862675f696d6167654000ff0000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f755f5840616464725f746573743171707963336a6b65346730743675656d7a657466746e6c306a65306135746879396b346a6d707679637361733838796b6c7977367430582c64336a74307a6739776e756d677866746b3966743877766a787a633672656c74676c6c6b7373356e7a617434ff00ff',

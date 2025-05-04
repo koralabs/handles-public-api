@@ -844,7 +844,12 @@ describe('HandleStore tests', () => {
                 })
             );
 
-            expect([...(holderAddress?.handles ?? [])]).toEqual(expect.arrayContaining(['barbacoa', 'burrito', 'taco', 'tortilla-soup']));
+            expect([...(holderAddress?.handles ?? [])]).toEqual([
+                {name:'barbacoa', og_number: expect.any(Number), created_slot_number: expect.any(Number)}, 
+                {name:'burrito', og_number: expect.any(Number), created_slot_number: expect.any(Number)}, 
+                {name:'taco', og_number: expect.any(Number), created_slot_number: expect.any(Number)}, 
+                {name:'tortilla-soup', og_number: expect.any(Number), created_slot_number: expect.any(Number)}
+            ]);
         });
 
         it('Should save default handle and history correctly when saving multiple times', async () => {
@@ -1387,7 +1392,7 @@ describe('HandleStore tests', () => {
                 name: 'shrimp-taco',
                 policy,
                 subhandle_settings: {
-                    settings: utxoDetails.datum,
+                    payment_address: 'abc',
                     utxo: utxoDetails
                 },
                 updated_slot_number: 200
@@ -1396,7 +1401,7 @@ describe('HandleStore tests', () => {
             handle = repo.get('shrimp-taco');
             expect(handle?.subhandle_settings).toEqual({
                 utxo: utxoDetails,
-                settings
+                payment_address: 'abc'
             });
 
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -1410,7 +1415,7 @@ describe('HandleStore tests', () => {
                         'shrimp-taco': {
                             new: {
                                 subhandle_settings: {
-                                    settings,
+                                    payment_address: 'abc',
                                     utxo: utxoDetails
                                 },
                                 updated_slot_number: 200
@@ -1443,7 +1448,7 @@ describe('HandleStore tests', () => {
             }));
 
             const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-            const settings = 'abc';
+            const payment_address = 'abc';
 
             let handle = repo.get(handleName);
             // First settings change
@@ -1453,7 +1458,7 @@ describe('HandleStore tests', () => {
                 hex: handleHex,
                 policy,
                 subhandle_settings: {
-                    settings: settings,
+                    payment_address,
                     utxo: utxoDetails
                 },
                 updated_slot_number: 200
@@ -1462,29 +1467,26 @@ describe('HandleStore tests', () => {
             handle = repo.get(handleName);
             expect(handle?.subhandle_settings).toEqual({
                 utxo: { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' },
-                settings
+                payment_address
             });
 
-            const newSettings = 'def';
 
             await repo.save(await repo.Internal.buildHandle({
                 ...handle,
                 name: handleName,
                 subhandle_settings: {
-                    settings: newSettings,
+                    payment_address: 'def',
                     utxo: utxoDetails
                 },
                 updated_slot_number: 300
             }), handle!);
-
-            const finalSettings = 'ghi';
 
             handle = repo.get(handleName);
             await repo.save(await repo.Internal.buildHandle({
                 ...handle,
                 name: handleName,
                 subhandle_settings: {
-                    settings: finalSettings,
+                    payment_address: 'ghi',
                     utxo: utxoDetails
                 },
                 updated_slot_number: 400
@@ -1500,7 +1502,7 @@ describe('HandleStore tests', () => {
                     [handleName]: {
                         new: {
                             subhandle_settings: {
-                                settings,
+                                payment_address,
                                 utxo: utxoDetails
                             },
                             updated_slot_number: 200
@@ -1519,13 +1521,13 @@ describe('HandleStore tests', () => {
                     [handleName]: {
                         new: {
                             subhandle_settings: {
-                                settings: 'def'
+                                payment_address: 'def'
                             },
                             updated_slot_number: 300
                         },
                         old: {
                             subhandle_settings: {
-                                settings,
+                                payment_address,
                                 utxo: utxoDetails
                             },
                             updated_slot_number: 200
@@ -1541,14 +1543,14 @@ describe('HandleStore tests', () => {
                     [handleName]: {
                         new: {
                             subhandle_settings: {
-                                settings: 'ghi'
+                                payment_address: 'ghi'
                             },
                             updated_slot_number: 400
                         },
                         old: {
                             subhandle_settings: {
                                 utxo: utxoDetails,
-                                settings: 'def'
+                                payment_address: 'def'
                             },
                             updated_slot_number: 300
                         }
@@ -1588,7 +1590,7 @@ describe('HandleStore tests', () => {
             expect(existingHandle?.holder).toEqual(stakeKey);
 
             const holderAddress = HandleStore.holderIndex.get(stakeKey);
-            expect(holderAddress?.handles?.has(handleName)).toBeTruthy();
+            expect(holderAddress?.handles?.some(h => h.name == handleName)).toBeTruthy();
 
             await repo.save(await repo.Internal.buildHandle({
                 ...existingHandle,
@@ -1633,11 +1635,15 @@ describe('HandleStore tests', () => {
             });
 
             const newHolderAddress = HandleStore.holderIndex.get(updatedStakeKey);
-            expect([...(newHolderAddress?.handles ?? [])]).toEqual([handleName]);
+            expect([...(newHolderAddress?.handles ?? [])]).toEqual([{
+                "created_slot_number": 100,
+                "name": "salsa",
+                "og_number": 0,
+            }]);
 
             // expect the handle to be removed from the old holder
             const updatedHolderAddress = HandleStore.holderIndex.get(stakeKey);
-            expect(updatedHolderAddress?.handles?.has(handleName)).toBeFalsy();
+            expect(updatedHolderAddress?.handles?.some(h => h.name == handleName)).toBeFalsy();
 
             // expect to get the correct slot history with all new handles
             expect(Array.from(HandleStore.slotHistoryIndex)).toEqual([
@@ -1716,7 +1722,7 @@ describe('HandleStore tests', () => {
             // Once a handle is burned, expect it to be removed from the holderIndex and a NEW defaultHandle set
             expect(HandleStore.holderIndex.get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70')).toEqual({
                 defaultHandle: 'burrito',
-                handles: new Set(['barbacoa', 'burrito']),
+                handles: [{name: 'barbacoa', og_number: 0, created_slot_number: expect.any(Number)}, {name: 'burrito', og_number: 0, created_slot_number: expect.any(Number)}],
                 knownOwnerName: '',
                 manuallySet: false,
                 type: 'wallet'

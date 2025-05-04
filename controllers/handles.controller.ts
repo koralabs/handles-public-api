@@ -323,7 +323,7 @@ class HandlesController {
 
     public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const {handle, code } = await HandlesController.getHandleFromRepo(req);
+            const { handle, code } = await HandlesController.getHandleFromRepo(req);
 
             if (!handle) {
                 res.status(404).send({ message: 'Handle not found' });
@@ -349,22 +349,18 @@ class HandlesController {
 
     public async getSubHandleSettingsUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const handle = await HandlesController.getHandleFromRepo(req);
 
-            if (!handleData?.handle) {
+            if (!handle?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
-
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
-            const settings = handleRepo.getSubHandleSettings(handleData.handle.name);
-
-            if (!settings?.utxo) {
+            if (!handle.handle.subhandle_settings?.utxo) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            res.status(handleData.code).json(settings.utxo);
+            res.status(handle.code).json(handle.handle.subhandle_settings.utxo);
         } catch (error) {
             next(error);
         }

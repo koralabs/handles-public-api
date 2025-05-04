@@ -16,17 +16,16 @@ describe('holder index integrity', () => {
             const holder = testHolderIndex.get(handle.holder);
             if (!holder) {
                 const set = new Set<string>();
-                set.add(handle.name);
                 testHolderIndex.set(handle.holder, {
                     defaultHandle: handle.default_in_wallet,
-                    handles: set,
+                    handles: [{name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number}],
                     knownOwnerName: '',
                     manuallySet: false,
                     type: 'wallet'
                 });
             } else {
                 holder.defaultHandle = handle.default_in_wallet;
-                holder.handles.add(handle.name);
+                holder.handles.push({name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number});
             }
         }
         const thisthing = HandleStore.holderIndex;

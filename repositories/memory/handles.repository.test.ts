@@ -227,12 +227,12 @@ describe('MemoryHandlesProvider Tests', () => {
                 defaultHandle: 'taco',
                 knownOwnerName: '',
                 manuallySet: false,
-                handles: new Set([
-                    'barbacoa',
-                    'burrito',
-                    'taco',
-                    'v@taco'
-                ]),
+                handles: [
+                    {name:'barbacoa', og_number: 0, created_slot_number: expect.any(Number)},
+                    {name:'burrito', og_number: 0, created_slot_number: expect.any(Number)},
+                    {name:'taco', og_number: 0, created_slot_number: expect.any(Number)},
+                    {name:'v@taco', og_number: 0, created_slot_number: expect.any(Number)},
+                ],
                 type: 'wallet'
             });
         });
@@ -269,7 +269,6 @@ describe('MemoryHandlesProvider Tests', () => {
 
     describe('getHandlesByStakeKeyHashes', () => {
         it('should get handles by stakeKeyHashes', async () => {
-            const repo = new MemoryHandlesRepository();
             const result = repo.getHandlesByStakeKeyHashes(['e0f1a8e379127b811583070faf74db00d880d45027fe6171b1b69bd9ca']);
             expect(result).toEqual(['barbacoa', 'burrito', 'taco', 'v@taco']);
         });
@@ -376,13 +375,12 @@ describe('MemoryHandlesProvider Tests', () => {
 
         it('should get subhandle settings by name', async () => {
             const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-            const settings = 'abc';
             let handle = repo.get(rootHandleName)!;
             handle = await repo.Internal.buildHandle({
                 ...handle,
                 subhandle_settings: {
                     utxo: utxoDetails,
-                    settings
+                    payment_address: 'abc'
                 },
                 updated_slot_number: 0,
                 resolved_addresses: {ada: ''}
@@ -392,7 +390,7 @@ describe('MemoryHandlesProvider Tests', () => {
             const result = repo.getSubHandleSettings(rootHandleName);
             expect(result).toEqual({
                 utxo: utxoDetails,
-                settings
+                payment_address: 'abc'
             });
         });
     });

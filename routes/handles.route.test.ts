@@ -35,6 +35,45 @@ jest.mock('../repositories/handlesRepository', () => ({
             if (handleName === 'nope@handle') {
                 return null;
             }
+            if (handleName === 'sub@handle') {
+                return {
+                    name: handleName,
+                    subhandle_settings:{
+                        utxo: {datum:'9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff'}
+                    }
+                }
+            }
+            
+            if (handleName === 'sub@handle2') {
+                return {
+                    name: handleName,
+                    subhandle_settings:{
+                        agreed_terms: 'http://localhost:3007/#tou',
+                        buy_down_paid: 0,
+                        buy_down_price: 0,
+                        buy_down_percent: 0,
+                        migrate_sig_required: false,
+                        nft: {
+                            public_minting_enabled: true,
+                            pz_enabled: true,
+                            default_styles: { bg_image: '' },
+                            tier_pricing: [
+                                [1, 200000000],
+                                [2, 100000000],
+                                [3, 50000000]
+                            ]
+                        },
+                        payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                        virtual: {
+                            default_styles: { bg_image: '' },
+                            public_minting_enabled: true,
+                            pz_enabled: true,
+                            tier_pricing: [[1, 20000000]]
+                        },
+                        utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
+                    }                    
+                };
+            }
 
             return {
                 name: handleName,
@@ -93,7 +132,7 @@ jest.mock('../repositories/handlesRepository', () => ({
         getHolder: (key: string) => {
             if (key !== 'nope') {
                 return {
-                    handles: ['burritos'],
+                    handles: [{name: 'burritos', og_number: 0, created_slot_number: 0}],
                     default_handle: 'burritos',
                     manually_set: false
                 }
@@ -124,7 +163,7 @@ jest.mock('../repositories/handlesRepository', () => ({
             }
 
             return {
-                handles: ['burritos'],
+                handles: [{name: 'burritos', og_number: 0, created_slot_number: 0}],
                 default_handle: 'burritos',
                 manually_set: false
             };
@@ -484,7 +523,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/holders/address');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
-                handles: ['burritos'],
+                handles: [{name:'burritos', og_number: expect.any(Number), created_slot_number: expect.any(Number)}],
                 default_handle: 'burritos',
                 manually_set: false
             });
@@ -622,30 +661,29 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
-                settings: {
-                    agreed_terms: 'http://localhost:3007/#tou',
-                    buy_down_paid: 0,
-                    buy_down_price: 0,
-                    buy_down_percent: 0,
-                    migrate_sig_required: false,
-                    nft: {
-                        public_minting_enabled: true,
-                        pz_enabled: true,
-                        default_styles: { bg_image: '' },
-                        tier_pricing: [
-                            [1, 200000000],
-                            [2, 100000000],
-                            [3, 50000000]
-                        ]
-                    },
-                    payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
-                    virtual: {
-                        default_styles: { bg_image: '' },
-                        public_minting_enabled: true,
-                        pz_enabled: true,
-                        tier_pricing: [[1, 20000000]]
-                    }
-                }
+                agreed_terms: 'http://localhost:3007/#tou',
+                buy_down_paid: 0,
+                buy_down_price: 0,
+                buy_down_percent: 0,
+                migrate_sig_required: false,
+                nft: {
+                    public_minting_enabled: true,
+                    pz_enabled: true,
+                    default_styles: { bg_image: '' },
+                    tier_pricing: [
+                        [1, 200000000],
+                        [2, 100000000],
+                        [3, 50000000]
+                    ]
+                },
+                payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                virtual: {
+                    default_styles: { bg_image: '' },
+                    public_minting_enabled: true,
+                    pz_enabled: true,
+                    tier_pricing: [[1, 20000000]]
+                },
+                utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
             });
         });
     });
