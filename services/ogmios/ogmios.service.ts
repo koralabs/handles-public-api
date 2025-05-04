@@ -323,7 +323,7 @@ class OgmiosService {
                             }, 1)
                             .push(message);
                     });
-                    for (let i=1; i<=200; i++) {
+                    for (let i=1; i<=1; i++) {
                         nextBlock(socket);
                     }
                     return intersection;
