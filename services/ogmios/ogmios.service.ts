@@ -146,7 +146,7 @@ class OgmiosService {
                                     }
                                     catch (error: any) {
                                         Logger.log({
-                                            message: `Unhandled error processing block:\nBLOCK: ${JSON.stringify(response.result.block.id)}\nERROR:${error.message}`,
+                                            message: `Unhandled error processing block: BLOCK: ${JSON.stringify(response.result.block.id)} ERROR:${error.message}`,
                                             category: LogCategory.NOTIFY,
                                             event: 'OgmiosService.processBlock'
                                         });
