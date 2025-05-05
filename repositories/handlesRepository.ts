@@ -339,7 +339,7 @@ export class HandlesRepository {
         const handleName = handle.name;
         const amount = handle.amount - 1;
 
-        if (amount === 0) {
+        if (amount <= 0) {
             this.provider.removeHandle(handle.name);
             if (!(handle instanceof RewoundHandle)) {
                 const history: HandleHistory = { old: handle, new: null };
@@ -454,12 +454,11 @@ export class HandlesRepository {
             case AssetNameLabel.LBL_222:
                 if (!existingHandle && !isMintTx) {
                     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
-                    return;
                 }
                 // check if existing handle has a utxo. If it does, we may have a double mint
                 if (isMintTx && existingHandle?.utxo) {
                     handle.amount = (handle.amount ?? 1) + 1;
-                    Logger.log({ message: `POSSIBLE DOUBLE MINT!!!\n UTxO already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
+                    Logger.log({ message: `POSSIBLE DOUBLE MINT!!! UTxO (${existingHandle?.utxo}) already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
                 }
                 handle.script = script;
                 handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
@@ -704,7 +703,7 @@ export class HandlesRepository {
     private async _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): Promise<StoredHandle> {
         const {name, hex, policy} = handle;
         if (!name || !hex || !policy) {
-            throw new Error('_buildHandle: "name", "hex", and "policy" are required properties');
+            throw new Error(`_buildHandle: "name", "hex", and "policy" are required properties. Given: ${{name, hex, policy}}`);
         }
         if (!hex.endsWith(Buffer.from(name).toString('hex'))) {
             throw new Error('_buildHandle: invalid hex for Handle name');
@@ -825,12 +824,12 @@ export class HandlesRepository {
         if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
             const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
             if (missingMetadata.length > 0) {
-                Logger.log({ category: LogCategory.INFO, message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`, event: 'buildValidDatum.missingMetadata' });
+                //Logger.log({ category: LogCategory.INFO, message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`, event: 'buildValidDatum.missingMetadata' });
             }
 
             const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
             if (missingDatum.length > 0) {
-                Logger.log({ category: LogCategory.INFO, message: `${handle} missing datum keys: ${missingDatum.join(', ')}`, event: 'buildValidDatum.missingDatum' });
+                //Logger.log({ category: LogCategory.INFO, message: `${handle} missing datum keys: ${missingDatum.join(', ')}`, event: 'buildValidDatum.missingDatum' });
             }
 
             return {
@@ -858,17 +857,17 @@ export class HandlesRepository {
         const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
 
         // start timer for ipfs calls
-        const ipfsTimer = Date.now();
+        // const ipfsTimer = Date.now();
 
         const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this._getDataFromIPFSLink));
 
         // stop timer for ipfs calls
-        const endIpfsTimer = Date.now() - ipfsTimer;
-        Logger.log({
-            message: `IPFS calls took ${endIpfsTimer}ms`,
-            category: LogCategory.INFO,
-            event: 'buildPersonalization.ipfsTime'
-        });
+        // const endIpfsTimer = Date.now() - ipfsTimer;
+        // Logger.log({
+        //     message: `IPFS calls took ${endIpfsTimer}ms`,
+        //     category: LogCategory.INFO,
+        //     event: 'buildPersonalization.ipfsTime'
+        // });
 
         const updatedPersonalization: IPersonalization = {
             ...personalization,

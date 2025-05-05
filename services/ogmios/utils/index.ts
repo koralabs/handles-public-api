@@ -73,7 +73,7 @@ export const getHandleNameFromAssetName = (asset: string): { name: string; hex: 
     }
     const {isCip67, name, assetLabel} = checkNameLabel(hex)
     if (isCip67) {
-        hex = `${assetLabel == AssetNameLabel.LBL_000 ? assetLabel : AssetNameLabel.LBL_222}${hex.replace(assetLabel ?? '', '')}`
+        hex = `${assetLabel == AssetNameLabel.LBL_000 ? AssetNameLabel.LBL_000 : AssetNameLabel.LBL_222}${hex.replace(assetLabel ?? '', '')}`
     }
 
     return {

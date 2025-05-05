@@ -1,14 +1,12 @@
-import { createInteractionContext, ensureSocketIsOpen, InteractionContext, safeJSON } from '@cardano-ogmios/client';
-import { ChainSynchronizationClient, findIntersection, nextBlock } from '@cardano-ogmios/client/dist/ChainSynchronization';
-import { BlockPraos, NextBlockResponse, Ogmios, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
+import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
 import { AssetNameLabel, checkNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
 import * as url from 'url';
+import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
 import { handleEraBoundaries } from '../../config/constants';
 import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from '../../interfaces/ogmios.interfaces';
 import { HandlesRepository } from '../../repositories/handlesRepository';
-import { } from '../../utils/util';
 import { getHandleNameFromAssetName } from './utils';
 
 let startOgmiosExec = 0;
@@ -17,7 +15,7 @@ class OgmiosService {
     private startTime: number;
     private firstMemoryUsage: number;
     private handlesRepo: HandlesRepository;
-    client?: ChainSynchronizationClient;
+    client?: WebSocket;
     processBlockCallback?: (block: NextBlockResponse) => Promise<void>;
 
     constructor(handlesRepo: HandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
@@ -35,37 +33,16 @@ class OgmiosService {
             firstMemoryUsage: this.firstMemoryUsage
         });
 
-        const ogmiosUrl = new url.URL(OGMIOS_HOST);
-
         await this.handlesRepo.initialize();
 
         // attempt ogmios resume (see if starting point exists or errors)
         const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));
-        console.log('firstStartingPoint', firstStartingPoint);
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            console.log('OgmiosService.initialize: Attempting to connect to Ogmios...');
             try {
                 if (!this.client) {
-                    const context: InteractionContext = await createInteractionContext(
-                        (err) => console.error(err),
-                        () => {
-                            Logger.log({
-                                message: 'Connection closed.',
-                                category: LogCategory.WARN,
-                                event: 'OgmiosService.createInteractionContext.closeHandler'
-                            });
-                        },
-                        {
-                            connection: {
-                                host: ogmiosUrl.hostname,
-                                port: parseInt(ogmiosUrl.port)
-                            }
-                        }
-                    );
-            
-                    this.client = await this.createLocalChainSyncClient(context);
+                    this.client = this._createWebSocketClient();
                 }
                 if (!firstStartingPoint) {                    
                     const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
@@ -100,7 +77,9 @@ class OgmiosService {
                         }
                     }
                 }
-                if (this.client) await this.client.shutdown();
+                if (this.client) 
+                    if (this.client.CONNECTING || this.client.OPEN)
+                        this.client.close();
             } catch (error: any) {
                 Logger.log({
                     message: `Unable to connect Ogmios: ${error.message}`,
@@ -108,14 +87,101 @@ class OgmiosService {
                     event: 'initializeStorage.failed.errorMessage'
                 });
                 
-                if (this.client) await this.client.shutdown();
+                if (this.client) 
+                    if (this.client.CONNECTING || this.client.OPEN)
+                        this.client.close();
             }
             await delay(30 * 1000);
         }
     }
 
-    private async _resume(startingPoint: Point) {        
-        await this.client!.resume(startingPoint.slot == 0 ? ['origin'] : [startingPoint], 1);
+    private _createWebSocketClient(): WebSocket {
+        const client = new WebSocket(new url.URL(OGMIOS_HOST).toString());
+        client.on('message', async (message: string) => {
+            await fastq.promise(async (msg: string) => {
+                const response  = JSON.parse(msg);
+                switch (response.id) {
+                    case 'find-intersection':
+                        for (let i=1; i<=1000; i++) {
+                            this._rpcRequest('nextBlock', {}, 'next-block');
+                        }
+                        break;
+                    case 'next-block':
+                        try {
+                            switch (response.result.direction) {
+                                case 'backward': {
+                                    const { currentSlot } = this.handlesRepo.getMetrics();
+                                    Logger.log({
+                                        message: `Rollback occurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                        event: 'OgmiosService.rollBackward',
+                                        category: LogCategory.INFO
+                                    });
+                                    await this.processRollback(response.result.point, response.result.tip);
+                                    break;
+                                }
+                                case 'forward': {
+                                    try {
+                                        const result = response.result as RollForward;
+                                        this.handlesRepo.setMetrics({
+                                            currentSlot: (result.block as BlockPraos).slot,
+                                            currentBlockHash: result.block.id,
+                                            tipBlockHash: result.tip.id,
+                                            lastSlot: result.tip.slot
+                                        });
+                                        // finish timer for ogmios rollForward
+                                        const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
+                                        const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
+                                        this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
+
+                                        if (result.block.type !== 'praos') {
+                                            throw new Error(`Block type ${result.block.type} is not supported`);
+                                        }
+
+                                        const block = { txBlock: result.block as BlockPraos, tip: result.tip as Tip };
+
+                                        await this.processBlock(block);
+
+                                        // start timer for ogmios rollForward
+                                        startOgmiosExec = Date.now();
+                                    }
+                                    catch (error: any) {
+                                        Logger.log({
+                                            message: `Unhandled error processing block:\nBLOCK: ${JSON.stringify(response.result.block.id)}\nERROR:${error.message}`,
+                                            category: LogCategory.NOTIFY,
+                                            event: 'OgmiosService.processBlock'
+                                        });
+                                        //process.exit(1);
+                                    }
+                                }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (this.processBlockCallback) await this.processBlockCallback(response);
+                        } catch (error) {
+                            Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
+                        }
+                        break;
+                }
+                this._rpcRequest('nextBlock', {}, 'next-block');
+            }, 1).push(message);
+        })
+        client.on('error', (error) => {
+            Logger.log({ message: `OgmiosClient Error: ${error}`, category: LogCategory.ERROR, event: 'OgmiosClient.Error' });
+        });
+        return client;
+    }
+
+    private async _resume(startingPoint: Point) { 
+        //startingPoint = {slot: 99999810, id: 'a270ecc9f374b82a9a5e027ba862593ef95cd10f4535dc1fe851babe03a0dec9'}; // TODO: remove this line
+        this.handlesRepo.setMetrics({ currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
+        this.client!.once('open', () => {
+            this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
+        });
+    }
+
+    private _rpcRequest(method: string, params: any, id: string | number) {
+        this.client!.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }));
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
@@ -133,12 +199,14 @@ class OgmiosService {
             const txId = txBody?.id;
 
             // Look for burn transactions
+            
+            //const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
             const mintAssets = Object.entries(txBody?.mint ?? {});
             for (let i = 0; i < mintAssets.length; i++) {
                 const [policy, assetInfo] = mintAssets[i];
                 if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
-                        if (quantity === BigInt(-1)) {
+                        if (quantity == BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
                             const handle = this.handlesRepo.get(name);
                             if (!handle) continue;
@@ -169,7 +237,7 @@ class OgmiosService {
                         }
                         const isMintTx = this.isMintingTransaction(assetName, policyId, txBody);
                         if (assetName === policyId) {
-                            // Don't save nameless token.
+                            // Don't process the nameless token.
                             continue;
                         }
 
@@ -242,119 +310,6 @@ class OgmiosService {
             await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
-    
-    /**
-     * Local Chain Sync client specifically for ADA Handles API.
-     *
-     * This client's purpose is the make sure we are only working with assets that include the ADA Handle policy ID before we parse the block json.
-     *
-     * @category ChainSync
-     */
-
-    /** @category Constructor */
-    private createLocalChainSyncClient = async (context: InteractionContext): Promise<ChainSynchronizationClient> => {
-        const { socket } = context;
-        return new Promise((resolve) => {
-            return resolve({
-                context,
-                shutdown: async () => {
-                    if (socket.CONNECTING || socket.OPEN) {
-                        socket.close();
-                    }
-                },
-                resume: async (points) => {
-                    Logger.log('Ogmios client resumed.');
-                    const intersection = await findIntersection(context, points || [await this.createPointFromCurrentTip(context)]);
-                    ensureSocketIsOpen(socket);
-                    socket.on('message', async (message: string) => {
-                        await fastq
-                            .promise(async (res: string) => {
-                                const response: Ogmios['NextBlockResponse'] = safeJSON.parse(res);
-                                if (this.isNextBlockResponse(response)) {
-                                    try {
-                                        if (response.result.direction == 'forward') {
-                                            this.handlesRepo.setMetrics({
-                                                currentSlot: ((response.result as RollForward).block as BlockPraos).slot,
-                                                currentBlockHash: (response.result as RollForward).block.id,
-                                                tipBlockHash: response.result.tip.id,
-                                                lastSlot: response.result.tip.slot
-                                            });
-                                        }
-                                        if (response.method === 'nextBlock') {
-                                            switch (response.result.direction) {
-                                                case 'backward': {
-                                                    const { currentSlot } = this.handlesRepo.getMetrics();
-                                                    Logger.log({
-                                                        message: `Rollback ocurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
-                                                        event: 'OgmiosService.rollBackward',
-                                                        category: LogCategory.INFO
-                                                    });
-                                                    await this.processRollback(response.result.point, response.result.tip);
-                                                    break;
-                                                }
-                                                case 'forward': {
-                                                    // finish timer for ogmios rollForward
-                                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-                                                    const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
-                                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
-
-                                                    if (response.result.block.type !== 'praos') {
-                                                        throw new Error(`Block type ${response.result.block.type} is not supported`);
-                                                    }
-
-                                                    const block = { txBlock: response.result.block as BlockPraos, tip: response.result.tip as Tip };
-
-                                                    await this.processBlock(block);
-
-                                                    // start timer for ogmios rollForward
-                                                    startOgmiosExec = Date.now();
-                                                    break;
-                                                }
-                                                default:
-                                                    break;
-                                            }
-                                        }
-                                        if (this.processBlockCallback) await this.processBlockCallback(response);
-                                    } catch (error) {
-                                        Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
-                                    }
-                                }
-                                nextBlock(socket);
-                            }, 1)
-                            .push(message);
-                    });
-                    for (let i=1; i<=1; i++) {
-                        nextBlock(socket);
-                    }
-                    return intersection;
-                }
-            });
-        });
-    };
-
-    private async createPointFromCurrentTip(context: InteractionContext): Promise<Point> {
-        const { tip } = await findIntersection(context, ['origin']);
-        if (tip === 'origin') {
-            throw new TipIsOriginError();
-        }
-        return {
-            id: tip.id,
-            slot: tip.slot
-        } as Point;
-    }
-
-    /** @internal */
-    private isNextBlockResponse(response: any): response is Ogmios['NextBlockResponse'] {
-        return typeof (response as Ogmios['NextBlockResponse'])?.result?.direction !== 'undefined';
-    }
-}
-
-/** @category ChainSynchronization */
-export class TipIsOriginError extends Error {
-    public constructor() {
-        super();
-        this.message = 'Unable to produce point as the chain tip is the origin';
-    }
 }
 
 export default OgmiosService;

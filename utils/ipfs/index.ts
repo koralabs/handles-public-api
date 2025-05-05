@@ -12,7 +12,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
         if (result.statusCode !== 200) {
             ipfsGateway = getIpfsGateway(true);
             if (ipfsGateway.length > 12) {
-                result = await requestIpfs(`${ipfsGateway}${cid}`);
+                result = await requestIpfs(`${ipfsGateway}${cid}?pinataGatewayToken=${process.env.PINATA_GATEWAY_TOKEN}`);
             } else {
                 throw new Error(`Status from primary gateway resulted in status ${result.statusCode}. Backup gateway "${ipfsGateway}" is invalid`);
             }
