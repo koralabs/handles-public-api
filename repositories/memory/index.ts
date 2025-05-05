@@ -137,6 +137,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
             this.intervals = [saveFilesInterval, setMemoryInterval];
         }
         this._files = await this._getFilesContent();
+        this.setMetrics({schemaVersion: this._storageSchemaVersion});
         return this;
     }
 

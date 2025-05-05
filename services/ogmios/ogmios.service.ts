@@ -236,7 +236,7 @@ class OgmiosService {
                             });
                         }
                         const isMintTx = this.isMintingTransaction(assetName, policyId, txBody);
-                        if (assetName === policyId) {
+                        if (assetName === '') {
                             // Don't process the nameless token.
                             continue;
                         }

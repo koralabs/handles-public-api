@@ -455,90 +455,100 @@ export class HandlesRepository {
                 if (!existingHandle && !isMintTx) {
                     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
                 }
-                // check if existing handle has a utxo. If it does, we may have a double mint
                 if (isMintTx && existingHandle?.utxo) {
+                    // check if existing handle has a utxo. If it does, we may have a double mint
                     handle.amount = (handle.amount ?? 1) + 1;
-                    Logger.log({ message: `POSSIBLE DOUBLE MINT!!! UTxO (${existingHandle?.utxo}) already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
+                    //this can happen now because either Ogmios or fastq .0001% of the time gets one out of order
+                    //Logger.log({ message: `POSSIBLE DOUBLE MINT!!! UTxO (${existingHandle?.utxo}) already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
                 }
-                handle.script = script;
-                handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
-                handle.has_datum = !!datum;
-                handle.lovelace = lovelace;
-                handle.utxo = utxo;
-                handle.updated_slot_number = slotNumber;
-                handle.resolved_addresses!.ada = address;
-                handle = new UpdatedOwnerHandle(handle);
+                if (slotNumber < handle.updated_slot_number) {
+                    handle.created_slot_number = Math.min(handle.created_slot_number, slotNumber);
+                }
+                else {
+                    handle.script = script;
+                    handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
+                    handle.has_datum = !!datum;
+                    handle.lovelace = lovelace;
+                    handle.utxo = utxo;
+                    handle.updated_slot_number = slotNumber;
+                    handle.resolved_addresses!.ada = address;
+                    handle = new UpdatedOwnerHandle(handle);
+                }
                 break;
             case AssetNameLabel.LBL_100:
             case AssetNameLabel.LBL_000:
             {
-                if (!datum) {
-                    Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
-                    return;
-                }
+                if (slotNumber > handle.updated_slot_number) {
+                    if (!datum) {
+                        Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
+                        return;
+                    }
 
-                let personalization = handle.personalization ?? { validated_by: '', trial: true, nsfw: true };
-                const { metadata,  personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
-                if (personalizationDatum) {
-                    // populate personalization from the reference token
-                    personalization = await this._buildPersonalization({ personalizationDatum, personalization });
-                }
-                const addresses = personalizationDatum?.resolved_addresses
-                    ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                        if (key !== 'ada') { acc[key] = value as string; }
-                        return acc;
-                    }, {})
-                    : {};
-                const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
-                handle.og_number = metadata?.og_number ?? 0;
-                handle.image_hash = personalizationDatum?.image_hash ?? ''
-                handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
-                handle.bg_image = personalizationDatum?.bg_image
-                handle.bg_asset = personalizationDatum?.bg_asset
-                handle.pfp_image = personalizationDatum?.pfp_image
-                handle.pfp_asset = personalizationDatum?.pfp_asset
-                handle.updated_slot_number = slotNumber
-                handle.resolved_addresses = {
-                    ...addresses,
-                    ada: existingHandle?.resolved_addresses?.ada ?? ''
-                }
-                handle.personalization = personalization
-                handle.reference_token = utxoDetails
-                handle.svg_version = personalizationDatum?.svg_version ?? ''
-                handle.default = personalizationDatum?.default ?? false
-                handle.last_update_address = personalizationDatum?.last_update_address
-                handle.virtual = virtual
-                handle.original_address = personalizationDatum?.original_address
-                handle.id_hash = personalizationDatum?.id_hash
-                handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
-                handle.last_edited_time = personalizationDatum?.last_edited_time
-                if (assetLabel == AssetNameLabel.LBL_000) {
-                    handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
-                    handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
-                    handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
+                    let personalization = handle.personalization ?? { validated_by: '', trial: true, nsfw: true };
+                    const { metadata,  personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
+                    if (personalizationDatum) {
+                        // populate personalization from the reference token
+                        personalization = await this._buildPersonalization({ personalizationDatum, personalization });
+                    }
+                    const addresses = personalizationDatum?.resolved_addresses
+                        ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
+                            if (key !== 'ada') { acc[key] = value as string; }
+                            return acc;
+                        }, {})
+                        : {};
+                    const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+                    handle.og_number = metadata?.og_number ?? 0;
+                    handle.image_hash = personalizationDatum?.image_hash ?? ''
+                    handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
+                    handle.bg_image = personalizationDatum?.bg_image
+                    handle.bg_asset = personalizationDatum?.bg_asset
+                    handle.pfp_image = personalizationDatum?.pfp_image
+                    handle.pfp_asset = personalizationDatum?.pfp_asset
+                    handle.updated_slot_number = slotNumber
+                    handle.resolved_addresses = {
+                        ...addresses,
+                        ada: existingHandle?.resolved_addresses?.ada ?? ''
+                    }
+                    handle.personalization = personalization
+                    handle.reference_token = utxoDetails
+                    handle.svg_version = personalizationDatum?.svg_version ?? ''
+                    handle.default = personalizationDatum?.default ?? false
+                    handle.last_update_address = personalizationDatum?.last_update_address
+                    handle.virtual = virtual
+                    handle.original_address = personalizationDatum?.original_address
+                    handle.id_hash = personalizationDatum?.id_hash
+                    handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
+                    handle.last_edited_time = personalizationDatum?.last_edited_time
+                    if (assetLabel == AssetNameLabel.LBL_000) {
+                        handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
+                        handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
+                        handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
+                    }
                 }
                 break;
             }
             case AssetNameLabel.LBL_001:
-                if (!existingHandle) {
-                    // There should always be an existing root handle for a subhandle
-                    Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });
-                    return;  
-                }
-        
-                if (!datum) {
-                    Logger.log({ message: `No datum for SubHandle token ${scannedHandleInfo.assetName}`,  category: LogCategory.ERROR, event: 'processScannedHandleInfo.subHandle.noDatum'});
-                    return;
-                }
+                if (slotNumber > handle.updated_slot_number) {
+                    if (!existingHandle) {
+                        // There should always be an existing root handle for a subhandle
+                        Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });
+                        return;  
+                    }
+            
+                    if (!datum) {
+                        Logger.log({ message: `No datum for SubHandle token ${scannedHandleInfo.assetName}`,  category: LogCategory.ERROR, event: 'processScannedHandleInfo.subHandle.noDatum'});
+                        return;
+                    }
 
-                handle.subhandle_settings = {
-                    ...(await this._parseSubHandleSettingsDatum(datum)),
-                    utxo: utxoDetails
-                }
-                handle.updated_slot_number = slotNumber;
-                handle.resolved_addresses = {
-                    ...(existingHandle?.resolved_addresses ?? {}),
-                    ada: existingHandle?.resolved_addresses?.ada ?? ''
+                    handle.subhandle_settings = {
+                        ...(await this._parseSubHandleSettingsDatum(datum)),
+                        utxo: utxoDetails
+                    }
+                    handle.updated_slot_number = slotNumber;
+                    handle.resolved_addresses = {
+                        ...(existingHandle?.resolved_addresses ?? {}),
+                        ada: existingHandle?.resolved_addresses?.ada ?? ''
+                    }
                 }
                 break;
             default:
@@ -703,7 +713,7 @@ export class HandlesRepository {
     private async _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): Promise<StoredHandle> {
         const {name, hex, policy} = handle;
         if (!name || !hex || !policy) {
-            throw new Error(`_buildHandle: "name", "hex", and "policy" are required properties. Given: ${{name, hex, policy}}`);
+            throw new Error(`_buildHandle: "name", "hex", and "policy" are required properties. Given: ${JSON.stringify({name, hex, policy})}`);
         }
         if (!hex.endsWith(Buffer.from(name).toString('hex'))) {
             throw new Error('_buildHandle: invalid hex for Handle name');
