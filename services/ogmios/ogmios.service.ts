@@ -280,8 +280,8 @@ class OgmiosService {
         this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
     };
 
-    private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) => {
-        const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
+    private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {
+        const assetNameInMintAssets = (txBody?.mint?.[policyId]?.[assetName] ?? 0) > 0;
         // is CIP67 is false OR is CIP67 is true and label is 222
         const { isCip67, assetLabel } = checkNameLabel(assetName);
         if (isCip67) {

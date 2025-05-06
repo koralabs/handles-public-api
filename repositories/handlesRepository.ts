@@ -455,16 +455,16 @@ export class HandlesRepository {
                 if (!existingHandle && !isMintTx) {
                     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
                 }
-                if (isMintTx && existingHandle?.utxo) {
-                    // check if existing handle has a utxo. If it does, we may have a double mint
-                    handle.amount = (handle.amount ?? 1) + 1;
-                    //this can happen now because either Ogmios or fastq .0001% of the time gets one out of order
-                    //Logger.log({ message: `POSSIBLE DOUBLE MINT!!! UTxO (${existingHandle?.utxo}) already found for minted Handle ${name}!`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists' });
+                if (slotNumber < handle.updated_slot_number && isMintTx) {
+                    handle.created_slot_number = Math.min(handle.created_slot_number, slotNumber, existingHandle?.created_slot_number ?? Number.POSITIVE_INFINITY);
                 }
-                if (slotNumber < handle.updated_slot_number) {
-                    handle.created_slot_number = Math.min(handle.created_slot_number, slotNumber);
-                }
-                else {
+                if (slotNumber >= handle.updated_slot_number) {
+                    if (isMintTx && existingHandle?.utxo) {
+                        // check if existing handle has a utxo. If it does, we may have a double mint
+                        handle.amount = (handle.amount ?? 1) + 1;
+                        //this can happen now because either Ogmios or fastq .0001% of the time gets one out of order
+                        Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slotNumber}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
+                    }
                     handle.script = script;
                     handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
                     handle.has_datum = !!datum;
@@ -478,7 +478,7 @@ export class HandlesRepository {
             case AssetNameLabel.LBL_100:
             case AssetNameLabel.LBL_000:
             {
-                if (slotNumber > handle.updated_slot_number) {
+                if (slotNumber >= handle.updated_slot_number) {
                     if (!datum) {
                         Logger.log({ message: `No datum for reference token ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.referenceToken.noDatum' });
                         return;
@@ -528,7 +528,7 @@ export class HandlesRepository {
                 break;
             }
             case AssetNameLabel.LBL_001:
-                if (slotNumber > handle.updated_slot_number) {
+                if (slotNumber >= handle.updated_slot_number) {
                     if (!existingHandle) {
                         // There should always be an existing root handle for a subhandle
                         Logger.log({ message: `Cannot save subhandle settings for ${name} because root handle does not exist`, event: 'this.saveSubHandleSettingsChange', category: LogCategory.NOTIFY });

@@ -1,28 +1,48 @@
 #!/bin/bash
 set -eu
+set -a && source .env && set +a
 
-if [ ! -x "$(command -v docker)" ] || [[ ! "$(docker --version)" == "Docker version"* ]]; then
-    echo -en "\033[31m"
-    echo '******** Remember to start Docker Desktop! ***********';
-    echo -en "\033[0m"
-    exit 1
+OGMIOS_VER=${OGMIOS_VER:-6.11.2}
+SOCKET_PATH=${SOCKET_PATH:-'node.socket'}
+BASE_URL=${CONFIG_FILES_BASE_URL:-'https://public.koralabs.io/cardano'}
+if [[ "$@" != *"--host"* ]]
+then
+    HOST="--host 0.0.0.0"
 fi
-
-if [ "$( docker container inspect -f '{{.State.Pid}}' local-ogmios )" = "0" ]; then
-    echo 'local-ogmios found. Starting...'
-    docker start local-ogmios
-else
-    if ! [ "$( docker container inspect -f '{{.State.Status}}' local-ogmios )" = "running" ]; then
-        echo 'starting local-ogmios...'
-        docker run -d \
-            --name local-ogmios \
-            -p 1337:1337 \
-            -e MODE=both \
-            -e NETWORK=${NETWORK} \
-            koralabs/handles-api --include-transaction-cbor --log-level Warning
-    else
-        echo 'local-omgios already running...'
-    fi
+if [[ "$@" != *"--node-config"* ]]
+then
+    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
+fi
+if [[ "$@" != *"--node-socket"* ]]
+then
+    NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
 cp ../api.handle.me/workers/* ./workers/ 
+
+if [ ! -x "$(command -v /bin/ogmios)" ]; then
+    echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
+    curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
+    unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
+    cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
+fi
+
+echo 'Downloading cardano-node config files...'
+declare -a NETWORKS=(preview preprod mainnet)
+declare -a ERAS=(byron shelley alonzo conway)
+for net in "${NETWORKS[@]}"; \
+do \
+    mkdir -p ${net}
+    curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json
+    curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json
+    for era in "${ERAS[@]}"; \
+    do \
+        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json; \
+    done; \
+done
+
+if ! pgrep -x "ogmios" > /dev/null
+then
+    echo 'Starting Ogmios...'
+    /bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ koralabs/handles-api --include-transaction-cbor --log-level Warning
+fi
