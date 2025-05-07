@@ -20,11 +20,11 @@ fi
 
 cp ../api.handle.me/workers/* ./workers/ 
 
-if [ ! -x "$(command -v /bin/ogmios)" ]; then
+if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
     echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
-    cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
+    cp ./ogmios-install/bin/ogmios $HOME/.local/bin/ogmios && chmod +x $HOME/.local/bin/ogmios && rm -rf ./ogmios-install
 fi
 
 echo 'Downloading cardano-node config files...'
@@ -43,6 +43,7 @@ done
 
 if ! pgrep -x "ogmios" > /dev/null
 then
+    ./connectToNode.sh
     echo 'Starting Ogmios...'
-    /bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ koralabs/handles-api --include-transaction-cbor --log-level Warning
+    $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Warning
 fi
