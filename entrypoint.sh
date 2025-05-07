@@ -78,6 +78,11 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
     trap cleanup INT TERM KILL QUIT ABRT
     echo "Starting cardano-node."
 
+    if [ ${NETWORK} == 'mainnet' ]; then
+        if [ ! -f ${NODE_DB}/protocolMagicId ]; then
+            echo -n '764824073' > ${NODE_DB}/protocolMagicId
+        fi
+    fi
     exec ./cardano-node run \
         --config ./${NETWORK}/config.json \
         --topology ./${NETWORK}/topology.json \
