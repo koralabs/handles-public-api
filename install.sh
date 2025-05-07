@@ -12,15 +12,18 @@ chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p
 BASE_URL=${CONFIG_FILES_BASE_URL}
 declare -a NETWORKS=(preview preprod mainnet)
 declare -a ERAS=(byron shelley alonzo conway)
-for net in "${NETWORKS[@]}"; \
-do \
+for net in "${NETWORKS[@]}"
+do 
     mkdir -p ${net}
+    if [ ${net} == "mainnet" ]; then
+        curl -sL ${BASE_URL}/${net}/checkpoints.json -o ${net}/checkpoints.json
+    fi
     curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json
     curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json
-    for era in "${ERAS[@]}"; \
-    do \
-        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json; \
-    done; \
+    for era in "${ERAS[@]}"
+    do
+        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json
+    done
 done
 curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
 unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
