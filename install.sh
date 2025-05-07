@@ -15,6 +15,9 @@ declare -a ERAS=(byron shelley alonzo conway)
 for net in "${NETWORKS[@]}"; \
 do \
     mkdir -p ${net}
+    if [ ${net} == "mainnet" ]; then
+        curl -sL ${BASE_URL}/${net}/checkpoints.json -o ${net}/checkpoints.json
+    fi
     curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json
     curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json
     for era in "${ERAS[@]}"; \
