@@ -335,11 +335,16 @@ export class HandlesRepository {
         this.provider.rollBackToGenesis();
     }
 
-    public async removeHandle(handle: StoredHandle | RewoundHandle, slotNumber: number): Promise<void> {
+    public removeHandle(handle: StoredHandle | RewoundHandle, slotNumber: number): void {
         const handleName = handle.name;
         const amount = handle.amount - 1;
+        
+        if (handle.name == 'ap@adaprotocol')
+            console.log(`amount: ${amount}, handle.amount: ${handle.amount}, at slot: ${slotNumber}`);
 
         if (amount <= 0) {
+            if (handle.name == 'ap@adaprotocol')
+                console.log(`Amount wasn't 0!!!, at slot: ${slotNumber}`);
             this.provider.removeHandle(handle.name);
             if (!(handle instanceof RewoundHandle)) {
                 const history: HandleHistory = { old: handle, new: null };
@@ -354,7 +359,7 @@ export class HandlesRepository {
             this.provider.removeValueFromIndexedSet(IndexNames.RARITY, handle.rarity, handleName)
             this.provider.removeValueFromIndexedSet(IndexNames.OG, handle.og_number === 0 ? 0 : 1, handleName);
             this.provider.removeValueFromIndexedSet(IndexNames.CHARACTER, handle.characters, handleName)
-            const payment_key_hash = (await getPaymentKeyHash(handle.resolved_addresses.ada))!;
+            const payment_key_hash = getPaymentKeyHash(handle.resolved_addresses.ada)!;
             this.provider.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, handleName)
             this.provider.removeValueFromIndexedSet(IndexNames.ADDRESS, handle.resolved_addresses.ada, handleName)
             this.provider.removeValueFromIndexedSet(IndexNames.NUMERIC_MODIFIER, handle.numeric_modifiers, handleName)
@@ -370,12 +375,14 @@ export class HandlesRepository {
             this.updateHolder(undefined, handle);
 
         } else {
+            if (handle.name == 'ap@adaprotocol')
+                console.log(`We're in save, at slot: ${slotNumber}`);
             const updatedHandle = { ...handle, amount };
-            await this.save(updatedHandle, handle);
+            this.save(updatedHandle, handle);
         }
     }
 
-    public async rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): Promise<{ name: string; action: string; handle: Partial<StoredHandle> | undefined }[]> {
+    public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): { name: string; action: string; handle: Partial<StoredHandle> | undefined }[] {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.provider.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
         const rewoundHandles = [];
@@ -401,7 +408,7 @@ export class HandlesRepository {
                 if (!existingHandle) {
                     if (handleHistory.old) {
                         rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
-                        await this.save(new RewoundHandle(handleHistory.old as StoredHandle));
+                        this.save(new RewoundHandle(handleHistory.old as StoredHandle));
                         continue;
                     }
                     continue;
@@ -411,7 +418,7 @@ export class HandlesRepository {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
                     rewoundHandles.push({ name, action: 'delete', handle: undefined });
-                    await this.removeHandle(new RewoundHandle(existingHandle), this.getMetrics().currentSlot ?? 0);
+                    this.removeHandle(new RewoundHandle(existingHandle), this.getMetrics().currentSlot ?? 0);
                     continue;
                 }
 
@@ -422,7 +429,7 @@ export class HandlesRepository {
                 };
 
                 rewoundHandles.push({ name, action: 'update', handle: updatedHandle });
-                await this.save(new RewoundHandle(updatedHandle), existingHandle);
+                this.save(new RewoundHandle(updatedHandle), existingHandle);
             }
 
             // delete the slot key since we are rolling back to it
@@ -436,47 +443,45 @@ export class HandlesRepository {
         const { hex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
-        let handle = structuredClone(existingHandle) ?? await this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        let handle = existingHandle ?? this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
+        const utxoDetails = { tx_id: txId, index, lovelace, datum: datum ?? '', address };
 
-        const utxoDetails = {
-            tx_id: txId,
-            index,
-            lovelace,
-            datum: datum ?? '',
-            address
-        };
-
+        if (assetName === '000de140622d3236332d3534') {
+            console.log('**** FOUND b-263-54 ****', { hex, assetName, utxo, address, slotNumber, isMintTx, updated: handle.updated_slot_number, existingHandle });
+        }
         switch (assetLabel) {
             case null:
             case AssetNameLabel.NONE:
             case AssetNameLabel.LBL_222:
                 if (!existingHandle && !isMintTx) {
-                    Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.noHandleFound' });
+                    // this can happen now because Ogmios or fastq or V8 gets one out of order .0001% of the time
+                    Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.INFO, event: 'saveHandleUpdate.noHandleFound' });
                 }
                 if (slotNumber < handle.updated_slot_number && isMintTx) {
                     handle.created_slot_number = Math.min(handle.created_slot_number, slotNumber, existingHandle?.created_slot_number ?? Number.POSITIVE_INFINITY);
                 }
                 if (slotNumber >= handle.updated_slot_number) {
+                    // check if existing handle has a utxo. If it does, we may have a double mint
                     if (isMintTx && existingHandle?.utxo) {
-                        // check if existing handle has a utxo. If it does, we may have a double mint
                         handle.amount = (handle.amount ?? 1) + 1;
-                        //this can happen now because either Ogmios or fastq .0001% of the time gets one out of order
                         Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slotNumber}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
                     }
+                    handle.updated_slot_number = slotNumber;
                     handle.script = script;
                     handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
                     handle.has_datum = !!datum;
                     handle.lovelace = lovelace;
                     handle.utxo = utxo;
-                    handle.updated_slot_number = slotNumber;
                     handle.resolved_addresses!.ada = address;
                     handle = new UpdatedOwnerHandle(handle);
                 }
                 break;
             case AssetNameLabel.LBL_100:
             case AssetNameLabel.LBL_000:
+            //case reference_token !== undefined:
             {
                 if (slotNumber >= handle.updated_slot_number) {
                     if (!datum) {
@@ -484,19 +489,8 @@ export class HandlesRepository {
                         return;
                     }
 
-                    let personalization = handle.personalization ?? { validated_by: '', trial: true, nsfw: true };
-                    const { metadata,  personalizationDatum } = await this._buildPersonalizationData(name, hex, datum);
-                    if (personalizationDatum) {
-                        // populate personalization from the reference token
-                        personalization = await this._buildPersonalization({ personalizationDatum, personalization });
-                    }
-                    const addresses = personalizationDatum?.resolved_addresses
-                        ? Object.entries(personalizationDatum?.resolved_addresses ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-                            if (key !== 'ada') { acc[key] = value as string; }
-                            return acc;
-                        }, {})
-                        : {};
-                    const virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined;
+                    const { metadata,  personalizationDatum } = this._buildPersonalizationData(name, hex, datum);
+
                     handle.og_number = metadata?.og_number ?? 0;
                     handle.image_hash = personalizationDatum?.image_hash ?? ''
                     handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
@@ -505,21 +499,26 @@ export class HandlesRepository {
                     handle.pfp_image = personalizationDatum?.pfp_image
                     handle.pfp_asset = personalizationDatum?.pfp_asset
                     handle.updated_slot_number = slotNumber
-                    handle.resolved_addresses = {
-                        ...addresses,
-                        ada: existingHandle?.resolved_addresses?.ada ?? ''
-                    }
-                    handle.personalization = personalization
                     handle.reference_token = utxoDetails
                     handle.svg_version = personalizationDatum?.svg_version ?? ''
                     handle.default = personalizationDatum?.default ?? false
                     handle.last_update_address = personalizationDatum?.last_update_address
-                    handle.virtual = virtual
                     handle.original_address = personalizationDatum?.original_address
                     handle.id_hash = personalizationDatum?.id_hash
                     handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
                     handle.last_edited_time = personalizationDatum?.last_edited_time
+                    handle.resolved_addresses = {
+                        ...personalizationDatum?.resolved_addresses,
+                        ada: existingHandle?.resolved_addresses?.ada ?? ''
+                    }
+                    handle.personalization = await this._buildPersonalization({ 
+                        personalizationDatum, 
+                        personalization: handle.personalization ?? { validated_by: '', trial: true, nsfw: true } 
+                    });
+
+                    // VIRTUAL_SUBHANDLE
                     if (assetLabel == AssetNameLabel.LBL_000) {
+                        handle.virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined
                         handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
                         handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
                         handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
@@ -541,25 +540,25 @@ export class HandlesRepository {
                     }
 
                     handle.subhandle_settings = {
-                        ...(await this._parseSubHandleSettingsDatum(datum)),
+                        ...(this._parseSubHandleSettingsDatum(datum)),
                         utxo: utxoDetails
                     }
                     handle.updated_slot_number = slotNumber;
                     handle.resolved_addresses = {
-                        ...(existingHandle?.resolved_addresses ?? {}),
+                        ...existingHandle?.resolved_addresses,
                         ada: existingHandle?.resolved_addresses?.ada ?? ''
                     }
                 }
                 break;
             default:
-                Logger.log({ message: `Unknown asset name ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
+                Logger.log({ message: `Unknown asset: ${assetName}`, category: LogCategory.ERROR, event: 'processScannedHandleInfo.unknownAssetName' });
         }
         
-        await this.save(handle, existingHandle);
+        this.save(handle, existingHandle);
 
     }
 
-    public async save(handle: StoredHandle | RewoundHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
+    public save(handle: StoredHandle | RewoundHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
         const {
             name,
             rarity,
@@ -571,8 +570,12 @@ export class HandlesRepository {
             updated_slot_number
         } = handle;
 
-        const payment_key_hash = (await getPaymentKeyHash(ada))!;
-        const old_payment_key_hash = (await getPaymentKeyHash(oldHandle?.resolved_addresses.ada!))!;
+        if (name === 'ap@adaprotocol' || name === 'b-263-54') {
+            console.log(`**** SAVING ${name} ****`, handle, oldHandle);
+        }
+
+        const payment_key_hash = getPaymentKeyHash(ada)!;
+        const old_payment_key_hash = getPaymentKeyHash(oldHandle?.resolved_addresses.ada!)!;
         const ogFlag = og_number === 0 ? 0 : 1;
         handle.payment_key_hash = payment_key_hash;
         handle.drep = buildDrep(ada, handle.id_hash?.replace('0x', ''));
@@ -633,7 +636,7 @@ export class HandlesRepository {
     }
 
     public async getStartingPoint(
-        save: (handle: StoredHandle) => Promise<void>, 
+        save: (handle: StoredHandle) => void, 
         failed = false
     ): Promise<Point | null> {
         return this.provider.getStartingPoint(save , failed);
@@ -710,7 +713,7 @@ export class HandlesRepository {
         return array;
     }
 
-    private async _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): Promise<StoredHandle> {
+    private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {
         const {name, hex, policy} = handle;
         if (!name || !hex || !policy) {
             throw new Error(`_buildHandle: "name", "hex", and "policy" are required properties. Given: ${JSON.stringify({name, hex, policy})}`);
@@ -728,7 +731,7 @@ export class HandlesRepository {
         handle.numeric_modifiers = buildNumericModifiers(name);
         handle.created_slot_number = (handle.created_slot_number ?? slotNumber);
         handle.updated_slot_number = (handle.updated_slot_number ?? slotNumber);
-        handle.payment_key_hash = address ? (await getPaymentKeyHash(address))! : '';
+        handle.payment_key_hash = address ? (getPaymentKeyHash(address))! : '';
         handle.handle_type = handle.handle_type ?? (name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE);
         handle.image = data?.image ?? (handle.image ?? '');
         handle.standard_image = data?.image ?? handle.standard_image ?? handle.image ?? '';
@@ -778,8 +781,8 @@ export class HandlesRepository {
         return testMode ? { old, new: difference } : { old };
     }
 
-    private _buildPersonalizationData = async (handle: string, hex: string, datum: string) => {
-        const decodedDatum = await decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
+    private _buildPersonalizationData = (handle: string, hex: string, datum: string) => {
+        const decodedDatum = decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
         const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
         const { constructor_0 } = datumObject;
 
@@ -864,6 +867,11 @@ export class HandlesRepository {
     };
 
     private _buildPersonalization = async ({ personalizationDatum, personalization }: BuildPersonalizationInput): Promise<IPersonalization> => {
+
+        if (!personalizationDatum) {
+            return personalization
+        }
+
         const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
 
         // start timer for ipfs calls
@@ -926,8 +934,8 @@ export class HandlesRepository {
         this.provider.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
 
-    private async _parseSubHandleSettingsDatum(datum: string) {
-        const decodedSettings = await decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
+    private _parseSubHandleSettingsDatum(datum: string) {
+        const decodedSettings = decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
 
         const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
             return {

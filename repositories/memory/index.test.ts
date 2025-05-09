@@ -1701,7 +1701,7 @@ describe('HandleStore tests', () => {
                 policy
             });
             expect(loggerSpy).toHaveBeenCalledWith({
-                category: 'NOTIFY',
+                category: 'INFO',
                 event: 'saveHandleUpdate.noHandleFound',
                 message: 'Handle was updated but there is no existing handle in storage with name: not-a-handle'
             });

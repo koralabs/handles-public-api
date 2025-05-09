@@ -3,7 +3,7 @@ set -eu
 set -a && source .env && set +a
 
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
-SOCKET_PATH=${SOCKET_PATH:-'node.socket'}
+SOCKET_PATH=${SOCKET_PATH:-"${PWD}/node.socket"}
 BASE_URL=${CONFIG_FILES_BASE_URL:-'https://public.koralabs.io/cardano'}
 if [[ "$@" != *"--host"* ]]
 then
@@ -44,6 +44,6 @@ done
 if ! pgrep -x "ogmios" > /dev/null
 then
     ./connectToNode.sh
-    echo 'Starting Ogmios...'
-    $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Warning
+    echo "Starting Ogmios - connecting to ${SOCKET_PATH}"
+    $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Error &
 fi

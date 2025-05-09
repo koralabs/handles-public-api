@@ -1,6 +1,6 @@
-import { decodeCborFromIPFSFile } from './index';
 import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import * as config from '../../config';
+import { decodeCborFromIPFSFile } from './index';
 import * as ipfs from './requestIpfs';
 
 jest.mock('../../config');
@@ -41,6 +41,6 @@ describe('decodeCborFromIPFSFile tests', () => {
         const result = await decodeCborFromIPFSFile(cid);
         expect(result).toEqual({ test: 'test' });
         expect(requestIpfsSpy).toBeCalledTimes(2);
-        expect(requestIpfsSpy).nthCalledWith(2, `https://ipfs.io/ipfs/${cid}`);
+        expect(requestIpfsSpy).nthCalledWith(2, `https://ipfs.io/ipfs/${cid}?pinataGatewayToken=undefined`);
     });
 });

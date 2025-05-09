@@ -79,17 +79,9 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
     trap cleanup INT TERM KILL QUIT ABRT
     echo "Starting cardano-node."
 
-    if [ ! -f ${NODE_DB}/protocolMagicId ]; then
-        if [ ${NETWORK} == 'mainnet' ]; then
-            echo -n '764824073' > ${NODE_DB}/protocolMagicId
-        fi
-        if [ ${NETWORK} == 'preview' ]; then
-            echo -n '2' > ${NODE_DB}/protocolMagicId
-        fi
-        if [ ${NETWORK} == 'preprod' ]; then
-            echo -n '1' > ${NODE_DB}/protocolMagicId
-        fi
-    fi
+    # Workaround for Mithril not outputting the protocolMagicId
+    cat ./${NETWORK}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
+
     exec ./cardano-node run \
         --config ./${NETWORK}/config.json \
         --topology ./${NETWORK}/topology.json \

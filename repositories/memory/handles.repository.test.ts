@@ -56,14 +56,11 @@ describe('MemoryHandlesProvider Tests', () => {
     };
 
     beforeAll(async () => {
-        const saves = handlesFixture.map(async (handle) => {
+        handlesFixture.map((handle) => {
             return repo.save(handle);
         });
 
-        saves.push(
-            repo.save(await repo.Internal.buildHandle(expectedVirtualHandle))
-        );
-        await Promise.all(saves);
+        repo.save(repo.Internal.buildHandle(expectedVirtualHandle))
     });
 
     beforeEach(() => {

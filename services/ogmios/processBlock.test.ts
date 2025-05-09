@@ -4,11 +4,13 @@ import { HandlesRepository } from '../../repositories/handlesRepository';
 import { MemoryHandlesProvider } from '../../repositories/memory';
 import { HandleStore } from '../../repositories/memory/handleStore';
 import * as ipfs from '../../utils/ipfs';
+import { block_144711632, block_144718140, block_144718597 } from './fixtures/blocks';
 import OgmiosService from './ogmios.service';
 const repo = new HandlesRepository(new MemoryHandlesProvider());
 const ogmios = new OgmiosService(repo);
 jest.mock('../../config/index', () => ({
-    isDatumEndpointEnabled: jest.fn(() => true)
+    isDatumEndpointEnabled: jest.fn(() => true),
+    getIpfsGateway: jest.fn(() => 'https://ipfs.io/ipfs/'),
 }));
 
 describe('processBlock Tests', () => {
@@ -152,6 +154,22 @@ describe('processBlock Tests', () => {
                 }
         ]
     });
+
+    describe('It should handle strangely ordered blocks', () => {
+        it('Should save Handle updates even if out of order', async () => {
+            const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
+            const setMetricsSpy = jest.spyOn(MemoryHandlesProvider.prototype, 'setMetrics');
+            jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+            // @ts-ignore #2
+            await ogmios['processBlock']({ txBlock: block_144718140, tip });
+            // @ts-ignore #1
+            await ogmios['processBlock']({ txBlock: block_144711632, tip });
+            // @ts-ignore #3
+            await ogmios['processBlock']({ txBlock: block_144718597, tip });
+            expect(HandleStore.handles.get('b-263-54')?.utxo).toBe('cba9fb3981f7a50e69ad6bc36739b2b303dee59b2b1db963e4ceb321ec8d8951#0');
+            expect(HandleStore.handles.get('b-263-54')?.resolved_addresses.ada).toBe('addr1qxedumyydxkq4gc7ud0wnwashphwxr7l7w3hmp2dnymvlj7yl8ckta8puax7ezypm7fg5ytydjz33erdxqtm556y9kfqa9s0sg');
+        });
+    })
 
     it('Should save a new handle to the datastore and set metrics', async () => {
         const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');

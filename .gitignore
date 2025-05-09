@@ -119,3 +119,7 @@ preview
 mainnet-node.ip
 preprod-node.ip
 preview-node.ip
+scripts/localHandles.json
+.gitignore
+scripts/discrepancies.json
+scripts/liveHandles.json

@@ -206,16 +206,23 @@ class OgmiosService {
                 const [policy, assetInfo] = mintAssets[i];
                 if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
+                        if (assetName === '0000000061704061646170726f746f636f6c') {
+                            console.log('**** MINT/BURN ap@adaprotocol ****', { quantity:Number(quantity) });
+                        }
                         if (quantity == BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
                             const handle = this.handlesRepo.get(name);
+                            if (assetName === '0000000061704061646170726f746f636f6c') {
+                                console.log(`${name}.amount`, handle?.amount);
+                            }
                             if (!handle) continue;
-                            await this.handlesRepo.removeHandle(handle, currentSlot);
+                            this.handlesRepo.removeHandle(handle, currentSlot);
                         }
                     }
                 }
             }
 
+            // const reference_tokens: Record<string, {datum: string}> = {};
             // Iterate through all the outputs and find asset keys that start with our policyId
             for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
                 const o = txBody?.outputs[i];

@@ -437,7 +437,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    public async getStartingPoint(save: (handle: StoredHandle) => Promise<void>, failed = false) {
+    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false) {
         if (!this._files || this._files.length === 0) {
             return null;
         }
@@ -458,13 +458,13 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    private async prepareHandlesStorage(save: (handle: StoredHandle) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
+    private async prepareHandlesStorage(save: (handle: StoredHandle) => void, filesContent: IHandleFileContent): Promise<void> {
         const startTime = Date.now()
         Logger.log('Preparing handles storage. Parsing file content...');
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
-        await asyncForEach(Object.entries(handles), ([, handle]) => {
+        await asyncForEach(Object.entries(handles), async ([, handle]) => {
             return save(new RewoundHandle(handle));
         }, 1)
 

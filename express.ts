@@ -10,4 +10,4 @@ process.on('unhandledRejection', (err: Error) => {
     // Log the error and potentially handle it
 });
 const appPromise = util.promisify(app.listen).bind(app);
-Promise.all([appPromise()]);
+await Promise.all([appPromise()]);
