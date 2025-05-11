@@ -6,7 +6,7 @@ import { isDatumEndpointEnabled } from '../config';
 import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { decodeCborFromIPFSFile } from '../utils/ipfs';
-import { sortAlphabetically, sortByUpdatedSlotNumber, sortedByLength, sortOGHandle } from './getDefaultHandle';
+import { sortAlphabetically, sortByCreatedSlotNumber, sortedByLength, sortOGHandle } from './getDefaultHandle';
 const blackListedIpfsCids: string[] = [];
 const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
 
@@ -610,8 +610,8 @@ export class HandlesRepository {
         const sortedHandlesByLength = sortedByLength(handles);
         if (sortedHandlesByLength.length == 1) return sortedHandlesByLength[0];
     
-        //Latest slot number if same length
-        const sortedHandlesBySlot = sortByUpdatedSlotNumber(sortedHandlesByLength);
+        // earliest created slot if same length
+        const sortedHandlesBySlot = sortByCreatedSlotNumber(sortedHandlesByLength);
         if (sortedHandlesBySlot.length == 1) return sortedHandlesBySlot[0];
     
         //Alphabetical if minted same time

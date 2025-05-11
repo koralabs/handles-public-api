@@ -29,7 +29,7 @@ export const sortedByLength = (handles: DefaultHandleInfo[]): DefaultHandleInfo[
     return groupedHandles[firstKey] ?? [];
 };
 
-export const sortByUpdatedSlotNumber = (handles: DefaultHandleInfo[]): DefaultHandleInfo[] => {
+export const sortByCreatedSlotNumber = (handles: DefaultHandleInfo[]): DefaultHandleInfo[] => {
     // group handles by updated_slot_number
     const groupedHandles = handles.reduce<Record<string, DefaultHandleInfo[]>>((acc, handle) => {
         const createdSlotNumber = handle.created_slot_number;
@@ -42,7 +42,7 @@ export const sortByUpdatedSlotNumber = (handles: DefaultHandleInfo[]): DefaultHa
 
     // sort grouped handles by updated_slot_number key
     const groupedHandleKeys = Object.keys(groupedHandles);
-    groupedHandleKeys.sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+    groupedHandleKeys.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
     const [firstKey] = groupedHandleKeys;
     return groupedHandles[firstKey] ?? [];
 };
