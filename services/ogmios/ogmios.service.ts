@@ -37,6 +37,7 @@ class OgmiosService {
 
         // attempt ogmios resume (see if starting point exists or errors)
         const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));
+        //const firstStartingPoint = {id: 'eca47c4fb9ca7f8eb2c524b975da3db1d05ced0a9ef0c4ee2c40c4cf2fcb3ea5', slot: 134281477} as Point
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -96,10 +97,10 @@ class OgmiosService {
     }
 
     private _createWebSocketClient(): WebSocket {
-        const client = new WebSocket(new url.URL(OGMIOS_HOST).toString());
+        const client = new WebSocket(new url.URL(OGMIOS_HOST).toString(), {allowSynchronousEvents: false});
         client.on('message', async (message: string) => {
             await fastq.promise(async (msg: string) => {
-                const response  = JSON.parse(msg);
+                const response = JSON.parse(msg);
                 switch (response.id) {
                     case 'find-intersection':
                         for (let i=1; i<=1000; i++) {
@@ -146,7 +147,7 @@ class OgmiosService {
                                     }
                                     catch (error: any) {
                                         Logger.log({
-                                            message: `Unhandled error processing block: BLOCK: ${JSON.stringify(response.result.block.id)} ERROR:${error.message}`,
+                                            message: `Unhandled error processing block: BLOCK: ${JSON.stringify(response.result.block.id)} ERROR:${error.message} STACK: ${error.stack}`,
                                             category: LogCategory.NOTIFY,
                                             event: 'OgmiosService.processBlock'
                                         });
@@ -173,7 +174,6 @@ class OgmiosService {
     }
 
     private async _resume(startingPoint: Point) { 
-        //startingPoint = {slot: 99999810, id: 'a270ecc9f374b82a9a5e027ba862593ef95cd10f4535dc1fe851babe03a0dec9'}; // TODO: remove this line
         this.handlesRepo.setMetrics({ currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
         this.client!.once('open', () => {
             this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
@@ -206,15 +206,9 @@ class OgmiosService {
                 const [policy, assetInfo] = mintAssets[i];
                 if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
-                        if (assetName === '0000000061704061646170726f746f636f6c') {
-                            console.log('**** MINT/BURN ap@adaprotocol ****', { quantity:Number(quantity) });
-                        }
                         if (quantity == BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
                             const handle = this.handlesRepo.get(name);
-                            if (assetName === '0000000061704061646170726f746f636f6c') {
-                                console.log(`${name}.amount`, handle?.amount);
-                            }
                             if (!handle) continue;
                             this.handlesRepo.removeHandle(handle, currentSlot);
                         }
@@ -222,7 +216,6 @@ class OgmiosService {
                 }
             }
 
-            // const reference_tokens: Record<string, {datum: string}> = {};
             // Iterate through all the outputs and find asset keys that start with our policyId
             for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
                 const o = txBody?.outputs[i];
@@ -275,7 +268,7 @@ class OgmiosService {
                             isMintTx
                         };
 
-                        await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo);
+                        await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo)
                     }
                 }
             }
@@ -305,7 +298,7 @@ class OgmiosService {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
-            await this.handlesRepo.rollBackToGenesis();
+            this.handlesRepo.rollBackToGenesis();
         } else {
             const { slot, id } = point;
             let lastSlot = 0;
@@ -314,7 +307,7 @@ class OgmiosService {
             }
 
             // The idea here is we need to rollback all changes from a given slot
-            await this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
 }

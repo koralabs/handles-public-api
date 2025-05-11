@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -339,12 +339,9 @@ export class HandlesRepository {
         const handleName = handle.name;
         const amount = handle.amount - 1;
         
-        if (handle.name == 'ap@adaprotocol')
-            console.log(`amount: ${amount}, handle.amount: ${handle.amount}, at slot: ${slotNumber}`);
-
         if (amount <= 0) {
-            if (handle.name == 'ap@adaprotocol')
-                console.log(`Amount wasn't 0!!!, at slot: ${slotNumber}`);
+            // if (handle.name == 'ap@adaprotocol')
+            //     debugLog('ap@adaprotocol being burned', slotNumber, handle);
             this.provider.removeHandle(handle.name);
             if (!(handle instanceof RewoundHandle)) {
                 const history: HandleHistory = { old: handle, new: null };
@@ -373,10 +370,9 @@ export class HandlesRepository {
     
             // remove the stake key index
             this.updateHolder(undefined, handle);
-
+            // if (handle.name == 'ap@adaprotocol')
+            //     debugLog('ap@adaprotocol burned', slotNumber, this.provider.getHandle(handle.name));
         } else {
-            if (handle.name == 'ap@adaprotocol')
-                console.log(`We're in save, at slot: ${slotNumber}`);
             const updatedHandle = { ...handle, amount };
             this.save(updatedHandle, handle);
         }
@@ -444,20 +440,19 @@ export class HandlesRepository {
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
         const existingHandle = this.get(name) ?? undefined;
         let handle = existingHandle ?? this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        
+        // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
+        //     debugLog('PROCESSED SCANNED INFO START', slotNumber, {...handle, utxo})
 
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
         const utxoDetails = { tx_id: txId, index, lovelace, datum: datum ?? '', address };
 
-        if (assetName === '000de140622d3236332d3534') {
-            console.log('**** FOUND b-263-54 ****', { hex, assetName, utxo, address, slotNumber, isMintTx, updated: handle.updated_slot_number, existingHandle });
-        }
         switch (assetLabel) {
             case null:
             case AssetNameLabel.NONE:
             case AssetNameLabel.LBL_222:
                 if (!existingHandle && !isMintTx) {
-                    // this can happen now because Ogmios or fastq or V8 gets one out of order .0001% of the time
                     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.INFO, event: 'saveHandleUpdate.noHandleFound' });
                 }
                 if (slotNumber < handle.updated_slot_number && isMintTx) {
@@ -481,7 +476,6 @@ export class HandlesRepository {
                 break;
             case AssetNameLabel.LBL_100:
             case AssetNameLabel.LBL_000:
-            //case reference_token !== undefined:
             {
                 if (slotNumber >= handle.updated_slot_number) {
                     if (!datum) {
@@ -489,38 +483,20 @@ export class HandlesRepository {
                         return;
                     }
 
-                    const { metadata,  personalizationDatum } = this._buildPersonalizationData(name, hex, datum);
+                    const { projectAttributes } = this._buildPersonalizationData(handle, datum); // <- handle is mutated
 
-                    handle.og_number = metadata?.og_number ?? 0;
-                    handle.image_hash = personalizationDatum?.image_hash ?? ''
-                    handle.standard_image_hash = personalizationDatum?.standard_image_hash ?? ''
-                    handle.bg_image = personalizationDatum?.bg_image
-                    handle.bg_asset = personalizationDatum?.bg_asset
-                    handle.pfp_image = personalizationDatum?.pfp_image
-                    handle.pfp_asset = personalizationDatum?.pfp_asset
                     handle.updated_slot_number = slotNumber
                     handle.reference_token = utxoDetails
-                    handle.svg_version = personalizationDatum?.svg_version ?? ''
-                    handle.default = personalizationDatum?.default ?? false
-                    handle.last_update_address = personalizationDatum?.last_update_address
-                    handle.original_address = personalizationDatum?.original_address
-                    handle.id_hash = personalizationDatum?.id_hash
-                    handle.pz_enabled = personalizationDatum?.pz_enabled ?? false
-                    handle.last_edited_time = personalizationDatum?.last_edited_time
                     handle.resolved_addresses = {
-                        ...personalizationDatum?.resolved_addresses,
+                        ...projectAttributes?.resolved_addresses,
                         ada: existingHandle?.resolved_addresses?.ada ?? ''
                     }
-                    handle.personalization = await this._buildPersonalization({ 
-                        personalizationDatum, 
-                        personalization: handle.personalization ?? { validated_by: '', trial: true, nsfw: true } 
-                    });
 
                     // VIRTUAL_SUBHANDLE
                     if (assetLabel == AssetNameLabel.LBL_000) {
-                        handle.virtual = personalizationDatum?.virtual ? { expires_time: personalizationDatum.virtual.expires_time, public_mint: !!personalizationDatum.virtual.public_mint } : undefined
+                        handle.virtual = projectAttributes?.virtual ? { expires_time: projectAttributes.virtual.expires_time, public_mint: !!projectAttributes.virtual.public_mint } : undefined
                         handle.utxo = `${utxoDetails.tx_id}#${utxoDetails.index}`;
-                        handle.resolved_addresses!.ada = bech32FromHex(personalizationDatum.resolved_addresses.ada.replace('0x', ''), isTestnet);
+                        handle.resolved_addresses!.ada = bech32FromHex(projectAttributes!.resolved_addresses!.ada.replace('0x', ''), isTestnet);
                         handle.handle_type = HandleType.VIRTUAL_SUBHANDLE;
                     }
                 }
@@ -556,6 +532,8 @@ export class HandlesRepository {
         
         this.save(handle, existingHandle);
 
+        // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
+        //     debugLog('PROCESSED SCANNED INFO END', slotNumber, handle)
     }
 
     public save(handle: StoredHandle | RewoundHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
@@ -570,9 +548,8 @@ export class HandlesRepository {
             updated_slot_number
         } = handle;
 
-        if (name === 'ap@adaprotocol' || name === 'b-263-54') {
-            console.log(`**** SAVING ${name} ****`, handle, oldHandle);
-        }
+        // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
+        //     debugLog('SAVE CALLED FOR', handle.updated_slot_number, handle)
 
         const payment_key_hash = getPaymentKeyHash(ada)!;
         const old_payment_key_hash = getPaymentKeyHash(oldHandle?.resolved_addresses.ada!)!;
@@ -633,6 +610,19 @@ export class HandlesRepository {
     
         //Alphabetical if minted same time
         return sortAlphabetically(sortedHandlesBySlot);
+    }
+
+    /**
+     * @description Mutates handle to add personalization data
+     */
+    public async addPersonalization(handle: StoredHandle | null | undefined): Promise<void> {
+        if (handle?.reference_token) {
+            const { projectAttributes } = this._buildPersonalizationData(handle, handle.reference_token.datum!);
+            handle.personalization = await this._buildPersonalization({ 
+                personalizationDatum: projectAttributes!, 
+                personalization: handle.personalization ?? { validated_by: '', trial: true, nsfw: true } 
+            });
+        }
     }
 
     public async getStartingPoint(
@@ -781,7 +771,10 @@ export class HandlesRepository {
         return testMode ? { old, new: difference } : { old };
     }
 
-    private _buildPersonalizationData = (handle: string, hex: string, datum: string) => {
+    /**
+     * @description Mutates handle - adding personalization data
+     */
+    private _buildPersonalizationData = (handle: StoredHandle, datum: string): { nftAttributes: IHandleMetadata | null; projectAttributes: IPzDatumConvertedUsingSchema | null; } => {
         const decodedDatum = decodeCborToJson({ cborString: datum, schema: handleDatumSchema });
         const datumObject = typeof decodedDatum === 'string' ? JSON.parse(decodedDatum) : decodedDatum;
         const { constructor_0 } = datumObject;
@@ -791,7 +784,7 @@ export class HandlesRepository {
                 return HandleType.VIRTUAL_SUBHANDLE;
             }
 
-            if (hex.startsWith(AssetNameLabel.LBL_222) && handle.includes('@')) {
+            if (hex.startsWith(AssetNameLabel.LBL_222) && handle.name.includes('@')) {
                 return HandleType.NFT_SUBHANDLE;
             }
 
@@ -809,7 +802,7 @@ export class HandlesRepository {
             characters: '',
             numeric_modifiers: '',
             version: 0,
-            handle_type: getHandleType(hex)
+            handle_type: getHandleType(handle.hex)
         };
 
         const requiredProperties: IPzDatum = {
@@ -835,27 +828,44 @@ export class HandlesRepository {
             }, []);
 
         if (constructor_0 && Array.isArray(constructor_0) && constructor_0.length === 3) {
-            const missingMetadata = getMissingKeys(constructor_0[0], requiredMetadata);
+            const nftAttributes: IHandleMetadata = constructor_0[0];
+            const projectAttributes: IPzDatumConvertedUsingSchema = constructor_0[2];
+            const missingMetadata = getMissingKeys(nftAttributes, requiredMetadata);
             if (missingMetadata.length > 0) {
                 //Logger.log({ category: LogCategory.INFO, message: `${handle} missing metadata keys: ${missingMetadata.join(', ')}`, event: 'buildValidDatum.missingMetadata' });
             }
 
-            const missingDatum = getMissingKeys(constructor_0[2], requiredProperties);
+            const missingDatum = getMissingKeys(projectAttributes, requiredProperties);
             if (missingDatum.length > 0) {
                 //Logger.log({ category: LogCategory.INFO, message: `${handle} missing datum keys: ${missingDatum.join(', ')}`, event: 'buildValidDatum.missingDatum' });
             }
 
+            handle.og_number = nftAttributes?.og_number ?? 0;
+            handle.image_hash = projectAttributes?.image_hash ?? ''
+            handle.standard_image_hash = projectAttributes?.standard_image_hash ?? ''
+            handle.bg_image = projectAttributes?.bg_image
+            handle.bg_asset = projectAttributes?.bg_asset
+            handle.pfp_image = projectAttributes?.pfp_image
+            handle.pfp_asset = projectAttributes?.pfp_asset
+            handle.svg_version = projectAttributes?.svg_version ?? ''
+            handle.default = projectAttributes?.default == true
+            handle.last_update_address = projectAttributes?.last_update_address
+            handle.original_address = projectAttributes?.original_address
+            handle.id_hash = projectAttributes?.id_hash
+            handle.pz_enabled = projectAttributes?.pz_enabled == true
+            handle.last_edited_time = projectAttributes?.last_edited_time
+
             return {
-                metadata: constructor_0[0],
-                personalizationDatum: constructor_0[2]
+                nftAttributes,
+                projectAttributes
             };
         }
 
         Logger.log({ category: LogCategory.ERROR, message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`, event: 'buildValidDatum.invalidMetadata' });
 
         return {
-            metadata: null,
-            personalizationDatum: null
+            nftAttributes: null,
+            projectAttributes: null
         };
     };
 
@@ -863,7 +873,7 @@ export class HandlesRepository {
         if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
         const cid = link.split('ipfs://')[1];
-        return decodeCborFromIPFSFile(`${cid}`, schema);
+        return await decodeCborFromIPFSFile(`${cid}`, schema);
     };
 
     private _buildPersonalization = async ({ personalizationDatum, personalization }: BuildPersonalizationInput): Promise<IPersonalization> => {
@@ -872,12 +882,14 @@ export class HandlesRepository {
             return personalization
         }
 
-        const { portal, designer, socials, vendor, validated_by, trial, nsfw } = personalizationDatum;
+        const { portal, designer, socials, validated_by, trial, nsfw } = personalizationDatum;
 
         // start timer for ipfs calls
         // const ipfsTimer = Date.now();
 
-        const [ipfsPortal, ipfsDesigner, ipfsSocials] = await Promise.all([{ link: portal, schema: portalSchema }, { link: designer, schema: designerSchema }, { link: socials, schema: socialsSchema }, { link: vendor }].map(this._getDataFromIPFSLink));
+        const ipfsPortal = await this._getDataFromIPFSLink({ link: portal, schema: portalSchema });
+        const ipfsDesigner = await this._getDataFromIPFSLink({ link: designer, schema: designerSchema });
+        const ipfsSocials = await this._getDataFromIPFSLink({ link: socials, schema: socialsSchema });
 
         // stop timer for ipfs calls
         // const endIpfsTimer = Date.now() - ipfsTimer;

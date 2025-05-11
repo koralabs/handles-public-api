@@ -7,12 +7,20 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
     let ipfsGateway = getIpfsGateway();
 
     try {
-        let result = await requestIpfs(`${ipfsGateway}${cid}`);
+        let result = await requestIpfs(`${ipfsGateway}${cid}`).catch((error: any) => {return {
+            statusCode: 500,
+            error: error.message,
+            cbor: undefined
+        }});
 
         if (result.statusCode !== 200) {
             ipfsGateway = getIpfsGateway(true);
             if (ipfsGateway.length > 12) {
-                result = await requestIpfs(`${ipfsGateway}${cid}?pinataGatewayToken=${process.env.PINATA_GATEWAY_TOKEN}`);
+                result = await requestIpfs(`${ipfsGateway}${cid}?pinataGatewayToken=${process.env.PINATA_GATEWAY_TOKEN}`).catch((error: any) => {return {
+                    statusCode: 500,
+                    error: error.message,
+                    cbor: undefined
+                }});
             } else {
                 throw new Error(`Status from primary gateway resulted in status ${result.statusCode}. Backup gateway "${ipfsGateway}" is invalid`);
             }
@@ -31,7 +39,7 @@ export const decodeCborFromIPFSFile = async (cid: string, schema?: any): Promise
 
         if (cbor) {
             try {
-                const json = await decodeCborToJson({ cborString: cbor, schema });
+                const json = decodeCborToJson({ cborString: cbor, schema });
                 // eslint-disable-next-line no-prototype-builtins
                 if (json.hasOwnProperty('constructor_0')) {
                     const [data] = json.constructor_0;

@@ -135,7 +135,7 @@ class App {
         await ogmiosService.initialize(this.resetBlockProcessors.bind(this), this.loadBlockProcessorIndexes.bind(this));
     }
 
-    private async initializeSwagger() {
+    private initializeSwagger() {
         const options = {
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'Handles API',

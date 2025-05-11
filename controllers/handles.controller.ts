@@ -183,16 +183,19 @@ class HandlesController {
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const handle = await HandlesController.getHandleFromRepo(req);
 
-            const { personalization } = new PersonalizedHandleViewModel(handleData.handle);
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
+            await handleRepo.addPersonalization(handle.handle)
+
+            const { personalization } = new PersonalizedHandleViewModel(handle.handle);
 
             if (!personalization) {
-                res.status(handleData.code).json({});
+                res.status(handle.code).json({});
                 return;
             }
 
-            res.status(handleData.code).json(personalization);
+            res.status(handle.code).json(personalization);
         } catch (error) {
             next(error);
         }

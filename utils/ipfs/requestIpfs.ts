@@ -7,7 +7,7 @@ export const requestIpfs = (
     cbor?: string;
     error?: string
 }> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
             const options: https.RequestOptions = {
                 method: 'GET',
@@ -23,15 +23,20 @@ export const requestIpfs = (
                 });
                 res.on('error', (err) => {
                     resolve({
-                        statusCode: res.statusCode,
+                        statusCode: 500,
                         error: err.message
                     });
                 });
-                res.on('end', (chunk: any) => {
+                res.on('end', () => {
                     resolve({
                         statusCode: res.statusCode,
                         cbor: Buffer.concat(body).toString('hex')
                     });
+                });
+            }).on('error', (err) => {
+                resolve({
+                    statusCode: 500,
+                    error: err.message
                 });
             });
             post_req.end();
