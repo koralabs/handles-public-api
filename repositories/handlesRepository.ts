@@ -94,8 +94,8 @@ export class HandlesRepository {
 
     }
 
-    public getAllHandleNames(search?: HandleSearchModel, sort = 'asc') {
-        const handles = this._filter(search);
+    public getAllHandleNames(handles?: StoredHandle[], sort = 'asc') {
+        if (!handles) return [];
         const filteredHandles = handles.filter((handle) => !!handle.utxo);
         if (sort === 'random') {
             const shuffledHandles = filteredHandles
@@ -215,6 +215,11 @@ export class HandlesRepository {
             }
             return agg;
         }, []);
+    }
+
+    public getRootHandleNames(): string[] {
+        // We expect at least one SubHandle to be minted to be counted as a rootHandle (have an entry in SUBHANDLE index)
+        return this.provider.getKeysFromIndex(IndexNames.SUBHANDLE) as string[];
     }
 
     public setMetrics(metrics: IApiMetrics): void {
@@ -462,7 +467,8 @@ export class HandlesRepository {
                     // check if existing handle has a utxo. If it does, we may have a double mint
                     if (isMintTx && existingHandle?.utxo) {
                         handle.amount = (handle.amount ?? 1) + 1;
-                        Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slotNumber}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
+                        if (handle.name != 'mydexaccounts') // The one double mint we had when half of Cardano nodes disconnected/restarted at 2023-01-22T00:09:00Z. Both the doublemint and what caused it on our side have been remedied
+                            Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slotNumber}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
                     }
                     handle.updated_slot_number = slotNumber;
                     handle.script = script;
@@ -696,9 +702,6 @@ export class HandlesRepository {
 
         if (searchModel.personalized) {
             array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
-        }
-        if (searchModel.public_subhandles) {
-            array = array.filter((handle) => handle.subhandle_settings?.nft?.public_minting_enabled || handle.subhandle_settings?.virtual?.public_minting_enabled);
         }
         return array;
     }

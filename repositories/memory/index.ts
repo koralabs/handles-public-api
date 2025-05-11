@@ -47,6 +47,10 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return this.convertIndexNameToIndex(indexName)!;
     }
 
+    public getKeysFromIndex(indexName: IndexNames) {
+        return this.convertIndexNameToIndex(indexName)!.keys().toArray();
+    }
+
     public getValuesFromIndexedSet(indexName: IndexNames, key: string | number): Set<string> | undefined {
         return (this.convertIndexNameToIndex(indexName) as Map<string|number, Set<string>>)?.get(key);
     }

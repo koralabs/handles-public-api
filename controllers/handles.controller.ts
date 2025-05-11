@@ -51,53 +51,8 @@ class HandlesController {
         return { code: handleRepo.currentHttpStatus(), message: null, handle };
     };
 
-    public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, public_subhandles, sort, personalized } = req.query;
-
-            const search = new HandleSearchModel({
-                characters,
-                length,
-                rarity,
-                numeric_modifiers,
-                search: searchQuery,
-                holder_address,
-                personalized,
-                handle_type,
-                public_subhandles,
-                og
-            });
-
-            const pagination = new HandlePaginationModel({
-                page,
-                sort,
-                handlesPerPage: records_per_page,
-                slotNumber: slot_number
-            });
-
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
-
-            if (req.headers?.accept?.startsWith('text/plain')) {
-                const { sort: sortParam } = pagination;
-                const handles = handleRepo.getAllHandleNames(search, sortParam);
-                res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.set('x-handles-search-total', handles.length.toString());
-                res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
-                return;
-            }
-
-            const result = handleRepo.search(pagination, search);
-
-            res.set('x-handles-search-total', result.searchTotal.toString())
-                .status(handleRepo.currentHttpStatus())
-                .json(result.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle)));
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
-        const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
+    public static parseQueryAndSearchHandles(req: Request<Request, {}, {}, IGetAllQueryParams>, handleRepo: HandlesRepository, handles?: ISearchBody) {
+        const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
 
         const search = new HandleSearchModel({
             characters,
@@ -107,8 +62,8 @@ class HandlesController {
             search: searchQuery,
             holder_address,
             personalized,
+            handle_type,            
             og,
-            handle_type,
             handles
         });
 
@@ -119,19 +74,44 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
+        return handleRepo.search(pagination, search);
+    }
 
+    public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
+
+            const handles = HandlesController.parseQueryAndSearchHandles(req, handleRepo);
+
+            if (req.headers?.accept?.startsWith('text/plain')) {
+                const handleNames = handleRepo.getAllHandleNames(handles.handles, req.query.sort ?? 'asc');
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.set('x-handles-search-total', handleNames.length.toString());
+                res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));
+            }
+
+            res.set('x-handles-search-total', handles.searchTotal.toString())
+                .status(handleRepo.currentHttpStatus())
+                .json(handles.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle)));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
+        const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
+        const handleSearchResults = HandlesController.parseQueryAndSearchHandles(req, handleRepo, handles)
+
+        
         if (req.headers?.accept?.startsWith('text/plain')) {
-            const { sort: sortParam } = pagination;
-            const handles = handleRepo.getAllHandleNames(search, sortParam);
+            const handles = handleRepo.getAllHandleNames(handleSearchResults.handles, req.query.sort ?? 'asc');
             res.set('Content-Type', 'text/plain; charset=utf-8');
             res.set('x-handles-search-total', handles.length.toString());
             res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
             return;
         }
 
-        const result = handleRepo.search(pagination, search);
-        const handlesViewModel = result.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle));
+        const handlesViewModel = handleSearchResults.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle));
 
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
     }

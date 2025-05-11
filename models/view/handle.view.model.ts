@@ -93,7 +93,7 @@ export class HandleViewModel {
         this.drep = handle.drep
         this.policy = handle.policy || '';
 
-        // SubHandle settings
+        // SubHandle attributes
         this.sub_rarity = handle.sub_rarity;
         this.sub_length = handle.sub_length;
         this.sub_characters = handle.sub_characters;
