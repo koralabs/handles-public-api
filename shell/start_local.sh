@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 set -a && source .env && set +a
-
+mkdir -p tmp
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
 SOCKET_PATH=${SOCKET_PATH:-"${PWD}/node.socket"}
 BASE_URL=${CONFIG_FILES_BASE_URL:-'https://public.koralabs.io/cardano'}
@@ -11,7 +11,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ./tmp/${NETWORK}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
@@ -33,17 +33,17 @@ declare -a ERAS=(byron shelley alonzo conway)
 for net in "${NETWORKS[@]}"; \
 do \
     mkdir -p ${net}
-    curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json
-    curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json
+    curl -sL ${BASE_URL}/${net}/config.json -o tmp/${net}/config.json
+    curl -sL ${BASE_URL}/${net}/topology.json -o tmp/${net}/topology.json
     for era in "${ERAS[@]}"; \
     do \
-        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json; \
+        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o tmp/${net}/${era}-genesis.json; \
     done; \
 done
 
 if ! pgrep -x "ogmios" > /dev/null
 then
-    ./connectToNode.sh
+    ./shell/connectToNode.sh
     echo "Starting Ogmios - connecting to ${SOCKET_PATH}"
     $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Error &
 fi

@@ -21,6 +21,8 @@
         "**/*.test.ts",
         "dist",
         "scripts",
-        "coverage"
+        "coverage",
+        "tmp",
+        "shell"
     ]
 }

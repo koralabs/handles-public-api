@@ -1,4 +1,4 @@
-import MemoryApiKeysRepository from './apiKeys.repository';
+import { MemoryApiKeysRepository } from '../apiKeys.repository';
 
 describe('MemoryApiKeysRepository Tests', () => {
     describe('get function tests', () => {

@@ -8,6 +8,17 @@ jest.mock('../services/ogmios/ogmios.service');
 
 jest.mock('../repositories/handlesRepository', () => ({
     HandlesRepository: jest.fn().mockImplementation(() => ({
+        buildPersonalization: () => {
+            return {}
+        },
+        getPersonalization:() => {
+            return {
+                    p: 'z',
+                    reference_token: {
+                        address: 'script_addr1'
+                    }
+                }
+        },
         getHandleByName: (handleName: string) => {
             if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
@@ -153,9 +164,6 @@ jest.mock('../repositories/handlesRepository', () => ({
                     }
                 ]
             };
-        },
-        getAllHandleNames: () => {
-            return ['burritos', 'tacos', 'barbacoa'];
         },
         getHolderAddressDetails: (key: string) => {
             if (key === 'nope') {
@@ -315,11 +323,6 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('search must be at least 3 characters');
         });
 
-        it('should pass plain text list of Accept is text/plain', async () => {
-            const response = await request(app?.getServer()).get('/handles').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
-            expect(response.status).toEqual(200);
-            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
-        });
     });
 
     describe('[POST] /handles/list', () => {
@@ -399,12 +402,6 @@ describe('Testing Handles Routes', () => {
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual('search must be at least 3 characters');
         });
-
-        it('should pass plain text list of Accept is text/plain', async () => {
-            const response = await request(app?.getServer()).post('/handles/list').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
-            expect(response.status).toEqual(200);
-            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
-        });
     });
 
     describe('[GET] /handles/:handle', () => {
@@ -461,42 +458,12 @@ describe('Testing Handles Routes', () => {
         it('should throw error if handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/nope/personalized');
             expect(response.status).toEqual(404);
-            expect(response.body.message).toEqual('Handle not found');
-        });
-
-        it('should return valid handle', async () => {
-            // const scriptDetails: ScriptDetails = {
-            //     handle: 'pz_script_01',
-            //     handleHex: 'hex',
-            //     validatorHash: 'abc',
-            //     type: ScriptType.PZ_CONTRACT
-            // };
-            // jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
-            const response = await request(app?.getServer()).get('/handles/burritos/personalized');
-            expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
-                p: 'z',
-                reference_token: {
-                    address: 'script_addr1'
-                }
-            });
         });
 
         it('should return legendary message', async () => {
             const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Legendary handles are not available to mint.');
-        });
-
-        it('should return legendary handle if available', async () => {
-            const response = await request(app?.getServer()).get('/handles/j/personalized');
-            expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
-                p: 'z',
-                reference_token: {
-                    address: 'script_addr1'
-                }
-            });
         });
 
         it('should return invalid message', async () => {

@@ -74,7 +74,12 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        return handleRepo.search(pagination, search);
+        if (req.headers?.accept?.startsWith('text/plain')) {
+            return handleRepo.search(pagination, search);
+        }
+        else {
+            return handleRepo.search(undefined, search);
+        }
     }
 
     public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
@@ -84,7 +89,7 @@ class HandlesController {
             const handles = HandlesController.parseQueryAndSearchHandles(req, handleRepo);
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handleNames = handleRepo.getAllHandleNames(handles.handles, req.query.sort ?? 'asc');
+                const handleNames = handles.handles.map(h => h.name);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handleNames.length.toString());
                 res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));
@@ -104,7 +109,7 @@ class HandlesController {
 
         
         if (req.headers?.accept?.startsWith('text/plain')) {
-            const handles = handleRepo.getAllHandleNames(handleSearchResults.handles, req.query.sort ?? 'asc');
+            const handles = handleSearchResults.handles.map(h => h.name);
             res.set('Content-Type', 'text/plain; charset=utf-8');
             res.set('x-handles-search-total', handles.length.toString());
             res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
@@ -163,19 +168,22 @@ class HandlesController {
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
             const handle = await HandlesController.getHandleFromRepo(req);
 
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
-            await handleRepo.addPersonalization(handle.handle)
+            if (handle.code == 200 || handle.code == 202 ) {
+                handle.handle!.personalization =  await handleRepo.getPersonalization(handle.handle)
 
-            const { personalization } = new PersonalizedHandleViewModel(handle.handle);
-
-            if (!personalization) {
-                res.status(handle.code).json({});
-                return;
+                const { personalization } = new PersonalizedHandleViewModel(handle.handle);
+            
+                if (!personalization) {
+                    res.status(handle.code).json({});
+                    return;
+                }
+                res.status(handle.code).json(personalization);
             }
+            res.status(handle.code).send(handle.message);
 
-            res.status(handle.code).json(personalization);
         } catch (error) {
             next(error);
         }

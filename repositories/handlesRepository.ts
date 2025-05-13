@@ -6,7 +6,7 @@ import { isDatumEndpointEnabled } from '../config';
 import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { decodeCborFromIPFSFile } from '../utils/ipfs';
-import { sortAlphabetically, sortByCreatedSlotNumber, sortedByLength, sortOGHandle } from './getDefaultHandle';
+import { sortAlphabetically, sortByCreatedSlotNumber, sortedByLength, sortOGHandle } from './tests';
 const blackListedIpfsCids: string[] = [];
 const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
 
@@ -63,50 +63,37 @@ export class HandlesRepository {
         return this.provider.getValueFromIndex(IndexNames.HOLDER, address) as Holder;
     }
 
-    public search(pagination: HandlePaginationModel, search: HandleSearchModel) {
-        const { page, sort, handlesPerPage, slotNumber } = pagination;
+    public search(pagination?: HandlePaginationModel, search?: HandleSearchModel) {
+        let handles = this._filter(search);
+        const searchTotal = handles.length;
+        
+        if (pagination) {                
+            const { page, sort, handlesPerPage, slotNumber } = pagination;
 
-        let items = this._filter(search);
+            if (slotNumber) {
+                handles.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
+                const slotNumberIndex = handles.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
+                handles = handles.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
 
-        if (slotNumber) {
-            items.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
-            const slotNumberIndex = items.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
-            const handles = items.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
+                return { searchTotal, handles };
+            }
 
-            return { searchTotal: items.length, handles };
+            handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+
+            if (sort === 'random') {
+                handles = handles
+                    .map((value) => ({ value, sort: Math.random() }))
+                    .sort((a, b) => a.sort - b.sort)
+                    .map(({ value }) => value);
+            } else {
+                handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
+            }
+
+            const startIndex = (page - 1) * handlesPerPage;
+            handles = handles.slice(startIndex, startIndex + handlesPerPage);
         }
+        return { searchTotal, handles };
 
-        items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-
-        if (sort === 'random') {
-            items = items
-                .map((value) => ({ value, sort: Math.random() }))
-                .sort((a, b) => a.sort - b.sort)
-                .map(({ value }) => value);
-        } else {
-            items.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-        }
-
-        const startIndex = (page - 1) * handlesPerPage;
-        const handles = items.slice(startIndex, startIndex + handlesPerPage);
-
-        return { searchTotal: items.length, handles };
-
-    }
-
-    public getAllHandleNames(handles?: StoredHandle[], sort = 'asc') {
-        if (!handles) return [];
-        const filteredHandles = handles.filter((handle) => !!handle.utxo);
-        if (sort === 'random') {
-            const shuffledHandles = filteredHandles
-                .map((value) => ({ value, sort: Math.random() }))
-                .sort((a, b) => a.sort - b.sort)
-                .map(({ value }) => value);
-            return shuffledHandles.map((handle) => handle.name);
-        } else {
-            filteredHandles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-        }
-        return filteredHandles.map((handle) => handle.name);
     }
     
     public getHandleByName(handleName: string): StoredHandle | null {
@@ -618,17 +605,16 @@ export class HandlesRepository {
         return sortAlphabetically(sortedHandlesBySlot);
     }
 
-    /**
-     * @description Mutates handle to add personalization data
-     */
-    public async addPersonalization(handle: StoredHandle | null | undefined): Promise<void> {
+    public async getPersonalization(handle: StoredHandle | null | undefined): Promise<IPersonalization | undefined> {
+        let personalization = handle?.personalization;
         if (handle?.reference_token) {
             const { projectAttributes } = this._buildPersonalizationData(handle, handle.reference_token.datum!);
-            handle.personalization = await this._buildPersonalization({ 
+            personalization = await this._buildPersonalization({ 
                 personalizationDatum: projectAttributes!, 
                 personalization: handle.personalization ?? { validated_by: '', trial: true, nsfw: true } 
             });
         }
+        return personalization
     }
 
     public async getStartingPoint(
@@ -639,7 +625,7 @@ export class HandlesRepository {
     }
     
     private _filter(searchModel?: HandleSearchModel) {
-        if (!searchModel) return this.provider.getAllHandles();
+        if (!searchModel) return this.provider.getAllHandles().filter((handle) => !!handle.utxo);
 
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
@@ -682,7 +668,7 @@ export class HandlesRepository {
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
                 ? handleNames.reduce<StoredHandle[]>((agg, name) => {
-                    const handle = this.get(name as string);
+                    const handle = this.get(name);
                     if (handle) {
                         if (search && !handle.name.includes(search)) return agg;
                         if (handle_type && handle.handle_type !== handle_type) return agg;
@@ -703,7 +689,7 @@ export class HandlesRepository {
         if (searchModel.personalized) {
             array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
         }
-        return array;
+        return array.filter((handle) => !!handle.utxo);
     }
 
     private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {
@@ -864,7 +850,7 @@ export class HandlesRepository {
             };
         }
 
-        Logger.log({ category: LogCategory.ERROR, message: `${handle} invalid metadata: ${JSON.stringify(datumObject)}`, event: 'buildValidDatum.invalidMetadata' });
+        Logger.log({ category: LogCategory.ERROR, message: `${handle.name} invalid metadata: ${JSON.stringify(datumObject)}`, event: 'buildValidDatum.invalidMetadata' });
 
         return {
             nftAttributes: null,

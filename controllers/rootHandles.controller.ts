@@ -18,7 +18,7 @@ class RootHandlesController {
             }
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handleNames = handleRepo.getAllHandleNames(handles, req.query.sort ?? 'asc');
+                const handleNames = handles.map(h => h.name);
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handleNames.length.toString());
                 res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));

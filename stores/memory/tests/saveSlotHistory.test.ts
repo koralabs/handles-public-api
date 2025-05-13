@@ -1,9 +1,8 @@
 import { HandleHistory } from '@koralabs/kora-labs-common';
-import { MemoryHandlesProvider } from '.';
-import { HandlesRepository } from '../handlesRepository';
-import { HandleStore } from './handleStore';
-import { slotHistoryFixture } from './tests/fixtures/handles';
-const repo = new HandlesRepository(new MemoryHandlesProvider());
+import { HandlesMemoryStore, HandleStore } from '..';
+import { HandlesRepository } from '../../../repositories/handlesRepository';
+import { slotHistoryFixture } from './fixtures/handles';
+const repo = new HandlesRepository(new HandlesMemoryStore());
 
 describe('saveSlotHistory', () => {
     beforeEach(() => {

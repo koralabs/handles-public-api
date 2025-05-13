@@ -1,6 +1,6 @@
 import { AssetNameLabel, buildNumericModifiers, getRarity, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
-import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher } from '.';
+import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher } from '../utils';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 

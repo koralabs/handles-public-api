@@ -1,12 +1,11 @@
 import * as klc from '@koralabs/kora-labs-common';
 import { delay, HandleType, IHandleMetadata, IPersonalization, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
 import { unlinkSync, writeFileSync } from 'fs';
-import { MemoryHandlesProvider } from '.';
-import * as config from '../../config';
-import { HandlesRepository } from '../handlesRepository';
-import { HandleStore } from './handleStore';
-import { handlesFixture } from './tests/fixtures/handles';
-const provider = new MemoryHandlesProvider();
+import { HandlesMemoryStore, HandleStore } from '..';
+import * as config from '../../../config';
+import { HandlesRepository } from '../../../repositories/handlesRepository';
+import { handlesFixture } from './fixtures/handles';
+const provider = new HandlesMemoryStore();
 const repo = new HandlesRepository(provider);
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
@@ -52,7 +51,7 @@ describe('HandleStore tests', () => {
         // populate storage
         for (const key in handlesFixture) {
             const handle = handlesFixture[key];
-            await repo.save({
+            repo.save({
                 ...handle,
                 datum: `some_datum_${key}`,
                 has_datum: true
@@ -61,9 +60,9 @@ describe('HandleStore tests', () => {
     });
 
     afterEach(async () => {
-        const handles = repo.getAllHandleNames(undefined).filter(Boolean);
+        const handles = repo.search().handles.filter(Boolean).map(h => h.name);
         for (const handle of handles) {            
-            await repo.removeHandle(repo.get(handle)!, 0);
+            repo.removeHandle(repo.get(handle)!, 0);
         }
 
         HandleStore.slotHistoryIndex = new Map();
@@ -163,7 +162,7 @@ describe('HandleStore tests', () => {
                 updated_slot_number: 100
             });
 
-            await repo.save(handle);
+            repo.save(handle);
 
             handle = repo.get('nachos')!;
 
@@ -217,7 +216,7 @@ describe('HandleStore tests', () => {
                 nsfw: false
             };
 
-            await repo.save(await repo.Internal.buildHandle({
+            repo.save(await repo.Internal.buildHandle({
                 hex: Buffer.from('chimichanga').toString('hex'),
                 name: 'chimichanga',
                 updated_slot_number: 99,
@@ -248,7 +247,7 @@ describe('HandleStore tests', () => {
             }));
 
             let handle = repo.get('chimichanga');
-            await repo.save(await repo.Internal.buildHandle({
+            repo.save(await repo.Internal.buildHandle({
                 ...handle,
                 utxo: 'utxo123#0',
                 image_hash: '0xtodo',
@@ -539,7 +538,7 @@ describe('HandleStore tests', () => {
                 public_mint: true
             };
 
-            await repo.save(await repo.Internal.buildHandle({
+            repo.save(await repo.Internal.buildHandle({
                 hex: '000000007669727475616c40686e646c',
                 name: handleName,
                 og_number: 0,

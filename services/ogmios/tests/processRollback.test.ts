@@ -1,8 +1,8 @@
-import { HandlesRepository } from '../../repositories/handlesRepository';
-import { MemoryHandlesProvider } from '../../repositories/memory';
-import OgmiosService from './ogmios.service';
+import { HandlesRepository } from '../../../repositories/handlesRepository';
+import { HandlesMemoryStore } from '../../../stores/memory';
+import OgmiosService from '../ogmios.service';
 
-const ogmios = new OgmiosService(new HandlesRepository(new MemoryHandlesProvider()));
+const ogmios = new OgmiosService(new HandlesRepository(new HandlesMemoryStore()));
 
 describe('processRollback', () => {
     it('should apply previous changes to handle', () => {
@@ -16,7 +16,7 @@ describe('processRollback', () => {
     });
 
     it('should rollback to genesis if point is origin', () => {
-        const rollbackSpy = jest.spyOn(MemoryHandlesProvider.prototype, 'rollBackToGenesis');
+        const rollbackSpy = jest.spyOn(HandlesMemoryStore.prototype, 'rollBackToGenesis');
         ogmios['processRollback']('origin', 'origin');
 
         expect(rollbackSpy).toHaveBeenCalledTimes(1);

@@ -4,11 +4,25 @@ import { promisify } from 'util';
 import { Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../config';
+import { RewoundHandle } from '../../repositories/handlesRepository';
 import { memoryWatcher } from '../../services/ogmios/utils';
-import { RewoundHandle } from '../handlesRepository';
-import { HandleStore } from './handleStore';
 
-export class MemoryHandlesProvider implements IHandlesProvider {
+export class HandleStore {
+    public static handles = new Map<string, StoredHandle>();
+    public static slotHistoryIndex = new Map<number, ISlotHistory>();
+    public static holderIndex = new Map<string, Holder>();
+    public static subHandlesIndex = new Map<string, Set<string>>();
+    public static rarityIndex = new Map<string, Set<string>>();
+    public static ogIndex = new Map<string, Set<string>>();
+    public static charactersIndex = new Map<string, Set<string>>();
+    public static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    public static hashOfStakeKeyHashIndex = new Map<string, Set<string>>();
+    public static addressesIndex = new Map<string, Set<string>>();
+    public static numericModifiersIndex = new Map<string, Set<string>>();
+    public static lengthIndex = new Map<string, Set<string>>();
+}
+
+export class HandlesMemoryStore implements IHandlesProvider {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     private _storageSchemaVersion = 43;
     intervals: NodeJS.Timeout[] = [];
@@ -75,8 +89,8 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getMetrics(): IApiMetrics {
-        MemoryHandlesProvider.metrics.count = HandleStore.handles.size;
-        return MemoryHandlesProvider.metrics;
+        HandlesMemoryStore.metrics.count = HandleStore.handles.size;
+        return HandlesMemoryStore.metrics;
     }
 
     public getSchemaVersion(): number {
@@ -115,7 +129,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     public async initialize(): Promise<IHandlesProvider> {
         if (this.intervals.length === 0) {
             const saveFilesInterval = setInterval(() => {
-                const { currentSlot, currentBlockHash } = MemoryHandlesProvider.metrics;
+                const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
 
                 // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
                 // Once restarted, we should have a valid file to read from.
@@ -262,7 +276,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public setMetrics(metrics: IApiMetrics): void {
-        MemoryHandlesProvider.metrics = { ...MemoryHandlesProvider.metrics, ...metrics };
+        HandlesMemoryStore.metrics = { ...HandlesMemoryStore.metrics, ...metrics };
     }
 
     public rollBackToGenesis() {

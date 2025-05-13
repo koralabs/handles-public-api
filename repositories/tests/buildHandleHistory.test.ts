@@ -1,9 +1,9 @@
-import { MemoryHandlesProvider } from '.';
+import { HandlesMemoryStore } from '../../stores/memory';
+import { handlesFixture } from '../../stores/memory/tests/fixtures/handles';
 import { HandlesRepository } from '../handlesRepository';
-import { handlesFixture } from './tests/fixtures/handles';
 
 describe('buildHandleHistory', () => {
-    const repo = new HandlesRepository(new MemoryHandlesProvider);
+    const repo = new HandlesRepository(new HandlesMemoryStore);
     it('should log the correct old and new value', async () => {
         const newHandle = {
             ...handlesFixture[0],
