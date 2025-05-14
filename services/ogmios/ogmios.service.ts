@@ -90,8 +90,10 @@ class OgmiosService {
                 if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity === BigInt(-1)) {
-                            const { name } = getHandleNameFromAssetName(assetName);
-                            await this.handlesRepo.burnHandle(name, currentSlot);
+                            const { name, hex } = getHandleNameFromAssetName(assetName);
+                            if (hex.startsWith(AssetNameLabel.LBL_222) || hex.startsWith(AssetNameLabel.LBL_000)) {
+                                await this.handlesRepo.burnHandle(name, currentSlot);
+                            }
                         }
                     }
                 }
