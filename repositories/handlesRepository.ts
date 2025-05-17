@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesProvider, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesStore, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -31,19 +31,19 @@ export class UpdatedOwnerHandle implements UpdatedOwnerHandle {
 }
 
 export class HandlesRepository {
-    private provider: IHandlesProvider;
+    private store: IHandlesStore;
     
-    constructor(repo: IHandlesProvider) {
-        this.provider = repo;
+    constructor(store: IHandlesStore) {
+        this.store = store;
     }
 
     public async initialize() {
-        await this.provider.initialize();
+        await this.store.initialize();
         return this;
     }
 
     public destroy(): void {
-        return this.provider.destroy();
+        return this.store.destroy();
     }
 
     public currentHttpStatus(): number {
@@ -51,16 +51,16 @@ export class HandlesRepository {
     }
 
     public get(key: string): StoredHandle | null {
-        return this.provider.getHandle(key);
+        return this.store.getHandle(key);
     }
 
     public isCaughtUp(): boolean {
-        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.provider.getMetrics();
+        const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.store.getMetrics();
         return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
     }
 
     public getHolder(address: string): Holder {
-        return this.provider.getValueFromIndex(IndexNames.HOLDER, address) as Holder;
+        return this.store.getValueFromIndex(IndexNames.HOLDER, address) as Holder;
     }
 
     public search(pagination?: HandlePaginationModel, search?: HandleSearchModel) {
@@ -81,7 +81,7 @@ export class HandlesRepository {
             handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
 
             if (sort === 'random') {
-                handles = handles
+                handles = (handles as StoredHandle[])
                     .map((value) => ({ value, sort: Math.random() }))
                     .sort((a, b) => a.sort - b.sort)
                     .map(({ value }) => value);
@@ -97,29 +97,29 @@ export class HandlesRepository {
     }
     
     public getHandleByName(handleName: string): StoredHandle | null {
-        return this.provider.getHandle(handleName);
+        return this.store.getHandle(handleName);
     }
 
     public getHandleByHex(handleHex: string): StoredHandle | null {
-        const handle = this.provider.getHandleByHex(handleHex);
+        const handle = this.store.getHandleByHex(handleHex);
         if (handle) return handle;
         return null;
     }
 
     public getMetrics(): IApiMetrics {  
-        return this.provider.getMetrics();
+        return this.store.getMetrics();
     }
 
     public getHandlesByHolderAddresses = (addresses: string[]): string[]  => {
-        return addresses.map((h) => {
-            const array = Array.from((this.provider.getValueFromIndex(IndexNames.HOLDER, h) as Holder)?.handles ?? []);
+        return addresses.map((address) => {
+            const array = Array.from((this.store.getValueFromIndex(IndexNames.HOLDER, address) as Holder)?.handles.map(h => h.name) ?? []);
             return array.length === 0 ? [EMPTY] : array;
         }
-        ).concat(addresses.map((h) => {
-            const decodedAddress = decodeAddress(h);
+        ).concat(addresses.map((address) => { // convert holder addresses to hash and look in that index too
+            const decodedAddress = decodeAddress(address);
             if (!decodedAddress) return [EMPTY];
             const hashed = crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex');
-            const array = Array.from(this.provider.getValuesFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashed!) ?? []);
+            const array: string[] = Array.from(this.store.getValuesFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashed!) ?? new Set());
             return array.length === 0 ? [EMPTY] : array;
         })).flat() as string[];
     }
@@ -127,14 +127,14 @@ export class HandlesRepository {
     public getAllHolders(params: { pagination: HolderPaginationModel; }): HolderViewModel[] {
         const { page, sort, recordsPerPage } = params.pagination;
         const items: HolderViewModel[] = [];
-        this.provider.getIndex(IndexNames.HOLDER).forEach((holder, key) => {
+        (this.store.getIndex(IndexNames.HOLDER) as Map<string, Holder>).forEach((holder, key) => {
             if (holder) {
-                const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder as Holder;
+                const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
                 items.push({
                     total_handles: handles.length,
                     default_handle: defaultHandle,
                     manually_set: manuallySet,
-                    address: key as string,
+                    address: key,
                     known_owner_name: knownOwnerName,
                     type
                 });
@@ -151,14 +151,14 @@ export class HandlesRepository {
     public getHandlesByStakeKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
             const hashed = crypto.createHash('md5').update(h, 'hex').digest('hex');
-            const array = Array.from(this.provider.getValuesFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashed!) ?? []);
+            const array = Array.from(this.store.getValuesFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashed!) ?? []);
             return array.length === 0 ? [EMPTY] : array;
         }).flat() as string[];
     }
 
     public getHandlesByPaymentKeyHashes = (hashes: string[]): string[]  => {
         return hashes.map((h) => {
-            const array = Array.from(this.provider.getValuesFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, h) ?? []);
+            const array = Array.from(this.store.getValuesFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, h) ?? []);
             return array.length === 0 ? [EMPTY] : array;
         }
         ).flat() as string[];
@@ -166,14 +166,14 @@ export class HandlesRepository {
 
     public getHandlesByAddresses = (addresses: string[]): string[] => {
         return addresses.map((h) => {
-            const array = Array.from(this.provider.getValuesFromIndexedSet(IndexNames.ADDRESS, h) ?? []);
+            const array = Array.from(this.store.getValuesFromIndexedSet(IndexNames.ADDRESS, h) ?? []);
             return array.length === 0 ? [EMPTY] : array;
         }
         ).flat() as string[];
     }
 
     public getHandleDatumByName(handleName: string): string | null {
-        const handle = this.provider.getHandle(handleName);
+        const handle = this.store.getHandle(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }
@@ -184,7 +184,7 @@ export class HandlesRepository {
     }
 
     public getSubHandleSettings(handleName: string): { settings?: string; utxo: IUTxO } | null {
-        const handle = this.provider.getHandle(handleName);
+        const handle = this.store.getHandle(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }
@@ -194,9 +194,9 @@ export class HandlesRepository {
     }
 
     public getSubHandlesByRootHandle(handleName: string): StoredHandle[] {
-        const subHandles = this.provider.getValuesFromIndexedSet(IndexNames.SUBHANDLE, handleName) ?? new Set<string>();
+        const subHandles = this.store.getValuesFromIndexedSet(IndexNames.SUBHANDLE, handleName) ?? new Set<string>();
         return [...subHandles].reduce<StoredHandle[]>((agg, item) => {
-            const subHandle = this.provider.getHandle(item);
+            const subHandle = this.store.getHandle(item);
             if (subHandle) {
                 agg.push(subHandle);
             }
@@ -206,11 +206,11 @@ export class HandlesRepository {
 
     public getRootHandleNames(): string[] {
         // We expect at least one SubHandle to be minted to be counted as a rootHandle (have an entry in SUBHANDLE index)
-        return this.provider.getKeysFromIndex(IndexNames.SUBHANDLE) as string[];
+        return this.store.getKeysFromIndex(IndexNames.SUBHANDLE) as string[];
     }
 
     public setMetrics(metrics: IApiMetrics): void {
-        this.provider.setMetrics(metrics);
+        this.store.setMetrics(metrics);
     }
 
     public updateHolder(handle?: StoredHandle | UpdatedOwnerHandle, oldHandle?: StoredHandle) {
@@ -218,7 +218,7 @@ export class HandlesRepository {
         let oldDefault: boolean | undefined = undefined;
         if (oldHandle) {
             const oldHolderInfo = buildHolderInfo(oldHandle.resolved_addresses.ada);
-            const oldHolder = this.provider.getValueFromIndex(IndexNames.HOLDER, oldHolderInfo.address) as Holder
+            const oldHolder = this.store.getValueFromIndex(IndexNames.HOLDER, oldHolderInfo.address) as Holder
             if (oldHolder) {
                 oldDefault = oldHolder.manuallySet && oldHolder.defaultHandle == oldHandle.name;
                 const oldIndex = oldHolder.handles?.findIndex(h => h.name == oldHandle.name) ?? -1;
@@ -226,11 +226,11 @@ export class HandlesRepository {
                     oldHolder.handles.splice(oldIndex, 1);
                 }
                 if (Object.keys(oldHolder.handles).length === 0) {
-                    this.provider.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
+                    this.store.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
                 } else {
                     oldHolder.manuallySet = oldHolder.manuallySet && oldHolder.defaultHandle != oldHandle.name;
                     oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(oldHolder.handles)?.name ?? '';
-                    this.provider.setValueOnIndex(IndexNames.HOLDER, oldHolderInfo.address, oldHolder);
+                    this.store.setValueOnIndex(IndexNames.HOLDER, oldHolderInfo.address, oldHolder);
                 }
             }
         }
@@ -240,7 +240,7 @@ export class HandlesRepository {
         const holderInfo = buildHolderInfo(handle.resolved_addresses.ada);
         const { address, knownOwnerName, type } = holderInfo;
 
-        const holder = (this.provider.getValueFromIndex(IndexNames.HOLDER, address) ?? {
+        const holder = (this.store.getValueFromIndex(IndexNames.HOLDER, address) ?? {
             handles: [],
             defaultHandle: '',
             manuallySet: false,
@@ -256,7 +256,7 @@ export class HandlesRepository {
 
         // if by this point, we have no handles, we need to remove the holder address from the index
         if (holder.handles.length === 0) {
-            this.provider.removeKeyFromIndex(IndexNames.HOLDER, address);
+            this.store.removeKeyFromIndex(IndexNames.HOLDER, address);
             return {newDefault, oldDefault};
         }
 
@@ -304,7 +304,7 @@ export class HandlesRepository {
         newDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
-        this.provider.setValueOnIndex(IndexNames.HOLDER, address, holder);
+        this.store.setValueOnIndex(IndexNames.HOLDER, address, holder);
         
         if (address && address != '') {
             // This could return null if it is a pre-Shelley address (not bech32)
@@ -314,17 +314,17 @@ export class HandlesRepository {
                 if (oldDecodedAddress) {
                     // if there is an old stake key hash, remove it from the index
                     const oldHashOfStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
-                    this.provider.removeValueFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, oldHashOfStakeKeyHash, handle.name);     
+                    this.store.removeValueFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, oldHashOfStakeKeyHash, handle.name);     
                 }
                 const hashOfStakeKeyHash = handle.id_hash ? handle.id_hash.replace('0x', '').slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
-                this.provider.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashOfStakeKeyHash, handle.name);
+                this.store.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashOfStakeKeyHash, handle.name);
             }
         }
         return {newDefault, oldDefault};
     }
 
     public rollBackToGenesis(): void {
-        this.provider.rollBackToGenesis();
+        this.store.rollBackToGenesis();
     }
 
     public removeHandle(handle: StoredHandle | RewoundHandle, slotNumber: number): void {
@@ -334,7 +334,7 @@ export class HandlesRepository {
         if (amount <= 0) {
             // if (handle.name == 'ap@adaprotocol')
             //     debugLog('ap@adaprotocol being burned', slotNumber, handle);
-            this.provider.removeHandle(handle.name);
+            this.store.removeHandle(handle.name);
             if (!(handle instanceof RewoundHandle)) {
                 const history: HandleHistory = { old: handle, new: null };
                 this._saveSlotHistory({
@@ -345,25 +345,25 @@ export class HandlesRepository {
             }
 
             // set all one-to-many indexes
-            this.provider.removeValueFromIndexedSet(IndexNames.RARITY, handle.rarity, handleName)
-            this.provider.removeValueFromIndexedSet(IndexNames.OG, handle.og_number === 0 ? 0 : 1, handleName);
-            this.provider.removeValueFromIndexedSet(IndexNames.CHARACTER, handle.characters, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.RARITY, handle.rarity, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.OG, handle.og_number === 0 ? 0 : 1, handleName);
+            this.store.removeValueFromIndexedSet(IndexNames.CHARACTER, handle.characters, handleName)
             const payment_key_hash = getPaymentKeyHash(handle.resolved_addresses.ada)!;
-            this.provider.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, handleName)
-            this.provider.removeValueFromIndexedSet(IndexNames.ADDRESS, handle.resolved_addresses.ada, handleName)
-            this.provider.removeValueFromIndexedSet(IndexNames.NUMERIC_MODIFIER, handle.numeric_modifiers, handleName)
-            this.provider.removeValueFromIndexedSet(IndexNames.LENGTH, handle.length, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, handle.resolved_addresses.ada, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.NUMERIC_MODIFIER, handle.numeric_modifiers, handleName)
+            this.store.removeValueFromIndexedSet(IndexNames.LENGTH, handle.length, handleName)
     
             // delete from subhandles index
             if (handleName.includes('@')) {
                 const rootHandle = handleName.split('@')[1];
-                this.provider.removeValueFromIndexedSet(IndexNames.SUBHANDLE, rootHandle, handleName);
+                this.store.removeValueFromIndexedSet(IndexNames.SUBHANDLE, rootHandle, handleName);
             }
     
             // remove the stake key index
             this.updateHolder(undefined, handle);
             // if (handle.name == 'ap@adaprotocol')
-            //     debugLog('ap@adaprotocol burned', slotNumber, this.provider.getHandle(handle.name));
+            //     debugLog('ap@adaprotocol burned', slotNumber, this.store.getHandle(handle.name));
         } else {
             const updatedHandle = { ...handle, amount };
             this.save(updatedHandle, handle);
@@ -372,7 +372,7 @@ export class HandlesRepository {
 
     public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): { name: string; action: string; handle: Partial<StoredHandle> | undefined }[] {
         // first we need to order the historyIndex desc by slot
-        const orderedHistoryIndex = [...this.provider.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
+        const orderedHistoryIndex = [...this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
         const rewoundHandles = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
@@ -421,7 +421,7 @@ export class HandlesRepository {
             }
 
             // delete the slot key since we are rolling back to it
-            this.provider.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slotKey);
+            this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slotKey);
         }
         return rewoundHandles;
     }
@@ -553,28 +553,28 @@ export class HandlesRepository {
         const {newDefault, oldDefault} = this.updateHolder(handle, oldHandle);
 
         // Set the main index (SAVES THE HANDLE)
-        this.provider.setHandle(name, handle);
+        this.store.setHandle(name, handle);
 
         // set all one-to-many indexes
-        this.provider.addValueToIndexedSet(IndexNames.RARITY, rarity, name);
-        this.provider.addValueToIndexedSet(IndexNames.CHARACTER, characters, name);
-        this.provider.addValueToIndexedSet(IndexNames.NUMERIC_MODIFIER, numeric_modifiers, name);
-        this.provider.addValueToIndexedSet(IndexNames.LENGTH, length, name);
+        this.store.addValueToIndexedSet(IndexNames.RARITY, rarity, name);
+        this.store.addValueToIndexedSet(IndexNames.CHARACTER, characters, name);
+        this.store.addValueToIndexedSet(IndexNames.NUMERIC_MODIFIER, numeric_modifiers, name);
+        this.store.addValueToIndexedSet(IndexNames.LENGTH, length, name);
 
         if (name.includes('@')) {
             const rootHandle = name.split('@')[1];
-            this.provider.addValueToIndexedSet(IndexNames.SUBHANDLE, rootHandle, name);
+            this.store.addValueToIndexedSet(IndexNames.SUBHANDLE, rootHandle, name);
         }
 
         // remove the old - these can change over time
-        this.provider.removeValueFromIndexedSet(IndexNames.OG, 0, name);
-        this.provider.removeValueFromIndexedSet(IndexNames.OG, 1, name);
-        this.provider.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
-        this.provider.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
+        this.store.removeValueFromIndexedSet(IndexNames.OG, 0, name);
+        this.store.removeValueFromIndexedSet(IndexNames.OG, 1, name);
+        this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
+        this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
         // add the new
-        this.provider.addValueToIndexedSet(IndexNames.OG, ogFlag, name);
-        this.provider.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
-        this.provider.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
+        this.store.addValueToIndexedSet(IndexNames.OG, ogFlag, name);
+        this.store.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
+        this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
 
         if (!(handle instanceof RewoundHandle)) {
             const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
@@ -621,11 +621,11 @@ export class HandlesRepository {
         save: (handle: StoredHandle) => void, 
         failed = false
     ): Promise<Point | null> {
-        return this.provider.getStartingPoint(save , failed);
+        return this.store.getStartingPoint(save , failed);
     }
     
-    private _filter(searchModel?: HandleSearchModel) {
-        if (!searchModel) return this.provider.getAllHandles().filter((handle) => !!handle.utxo);
+    private _filter(searchModel?: HandleSearchModel): StoredHandle[] {
+        if (!searchModel) return this.store.getAllHandles().filter((handle: StoredHandle) => !!handle.utxo);
 
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
@@ -634,7 +634,7 @@ export class HandlesRepository {
         // When intersected with all other results, ['|empty|'] ensures empty result set
         const checkEmptyResult = (indexName: IndexNames, term: string | number | undefined) => {
             if (!term) return [];
-            const set = this.provider.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
+            const set = this.store.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
             return set.size === 0 ? [EMPTY] : [...set];
         };
 
@@ -643,7 +643,7 @@ export class HandlesRepository {
         let lengthArray: string[] = [];
         if (length?.includes('-')) {
             for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
-                lengthArray = lengthArray.concat([...this.provider.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
+                lengthArray = lengthArray.concat([...this.store.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
             }
             if (lengthArray.length === 0) lengthArray = [EMPTY];
         } else {
@@ -654,7 +654,7 @@ export class HandlesRepository {
         const ogArray = og ? checkEmptyResult(IndexNames.OG, 1) : [];
         const holderArray = (() => {
             if (!holder_address) return [];
-            const holder = this.provider.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
+            const holder = this.store.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
             return holder ? [...holder.handles.map(h => h.name)] : [EMPTY];
         })();
 
@@ -677,7 +677,7 @@ export class HandlesRepository {
                     }
                     return agg;
                 }, [])
-                : this.provider.getAllHandles().reduce<StoredHandle[]>((agg, handle) => {
+                : this.store.getAllHandles().reduce<StoredHandle[]>((agg: StoredHandle[], handle: StoredHandle) => {
                     if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
                     if (handle_type && handle.handle_type !== handle_type) return agg;
                     if (handles && !handles.includes(handle.name)) return agg;
@@ -687,9 +687,9 @@ export class HandlesRepository {
                 }, []);
 
         if (searchModel.personalized) {
-            array = array.filter((handle) => handle.image_hash != handle.standard_image_hash);
+            array = array.filter((handle: StoredHandle) => handle.image_hash != handle.standard_image_hash);
         }
-        return array.filter((handle) => !!handle.utxo);
+        return array.filter((handle: StoredHandle) => !!handle.utxo);
     }
 
     private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {
@@ -916,7 +916,7 @@ export class HandlesRepository {
     };
 
     private _saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = TWELVE_HOURS_IN_SLOTS }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
-        let slotHistory = this.provider.getValueFromIndex(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory;
+        let slotHistory = this.store.getValueFromIndex(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory;
         if (!slotHistory) {
             slotHistory = {
                 [handleName]: handleHistory
@@ -926,13 +926,13 @@ export class HandlesRepository {
         }
 
         const oldestSlot = slotNumber - maxSlots;
-        (this.provider.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>).forEach((_, slot) => {
+        (this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>).forEach((_, slot) => {
             if (slot < oldestSlot) {
-                this.provider.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slot);
+                this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slot);
             }
         });
 
-        this.provider.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
+        this.store.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
 
     private _parseSubHandleSettingsDatum(datum: string) {

@@ -5,8 +5,8 @@ import { HandlesMemoryStore, HandleStore } from '..';
 import * as config from '../../../config';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
 import { handlesFixture } from './fixtures/handles';
-const provider = new HandlesMemoryStore();
-const repo = new HandlesRepository(provider);
+const store = new HandlesMemoryStore();
+const repo = new HandlesRepository(store);
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 //const klc = {getAddressHolderDetails, bech32FromHex};
@@ -82,17 +82,17 @@ describe('HandleStore tests', () => {
 
     describe.skip('getFile tests', () => {
         it('should not allow reading if file is locked', async () => {
-            await provider.Internal.saveHandlesFile(123, 'some-hash', filePath);
-            const file = await provider.Internal.getFile(filePath);
+            await store.Internal.saveHandlesFile(123, 'some-hash', filePath);
+            const file = await store.Internal.getFile(filePath);
             expect(file).toEqual({
                 slot: 123,
                 hash: 'some-hash',
                 schemaVersion: 1,
                 handles: expect.any(Object)
             });
-            provider.Internal.saveHandlesFile(123, 'some-hash', filePath, true);
+            store.Internal.saveHandlesFile(123, 'some-hash', filePath, true);
             await delay(100);
-            const locked = await provider.Internal.getFile(filePath);
+            const locked = await store.Internal.getFile(filePath);
             expect(locked).toEqual(null);
         });
     });

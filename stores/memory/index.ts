@@ -1,4 +1,4 @@
-import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesStore, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -22,7 +22,7 @@ export class HandleStore {
     public static lengthIndex = new Map<string, Set<string>>();
 }
 
-export class HandlesMemoryStore implements IHandlesProvider {
+export class HandlesMemoryStore implements IHandlesStore {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     private _storageSchemaVersion = 43;
     intervals: NodeJS.Timeout[] = [];
@@ -126,7 +126,7 @@ export class HandlesMemoryStore implements IHandlesProvider {
         }
     }
 
-    public async initialize(): Promise<IHandlesProvider> {
+    public async initialize(): Promise<IHandlesStore> {
         if (this.intervals.length === 0) {
             const saveFilesInterval = setInterval(() => {
                 const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
@@ -204,9 +204,7 @@ export class HandlesMemoryStore implements IHandlesProvider {
     }
     
     private _saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
-        const handles = {
-            ...this.convertMapsToObjects(HandleStore.handles)
-        };
+        const handles = HandleStore.handles
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${HandleStore.handles.size} handles & ${history.length} history entries`);
@@ -253,13 +251,6 @@ export class HandlesMemoryStore implements IHandlesProvider {
         };
     }
 
-    private convertMapsToObjects<T>(mapInstance: Map<string, T>) {
-        return Array.from(mapInstance).reduce<Record<string, T>>((obj, [key, value]) => {
-            obj[key] = value;
-            return obj;
-        }, {});
-    }
-
     public memorySize() {
         const object = [
             HandleStore.handles,
@@ -272,7 +263,7 @@ export class HandlesMemoryStore implements IHandlesProvider {
             HandleStore.numericModifiersIndex,
             HandleStore.addressesIndex
         ]
-        return Buffer.byteLength(JSON.stringify(object));
+        return Buffer.byteLength(JSON.stringify(object, mapStringifyReplacer));
     }
 
     public setMetrics(metrics: IApiMetrics): void {

@@ -1,3 +1,4 @@
+import { mapStringifyReplacer } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import * as lockfile from 'proper-lockfile';
 import { parentPort, workerData } from 'worker_threads';
@@ -23,7 +24,7 @@ import { parentPort, workerData } from 'worker_threads';
                     hash: workerData.hash,
                     schemaVersion: workerData.storageSchemaVersion,
                     ...workerData.content
-                })
+                }, mapStringifyReplacer)
                 : '';
 
     fs.writeFileSync(workerData.storagePath, fileContent);
