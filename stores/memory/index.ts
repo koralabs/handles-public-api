@@ -431,7 +431,7 @@ export class HandlesMemoryStore implements IApiStore {
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
-        await asyncForEach(Object.entries(handles), async ([, handle]) => {
+        await asyncForEach(handles, async (handle) => {
             return save(new RewoundHandle(handle));
         }, 1)
 
