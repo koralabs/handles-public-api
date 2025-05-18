@@ -208,7 +208,7 @@ class OgmiosService {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity == BigInt(-1)) {
                             const { name } = getHandleNameFromAssetName(assetName);
-                            const handle = this.handlesRepo.get(name);
+                            const handle = this.handlesRepo.getHandle(name);
                             if (!handle) continue;
                             this.handlesRepo.removeHandle(handle, currentSlot);
                         }

@@ -1,4 +1,4 @@
-import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesStore, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
+import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -22,10 +22,11 @@ export class HandleStore {
     public static lengthIndex = new Map<string, Set<string>>();
 }
 
-export class HandlesMemoryStore implements IHandlesStore {
+export class HandlesMemoryStore implements IApiStore {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
     private _storageSchemaVersion = 43;
     intervals: NodeJS.Timeout[] = [];
+    private _files: IHandleFileContent[] | null = null;
 
     private storageFileName = `handles.json`;
     private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
@@ -40,21 +41,49 @@ export class HandlesMemoryStore implements IHandlesStore {
         memorySize: 0
     };
 
+    public async initialize(): Promise<IApiStore> {
+        if (this.intervals.length === 0) {
+            const saveFilesInterval = setInterval(() => {
+                const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
+
+                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+                // Once restarted, we should have a valid file to read from.
+                if (currentSlot === 0) {
+                    Logger.log({
+                        message: 'Slot is zero. Exiting process.',
+                        category: LogCategory.NOTIFY,
+                        event: 'OgmiosService.saveFilesInterval'
+                    });
+                    process.exit(2);
+                }
+
+                this._saveHandlesFile(currentSlot ?? 0, currentBlockHash ?? '');
+
+                memoryWatcher();
+            }, 10 * 60 * 1000);
+
+            const setMemoryInterval = setInterval(() => {
+                const memorySize = this.memorySize();
+                this.setMetrics({ memorySize });
+            }, 60000);
+
+            this.intervals = [saveFilesInterval, setMemoryInterval];
+        }
+        this._files = await this._getFilesContent();
+        this.setMetrics({schemaVersion: this._storageSchemaVersion});
+        return this;
+    }
+
+    public destroy(): void {
+        this.intervals.map((i) => clearInterval(i));
+    }
+
     public getValueFromIndex (indexName: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
         return this.convertIndexNameToIndex(indexName)?.get(key);
     }
 
     public setValueOnIndex (indexName: IndexNames, key: string | number, value: Set<string> | Holder | ISlotHistory | StoredHandle) {
         this.convertIndexNameToIndex(indexName)?.set(key, value);
-    }
-
-    private _files: IHandleFileContent[] | null = null;
-    public setHandle(handleName: string, value: StoredHandle): void {
-        HandleStore.handles.set(handleName, value);
-    }
-
-    public removeHandle(handleName: string): void {
-        HandleStore.handles.delete(handleName)
     }
 
     public getIndex(indexName: IndexNames) {
@@ -123,84 +152,13 @@ export class HandlesMemoryStore implements IHandlesStore {
                 return HandleStore.holderIndex
             case IndexNames.SLOT_HISTORY:
                 return HandleStore.slotHistoryIndex
+            default:
+                return new Map<string, Set<string>>()
         }
-    }
-
-    public async initialize(): Promise<IHandlesStore> {
-        if (this.intervals.length === 0) {
-            const saveFilesInterval = setInterval(() => {
-                const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
-
-                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
-                // Once restarted, we should have a valid file to read from.
-                if (currentSlot === 0) {
-                    Logger.log({
-                        message: 'Slot is zero. Exiting process.',
-                        category: LogCategory.NOTIFY,
-                        event: 'OgmiosService.saveFilesInterval'
-                    });
-                    process.exit(2);
-                }
-
-                this._saveHandlesFile(currentSlot ?? 0, currentBlockHash ?? '');
-
-                memoryWatcher();
-            }, 10 * 60 * 1000);
-
-            const setMemoryInterval = setInterval(() => {
-                const memorySize = this.memorySize();
-                this.setMetrics({ memorySize });
-            }, 60000);
-
-            this.intervals = [saveFilesInterval, setMemoryInterval];
-        }
-        this._files = await this._getFilesContent();
-        this.setMetrics({schemaVersion: this._storageSchemaVersion});
-        return this;
-    }
-
-    public destroy(): void {
-        this.intervals.map((i) => clearInterval(i));
-    }
-
-    public getHandle(key: string): StoredHandle | null {
-        const handle = structuredClone(HandleStore.handles.get(key));
-
-        return this.returnHandleWithDefault(handle);
-    }
-
-    public getHandleByHex(hex: string): StoredHandle | null {
-        let handle: StoredHandle | null = null;
-        for (const [ , value] of HandleStore.handles.entries()) {
-            if (value.hex === hex) handle = structuredClone(value);
-            break;
-        }
-        return this.returnHandleWithDefault(handle);
-    }
-
-    private returnHandleWithDefault(handle?: StoredHandle | null) {
-        if (!handle) {
-            return null;
-        }
-
-        const holder = HandleStore.holderIndex.get(handle.holder);
-        if (holder) {
-            handle.default_in_wallet = holder.defaultHandle;
-        }
-
-        return handle;
     }
 
     public count() {
         return HandleStore.handles.size;
-    }
-
-    public getAllHandles() {
-        return Array.from(HandleStore.handles).map(([handle]) => this.getHandle(handle) as StoredHandle);
-    }
-
-    private _getRootHandleSubHandles (rootHandle: string) {
-        return HandleStore.subHandlesIndex.get(rootHandle) ?? new Set();
     }
     
     private _saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
@@ -501,7 +459,6 @@ export class HandlesMemoryStore implements IHandlesStore {
     Internal = {
         saveHandlesFile: this._saveHandlesFile.bind(this),
         getFile: this._getFile.bind(this),
-        getRootHandleSubHandles: this._getRootHandleSubHandles.bind(this),
         storageSchemaVersion: this._storageSchemaVersion,
         getFileOnline: this._getFileOnline.bind(this),
         getFilesContent: this._getFilesContent.bind(this)

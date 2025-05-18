@@ -55,8 +55,8 @@ describe('rewindChangesToSlot', () => {
         await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // and none after the rollback
-        expect(repo.get('burrito')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
-        expect(repo.get('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
+        expect(repo.getHandle('burrito')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
+        expect(repo.getHandle('barbacoa')?.resolved_addresses.ada).toEqual('addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q');
 
         expect(setMetricsSpy).toHaveBeenCalledWith({ currentBlockHash: hash, currentSlot: slot, lastSlot });
     });
@@ -67,11 +67,11 @@ describe('rewindChangesToSlot', () => {
         const lastSlot = 10;
         jest.spyOn(repo, 'setMetrics').mockImplementation();
 
-        await repo.removeHandle(repo.get('taco')!, 5);
+        await repo.removeHandle(repo.getHandle('taco')!, 5);
 
         await repo.rewindChangesToSlot({ slot, hash, lastSlot });
 
         // should pull back the entire handle
-        expect(repo.get('taco')).toEqual({ ...handlesFixture[2], holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
+        expect(repo.getHandle('taco')).toEqual({ ...handlesFixture[2], holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70' });
     });
 });

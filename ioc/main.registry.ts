@@ -3,7 +3,7 @@ import { MemoryApiKeysRepository } from '../repositories/apiKeys.repository';
 import { HandlesMemoryStore } from '../stores/memory';
 
 const registry: IRegistry = {
-    ['handlesRepo']: HandlesMemoryStore,
+    ['handlesStore']: HandlesMemoryStore,
     ['apiKeysRepo']: MemoryApiKeysRepository
 };
 

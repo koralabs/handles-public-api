@@ -8,7 +8,7 @@ import HandlesController from './handles.controller';
 class RootHandlesController {
     public index = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesRepo());
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const handleResults = HandlesController.parseQueryAndSearchHandles(req, handleRepo, handleRepo.getRootHandleNames());
             let handles = handleResults.handles;
 

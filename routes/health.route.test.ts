@@ -22,7 +22,7 @@ const getStats = (): IApiMetricsViewModel => ({
 const caughtUp = jest.fn().mockReturnValue(true);
 jest.mock('../repositories/handlesRepository', () => ({
     HandlesRepository: jest.fn().mockImplementation(() => ({
-        getHandleByName: (handleName: string) => {
+        getHandle: (handleName: string) => {
             if (['nope'].includes(handleName)) return null;
 
             return {

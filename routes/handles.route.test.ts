@@ -19,7 +19,7 @@ jest.mock('../repositories/handlesRepository', () => ({
                     }
                 }
         },
-        getHandleByName: (handleName: string) => {
+        getHandle: (handleName: string) => {
             if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
             if (handleName === 'no-utxo') {

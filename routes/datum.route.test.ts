@@ -5,7 +5,7 @@ import App from '../app';
 jest.mock('../services/ogmios/ogmios.service');
 jest.mock('../ioc/main.registry', () => ({        
     ['handlesRepo']: jest.fn().mockReturnValue({
-        getHandleByName: (handleName: string) => {
+        getHandle: (handleName: string) => {
             if (['nope'].includes(handleName)) return null;
 
             return {

@@ -150,7 +150,7 @@ describe('HandlesMemoryStore Tests', () => {
 
     describe('getAllHandleNames', () => {
         it('should get all handle names', async () => {
-            jest.spyOn(HandlesMemoryStore.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel({});
             const handles = repo.search(new HandlePaginationModel({sort: 'asc'}), search);
             const result = handles.handles.map(h => h.name);
@@ -158,7 +158,7 @@ describe('HandlesMemoryStore Tests', () => {
         });
 
         it('should search all handle names', async () => {
-            jest.spyOn(HandlesMemoryStore.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel({
                 length: '4'
             });
@@ -168,7 +168,7 @@ describe('HandlesMemoryStore Tests', () => {
         });
 
         it('should search all handle names', async () => {
-            jest.spyOn(HandlesMemoryStore.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel({
                 length: '4-7'
             });
@@ -178,7 +178,7 @@ describe('HandlesMemoryStore Tests', () => {
         });
 
         it('should sort handles randomly', async () => {
-            jest.spyOn(HandlesMemoryStore.prototype, 'getAllHandles').mockReturnValue(handlesFixture);
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel();
             const pagination = new HandlePaginationModel({sort:'random'})
             const result1 = repo.search(pagination, search).handles.map(h => h.name);
@@ -206,7 +206,7 @@ describe('HandlesMemoryStore Tests', () => {
                 resolved_addresses: {ada: ''}
             });
             const handles = [...handlesFixture, newHandle];
-            jest.spyOn(HandlesMemoryStore.prototype, 'getAllHandles').mockReturnValue(handles as StoredHandle[]);
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel();
             const result = repo.search(new HandlePaginationModel({sort:'asc'}), search);
             expect(result.handles.map(h=> h.name)).toEqual(['barbacoa', 'burrito', 'taco']);
@@ -215,7 +215,7 @@ describe('HandlesMemoryStore Tests', () => {
 
     describe('getHandleByName', () => {
         it('should get handle by name', async () => {
-            const result = repo.getHandleByName('barbacoa');
+            const result = repo.getHandle('barbacoa');
             expect(result).toEqual(handlesFixture[0]);
         });
     });
@@ -241,6 +241,7 @@ describe('HandlesMemoryStore Tests', () => {
         it('should get holderAddress list', async () => {
             const mockHandleStore = HandleStore as { holderIndex: Map<string, Holder> };
             mockHandleStore.holderIndex = holdersFixture;
+            jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(mockHandleStore.holderIndex);
             const result = repo.getAllHolders({ pagination: new HolderPaginationModel() });
             expect(result).toEqual([
                 {
@@ -371,7 +372,7 @@ describe('HandlesMemoryStore Tests', () => {
 
         it('should get subhandle settings by name', async () => {
             const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-            let handle = repo.get(rootHandleName)!;
+            let handle = repo.getHandle(rootHandleName)!;
             handle = await repo.Internal.buildHandle({
                 ...handle,
                 subhandle_settings: {

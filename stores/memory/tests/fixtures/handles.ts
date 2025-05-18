@@ -165,7 +165,7 @@ export const createRandomHandles = async (count: number, saveToHandleStore = fal
     const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
-        if (!repo.get(handleName)) {
+        if (!repo.getHandle(handleName)) {
             const handle = await repo.Internal.buildHandle({
                 name: handleName,
                 hex: Buffer.from(handleName).toString('hex'),
@@ -219,7 +219,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
         switch (i % 3) {
             case 0: { // add
                 const handleName = createRandomHandleName();
-                if (!repo.get(handleName)) {
+                if (!repo.getHandle(handleName)) {
                     const newHandle = await repo.Internal.buildHandle({
                         name: handleName,
                         hex: Buffer.from(handleName).toString('hex'),
@@ -238,7 +238,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
             }
             case 1: { // update
                 const handleNames = repo.search().handles.map(h => h.name);
-                const oldHandle = repo.get(handleNames[Math.floor(Math.random() * handleNames.length)]) ?? undefined;
+                const oldHandle = repo.getHandle(handleNames[Math.floor(Math.random() * handleNames.length)]) ?? undefined;
                 const handle = {
                     ...oldHandle,
                     utxo: createRandomUtxo(),
@@ -250,7 +250,7 @@ export const performRandomHandleUpdates = async (count: number, beginningSlot = 
             }
             case 2: { // remove
                 const handleNames = repo.search().handles.map(h => h.name);
-                const handle = repo.get(handleNames[Math.floor(Math.random() * handleNames.length)]);
+                const handle = repo.getHandle(handleNames[Math.floor(Math.random() * handleNames.length)]);
                 if (handle)
                     repo.removeHandle(handle, beginningSlot + i);
                 break;

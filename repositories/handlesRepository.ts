@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleMetadata, IHandlesStore, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -31,9 +31,9 @@ export class UpdatedOwnerHandle implements UpdatedOwnerHandle {
 }
 
 export class HandlesRepository {
-    private store: IHandlesStore;
+    private store: IApiStore;
     
-    constructor(store: IHandlesStore) {
+    constructor(store: IApiStore) {
         this.store = store;
     }
 
@@ -50,13 +50,35 @@ export class HandlesRepository {
         return this.isCaughtUp() ? 200 : 202        
     }
 
-    public get(key: string): StoredHandle | null {
-        return this.store.getHandle(key);
-    }
-
     public isCaughtUp(): boolean {
         const { lastSlot = 1, currentSlot = 0, currentBlockHash = '0', tipBlockHash = '1' } = this.store.getMetrics();
         return lastSlot - currentSlot < 120 && currentBlockHash == tipBlockHash;
+    }
+    
+    public getHandle(key: string): StoredHandle | null {
+        const handle = structuredClone(this.store.getValueFromIndex(IndexNames.HANDLE, key));
+        if (!handle) return null;
+        return this.returnHandleWithDefault(handle as StoredHandle);
+    }
+
+    public getHandleByHex(hex: string): StoredHandle | null {
+        const {name} = getHandleNameFromAssetName(hex);
+        const handle = this.getHandle(name);
+        if(handle?.hex != hex) return null;
+        return handle;
+    }
+
+    private returnHandleWithDefault(handle?: StoredHandle | null) {
+        if (!handle) {
+            return null;
+        }
+
+        const holder = this.store.getValueFromIndex(IndexNames.HOLDER, handle.holder) as Holder | undefined;
+        if (holder) {
+            handle.default_in_wallet = holder.defaultHandle;
+        }
+
+        return handle;
     }
 
     public getHolder(address: string): Holder {
@@ -95,16 +117,6 @@ export class HandlesRepository {
         return { searchTotal, handles };
 
     }
-    
-    public getHandleByName(handleName: string): StoredHandle | null {
-        return this.store.getHandle(handleName);
-    }
-
-    public getHandleByHex(handleHex: string): StoredHandle | null {
-        const handle = this.store.getHandleByHex(handleHex);
-        if (handle) return handle;
-        return null;
-    }
 
     public getMetrics(): IApiMetrics {  
         return this.store.getMetrics();
@@ -131,7 +143,7 @@ export class HandlesRepository {
             if (holder) {
                 const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
                 items.push({
-                    total_handles: handles.length,
+                    total_handles: handles?.length ?? 0,
                     default_handle: defaultHandle,
                     manually_set: manuallySet,
                     address: key,
@@ -173,7 +185,7 @@ export class HandlesRepository {
     }
 
     public getHandleDatumByName(handleName: string): string | null {
-        const handle = this.store.getHandle(handleName);
+        const handle = this.getHandle(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }
@@ -184,7 +196,7 @@ export class HandlesRepository {
     }
 
     public getSubHandleSettings(handleName: string): { settings?: string; utxo: IUTxO } | null {
-        const handle = this.store.getHandle(handleName);
+        const handle = this.getHandle(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
         }
@@ -196,7 +208,7 @@ export class HandlesRepository {
     public getSubHandlesByRootHandle(handleName: string): StoredHandle[] {
         const subHandles = this.store.getValuesFromIndexedSet(IndexNames.SUBHANDLE, handleName) ?? new Set<string>();
         return [...subHandles].reduce<StoredHandle[]>((agg, item) => {
-            const subHandle = this.store.getHandle(item);
+            const subHandle = this.getHandle(item);
             if (subHandle) {
                 agg.push(subHandle);
             }
@@ -334,7 +346,7 @@ export class HandlesRepository {
         if (amount <= 0) {
             // if (handle.name == 'ap@adaprotocol')
             //     debugLog('ap@adaprotocol being burned', slotNumber, handle);
-            this.store.removeHandle(handle.name);
+            this.store.removeKeyFromIndex(IndexNames.HANDLE, handle.name);
             if (!(handle instanceof RewoundHandle)) {
                 const history: HandleHistory = { old: handle, new: null };
                 this._saveSlotHistory({
@@ -392,7 +404,7 @@ export class HandlesRepository {
                 const name = keys[i];
                 const handleHistory = history[name];
 
-                const existingHandle = this.get(name);
+                const existingHandle = this.getHandle(name);
                 if (!existingHandle) {
                     if (handleHistory.old) {
                         rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
@@ -430,7 +442,7 @@ export class HandlesRepository {
         const {assetName, utxo, lovelace, datum, address, policy, slotNumber, script, metadata, isMintTx} = scannedHandleInfo
         const { hex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
-        const existingHandle = this.get(name) ?? undefined;
+        const existingHandle = this.getHandle(name) ?? undefined;
         let handle = existingHandle ?? this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         
         // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
@@ -553,7 +565,7 @@ export class HandlesRepository {
         const {newDefault, oldDefault} = this.updateHolder(handle, oldHandle);
 
         // Set the main index (SAVES THE HANDLE)
-        this.store.setHandle(name, handle);
+        this.store.setValueOnIndex(IndexNames.HANDLE, name, handle);
 
         // set all one-to-many indexes
         this.store.addValueToIndexedSet(IndexNames.RARITY, rarity, name);
@@ -616,6 +628,10 @@ export class HandlesRepository {
         }
         return personalization
     }
+    
+    public getAllHandles() {
+        return Array.from(this.store.getIndex(IndexNames.HANDLE)).map(([handle]) => this.getHandle(handle as string)!);
+    }
 
     public async getStartingPoint(
         save: (handle: StoredHandle) => void, 
@@ -625,7 +641,7 @@ export class HandlesRepository {
     }
     
     private _filter(searchModel?: HandleSearchModel): StoredHandle[] {
-        if (!searchModel) return this.store.getAllHandles().filter((handle: StoredHandle) => !!handle.utxo);
+        if (!searchModel) return this.getAllHandles().filter((handle: StoredHandle) => !!handle.utxo);
 
         const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
 
@@ -668,7 +684,7 @@ export class HandlesRepository {
         let array =
             characters || length || rarity || numeric_modifiers || holder_address || og
                 ? handleNames.reduce<StoredHandle[]>((agg, name) => {
-                    const handle = this.get(name);
+                    const handle = this.getHandle(name);
                     if (handle) {
                         if (search && !handle.name.includes(search)) return agg;
                         if (handle_type && handle.handle_type !== handle_type) return agg;
@@ -677,7 +693,7 @@ export class HandlesRepository {
                     }
                     return agg;
                 }, [])
-                : this.store.getAllHandles().reduce<StoredHandle[]>((agg: StoredHandle[], handle: StoredHandle) => {
+                : this.getAllHandles().reduce<StoredHandle[]>((agg: StoredHandle[], handle: StoredHandle) => {
                     if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
                     if (handle_type && handle.handle_type !== handle_type) return agg;
                     if (handles && !handles.includes(handle.name)) return agg;

@@ -115,7 +115,7 @@ class App {
 
     private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
-        const handlesRepo = new HandlesRepository(new this.registry.handlesRepo());
+        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
         handlesRepo.rollBackToGenesis();
         
         if (this.blockProcessors.length > 0) {
@@ -130,7 +130,7 @@ class App {
             return;
         }
 
-        const handlesRepo = new HandlesRepository(new this.registry.handlesRepo());
+        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
         const ogmiosService = new OgmiosService(handlesRepo, this.processBlock.bind(this));
         await ogmiosService.initialize(this.resetBlockProcessors.bind(this), this.loadBlockProcessorIndexes.bind(this));
     }

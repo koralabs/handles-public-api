@@ -853,7 +853,7 @@ describe('processBlock Tests', () => {
                 public_mint: false
             }
         }, undefined);
-        expect(repo.get('virtual@hndl')).toEqual({
+        expect(repo.getHandle('virtual@hndl')).toEqual({
             "amount": 1,
             "bg_image": "",
             "characters": "letters",
