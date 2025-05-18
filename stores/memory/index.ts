@@ -1,4 +1,4 @@
-import { asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -78,11 +78,11 @@ export class HandlesMemoryStore implements IApiStore {
         this.intervals.map((i) => clearInterval(i));
     }
 
-    public getValueFromIndex (indexName: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
+    public getValueFromIndex (indexName: IndexNames, key: string | number): ApiIndexType | undefined {
         return this.convertIndexNameToIndex(indexName)?.get(key);
     }
 
-    public setValueOnIndex (indexName: IndexNames, key: string | number, value: Set<string> | Holder | ISlotHistory | StoredHandle) {
+    public setValueOnIndex (indexName: IndexNames, key: string | number, value: ApiIndexType) {
         this.convertIndexNameToIndex(indexName)?.set(key, value);
     }
 
@@ -126,7 +126,7 @@ export class HandlesMemoryStore implements IApiStore {
         return this._storageSchemaVersion;
     }
 
-    private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, Set<string> | Holder | ISlotHistory | StoredHandle> {
+    private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, ApiIndexType> {
         switch (indexName) {
             case IndexNames.ADDRESS:
                 return HandleStore.addressesIndex

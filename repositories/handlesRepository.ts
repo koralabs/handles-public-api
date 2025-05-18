@@ -385,7 +385,7 @@ export class HandlesRepository {
     public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): { name: string; action: string; handle: Partial<StoredHandle> | undefined }[] {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
-        const rewoundHandles = [];
+        const rewoundHandles: { name: string, action: string, handle: Partial<StoredHandle> | undefined }[] = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {
@@ -402,7 +402,7 @@ export class HandlesRepository {
             const keys = Object.keys(history);
             for (let i = 0; i < keys.length; i++) {
                 const name = keys[i];
-                const handleHistory = history[name];
+                const handleHistory = history[name] as HandleHistory;
 
                 const existingHandle = this.getHandle(name);
                 if (!existingHandle) {
@@ -425,7 +425,7 @@ export class HandlesRepository {
                 // otherwise we need to update the handle with the old values
                 const updatedHandle: StoredHandle = {
                     ...existingHandle,
-                    ...handleHistory.old
+                    ...(handleHistory as HandleHistory).old
                 };
 
                 rewoundHandles.push({ name, action: 'update', handle: updatedHandle });
