@@ -15,7 +15,7 @@
     "copy-dist-files": "mkdir -p dist && cp rollup.package.json dist/package.json && cp docs/swagger.yml dist/swagger.yml && cp ./shell/setup_env.sh dist/setup_env.sh",
     "build:production": "npm run copy-dist-files && (cd dist && npm install && chmod +x ./setup_env.sh && ./setup_env.sh) && npm run run rollup -c",
     "build:docker": "npm run build:production && docker build -t koralabs/handles-api .",
-    "dev:mainnet": "(export NODE_ENV=production; export NETWORK=mainnet; npm run start:ogmios && nodemon)",
+    "dev:mainnet": "(export NODE_ENV=development; export NETWORK=mainnet; npm run start:ogmios && nodemon)",
     "dev:preprod": "(export NODE_ENV=development; export NETWORK=preprod; npm run start:ogmios && nodemon)",
     "dev:preview": "(export NODE_ENV=development; export NETWORK=preview; npm run start:ogmios && nodemon)",
     "test": "jest --forceExit --coverage --runInBand",
@@ -25,7 +25,7 @@
   "dependencies": {
     "@cardano-ogmios/client": "^6.11.0",
     "@cardano-ogmios/schema": "^6.11.0",
-    "@koralabs/kora-labs-common": "6.1.6",
+    "@koralabs/kora-labs-common": "6.1.8",
     "bech32": "^2.0.0",
     "cors": "^2.8.5",
     "cross-fetch": "^3.1.5",

@@ -96,11 +96,10 @@ class App {
         }
         this.app.set('registry', this.registry);
     }
-
-    public async processBlock(block: NextBlockResponse) {
+    public async processBlock(response: NextBlockResponse) {
         if (this.blockProcessors.length > 0) {
             for (let i = 0; i < this.blockProcessors.length; i++) {
-                await this.blockProcessors[i].processBlock(block);
+                await this.blockProcessors[i].processBlock(response);
             }
         }
     }

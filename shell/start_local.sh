@@ -32,7 +32,7 @@ declare -a NETWORKS=(preview preprod mainnet)
 declare -a ERAS=(byron shelley alonzo conway)
 for net in "${NETWORKS[@]}"; \
 do \
-    mkdir -p ${net}
+    mkdir -p tmp/${net}
     curl -sL ${BASE_URL}/${net}/config.json -o tmp/${net}/config.json
     curl -sL ${BASE_URL}/${net}/topology.json -o tmp/${net}/topology.json
     for era in "${ERAS[@]}"; \

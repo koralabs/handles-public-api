@@ -8,5 +8,5 @@
         "logs/*",
         "**/*.{spec,test}.ts"
     ],
-    "exec": "chmod +x setup_env.sh && ./setup_env.sh && tsx -r tsconfig-paths/register -r dotenv/config express.ts"
+    "exec": "chmod +x ./shell/setup_env.sh && ./shell/setup_env.sh && tsx -r tsconfig-paths/register -r dotenv/config express.ts"
 }

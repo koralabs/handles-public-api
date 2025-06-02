@@ -162,7 +162,7 @@ export class HandlesMemoryStore implements IApiStore {
     }
     
     private _saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
-        const handles = HandleStore.handles
+        const handles = HandleStore.handles.values()
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${HandleStore.handles.size} handles & ${history.length} history entries`);

@@ -98,75 +98,72 @@ class OgmiosService {
 
     private _createWebSocketClient(): WebSocket {
         const client = new WebSocket(new url.URL(OGMIOS_HOST).toString(), {allowSynchronousEvents: false});
-        client.on('message', async (message: string) => {
-            await fastq.promise(async (msg: string) => {
-                const response = JSON.parse(msg);
-                switch (response.id) {
-                    case 'find-intersection':
-                        for (let i=1; i<=1000; i++) {
-                            this._rpcRequest('nextBlock', {}, 'next-block');
-                        }
-                        break;
-                    case 'next-block':
-                        try {
-                            switch (response.result.direction) {
-                                case 'backward': {
-                                    const { currentSlot } = this.handlesRepo.getMetrics();
-                                    Logger.log({
-                                        message: `Rollback occurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
-                                        event: 'OgmiosService.rollBackward',
-                                        category: LogCategory.INFO
-                                    });
-                                    await this.processRollback(response.result.point, response.result.tip);
-                                    break;
-                                }
-                                case 'forward': {
-                                    try {
-                                        const result = response.result as RollForward;
-                                        this.handlesRepo.setMetrics({
-                                            currentSlot: (result.block as BlockPraos).slot,
-                                            currentBlockHash: result.block.id,
-                                            tipBlockHash: result.tip.id,
-                                            lastSlot: result.tip.slot
-                                        });
-                                        // finish timer for ogmios rollForward
-                                        const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
-                                        const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
-                                        this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
-
-                                        if (result.block.type !== 'praos') {
-                                            throw new Error(`Block type ${result.block.type} is not supported`);
-                                        }
-
-                                        const block = { txBlock: result.block as BlockPraos, tip: result.tip as Tip };
-
-                                        await this.processBlock(block);
-
-                                        // start timer for ogmios rollForward
-                                        startOgmiosExec = Date.now();
-                                    }
-                                    catch (error: any) {
-                                        Logger.log({
-                                            message: `Unhandled error processing block: BLOCK: ${JSON.stringify(response.result.block.id)} ERROR:${error.message} STACK: ${error.stack}`,
-                                            category: LogCategory.NOTIFY,
-                                            event: 'OgmiosService.processBlock'
-                                        });
-                                        //process.exit(1);
-                                    }
-                                }
-                                    break;
-                                default:
-                                    break;
+        client.on('message', fastq.promise(async (msg: string) => {
+            const response = JSON.parse(msg);
+            switch (response.id) {
+                case 'find-intersection':
+                    for (let i=1; i<=1000; i++) {
+                        this._rpcRequest('nextBlock', {}, 'next-block');
+                    }
+                    break;
+                case 'next-block':
+                    try {
+                        switch (response.result.direction) {
+                            case 'backward': {
+                                const { currentSlot } = this.handlesRepo.getMetrics();
+                                Logger.log({
+                                    message: `Rollback occurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                    event: 'OgmiosService.rollBackward',
+                                    category: LogCategory.INFO
+                                });
+                                await this.processRollback(response.result.point, response.result.tip);
+                                break;
                             }
-                            if (this.processBlockCallback) await this.processBlockCallback(response);
-                        } catch (error) {
-                            Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
+                            case 'forward': {
+                                try {
+                                    const result = response.result as RollForward;
+                                    this.handlesRepo.setMetrics({
+                                        currentSlot: (result.block as BlockPraos).slot,
+                                        currentBlockHash: result.block.id,
+                                        tipBlockHash: result.tip.id,
+                                        lastSlot: result.tip.slot
+                                    });
+                                    // finish timer for ogmios rollForward
+                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
+                                    const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
+                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
+
+                                    if (result.block.type !== 'praos') {
+                                        throw new Error(`Block type ${result.block.type} is not supported`);
+                                    }
+
+                                    const block = { txBlock: result.block as BlockPraos, tip: result.tip as Tip };
+                                    await this.processBlock(block);
+                           
+                                    // start timer for ogmios rollForward
+                                    startOgmiosExec = Date.now();
+                                }
+                                catch (error: any) {
+                                    Logger.log({
+                                        message: `Unhandled error processing block: BLOCK: ${JSON.stringify(response.result.block.id)} ERROR:${error.message} STACK: ${error.stack}`,
+                                        category: LogCategory.NOTIFY,
+                                        event: 'OgmiosService.processBlock'
+                                    });
+                                    //process.exit(1);
+                                }
+                            }
+                                break;
+                            default:
+                                break;
                         }
-                        break;
-                }
-                this._rpcRequest('nextBlock', {}, 'next-block');
-            }, 1).push(message);
-        })
+                        if (this.processBlockCallback) await this.processBlockCallback(response);
+                    } catch (error) {
+                        Logger.log({ message: JSON.stringify(error), category: LogCategory.ERROR, event: 'OgmiosClient.Message' });
+                    }
+                    break;
+            }
+            this._rpcRequest('nextBlock', {}, 'next-block');
+        }, 1).push)
         client.on('error', (error) => {
             Logger.log({ message: `OgmiosClient Error: ${error}`, category: LogCategory.ERROR, event: 'OgmiosClient.Error' });
         });
