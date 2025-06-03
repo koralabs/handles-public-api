@@ -24,7 +24,7 @@ export class HandleStore {
 
 export class HandlesMemoryStore implements IApiStore {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 43;
+    private _storageSchemaVersion = 44;
     intervals: NodeJS.Timeout[] = [];
     private _files: IHandleFileContent[] | null = null;
 
@@ -162,7 +162,7 @@ export class HandlesMemoryStore implements IApiStore {
     }
     
     private _saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
-        const handles = HandleStore.handles.values()
+        const handles = Array.from(HandleStore.handles.values());
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${HandleStore.handles.size} handles & ${history.length} history entries`);
@@ -242,7 +242,7 @@ export class HandlesMemoryStore implements IApiStore {
         this.saveFileContents({ storagePath: this.storageFilePath });
     }
 
-    private saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): boolean {
+    private saveFileContents({ content, storagePath, slot, hash, testDelay }: { content?: any; storagePath: string; slot?: number; hash?: string; testDelay?: boolean }): boolean {
         try {
             const worker = new Worker('./workers/handleStore.worker.js', {
                 workerData: {
