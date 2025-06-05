@@ -656,19 +656,31 @@ describe('processBlock Tests', () => {
         });
     });
 
-    it('Should burn tokens', async () => {
-        const slot = 1234;
-        const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
-        const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
-        jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
+    describe('Burn Tokens tests', () => {
+        it('Should burn tokens', async () => {
+            const slot = 1234;
+            const burritoHex = '6275727269746f';
+            const tacoHex = '7461636f';
+            // start with non-cip68 handle, then try all values
+            const handles = [burritoHex, ...Object.values(AssetNameLabel).map(l => `${l}${tacoHex}`)];
+            const burnHandleSpy = jest.spyOn(HandleStore, 'burnHandle').mockImplementation();
+            jest.spyOn(HandleStore, 'getTimeMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await ogmios['processBlock']({
-            txBlock: txBlock({ policy: policyId, handleHexName, isBurn: true, slot }),
-            tip
+            await Promise.all(
+                handles.map((h) =>
+                    ogmios['processBlock']({
+                        txBlock: txBlock({ policy: policyId, handleHexName: h, isBurn: true, slot }),
+                        tip
+                    })
+                )
+            );
+
+            expect(burnHandleSpy).toHaveBeenCalledTimes(3);
+
+            expect(burnHandleSpy).toHaveBeenNthCalledWith(1, 'burrito', slot);
+            expect(burnHandleSpy).toHaveBeenNthCalledWith(2, 'taco', slot);
+            expect(burnHandleSpy).toHaveBeenNthCalledWith(3, 'taco', slot);
         });
-
-        expect(burnHandleSpy).toHaveBeenCalledWith(handleName, slot);
     });
 
     describe('isValidDatum tests', () => {

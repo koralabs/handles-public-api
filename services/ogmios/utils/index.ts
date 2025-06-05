@@ -65,7 +65,7 @@ export const buildOnChainObject = <T>(cborData: any): T | null => {
     }
 };
 
-export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string } => {
+export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string, isCip68: boolean } => {
     let hex = `${assetName}`;
 
     // check if asset name has a period. If so, it includes the policyId
@@ -74,10 +74,12 @@ export const getHandleNameFromAssetName = (assetName: string): { name: string; h
     }
 
     const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
+    const isCip68 = Object.values(AssetNameLabel).some(l => hex.startsWith(l));
 
     return {
         name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
-        hex
+        hex,
+        isCip68
     };
 };
 
