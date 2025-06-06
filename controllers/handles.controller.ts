@@ -75,10 +75,10 @@ class HandlesController {
         });
 
         if (req.headers?.accept?.startsWith('text/plain')) {
-            return handleRepo.search(pagination, search);
+            return handleRepo.search(undefined, search);
         }
         else {
-            return handleRepo.search(undefined, search);
+            return handleRepo.search(pagination, search);
         }
     }
 
