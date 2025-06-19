@@ -729,7 +729,7 @@ export class HandlesRepository {
         handle.payment_key_hash = address ? (getPaymentKeyHash(address))! : '';
         handle.handle_type = handle.handle_type ?? (name.includes('@') ? HandleType.NFT_SUBHANDLE : HandleType.HANDLE);
         handle.image = data?.image ?? (handle.image ?? '');
-        handle.standard_image = data?.image ?? handle.standard_image ?? handle.image ?? '';
+        handle.standard_image = handle.standard_image ?? handle.image ?? data?.image ?? '';
         handle.version = Number(((data as any)?.core ?? data)?.version ?? (handle.version ?? 0));
         handle.sub_characters = name.includes('@') ? buildCharacters(name.split('@')[0]) : undefined;
         handle.sub_length = name.includes('@') ? name.split('@')[0].length : undefined;
@@ -848,6 +848,8 @@ export class HandlesRepository {
             handle.og_number = nftAttributes?.og_number ?? 0;
             handle.image_hash = projectAttributes?.image_hash ?? ''
             handle.standard_image_hash = projectAttributes?.standard_image_hash ?? ''
+            handle.image = nftAttributes?.image ?? ''
+            handle.standard_image = projectAttributes?.standard_image ?? ''
             handle.bg_image = projectAttributes?.bg_image
             handle.bg_asset = projectAttributes?.bg_asset
             handle.pfp_image = projectAttributes?.pfp_image
