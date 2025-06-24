@@ -204,10 +204,12 @@ class OgmiosService {
                 if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
                     for (const [assetName, quantity] of Object.entries(assetInfo)) {
                         if (quantity == BigInt(-1)) {
-                            const { name } = getHandleNameFromAssetName(assetName);
-                            const handle = this.handlesRepo.getHandle(name);
-                            if (!handle) continue;
-                            this.handlesRepo.removeHandle(handle, currentSlot);
+                            const { name, hex, isCip67 } = getHandleNameFromAssetName(assetName);
+                            if (!isCip67 || hex.startsWith(AssetNameLabel.LBL_222) || hex.startsWith(AssetNameLabel.LBL_000)) {
+                                const handle = this.handlesRepo.getHandle(name);
+                                if (!handle) continue;
+                                this.handlesRepo.removeHandle(handle, currentSlot);
+                            }
                         }
                     }
                 }

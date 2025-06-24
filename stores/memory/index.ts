@@ -24,7 +24,7 @@ export class HandleStore {
 
 export class HandlesMemoryStore implements IApiStore {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 45;
+    private _storageSchemaVersion = 46;
     intervals: NodeJS.Timeout[] = [];
     private _files: IHandleFileContent[] | null = null;
 
