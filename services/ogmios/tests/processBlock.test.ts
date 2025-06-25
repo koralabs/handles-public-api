@@ -954,11 +954,11 @@ describe('processBlock Tests', () => {
     it('Should burn tokens', async () => {
         const slot = 1234;
         const handleName = `burritos`;
-        const handleHexName = `${AssetNameLabel.LBL_100}${Buffer.from(handleName).toString('hex')}`;
+        const handleHexName = `${AssetNameLabel.LBL_222}${Buffer.from(handleName).toString('hex')}`;
         const burnHandleSpy = jest.spyOn(HandlesRepository.prototype, 'removeHandle').mockImplementation();
         jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ elapsedOgmiosExec: 0, elapsedBuildingExec: 0 });
 
-        await repo.save(await repo.Internal.buildHandle({name: handleName, hex: handleHexName, policy: policyId, resolved_addresses: {ada: defaultAddress}}))
+        repo.save(await repo.Internal.buildHandle({name: handleName, hex: handleHexName, policy: policyId, resolved_addresses: {ada: defaultAddress}}))
 
         await ogmios['processBlock']({
             txBlock: txBlock({ policy: policyId, handleHexName, isBurn: true, slot }),
@@ -974,7 +974,7 @@ describe('processBlock Tests', () => {
             drep: undefined,
             handle_type: 'handle',
             has_datum: false,
-            hex: '000643b06275727269746f73',
+            hex: '000de1406275727269746f73',
             holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
             holder_type: 'wallet',
             image: '',

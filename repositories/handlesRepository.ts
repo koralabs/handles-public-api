@@ -440,10 +440,10 @@ export class HandlesRepository {
     
     public async processScannedHandleInfo(scannedHandleInfo: ScannedHandleInfo): Promise<void> {
         const {assetName, utxo, lovelace, datum, address, policy, slotNumber, script, metadata, isMintTx} = scannedHandleInfo
-        const { hex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
-        const data = metadata && (metadata[isCip67 ? hex : name] as unknown as IHandleMetadata);
+        const { handleHex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
+        const data = metadata && (metadata[isCip67 ? handleHex : name] as unknown as IHandleMetadata);
         const existingHandle = this.getHandle(name) ?? undefined;
-        let handle = existingHandle ?? this._buildHandle({name, hex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        let handle = existingHandle ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         
         // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
         //     debugLog('PROCESSED SCANNED INFO START', slotNumber, {...handle, utxo})
