@@ -85,37 +85,48 @@ export class HandlesRepository {
         return this.store.getValueFromIndex(IndexNames.HOLDER, address) as Holder;
     }
 
-    public search(pagination?: HandlePaginationModel, search?: HandleSearchModel) {
+    private _shuffle(t: any[])
+    { 
+        let last = t.length
+        let n
+        while (last > 0)
+        { 
+            n = 0 | Math.random() * last;
+            let q = t[n]
+            let j = --last;
+            t[n] = t[j]
+            t[j] = q
+        }
+    }
+
+    public search(pagination?: HandlePaginationModel, search?: HandleSearchModel, showAll = false) {
         let handles = this._filter(search);
         const searchTotal = handles.length;
         
-        if (pagination) {                
-            const { page, sort, handlesPerPage, slotNumber } = pagination;
-
-            if (slotNumber) {
-                handles.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
-                const slotNumberIndex = handles.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
-                handles = handles.slice(slotNumberIndex, slotNumberIndex + handlesPerPage);
-
-                return { searchTotal, handles };
-            }
-
-            handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-
-            if (sort === 'random') {
-                handles = (handles as StoredHandle[])
-                    .map((value) => ({ value, sort: Math.random() }))
-                    .sort((a, b) => a.sort - b.sort)
-                    .map(({ value }) => value);
-            } else {
-                handles.sort((a, b) => (sort === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
-            }
-
-            const startIndex = (page - 1) * handlesPerPage;
-            handles = handles.slice(startIndex, startIndex + handlesPerPage);
+        const { page = 1, sort = 'asc', handlesPerPage = 100, slotNumber = undefined } = pagination ?? { page: 1, sort: 'asc', handlesPerPage: 100, slotNumber: undefined };
+    
+        if (slotNumber) {
+            handles.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
+            const slotNumberIndex = handles.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
+            handles = handles.slice(slotNumberIndex, showAll ? undefined : slotNumberIndex + handlesPerPage);
+            return { searchTotal, handles };
         }
-        return { searchTotal, handles };
 
+        switch (sort) {
+            case 'random':
+                this._shuffle(handles);
+                break;
+            case 'desc': 
+                handles.sort((h1, h2) => h2.name.localeCompare(h1.name));
+                break;
+            default:
+                handles.sort((h1, h2) => h1.name.localeCompare(h2.name));
+                break;
+        }
+
+        const startIndex = (page - 1) * handlesPerPage;
+        handles = handles.slice(startIndex, showAll ? undefined : startIndex + handlesPerPage);
+        return { searchTotal, handles };
     }
 
     public getMetrics(): IApiMetrics {  
@@ -221,7 +232,7 @@ export class HandlesRepository {
         return this.store.getKeysFromIndex(IndexNames.SUBHANDLE) as string[];
     }
 
-    public setMetrics(metrics: IApiMetrics): void {
+    public setMetrics(metrics: Partial<IApiMetrics>): void {
         this.store.setMetrics(metrics);
     }
 

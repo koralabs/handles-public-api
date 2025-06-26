@@ -48,16 +48,17 @@ export class HandlesMemoryStore implements IApiStore {
 
                 // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
                 // Once restarted, we should have a valid file to read from.
-                if (currentSlot === 0) {
+                if (!currentSlot || currentSlot === 0) {
                     Logger.log({
-                        message: 'Slot is zero. Exiting process.',
+                        message: `Slot is ${currentSlot}. Cannot save file. Current block hash: ${currentBlockHash}`,
                         category: LogCategory.NOTIFY,
                         event: 'OgmiosService.saveFilesInterval'
                     });
-                    process.exit(2);
+                    //process.exit(2);
+                    return;
                 }
 
-                this._saveHandlesFile(currentSlot ?? 0, currentBlockHash ?? '');
+                this._saveHandlesFile(currentSlot, currentBlockHash ?? '');
 
                 memoryWatcher();
             }, 10 * 60 * 1000);
@@ -224,7 +225,7 @@ export class HandlesMemoryStore implements IApiStore {
         return Buffer.byteLength(JSON.stringify(object, mapStringifyReplacer));
     }
 
-    public setMetrics(metrics: IApiMetrics): void {
+    public setMetrics(metrics: Partial<IApiMetrics>): void {
         HandlesMemoryStore.metrics = { ...HandlesMemoryStore.metrics, ...metrics };
     }
 

@@ -181,11 +181,11 @@ describe('HandlesMemoryStore Tests', () => {
             jest.spyOn(HandlesMemoryStore.prototype, 'getIndex').mockReturnValue(new Map<string, StoredHandle>(handlesFixture.map(h => [h.name, h])));
             const search = new HandleSearchModel();
             const pagination = new HandlePaginationModel({sort:'random'})
-            const result1 = repo.search(pagination, search).handles.map(h => h.name);
-            const result2 = repo.search(pagination, search).handles.map(h => h.name);
-            const result3 = repo.search(pagination, search).handles.map(h => h.name);
-            const result4 = repo.search(pagination, search).handles.map(h => h.name);
-            const noWayTheyreEqual = [result2, result3, result4].every((r) => r == result1);
+            const result1 = repo.search(pagination, search).handles.map(h => h.name).join(',');
+            const result2 = repo.search(pagination, search).handles.map(h => h.name).join(',');
+            const result3 = repo.search(pagination, search).handles.map(h => h.name).join(',');
+            const result4 = repo.search(pagination, search).handles.map(h => h.name).join(',');
+            const noWayTheyreEqual = result1 == result2 && result2 == result3 && result3 == result4
             expect(noWayTheyreEqual).toEqual(false);
         });
 

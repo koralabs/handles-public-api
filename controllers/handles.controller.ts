@@ -74,12 +74,7 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        if (req.headers?.accept?.startsWith('text/plain')) {
-            return handleRepo.search(undefined, search);
-        }
-        else {
-            return handleRepo.search(pagination, search);
-        }
+        return handleRepo.search(pagination, search, req.headers?.accept?.startsWith('text/plain'));
     }
 
     public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
@@ -93,6 +88,7 @@ class HandlesController {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handleNames.length.toString());
                 res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));
+                return;
             }
 
             res.set('x-handles-search-total', handles.searchTotal.toString())

@@ -1,6 +1,5 @@
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { HttpException, LogCategory, Logger, ModelException } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
-import { HttpException, ModelException } from '@koralabs/kora-labs-common';
 
 const errorMiddleware = (error: HttpException, req: Request, res: Response, next: NextFunction) => {
     try {
@@ -13,7 +12,7 @@ const errorMiddleware = (error: HttpException, req: Request, res: Response, next
         }
         if (status >= 500) {
             Logger.log({
-                message: `[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`,
+                message: `[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}, Stack: ${error.stack}`,
                 category: LogCategory.ERROR,
                 event: 'http.exception'
             });

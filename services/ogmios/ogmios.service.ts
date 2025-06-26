@@ -121,24 +121,24 @@ class OgmiosService {
                             }
                             case 'forward': {
                                 try {
-                                    const result = response.result as RollForward;
-                                    this.handlesRepo.setMetrics({
-                                        currentSlot: (result.block as BlockPraos).slot,
-                                        currentBlockHash: result.block.id,
-                                        tipBlockHash: result.tip.id,
-                                        lastSlot: result.tip.slot
-                                    });
                                     // finish timer for ogmios rollForward
-                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
                                     const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
-                                    this.handlesRepo.setMetrics({ elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished });
-
-                                    if (result.block.type !== 'praos') {
+                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
+                                    const result = response.result as RollForward;
+                                    
+                                    if (result.block.type !== 'praos')
                                         throw new Error(`Block type ${result.block.type} is not supported`);
-                                    }
 
-                                    const block = { txBlock: result.block as BlockPraos, tip: result.tip as Tip };
-                                    await this.processBlock(block);
+                                    const block = result.block as BlockPraos
+                                    this.handlesRepo.setMetrics({
+                                        currentSlot: block.slot,
+                                        currentBlockHash: block.id,
+                                        tipBlockHash: result.tip.id,
+                                        lastSlot: result.tip.slot,
+                                        elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished
+                                    });
+
+                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });                                    
                            
                                     // start timer for ogmios rollForward
                                     startOgmiosExec = Date.now();
@@ -185,7 +185,7 @@ class OgmiosService {
         const startBuildingExec = Date.now();
 
         const lastSlot = tip.slot;
-        const currentSlot = txBlock?.slot ?? 0;
+        const currentSlot = txBlock?.slot ?? this.handlesRepo.getMetrics().currentSlot ?? 0;
         const currentBlockHash = txBlock.id ?? '0';
         const tipBlockHash = tip?.id ?? '1';
 
