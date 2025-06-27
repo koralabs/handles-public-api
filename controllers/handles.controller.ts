@@ -22,7 +22,7 @@ import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.v
 import { HandlesRepository } from '../repositories/handlesRepository';
 
 class HandlesController {
-    private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null; }> => {
+    private static async getHandleFromRepo (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null; }> {
         const handleName = req.params.handle;
         const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
         const asHex = req.query.hex == 'true';
@@ -77,7 +77,7 @@ class HandlesController {
         return handleRepo.search(pagination, search, req.headers?.accept?.startsWith('text/plain'));
     }
 
-    public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public async getAll (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
 
@@ -99,7 +99,7 @@ class HandlesController {
         }
     };
 
-    private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
+    private static async _searchFromList (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> {
         const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
         const handleSearchResults = HandlesController.parseQueryAndSearchHandles(req, handleRepo, handles)
 
@@ -117,7 +117,7 @@ class HandlesController {
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
     }
 
-    public list = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public async list (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             let handles: string[] = !isEmpty(req.body) ? req.body as string[] : [];
@@ -147,13 +147,13 @@ class HandlesController {
                 default:
                     break;
             }
-            await this._searchFromList(req, res, next, handles);
+            await HandlesController._searchFromList(req, res, next, handles);
         } catch (error) {
             next(error);
         }
     };
 
-    public getHandle = async (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> => {
+    public async getHandle (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleData = await HandlesController.getHandleFromRepo(req);
             res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message });
@@ -177,6 +177,7 @@ class HandlesController {
                     return;
                 }
                 res.status(handle.code).json(personalization);
+                return;
             }
             res.status(handle.code).send(handle.message);
 

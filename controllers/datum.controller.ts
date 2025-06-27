@@ -2,7 +2,7 @@ import { decodeCborToJson, encodeJsonToDatum, KeyType } from '@koralabs/kora-lab
 import { NextFunction, Request, Response } from 'express';
 
 class DatumController {
-    public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             if (req.query.from === 'json' && req.query.to === 'plutus_data_cbor') {
                 const encoded = await encodeJsonToDatum(req.body, { 

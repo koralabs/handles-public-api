@@ -12,7 +12,7 @@ enum HealthStatus {
 }
 
 class HealthController {
-    public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const ogmiosResults = await fetchHealth();
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());

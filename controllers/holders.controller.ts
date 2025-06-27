@@ -4,11 +4,11 @@ import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 
 class HoldersController {
-    public getAll = async (
+    public  async getAll (
         req: Request<Request, {}, {}, IGetAllHoldersQueryParams>,
         res: Response,
         next: NextFunction
-    ): Promise<void> => {
+    ): Promise<void> {
         try {
             const {
                 records_per_page,

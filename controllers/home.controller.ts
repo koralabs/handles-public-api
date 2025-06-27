@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 class HomeController {
-    public index = (req: Request, res: Response, next: NextFunction): void => {
+    public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             res.sendStatus(200);
         } catch (error) {
