@@ -46,14 +46,13 @@ class App {
             Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
         });
         server.keepAliveTimeout = 61 * 1000;
+        this.initializeOgmios();
     }
 
     public async initialize() {
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         this.app.use(errorMiddleware);
-        this.handlesRepo = new HandlesRepository(this.registry.handlesProvider()).initialize();
-        this.initializeOgmios();
         return this;
     }
 
@@ -99,11 +98,10 @@ class App {
         }
         this.app.set('registry', this.registry);
     }
-
-    public async processBlock(block: NextBlockResponse) {
+    public async processBlock(response: NextBlockResponse) {
         if (this.blockProcessors.length > 0) {
             for (let i = 0; i < this.blockProcessors.length; i++) {
-                await this.blockProcessors[i].processBlock(block);
+                await this.blockProcessors[i].processBlock(response);
             }
         }
     }
@@ -118,7 +116,8 @@ class App {
 
     private async resetBlockProcessors() {
         // loop through registries and clear out storage and file
-        this.handlesRepo!.rollBackToGenesis();
+        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
+        handlesRepo.rollBackToGenesis();
         
         if (this.blockProcessors.length > 0) {
             for (let i = 0; i < this.blockProcessors.length; i++) {
@@ -132,11 +131,12 @@ class App {
             return;
         }
 
-        const ogmiosService = new OgmiosService(this.handlesRepo!, this.processBlock);
-        await ogmiosService.initialize(this.resetBlockProcessors, this.loadBlockProcessorIndexes);
+        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
+        const ogmiosService = new OgmiosService(handlesRepo, this.processBlock.bind(this));
+        await ogmiosService.initialize(this.resetBlockProcessors.bind(this), this.loadBlockProcessorIndexes.bind(this));
     }
 
-    private async initializeSwagger() {
+    private initializeSwagger() {
         const options = {
             customCss: '.swagger-ui .topbar { display: none }',
             customSiteTitle: 'Handles API',

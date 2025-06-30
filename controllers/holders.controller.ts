@@ -4,11 +4,11 @@ import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 
 class HoldersController {
-    public getAll = async (
+    public  async getAll (
         req: Request<Request, {}, {}, IGetAllHoldersQueryParams>,
         res: Response,
         next: NextFunction
-    ): Promise<void> => {
+    ): Promise<void> {
         try {
             const {
                 records_per_page,
@@ -22,7 +22,7 @@ class HoldersController {
                 recordsPerPage: records_per_page
             });
 
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesProvider());
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const holders = handleRepo.getAllHolders({ pagination });
             res.status(handleRepo.currentHttpStatus()).json(holders);
         } catch (error) {
@@ -37,7 +37,7 @@ class HoldersController {
     ) {
         try {
             const holderAddress = req.params.address;
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesProvider());
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const details = handleRepo.getHolder(holderAddress);
             if (!details) {
                 throw new HttpException(404, 'Not found');

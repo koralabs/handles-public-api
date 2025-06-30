@@ -1,5 +1,13 @@
+import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import util from 'util';
 import App from './app';
-import util from 'util'
 const app = new App();
+process.on('uncaughtException', (err) => {
+    Logger.log({message: `Uncaught Exception: ${JSON.stringify(err.message)} STACK: ${JSON.stringify(err.stack)}`, category: LogCategory.NOTIFY, event: 'uncaughtException'});
+});
+process.on('unhandledRejection', (err: Error) => {
+    Logger.log({message: `Unhandled Rejection: ${JSON.stringify(err.message)} STACK: ${JSON.stringify(err.stack)}`, category: LogCategory.NOTIFY, event: 'uncaughtException'});
+    // Log the error and potentially handle it
+});
 const appPromise = util.promisify(app.listen).bind(app);
-Promise.all([appPromise()]);
+await Promise.all([appPromise()]);

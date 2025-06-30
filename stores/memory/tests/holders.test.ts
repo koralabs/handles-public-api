@@ -1,8 +1,8 @@
 import { Holder } from '@koralabs/kora-labs-common';
-import { MemoryHandlesProvider } from '.';
-import { HandleStore } from './handleStore';
-import { createRandomHandles, performRandomHandleUpdates } from './tests/fixtures/handles';
-const repo = new MemoryHandlesProvider();
+import { HandlesMemoryStore, HandleStore } from '..';
+import { HandlesRepository } from '../../../repositories/handlesRepository';
+import { createRandomHandles, performRandomHandleUpdates } from './fixtures/handles';
+const repo = new HandlesRepository(new HandlesMemoryStore());
 
 describe('holder index integrity', () => {
     it('holder index should be accurate', async () => {
@@ -14,11 +14,10 @@ describe('holder index integrity', () => {
             const handle = handles[i];
             const holder = testHolderIndex.get(handle.holder);
             if (!holder) {
-                const set = new Set<string>();
-                set.add(handle.name);
+                
                 testHolderIndex.set(handle.holder, {
                     defaultHandle: handle.default_in_wallet,
-                    handles: set,
+                    handles: [{name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number}],
                     knownOwnerName: '',
                     manuallySet: false,
                     type: 'wallet'
@@ -26,7 +25,7 @@ describe('holder index integrity', () => {
             } 
             else {
                 holder.defaultHandle = handle.default_in_wallet;
-                holder.handles.add(handle.name);
+                holder.handles.push({name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number});
             } 
         }
         expect(HandleStore.holderIndex).toEqual(testHolderIndex);

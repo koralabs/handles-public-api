@@ -1,6 +1,7 @@
 #!/bin/bash
-# DEFAULT_NODE_OPTIONS=--max-old-space-size=12288
-# export NODE_OPTIONS=--max-old-space-size=12288
+set -eu
+
+export NODE_OPTIONS='--max-old-space-size=12288'
 export NETWORK=${NETWORK:-mainnet}
 export OGMIOS_HOST=${OGMIOS_HOST:-'http://0.0.0.0:1337'}
 export DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false}
@@ -40,10 +41,13 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "all" ]]; the
         echo "Failed to start ogmios: $ogmios_status"
         exit $ogmios_status
     fi
-    sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
+    source ~/.nvm/nvm.sh
+    export TMPDIR=/tmp
+    nvm use 21
+    sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
     tail -f ./forever/**.log
@@ -64,7 +68,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
         rm -rf ${NODE_DB}
         mkdir -p ${NODE_DB}
         echo "Grabbing latest snapshot with Mithril."
-        MITHRIL_VERSION=2450.0
+        MITHRIL_VERSION=2517.1
         curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
         export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
         export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
@@ -77,6 +81,9 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
     
     trap cleanup INT TERM KILL QUIT ABRT
     echo "Starting cardano-node."
+
+    # Workaround for Mithril not outputting the protocolMagicId
+    cat ./${NETWORK}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
 
     exec ./cardano-node run \
         --config ./${NETWORK}/config.json \

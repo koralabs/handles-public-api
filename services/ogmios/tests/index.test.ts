@@ -1,6 +1,6 @@
 import { AssetNameLabel, buildNumericModifiers, getRarity, Logger } from '@koralabs/kora-labs-common';
 import v8 from 'v8';
-import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher } from '.';
+import { buildOnChainObject, getHandleNameFromAssetName, memoryWatcher } from '../utils';
 
 type DoesZapCodeSpaceFlag = 0 | 1;
 
@@ -163,8 +163,7 @@ describe('Utils Tests', () => {
             const handle = getHandleNameFromAssetName(asset1);
             expect(handle).toEqual({
                 ...expectedHandle,
-                hex: asset1,
-                assetName: asset1
+                handleHex: asset1
             });
         });
 
@@ -173,8 +172,7 @@ describe('Utils Tests', () => {
             const handle = getHandleNameFromAssetName(asset2);
             expect(handle).toEqual({
                 ...expectedHandle,
-                hex: '6275727269746f',
-                assetName: asset2
+                handleHex: '6275727269746f'
             });
         });
 
@@ -183,8 +181,7 @@ describe('Utils Tests', () => {
             const handle = getHandleNameFromAssetName(asset);
             expect(handle).toEqual({
                 assetLabel: AssetNameLabel.LBL_222,
-                assetName: asset,
-                hex: `${AssetNameLabel.LBL_222}6275727269746f`,
+                handleHex: `${AssetNameLabel.LBL_222}6275727269746f`,
                 name: 'burrito',
                 isCip67: true
             });
@@ -195,8 +192,7 @@ describe('Utils Tests', () => {
             const handle = getHandleNameFromAssetName(asset);
             expect(handle).toEqual({
                 assetLabel: AssetNameLabel.LBL_100,
-                assetName: asset,
-                hex: `${AssetNameLabel.LBL_222}6275727269746f`,
+                handleHex: `${AssetNameLabel.LBL_222}6275727269746f`,
                 name: 'burrito',
                 isCip67: true
             });

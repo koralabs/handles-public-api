@@ -1,4 +1,4 @@
-import { getElapsedTime, Logger } from '@koralabs/kora-labs-common';
+import { getElapsedTime, Logger, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 
@@ -32,3 +32,17 @@ export const dynamicallyLoad = async (folderPath: string, type: DynamicLoadType)
         })
     );
 };
+
+export const debugLog = (msg: string, blockSlot: number, handle?: StoredHandle | null) => {
+    console.log('**************************************************************');
+    console.log(msg);
+    console.log({
+        blockSlot, 
+        hex: handle?.hex,
+        amount: handle?.amount,
+        handleSlot: handle?.updated_slot_number, 
+        address: handle?.resolved_addresses?.ada,
+        utxo: handle?.utxo
+    });
+    console.log('______________________________________________________________');
+}

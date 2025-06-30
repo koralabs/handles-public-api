@@ -1,6 +1,6 @@
 set -eu
 
-CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.1.4}
+CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.3.1}
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
 CONFIG_FILES_BASE_URL=${CONFIG_FILES_BASE_URL:-'https://book.world.dev.cardano.org/environments'}
 apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 zstd
@@ -12,15 +12,18 @@ chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p /ipc && mkdir -p
 BASE_URL=${CONFIG_FILES_BASE_URL}
 declare -a NETWORKS=(preview preprod mainnet)
 declare -a ERAS=(byron shelley alonzo conway)
-for net in "${NETWORKS[@]}"; \
-do \
+for net in "${NETWORKS[@]}"
+do 
     mkdir -p ${net}
+    if [ ${net} == "mainnet" ]; then
+        curl -sL ${BASE_URL}/${net}/checkpoints.json -o ${net}/checkpoints.json
+    fi
     curl -sL ${BASE_URL}/${net}/config.json -o ${net}/config.json
     curl -sL ${BASE_URL}/${net}/topology.json -o ${net}/topology.json
-    for era in "${ERAS[@]}"; \
-    do \
-        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json; \
-    done; \
+    for era in "${ERAS[@]}"
+    do
+        curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o ${net}/${era}-genesis.json
+    done
 done
 curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
 unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip

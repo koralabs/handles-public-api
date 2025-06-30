@@ -1,33 +1,98 @@
-import { Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NETWORK, NODE_ENV } from '../../config';
+import { RewoundHandle } from '../../repositories/handlesRepository';
 import { memoryWatcher } from '../../services/ogmios/utils';
-import { RewoundHandle } from '../handlesRepository';
-import { HandleStore } from './handleStore';
 
-export class MemoryHandlesProvider implements IHandlesProvider {
-    public getValueFromIndex (indexName: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
+export class HandleStore {
+    public static handles = new Map<string, StoredHandle>();
+    public static slotHistoryIndex = new Map<number, ISlotHistory>();
+    public static holderIndex = new Map<string, Holder>();
+    public static subHandlesIndex = new Map<string, Set<string>>();
+    public static rarityIndex = new Map<string, Set<string>>();
+    public static ogIndex = new Map<string, Set<string>>();
+    public static charactersIndex = new Map<string, Set<string>>();
+    public static paymentKeyHashesIndex = new Map<string, Set<string>>();
+    public static hashOfStakeKeyHashIndex = new Map<string, Set<string>>();
+    public static addressesIndex = new Map<string, Set<string>>();
+    public static numericModifiersIndex = new Map<string, Set<string>>();
+    public static lengthIndex = new Map<string, Set<string>>();
+}
+
+export class HandlesMemoryStore implements IApiStore {
+    private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
+    private _storageSchemaVersion = 47;
+    intervals: NodeJS.Timeout[] = [];
+    private _files: IHandleFileContent[] | null = null;
+
+    private storageFileName = `handles.json`;
+    private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
+    private static metrics: IApiMetrics = {
+        firstSlot: 0,
+        lastSlot: 0,
+        currentSlot: 0,
+        elapsedOgmiosExec: 0,
+        elapsedBuildingExec: 0,
+        firstMemoryUsage: 0,
+        currentBlockHash: '',
+        memorySize: 0
+    };
+
+    public async initialize(): Promise<IApiStore> {
+        if (this.intervals.length === 0) {
+            const saveFilesInterval = setInterval(() => {
+                const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
+
+                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+                // Once restarted, we should have a valid file to read from.
+                if (!currentSlot || currentSlot === 0) {
+                    Logger.log({
+                        message: `Slot is ${currentSlot}. Cannot save file. Current block hash: ${currentBlockHash}`,
+                        category: LogCategory.NOTIFY,
+                        event: 'OgmiosService.saveFilesInterval'
+                    });
+                    //process.exit(2);
+                    return;
+                }
+
+                this._saveHandlesFile(currentSlot, currentBlockHash ?? '');
+
+                memoryWatcher();
+            }, 10 * 60 * 1000);
+
+            const setMemoryInterval = setInterval(() => {
+                const memorySize = this.memorySize();
+                this.setMetrics({ memorySize });
+            }, 60000);
+
+            this.intervals = [saveFilesInterval, setMemoryInterval];
+        }
+        this._files = await this._getFilesContent();
+        this.setMetrics({schemaVersion: this._storageSchemaVersion});
+        return this;
+    }
+
+    public destroy(): void {
+        this.intervals.map((i) => clearInterval(i));
+    }
+
+    public getValueFromIndex (indexName: IndexNames, key: string | number): ApiIndexType | undefined {
         return this.convertIndexNameToIndex(indexName)?.get(key);
     }
 
-    public setValueOnIndex (indexName: IndexNames, key: string | number, value: Set<string> | Holder | ISlotHistory | StoredHandle) {
+    public setValueOnIndex (indexName: IndexNames, key: string | number, value: ApiIndexType) {
         this.convertIndexNameToIndex(indexName)?.set(key, value);
-    }
-
-    private _files: IHandleFileContent[] | null = null;
-    public setHandle(handleName: string, value: StoredHandle): void {
-        HandleStore.handles.set(handleName, value);
-    }
-
-    public removeHandle(handleName: string): void {
-        HandleStore.handles.delete(handleName)
     }
 
     public getIndex(indexName: IndexNames) {
         return this.convertIndexNameToIndex(indexName)!;
+    }
+
+    public getKeysFromIndex(indexName: IndexNames) {
+        return this.convertIndexNameToIndex(indexName)!.keys().toArray();
     }
 
     public getValuesFromIndexedSet(indexName: IndexNames, key: string | number): Set<string> | undefined {
@@ -54,15 +119,15 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     }
 
     public getMetrics(): IApiMetrics {
-        this.metrics.count = HandleStore.handles.size;
-        return this.metrics;
+        HandlesMemoryStore.metrics.count = HandleStore.handles.size;
+        return HandlesMemoryStore.metrics;
     }
 
     public getSchemaVersion(): number {
         return Number(process.env.STORAGE_SCHEMA_VERSION);
     }
 
-    private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, Set<string> | Holder | ISlotHistory | StoredHandle> {
+    private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, ApiIndexType> {
         switch (indexName) {
             case IndexNames.ADDRESS:
                 return HandleStore.addressesIndex
@@ -82,113 +147,23 @@ export class MemoryHandlesProvider implements IHandlesProvider {
                 return HandleStore.rarityIndex
             case IndexNames.SUBHANDLE:
                 return HandleStore.subHandlesIndex
-            case IndexNames.STAKE_KEY_HASH:
-                return HandleStore.addressesIndex
             case IndexNames.HANDLE:
                 return HandleStore.handles
             case IndexNames.HOLDER:
                 return HandleStore.holderIndex
             case IndexNames.SLOT_HISTORY:
                 return HandleStore.slotHistoryIndex
+            default:
+                return new Map<string, Set<string>>()
         }
-    }
-
-    private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private metrics: IApiMetrics = {
-        firstSlot: 0,
-        lastSlot: 0,
-        currentSlot: 0,
-        elapsedOgmiosExec: 0,
-        elapsedBuildingExec: 0,
-        firstMemoryUsage: 0,
-        currentBlockHash: '',
-        memorySize: 0
-    };
-    intervals: NodeJS.Timeout[] = [];
-
-    private storageFileName = `handles.json`;
-    private storageFilePath = `${this.storageFolder}/${NETWORK}/snapshot/${this.storageFileName}`;
-
-    public async initialize(): Promise<IHandlesProvider> {
-        if (this.intervals.length === 0) {
-            const saveFilesInterval = setInterval(() => {
-                const { currentSlot, currentBlockHash } = this.metrics;
-
-                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
-                // Once restarted, we should have a valid file to read from.
-                if (currentSlot === 0) {
-                    Logger.log({
-                        message: 'Slot is zero. Exiting process.',
-                        category: LogCategory.NOTIFY,
-                        event: 'OgmiosService.saveFilesInterval'
-                    });
-                    process.exit(2);
-                }
-
-                this._saveHandlesFile(currentSlot ?? 0, currentBlockHash ?? '');
-
-                memoryWatcher();
-            }, 10 * 60 * 1000);
-
-            const setMemoryInterval = setInterval(() => {
-                const memorySize = this.memorySize();
-                this.setMetrics({ memorySize });
-            }, 60000);
-
-            this.intervals = [saveFilesInterval, setMemoryInterval];
-        }
-        this._files = await this._getFilesContent();
-        return this;
-    }
-
-    public destroy(): void {
-        this.intervals.map((i) => clearInterval(i));
-    }
-
-    public getHandle(key: string): StoredHandle | null {
-        const handle = structuredClone(HandleStore.handles.get(key));
-
-        return this.returnHandleWithDefault(handle);
-    }
-
-    public getHandleByHex(hex: string): StoredHandle | null {
-        let handle: StoredHandle | null = null;
-        for (const [ , value] of HandleStore.handles.entries()) {
-            if (value.hex === hex) handle = structuredClone(value);
-            break;
-        }
-        return this.returnHandleWithDefault(handle);
-    }
-
-    private returnHandleWithDefault(handle?: StoredHandle | null) {
-        if (!handle) {
-            return null;
-        }
-
-        const holder = HandleStore.holderIndex.get(handle.holder);
-        if (holder) {
-            handle.default_in_wallet = holder.defaultHandle;
-        }
-
-        return handle;
     }
 
     public count() {
         return HandleStore.handles.size;
     }
-
-    public getAllHandles() {
-        return Array.from(HandleStore.handles).map(([,handle]) => this.returnHandleWithDefault(structuredClone(handle)) as StoredHandle);
-    }
-
-    private _getRootHandleSubHandles (rootHandle: string) {
-        return HandleStore.subHandlesIndex.get(rootHandle) ?? new Set();
-    }
     
     private _saveHandlesFile(slot: number, hash: string, storagePath?: string, testDelay?: boolean): boolean {
-        const handles = {
-            ...this.convertMapsToObjects(HandleStore.handles)
-        };
+        const handles = Array.from(HandleStore.handles.values());
         const history = Array.from(HandleStore.slotHistoryIndex);
         storagePath = storagePath ?? this.storageFilePath;
         Logger.log(`Saving file with ${HandleStore.handles.size} handles & ${history.length} history entries`);
@@ -205,7 +180,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     public getAllHolders({ pagination }: { pagination: HolderPaginationModel }): Holder[] {
         const { page, sort, recordsPerPage } = pagination;
 
-        const items: Holder[] = [...HandleStore.holderIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.size - a.handles.size : a.handles.size - b.handles.size));
+        const items: Holder[] = [...HandleStore.holderIndex.values()].sort((a, b) => (sort === 'desc' ? b.handles.length - a.handles.length : a.handles.length - b.handles.length));
         const startIndex = (page - 1) * recordsPerPage;
         const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
@@ -219,7 +194,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         const { defaultHandle, manuallySet, handles, knownOwnerName, type } = holderAddressDetails;
 
         return {
-            total_handles: handles.size,
+            total_handles: handles.length,
             default_handle: defaultHandle,
             manually_set: manuallySet,
             address: key,
@@ -235,31 +210,23 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         };
     }
 
-    private convertMapsToObjects<T>(mapInstance: Map<string, T>) {
-        return Array.from(mapInstance).reduce<Record<string, T>>((obj, [key, value]) => {
-            obj[key] = value;
-            return obj;
-        }, {});
-    }
-
     public memorySize() {
-        const object = {
-            ...this.convertMapsToObjects(HandleStore.handles),
-            ...this.convertMapsToObjects(HandleStore.rarityIndex),
-            ...this.convertMapsToObjects(HandleStore.ogIndex),
-            ...this.convertMapsToObjects(HandleStore.subHandlesIndex),
-            ...this.convertMapsToObjects(HandleStore.lengthIndex),
-            ...this.convertMapsToObjects(HandleStore.charactersIndex),
-            ...this.convertMapsToObjects(HandleStore.paymentKeyHashesIndex),
-            ...this.convertMapsToObjects(HandleStore.numericModifiersIndex),
-            ...this.convertMapsToObjects(HandleStore.addressesIndex)
-        };
-
-        return Buffer.byteLength(JSON.stringify(object));
+        const object = [
+            HandleStore.handles,
+            HandleStore.rarityIndex,
+            HandleStore.ogIndex,
+            HandleStore.subHandlesIndex,
+            HandleStore.lengthIndex,
+            HandleStore.charactersIndex,
+            HandleStore.paymentKeyHashesIndex,
+            HandleStore.numericModifiersIndex,
+            HandleStore.addressesIndex
+        ]
+        return Buffer.byteLength(JSON.stringify(object, mapStringifyReplacer));
     }
 
-    public setMetrics(metrics: IApiMetrics): void {
-        this.metrics = { ...this.metrics, ...metrics };
+    public setMetrics(metrics: Partial<IApiMetrics>): void {
+        HandlesMemoryStore.metrics = { ...HandlesMemoryStore.metrics, ...metrics };
     }
 
     public rollBackToGenesis() {
@@ -276,9 +243,9 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         this.saveFileContents({ storagePath: this.storageFilePath });
     }
 
-    private saveFileContents({ content, storagePath, slot, hash, testDelay }: { storagePath: string; content?: any; slot?: number; hash?: string; testDelay?: boolean }): boolean {
+    private saveFileContents({ content, storagePath, slot, hash, testDelay }: { content?: any; storagePath: string; slot?: number; hash?: string; testDelay?: boolean }): boolean {
         try {
-            const worker = new Worker('./workers/this.worker.js', {
+            const worker = new Worker('./workers/handleStore.worker.js', {
                 workerData: {
                     content,
                     storagePath,
@@ -435,8 +402,8 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    public async getStartingPoint(save: (handle: StoredHandle) => Promise<void>, failed = false) {
-        if (!this._files) {
+    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false) {
+        if (!this._files || this._files.length === 0) {
             return null;
         }
 
@@ -456,25 +423,20 @@ export class MemoryHandlesProvider implements IHandlesProvider {
         return null;
     }
 
-    private async prepareHandlesStorage(save: (handle: StoredHandle) => Promise<void>, filesContent: IHandleFileContent): Promise<void> {
+    private async prepareHandlesStorage(save: (handle: StoredHandle) => void, filesContent: IHandleFileContent): Promise<void> {
+        const startTime = Date.now()
+        Logger.log('Preparing handles storage. Parsing file content...');
         const { handles, slot, hash, history } = filesContent;
 
         // save all the individual handles to the store
-        const keys = Object.keys(handles ?? {});
-        for (let i = 0; i < keys.length; i++) {
-            const name = keys[i];
-            const handle = handles[name];
-            const newHandle = {
-                ...handle
-            };
-            // delete the personalization object from the handle so we don't double store it
-            await save(new RewoundHandle(newHandle));
-        }
+        await asyncForEach(handles, async (handle) => {
+            return save(new RewoundHandle(handle));
+        }, 1)
 
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
 
-        Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
+        Logger.log(`Handle storage context parsed in ${(Date.now() - startTime)/1000}s at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
     }
 
     private eraseStorage() {
@@ -495,8 +457,7 @@ export class MemoryHandlesProvider implements IHandlesProvider {
     Internal = {
         saveHandlesFile: this._saveHandlesFile.bind(this),
         getFile: this._getFile.bind(this),
-        getRootHandleSubHandles: this._getRootHandleSubHandles.bind(this),
-        storageSchemaVersion: this.getSchemaVersion(),
+        storageSchemaVersion: this._storageSchemaVersion,
         getFileOnline: this._getFileOnline.bind(this),
         getFilesContent: this._getFilesContent.bind(this)
     }

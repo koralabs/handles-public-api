@@ -168,6 +168,7 @@ export interface ScannedHandleInfo {
     metadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
     policy: string;
+    reference_token?: {datum: string}
 }
 
 export interface IBlockProcessor {

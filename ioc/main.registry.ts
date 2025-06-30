@@ -1,9 +1,9 @@
 import { IRegistry } from '../interfaces/registry.interface';
-import { MemoryHandlesProvider } from '../repositories/memory';
-import MemoryApiKeysRepository from '../repositories/memory/apiKeys.repository';
+import { MemoryApiKeysRepository } from '../repositories/apiKeys.repository';
+import { HandlesMemoryStore } from '../stores/memory';
 
 const registry: IRegistry = {
-    ['handlesProvider']: MemoryHandlesProvider,
+    ['handlesStore']: HandlesMemoryStore,
     ['apiKeysRepo']: MemoryApiKeysRepository
 };
 

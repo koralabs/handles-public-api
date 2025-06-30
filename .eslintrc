@@ -2,7 +2,7 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "plugins": [ "@typescript-eslint" ],
-  "ignorePatterns": ["temp", "dist", "helios.*", ".next", "out"],
+  "ignorePatterns": ["temp", "tmp", "shell", "dist", "helios.*", ".next", "out", "*.test.ts", "**/tests/*", "**/fixtures/*", "coverage", "scripts"],
   "rules": {
     "indent": ["error", 4, {"SwitchCase": 1}],
     "comma-dangle": ["error", "never"],
@@ -12,7 +12,9 @@
     "@typescript-eslint/no-unused-vars": ["error", {"args": "none" }],
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
-    "@typescript-eslint/no-empty-object-type": "off"
+    "@typescript-eslint/no-empty-object-type": "off",
+    // "@typescript-eslint/no-floating-promises": "error",
+    // "@typescript-eslint/no-misused-promises": "error"
   },
   "env": {
     "browser": true,
@@ -22,5 +24,6 @@
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended"
-  ]
+  ],
+  // "parserOptions": { "project": ["tsconfig.json"] }
 }

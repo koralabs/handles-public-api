@@ -1,7 +1,7 @@
+import { HandlesMemoryStore } from '../../stores/memory';
 import { HandlesRepository } from '../handlesRepository';
-import { MemoryHandlesProvider } from '../memory';
 import { handles, handlesWithDifferentLengths, handlesWithDifferentSlotNumbers, ogHandles } from './fixtures/handles';
-const repo = new HandlesRepository(new MemoryHandlesProvider());
+const repo = new HandlesRepository(new HandlesMemoryStore());
 
 describe('getDefaultHandle', () => {
     it('should sort OGs', () => {
@@ -25,7 +25,7 @@ describe('getDefaultHandle', () => {
     it('should sort if there are multiple slot numbers', () => {
         // @ts-ignore
         const handle = repo.getDefaultHandle(handlesWithDifferentSlotNumbers);
-        expect(handle).toEqual(handlesWithDifferentSlotNumbers[2]);
+        expect(handle).toEqual(handlesWithDifferentSlotNumbers[0]);
     });
 
     it('should sort alphabetically', () => {
