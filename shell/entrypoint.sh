@@ -47,7 +47,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]];
     source ~/.nvm/nvm.sh
     export TMPDIR=/tmp
     nvm use 21
-    sed -i 's https://api.handle.me http://localhost:3141 ' /app/swagger.yml
+    sed -i 's https://api.handle.me http://localhost:3141 ' swagger.yml
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
     tail -f ./forever/**.log
