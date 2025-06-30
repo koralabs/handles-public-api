@@ -475,7 +475,7 @@ export class HandlesRepository {
                 }
                 if (slotNumber >= handle.updated_slot_number) {
                     // check if existing handle has a utxo. If it does, we may have a double mint
-                    if (isMintTx && existingHandle?.utxo) {
+                    if (isMintTx && existingHandle?.utxo && existingHandle?.utxo != utxo) {
                         handle.amount = (handle.amount ?? 1) + 1;
                         if (handle.name != 'mydexaccounts') // The one double mint we had when half of Cardano nodes disconnected/restarted at 2023-01-22T00:09:00Z. Both the doublemint and what caused it on our side have been remedied
                             Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slotNumber}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
