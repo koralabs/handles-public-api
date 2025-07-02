@@ -28,7 +28,7 @@ do
 done
 curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
 unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
-cp ./ogmios-install/bin/ogmios /bin/ogmios && chmod +x /bin/ogmios && rm -rf ./ogmios-install
+sudo cp ./ogmios-install/bin/ogmios /bin/ogmios && sudo chmod +x /bin/ogmios && rm -rf ./ogmios-install
 source ~/.nvm/nvm.sh
 export TMPDIR=/tmp
 nvm install 21

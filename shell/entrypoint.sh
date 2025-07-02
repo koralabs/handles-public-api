@@ -14,6 +14,7 @@ DISABLE_NODE_SNAPSHOT=${DISABLE_NODE_SNAPSHOT:-false}
 MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
+CARDANO_NODE_PATH=${CARDANO_NODE_PATH:-'./cardano-node'}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -34,6 +35,7 @@ fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
     # --include-transaction-cbor
+    echo "STARTING OGMIOS..."
     ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
 
@@ -41,9 +43,11 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "all" ]]; the
         echo "Failed to start ogmios: $ogmios_status"
         exit $ogmios_status
     fi
+    echo "  ...OGMIOS RUNNING"
 fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
+    echo "STARTING API..."
     source ~/.nvm/nvm.sh
     export TMPDIR=/tmp
     nvm use 21
@@ -51,6 +55,7 @@ if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]];
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
     tail -f ./forever/**.log
+    echo "  ...API RUNNING"
 fi
 
 release_host() {
@@ -64,6 +69,7 @@ release_host() {
 export RELEASE_HOST=$(release_host)
 
 if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
+    echo "STARTING CARDANO-NODE..."
     if [ ! "${DISABLE_NODE_SNAPSHOT}" == "true" ]; then
         rm -rf ${NODE_DB}
         mkdir -p ${NODE_DB}
@@ -85,7 +91,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
     # Workaround for Mithril not outputting the protocolMagicId
     cat ./${NETWORK}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
 
-    exec ./cardano-node run \
+    exec ${CARDANO_NODE_PATH} run \
         --config ./${NETWORK}/config.json \
         --topology ./${NETWORK}/topology.json \
         --database-path ${NODE_DB} \
@@ -101,5 +107,6 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
         echo "Found! ${SOCKET_PATH}"
         socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
     fi
+    echo "  ...CARDANO-NODE RUNNING"
 fi
 wait
