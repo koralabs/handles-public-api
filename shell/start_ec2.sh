@@ -46,21 +46,7 @@ if [ ! -f "$CW_INSTALL_FILE" ]; then
     do
         LOG_FILES="${LOG_FILES:-}{\"file_path\":\"/home/ubuntu/.forever/**.log\",\"log_group_name\":\"/koralabs/cardano-node/${net}\",\"log_stream_name\":\"{instance_id}\"},"
     done
-    cat << EOF > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-    {
-        "agent": {
-            "metrics_collection_interval": 60,
-            "run_as_user": "root"
-        },
-        "logs": {
-            "logs_collected": {
-                "files": {
-                    "collect_list": [${LOG_FILES}]
-                }
-            }
-        }
-    }
-EOF
+    echo '{ "agent": { "metrics_collection_interval": 60, "run_as_user": "root" }, "logs": { "logs_collected": { "files": { "collect_list": [${LOG_FILES}]}}}}' > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     sudo sed -i "s/{{NETWORK}}/${NETWORK}/gi" /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json;
     sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
         -a fetch-config -m ec2 -s \

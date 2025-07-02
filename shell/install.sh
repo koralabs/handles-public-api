@@ -9,7 +9,7 @@ curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARD
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 rm -f ./cardano-node-${CARDANO_NODE_VER}-linux.tar.gz
 cp ./bin/* ./
-chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p $(dirname "${SOCKET_PATH}") && touch handles/handles.json
+chmod +x ./cardano-node && chmod +x ./entrypoint.sh && mkdir -p $(dirname "${SOCKET_PATH}") && mkdir -p handles && touch handles/handles.json
 BASE_URL=${CONFIG_FILES_BASE_URL}
 declare -a NETWORKS=(preview preprod mainnet)
 declare -a ERAS=(byron shelley alonzo conway)
