@@ -965,30 +965,36 @@ export class HandlesRepository {
     }
 
     private _parseSubHandleSettingsDatum(datum: string) {
-        const decodedSettings = decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
+        try {
+            const decodedSettings = decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
 
-        const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
-            return {
-                public_minting_enabled: typeSettings[0],
-                pz_enabled: typeSettings[1],
-                tier_pricing: typeSettings[2],
-                default_styles: typeSettings[3],
-                save_original_address: typeSettings[4]
+            const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
+                return {
+                    public_minting_enabled: typeSettings[0],
+                    pz_enabled: typeSettings[1],
+                    tier_pricing: typeSettings[2],
+                    default_styles: typeSettings[3],
+                    save_original_address: typeSettings[4]
+                };
             };
-        };
 
-        const settings: ISubHandleSettings = {
-            nft: buildTypeSettings(decodedSettings[0]),
-            virtual: buildTypeSettings(decodedSettings[1]),
-            buy_down_price: decodedSettings[2],
-            buy_down_paid: decodedSettings[3],
-            buy_down_percent: decodedSettings[4],
-            agreed_terms: decodedSettings[5],
-            migrate_sig_required: decodedSettings[6],
-            payment_address: decodedSettings[7]
-        };
+            const settings: ISubHandleSettings = {
+                nft: buildTypeSettings(decodedSettings[0]),
+                virtual: buildTypeSettings(decodedSettings[1]),
+                buy_down_price: decodedSettings[2],
+                buy_down_paid: decodedSettings[3],
+                buy_down_percent: decodedSettings[4],
+                agreed_terms: decodedSettings[5],
+                migrate_sig_required: decodedSettings[6],
+                payment_address: decodedSettings[7]
+            };
 
-        return settings
+            return settings
+        }
+        catch (error: any) {
+            Logger.log({ message: `Error decoding SubHandle owner settings datum: ${error.message}`, category: LogCategory.ERROR, event: 'handleRepository.parseSubHandleSettingsDatum' });
+            return {};
+        }
     }
     // Used for unit testing
     Internal = {
