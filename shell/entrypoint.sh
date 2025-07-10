@@ -48,7 +48,7 @@ fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
     echo "STARTING API..."
-    source ~/.nvm/nvm.sh
+    source $HOME/.nvm/nvm.sh
     export TMPDIR=/tmp
     nvm use 21
     sed -i 's https://api.handle.me http://localhost:3141 ' swagger.yml
