@@ -48,13 +48,12 @@ fi
 
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
     echo "STARTING API..."
-    source $HOME/.nvm/nvm.sh
+    source ${HOME:-'~'}/.nvm/nvm.sh
     export TMPDIR=/tmp
     nvm use 21
     sed -i 's https://api.handle.me http://localhost:3141 ' swagger.yml
     sleep 5
     NODE_ENV=${NODE_ENV:-production} NETWORK=${NETWORK} OGMIOS_HOST=${OGMIOS_HOST} DISABLE_HANDLES_SNAPSHOT=${DISABLE_HANDLES_SNAPSHOT:-false} npm run start:forever
-    tail -f ./forever/**.log
     echo "  ...API RUNNING"
 fi
 
@@ -105,8 +104,11 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
             sleep 1
         done
         echo "Found! ${SOCKET_PATH}"
-        socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH}
+        socat TCP-LISTEN:4001,reuseaddr,fork UNIX-CONNECT:${SOCKET_PATH} &
     fi
     echo "  ...CARDANO-NODE RUNNING"
+fi
+if [[ "${MODE}" == "ogmios" || "${MODE}" == "all" || "${MODE}" == "api-only" ]]; then
+    tail -f ./forever/**.log
 fi
 wait
