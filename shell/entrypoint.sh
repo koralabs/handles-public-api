@@ -15,6 +15,7 @@ MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 CARDANO_NODE_PATH=${CARDANO_NODE_PATH:-'./cardano-node'}
+NODE_CONFIG_FILE=${NODE_CONFIG_FILE:-"./${NETWORK}/config.json"}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -26,7 +27,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ${NODE_CONFIG_FILE}"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
