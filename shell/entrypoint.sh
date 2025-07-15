@@ -89,11 +89,11 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
     echo "Starting cardano-node."
 
     # Workaround for Mithril not outputting the protocolMagicId
-    cat ./${NETWORK}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
+    cat ${NODE_CONFIG_PATH}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
 
     exec ${CARDANO_NODE_PATH} run \
-        --config ./${NETWORK}/config.json \
-        --topology ./${NETWORK}/topology.json \
+        --config ${NODE_CONFIG_PATH}/config.json \
+        --topology ${NODE_CONFIG_PATH}/topology.json \
         --database-path ${NODE_DB} \
         --port 3000 \
         --host-addr 0.0.0.0 \
