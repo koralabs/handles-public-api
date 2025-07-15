@@ -15,7 +15,7 @@ MODE=${MODE:-all}
 NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 CARDANO_NODE_PATH=${CARDANO_NODE_PATH:-'./cardano-node'}
-NODE_CONFIG_FILE=${NODE_CONFIG_FILE:-"./${NETWORK}/config.json"}
+NODE_CONFIG_PATH=${NODE_CONFIG_PATH:-"./${NETWORK}"}
 
 function cleanup {
   kill -INT $(pidof cardano-node)
@@ -27,7 +27,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ${NODE_CONFIG_FILE}"
+    NODE_CONFIG="--node-config ${NODE_CONFIG_PATH}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
@@ -37,7 +37,7 @@ fi
 if [[ "${MODE}" == "ogmios" || "${MODE}" == "both" || "${MODE}" == "all" ]]; then
     # --include-transaction-cbor
     echo "STARTING OGMIOS..."
-    ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ &
+    ogmios --log-level Error $HOST $NODE_CONFIG $NODE_SOCKET $@ &
     ogmios_status=$?
 
     if [ $ogmios_status -ne 0 ]; then
