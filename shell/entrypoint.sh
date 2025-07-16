@@ -16,6 +16,7 @@ NODE_DB=${NODE_DB:-'/db'}
 SOCKET_PATH=${SOCKET_PATH:-'/ipc/node.socket'}
 CARDANO_NODE_PATH=${CARDANO_NODE_PATH:-'./cardano-node'}
 NODE_CONFIG_PATH=${NODE_CONFIG_PATH:-"./${NETWORK}"}
+mkdir -p "$(dirname "$SOCKET_PATH")"
 
 function cleanup {
   kill -INT $(pidof cardano-node)
