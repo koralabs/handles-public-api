@@ -398,7 +398,6 @@ export class HandlesMemoryStore implements IApiStore {
         }
 
         // At this point, we should have a valid filesContent object.
-        // If we don't perform this check we'd have to use a large ternary operator which is pretty ugly
         return null;
     }
 
