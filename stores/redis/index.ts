@@ -55,14 +55,9 @@ export class RedisHandlesProvider implements IHandlesProvider {
                     const { handles, slot, hash, history } = storedS3HandlesJson;
                     
                     // save all the individual handles to the store
-                    const keys = Object.keys(handles ?? {});
-                    for (let i = 0; i < keys.length; i++) {
-                        const name = keys[i];
-                        const handle = handles[name];
-                        const newHandle = {
-                            ...handle
-                        };
-                        // delete the personalization object from the handle so we don't double store it
+                    for (let i = 0; i < handles.length; i++) {
+                        // clone it
+                        const newHandle = { ...handles[i] };
                         await save(new RewoundHandle(newHandle));
                     }
                     
