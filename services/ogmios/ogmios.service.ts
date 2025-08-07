@@ -97,7 +97,6 @@ class OgmiosService {
             const response = JSON.parse(msg);
             switch (response.id) {
                 case 'find-intersection':
-                    Logger.log("find-intersection called")
                     for (let i=1; i<=1000; i++) {
                         this._rpcRequest('nextBlock', {}, 'next-block');
                     }
@@ -167,12 +166,11 @@ class OgmiosService {
     }
 
     private async _resume(startingPoint: Point) {
-        Logger.log("Calling _resume")
+        while (this.client!.readyState != WebSocket.OPEN) {
+            await delay(250);
+        }
         this.handlesRepo.setMetrics({ currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
-        this.client!.once('open', () => {
-            Logger.log("Client Open")
-            this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
-        });
+        this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
     }
 
     private _rpcRequest(method: string, params: any, id: string | number) {
