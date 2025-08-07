@@ -98,11 +98,14 @@ class App {
         }
         this.app.set('registry', this.registry);
     }
+
     public async processBlock(response: NextBlockResponse) {
         if (this.blockProcessors.length > 0) {
+            const processors: Promise<void>[] = [];
             for (let i = 0; i < this.blockProcessors.length; i++) {
-                await this.blockProcessors[i].processBlock(response);
+                processors.push(this.blockProcessors[i].processBlock(response));
             }
+            Promise.all(processors);
         }
     }
 

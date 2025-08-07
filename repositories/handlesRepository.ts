@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -751,7 +751,7 @@ export class HandlesRepository {
         
         // defaults
         handle.amount = handle.amount ?? 1;
-        handle.og_number = Number(handle.og_number ?? 0);
+        handle.og_number = Number(handle.og_number ?? MINTED_OG_LIST[handle.name!] ?? 0);
         handle.standard_image_hash = handle.standard_image_hash ?? handle.image_hash ?? '';
         handle.image_hash = handle.image_hash ?? '';
         handle.holder = handle.holder ?? '';

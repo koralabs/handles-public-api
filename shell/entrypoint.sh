@@ -64,7 +64,7 @@ release_host() {
         preprod | mainnet)
             echo -n "release-${NETWORK}";;
         preview)
-            echo -n "testing-preview";;
+            echo -n "pre-release-preview";;
     esac
 }
 export RELEASE_HOST=$(release_host)
@@ -75,14 +75,15 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
         rm -rf ${NODE_DB}
         mkdir -p ${NODE_DB}
         echo "Grabbing latest snapshot with Mithril."
-        MITHRIL_VERSION=2517.1
+        MITHRIL_VERSION=2524.0
         curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz
         export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
         export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
+        export ANCILLARY_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/ancillary.vkey)
         export DIGEST=latest
         chmod +x ./mithril-client
         #curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
-        ./mithril-client cardano-db download $DIGEST
+        ./mithril-client cardano-db download --include-ancillary $DIGEST
         echo "Mithril snapshot downloaded and validated."
     fi
     
