@@ -82,12 +82,7 @@ class OgmiosService {
                     if (this.client.CONNECTING || this.client.OPEN)
                         this.client.close();
             } catch (error: any) {
-                Logger.log({
-                    message: `Unable to connect Ogmios: ${error.message}`,
-                    category: LogCategory.ERROR,
-                    event: 'initializeStorage.failed.errorMessage'
-                });
-                
+                Logger.log({ message: `Unable to connect Ogmios: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.failed.errorMessage' });
                 if (this.client) 
                     if (this.client.CONNECTING || this.client.OPEN)
                         this.client.close();
@@ -102,6 +97,7 @@ class OgmiosService {
             const response = JSON.parse(msg);
             switch (response.id) {
                 case 'find-intersection':
+                    Logger.log("find-intersection called")
                     for (let i=1; i<=1000; i++) {
                         this._rpcRequest('nextBlock', {}, 'next-block');
                     }
@@ -170,9 +166,11 @@ class OgmiosService {
         return client;
     }
 
-    private async _resume(startingPoint: Point) { 
+    private async _resume(startingPoint: Point) {
+        Logger.log("Calling _resume")
         this.handlesRepo.setMetrics({ currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
         this.client!.once('open', () => {
+            Logger.log("Client Open")
             this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
         });
     }
