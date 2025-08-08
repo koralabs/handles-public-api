@@ -6,13 +6,13 @@ import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV } from '../../config';
 import { RewoundHandle } from '../handlesRepository';
 
 export class RedisHandlesProvider implements IHandlesProvider {
-    private static redis: GlideClient | undefined = undefined;
+    private static client: GlideClient | undefined = undefined;
 
     /********* SETUP *************/
     public async initialize(): Promise<IHandlesProvider> {
         // initialize valkey/redis
-        if (!RedisHandlesProvider.redis){
-            RedisHandlesProvider.redis = await GlideClient.createClient({
+        if (!RedisHandlesProvider.client){
+            RedisHandlesProvider.client = await GlideClient.createClient({
                 addresses: [{host: process.env.REDIS_HOST ?? 'localhost'}],
                 // if the server uses TLS, you'll need to enable it. Otherwise, the connection attempt will time out silently.
                 useTLS: process.env.REDIS_USE_TLS == 'true'
@@ -22,7 +22,7 @@ export class RedisHandlesProvider implements IHandlesProvider {
     }
 
     public destroy(): void {
-        RedisHandlesProvider.redis = undefined;
+        RedisHandlesProvider.client = undefined;
     }
 
     public rollBackToGenesis(): void {
@@ -79,7 +79,7 @@ export class RedisHandlesProvider implements IHandlesProvider {
 
     /********* HANDLES ************/
     public getHandle(key: string): StoredHandle | null {
-        const handle = structuredClone(HandleStore.handles.get(key));
+        const handle = structuredClone(RedisHandlesProvider.client!.handles.get(key));
 
         return this.returnHandleWithDefault(handle);
 
@@ -100,12 +100,12 @@ export class RedisHandlesProvider implements IHandlesProvider {
     }
 
     public setHandle(key: string, value: StoredHandle): void {
-        RedisHandlesProvider.redis?.hset(`${IndexNames.HANDLE}:${key}`, value)
-
+        this.saveObjectToGlide(`${IndexNames.HANDLE}:${key}`, value)
     }
 
-    public removeHandle(handleName: string): void {
-
+    public removeHandle(key: string): void {
+        const handle = this.getHandle(key);
+        this.removeObjectAndDescendents(`${IndexNames.HANDLE}:${key}`, handle)
     }
 
     /********* INDEXES *************/
@@ -169,6 +169,48 @@ export class RedisHandlesProvider implements IHandlesProvider {
         }
     
         return handle;
+    }
+
+    private async saveObjectToGlide(key: string, obj: any) {
+        const parentFields: Record<string, string> = {};
+
+        for (const [field, value] of Object.entries(obj)) {
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                // Nested object → store as its own hash
+                await this.saveObjectToGlide(`${key}:${field}`, value);
+            } else {
+                // Primitive value → add to parent hash
+                parentFields[field] = String(value);
+            }
+        }
+
+        if (Object.keys(parentFields).length > 0) {
+            await RedisHandlesProvider.client!.hset(key, parentFields);
+        }
+
+    }
+
+    private findDescendentKeys(key: string, obj:any, keys: Set<string>) {
+        keys.add(key);
+
+        for (const [field, value] of Object.entries(obj)) {
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                const childKey = `${key}:${field}`;
+                this.findDescendentKeys(childKey, value as Record<string, any>, keys);
+            }
+        }
+
+    }
+
+    private async removeObjectAndDescendents(key: string, obj:any): Promise<void> {
+        const keys = new Set<string>();
+        this.findDescendentKeys(key, obj, keys);
+        const ordered = [...keys].sort((a, b) => b.length - a.length);
+
+        if (ordered.length > 0) {
+            await RedisHandlesProvider.client!.del(ordered);
+        }
+
     }
 
 }
