@@ -1,15 +1,16 @@
-import { Holder, IApiMetrics, IHandleFileContent, IHandlesProvider, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, StoredHandle } from '@koralabs/kora-labs-common';
 import { GlideClient } from '@valkey/valkey-glide';
+import runSync from 'make-synchronous';
 import { promisify } from 'util';
 import { inflate } from 'zlib';
-import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV } from '../../config';
-import { RewoundHandle } from '../handlesRepository';
+import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NODE_ENV } from '../../config';
+import { RewoundHandle } from '../../repositories/handlesRepository';
 
-export class RedisHandlesProvider implements IHandlesProvider {
+export class RedisHandlesProvider implements IApiStore {
     private static client: GlideClient | undefined = undefined;
 
-    /********* SETUP *************/
-    public async initialize(): Promise<IHandlesProvider> {
+    // #region SETUP **************************
+    public async initialize(): Promise<IApiStore> {
         // initialize valkey/redis
         if (!RedisHandlesProvider.client){
             RedisHandlesProvider.client = await GlideClient.createClient({
@@ -28,10 +29,10 @@ export class RedisHandlesProvider implements IHandlesProvider {
     public rollBackToGenesis(): void {
         Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
         // Clear all redis cache
-
+        runSync(RedisHandlesProvider.client!.flushall)();
     }
 
-    public async getStartingPoint(save: (handle: StoredHandle) => Promise<void>, failed = false): Promise<{ slot: number; id: string; } | null> {
+    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
         if (!failed) {
             //connect to redis and get currentSlot and currentBlockHash
             return { slot: 0, id: '' }
@@ -42,7 +43,8 @@ export class RedisHandlesProvider implements IHandlesProvider {
             }
             
             try {
-                const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this._storageSchemaVersion}/${fileName}`;
+                const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
+                const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getSchemaVersion()}/${fileName}`;
                 Logger.log(`Fetching ${url}`);
                 const awsResponse = await fetch(url);
                 if (awsResponse.status === 200) {
@@ -58,12 +60,12 @@ export class RedisHandlesProvider implements IHandlesProvider {
                     for (let i = 0; i < handles.length; i++) {
                         // clone it
                         const newHandle = { ...handles[i] };
-                        await save(new RewoundHandle(newHandle));
+                        save(new RewoundHandle(newHandle));
                     }
                     
                     // save the slot history to the store
-                    HandleStore.slotHistoryIndex = new Map(history);
-                    
+                    RedisHandlesProvider.client!.del([IndexNames.SLOT_HISTORY])
+                    await RedisHandlesProvider.client!.zadd(IndexNames.SLOT_HISTORY, history.map(([slot, hist]) => ({score: slot, element: JSON.stringify(hist)})));
                     Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
                 }
             
@@ -77,93 +79,134 @@ export class RedisHandlesProvider implements IHandlesProvider {
         }
     }
 
-    /********* HANDLES ************/
+    // #endregion
+
+    // #region HANDLES ************************
     public getHandle(key: string): StoredHandle | null {
-        const handle = structuredClone(RedisHandlesProvider.client!.handles.get(key));
-
-        return this.returnHandleWithDefault(handle);
-
+        const handle = runSync(this.rehydrateObjectFromCache)(`${IndexNames.HANDLE}:${key}`);
+        return structuredClone(handle) as StoredHandle;
     }
 
     public getHandleByHex(hex: string): StoredHandle | null {
-        let handle: StoredHandle | null = null;
-        for (const [ , value] of HandleStore.handles.entries()) {
-            if (value.hex === hex) handle = structuredClone(value);
-            break;
-        }
+        const handle = this.getHandle(this.getValueFromIndex(IndexNames.HEX, hex) as string);
         return this.returnHandleWithDefault(handle);
-
     }
 
     public getAllHandles(): StoredHandle[] {
-        return Array.from(HandleStore.handles).map(([,handle]) => this.returnHandleWithDefault(structuredClone(handle)) as StoredHandle);
+        const handleNames = runSync(RedisHandlesProvider.client!.smembers)(IndexNames.HANDLE);
+        const handles: StoredHandle[] = [];
+        for (const name in handleNames) {
+            const handle = this.getHandle(name);
+            if (handle)
+                handles.push(handle);
+        }
+        return handles;
     }
 
     public setHandle(key: string, value: StoredHandle): void {
-        this.saveObjectToGlide(`${IndexNames.HANDLE}:${key}`, value)
+        runSync(this.saveObjectToCache)(`${IndexNames.HANDLE}:${key}`, value);
+        this.setValueOnIndex(IndexNames.HEX, value.hex, key);
+        runSync(RedisHandlesProvider.client!.sadd)(IndexNames.HANDLE, [key]);
     }
 
     public removeHandle(key: string): void {
         const handle = this.getHandle(key);
-        this.removeObjectAndDescendents(`${IndexNames.HANDLE}:${key}`, handle)
+        runSync(this.removeObjectAndDescendents)(`${IndexNames.HANDLE}:${key}`, handle);
+        runSync(RedisHandlesProvider.client!.srem)(IndexNames.HANDLE, [key]);
     }
 
-    /********* INDEXES *************/
-    public getIndex(index: IndexNames): Map<string | number, Set<string> | Holder | ISlotHistory | StoredHandle> {
+    // #endregion
 
+    // #region INDEXES *************************
+    public getIndex(index: IndexNames): Map<string | number, ApiIndexType> {
+        // SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index == IndexNames.SLOT_HISTORY) { 
+            return runSync(RedisHandlesProvider.client!.zrangeWithScores)(IndexNames.SLOT_HISTORY, {start: 0, end: -1})
+                .reduce((acc: Map<number, ISlotHistory>, value) => {
+                    acc.set(value.score, JSON.parse(value.element.toString()) as ISlotHistory);
+                    return acc;
+                }, new Map<number, ISlotHistory>());
+        }
+        const keys = runSync(RedisHandlesProvider.client!.smembers)(index);
+        const values: Map<string | number, ApiIndexType> = new Map<string | number, ApiIndexType>();
+        for (const key in keys) {
+            const value = this.getValueFromIndex(index, key);
+            if (value)
+                values.set(key, value);
+        }
+        return values;
     }
 
-    public getValueFromIndex(index: IndexNames, key: string | number): Set<string> | Holder | ISlotHistory | StoredHandle | undefined {
-
+    public getKeysFromIndex(index:IndexNames): (string|number)[] {
+        return Array.from(runSync(RedisHandlesProvider.client!.smembers)(index)).map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
     }
 
-    public setValueOnIndex(index: IndexNames, key: string | number, value: Set<string> | Holder | ISlotHistory | StoredHandle): void {
+    public getValueFromIndex(index: IndexNames, key: string | number): ApiIndexType | undefined {
+        return runSync(this.rehydrateObjectFromCache)(`${index}:${key}`);
+    }
+
+    public setValueOnIndex(index: IndexNames, key: string | number, value: ApiIndexType): void {
+        // SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index == IndexNames.SLOT_HISTORY) { 
+            runSync(RedisHandlesProvider.client!.zadd)(IndexNames.SLOT_HISTORY, [{element: JSON.stringify(value), score: key as number}]);
+        }
+        runSync(this.saveObjectToCache)(`${index}:${key}`, value)
 
     }
 
     public removeKeyFromIndex(index: IndexNames, key: string | number): void {
-
+        // SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index == IndexNames.SLOT_HISTORY) { 
+             runSync(RedisHandlesProvider.client!.zremRangeByScore)(IndexNames.SLOT_HISTORY, {value: key as number}, {value: key as number});
+        }
+        runSync(RedisHandlesProvider.client!.del)([`${index}:${key}`])
     }
 
+    // #endregion
 
-    /******* SET INDEXES ***********/
+    // #region SET INDEXES ************************
     public getValuesFromIndexedSet(index: IndexNames, key: string | number): Set<string> | undefined {
-
+        return new Set([...runSync(RedisHandlesProvider.client!.smembers)(`${index}:${key}`)].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
-
+        runSync(RedisHandlesProvider.client!.sadd)(`${index}:${key}`, [value])
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
-
+        runSync(RedisHandlesProvider.client!.srem)(`${index}:${key}`, [value])
     }
 
+    // #endregion
 
-    /********* METRICS *************/
+    // #region METRICS *****************************
     public getMetrics(): IApiMetrics {
-
+        const metrics = runSync(RedisHandlesProvider.client!.hgetall)("metrics") as IApiMetrics;
+        metrics.count = this.count();
+        return metrics;        
     }
 
     public setMetrics(metrics: IApiMetrics): void {
-
+        this.saveObjectToCache("metrics", { ...this.getMetrics(), ...metrics });
     }
 
     public count(): number {
-
+        return runSync(RedisHandlesProvider.client!.scard)(IndexNames.HANDLE);
     }
 
     public getSchemaVersion(): number {
         return Number(process.env.STORAGE_SCHEMA_VERSION);
     }
 
-    /********* PRIVATE *************/
+    // #endregion
+
+    // #region PRIVATE *******************************
     private returnHandleWithDefault(handle?: StoredHandle | null) {
         if (!handle) {
             return null;
         }
     
-        const holder = HandleStore.holderIndex.get(handle.holder);
+        const holder = this.getValueFromIndex(IndexNames.HOLDER, handle.holder) as Holder;
         if (holder) {
             handle.default_in_wallet = holder.defaultHandle;
         }
@@ -171,40 +214,55 @@ export class RedisHandlesProvider implements IHandlesProvider {
         return handle;
     }
 
-    private async saveObjectToGlide(key: string, obj: any) {
+    private async saveObjectToCache(key: string, obj: any) {
         const parentFields: Record<string, string> = {};
-
         for (const [field, value] of Object.entries(obj)) {
             if (value && typeof value === "object" && !Array.isArray(value)) {
-                // Nested object → store as its own hash
-                await this.saveObjectToGlide(`${key}:${field}`, value);
+                // JSON value → add to parent hash
+                parentFields[field] = JSON.stringify(value) 
             } else {
                 // Primitive value → add to parent hash
-                parentFields[field] = String(value);
+                parentFields[field] =  String(value);
             }
         }
-
         if (Object.keys(parentFields).length > 0) {
             await RedisHandlesProvider.client!.hset(key, parentFields);
         }
-
     }
 
-    private findDescendentKeys(key: string, obj:any, keys: Set<string>) {
+    private async rehydrateObjectFromCache(key: string): Promise<Record<string, any>> {
+        const result: Record<string, any> = {};
+        const fields = await RedisHandlesProvider.client!.hgetall(key);
+        for (const {field, value} of Object.values(fields)) {
+            if (value.toString() == `${key}:${field}`)
+                result[field.toString()] = this.rehydrateObjectFromCache(`${key}:${field}`)
+            else {
+                try { // This covers object, boolean, number
+                    result[field.toString()] = JSON.parse(value.toString());
+                }
+                catch {
+                    result[field.toString()] = value.toString();
+                }
+            }
+        }
+        return result;
+    }
+
+    private scanDescendentKeys(key: string, obj:any, keys: Set<string>) {
         keys.add(key);
 
         for (const [field, value] of Object.entries(obj)) {
             if (value && typeof value === "object" && !Array.isArray(value)) {
                 const childKey = `${key}:${field}`;
-                this.findDescendentKeys(childKey, value as Record<string, any>, keys);
+                this.scanDescendentKeys(childKey, value as Record<string, any>, keys);
             }
         }
 
     }
 
-    private async removeObjectAndDescendents(key: string, obj:any): Promise<void> {
+    private async removeObjectAndDescendents(key: string, obj: any): Promise<void> {
         const keys = new Set<string>();
-        this.findDescendentKeys(key, obj, keys);
+        this.scanDescendentKeys(key, obj, keys);
         const ordered = [...keys].sort((a, b) => b.length - a.length);
 
         if (ordered.length > 0) {
@@ -213,4 +271,5 @@ export class RedisHandlesProvider implements IHandlesProvider {
 
     }
 
+    // #endregion
 }
