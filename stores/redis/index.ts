@@ -1,35 +1,39 @@
 import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, StoredHandle } from '@koralabs/kora-labs-common';
-import { GlideClient } from '@valkey/valkey-glide';
-import runSync from 'make-synchronous';
+import { GlideString, HashDataType } from '@valkey/valkey-glide';
 import { promisify } from 'util';
+import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NODE_ENV } from '../../config';
 import { RewoundHandle } from '../../repositories/handlesRepository';
 
-export class RedisHandlesProvider implements IApiStore {
-    private static client: GlideClient | undefined = undefined;
+export class RedisHandlesStore implements IApiStore {
+    private static _worker: any
+    private static _id = 0
 
     // #region SETUP **************************
     public async initialize(): Promise<IApiStore> {
-        // initialize valkey/redis
-        if (!RedisHandlesProvider.client){
-            RedisHandlesProvider.client = await GlideClient.createClient({
-                addresses: [{host: process.env.REDIS_HOST ?? 'localhost'}],
-                // if the server uses TLS, you'll need to enable it. Otherwise, the connection attempt will time out silently.
-                useTLS: process.env.REDIS_USE_TLS == 'true'
+        if (!RedisHandlesStore._worker) {
+            const { port1, port2 } = new MessageChannel();
+            const worker = new Worker('./workers/redisSync.worker.js', { 
+                workerData: { port: port2 }, 
+                //@ts-ignore
+                transferList: [port2] 
             });
+            worker.on('error', (e) => Logger.log({message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Error"}));
+            worker.on('exit', (e) => Logger.log({message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Exit"}));
+            RedisHandlesStore._worker = { worker, port: port1 };
         }
         return this;
     }
 
     public destroy(): void {
-        RedisHandlesProvider.client = undefined;
+
     }
 
     public rollBackToGenesis(): void {
         Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
         // Clear all redis cache
-        runSync(RedisHandlesProvider.client!.flushall)();
+        this.redisClientCall('flushall');
     }
 
     public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
@@ -64,8 +68,8 @@ export class RedisHandlesProvider implements IApiStore {
                     }
                     
                     // save the slot history to the store
-                    RedisHandlesProvider.client!.del([IndexNames.SLOT_HISTORY])
-                    await RedisHandlesProvider.client!.zadd(IndexNames.SLOT_HISTORY, history.map(([slot, hist]) => ({score: slot, element: JSON.stringify(hist)})));
+                    this.redisClientCall('del', [IndexNames.SLOT_HISTORY])
+                    await this.redisClientCall('zadd', IndexNames.SLOT_HISTORY, history.map(([slot, hist]) => ({score: slot, element: JSON.stringify(hist)})));
                     Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
                 }
             
@@ -83,7 +87,7 @@ export class RedisHandlesProvider implements IApiStore {
 
     // #region HANDLES ************************
     public getHandle(key: string): StoredHandle | null {
-        const handle = runSync(this.rehydrateObjectFromCache)(`${IndexNames.HANDLE}:${key}`);
+        const handle = this.rehydrateObjectFromCache(`${IndexNames.HANDLE}:${key}`);
         return structuredClone(handle) as StoredHandle;
     }
 
@@ -93,9 +97,9 @@ export class RedisHandlesProvider implements IApiStore {
     }
 
     public getAllHandles(): StoredHandle[] {
-        const handleNames = runSync(RedisHandlesProvider.client!.smembers)(IndexNames.HANDLE);
+        const handleNames = this.redisClientCall('smembers', IndexNames.HANDLE);
         const handles: StoredHandle[] = [];
-        for (const name in handleNames) {
+        for (const name of handleNames) {
             const handle = this.getHandle(name);
             if (handle)
                 handles.push(handle);
@@ -104,15 +108,15 @@ export class RedisHandlesProvider implements IApiStore {
     }
 
     public setHandle(key: string, value: StoredHandle): void {
-        runSync(this.saveObjectToCache)(`${IndexNames.HANDLE}:${key}`, value);
+        this.saveObjectToCache(`${IndexNames.HANDLE}:${key}`, value);
         this.setValueOnIndex(IndexNames.HEX, value.hex, key);
-        runSync(RedisHandlesProvider.client!.sadd)(IndexNames.HANDLE, [key]);
+        this.redisClientCall('sadd', IndexNames.HANDLE, [key]);
     }
 
     public removeHandle(key: string): void {
         const handle = this.getHandle(key);
-        runSync(this.removeObjectAndDescendents)(`${IndexNames.HANDLE}:${key}`, handle);
-        runSync(RedisHandlesProvider.client!.srem)(IndexNames.HANDLE, [key]);
+        this.removeObjectAndDescendents(`${IndexNames.HANDLE}:${key}`, handle);
+        this.redisClientCall('srem', IndexNames.HANDLE, [key]);
     }
 
     // #endregion
@@ -121,15 +125,15 @@ export class RedisHandlesProvider implements IApiStore {
     public getIndex(index: IndexNames): Map<string | number, ApiIndexType> {
         // SLOT_HISTORY uses a an ordered set (ZSET)
         if (index == IndexNames.SLOT_HISTORY) { 
-            return runSync(RedisHandlesProvider.client!.zrangeWithScores)(IndexNames.SLOT_HISTORY, {start: 0, end: -1})
-                .reduce((acc: Map<number, ISlotHistory>, value) => {
+            return this.redisClientCall('zrangeWithScores', IndexNames.SLOT_HISTORY, {start: 0, end: -1})
+                .reduce((acc: Map<number, ISlotHistory>, value: {score: number, element: GlideString}) => {
                     acc.set(value.score, JSON.parse(value.element.toString()) as ISlotHistory);
                     return acc;
                 }, new Map<number, ISlotHistory>());
         }
-        const keys = runSync(RedisHandlesProvider.client!.smembers)(index);
+        const keys = this.redisClientCall('smembers', index);
         const values: Map<string | number, ApiIndexType> = new Map<string | number, ApiIndexType>();
-        for (const key in keys) {
+        for (const key of keys) {
             const value = this.getValueFromIndex(index, key);
             if (value)
                 values.set(key, value);
@@ -138,50 +142,51 @@ export class RedisHandlesProvider implements IApiStore {
     }
 
     public getKeysFromIndex(index:IndexNames): (string|number)[] {
-        return Array.from(runSync(RedisHandlesProvider.client!.smembers)(index)).map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
+        //@ts-ignore
+        return Array.from(this.redisClientCall('smembers', index)).map((v) => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
     }
 
     public getValueFromIndex(index: IndexNames, key: string | number): ApiIndexType | undefined {
-        return runSync(this.rehydrateObjectFromCache)(`${index}:${key}`);
+        return this.rehydrateObjectFromCache(`${index}:${key}`);
     }
 
     public setValueOnIndex(index: IndexNames, key: string | number, value: ApiIndexType): void {
         // SLOT_HISTORY uses a an ordered set (ZSET)
         if (index == IndexNames.SLOT_HISTORY) { 
-            runSync(RedisHandlesProvider.client!.zadd)(IndexNames.SLOT_HISTORY, [{element: JSON.stringify(value), score: key as number}]);
+            this.redisClientCall('zadd', IndexNames.SLOT_HISTORY, [{element: JSON.stringify(value), score: key as number}]);
         }
-        runSync(this.saveObjectToCache)(`${index}:${key}`, value)
+        this.saveObjectToCache(`${index}:${key}`, value)
 
     }
 
     public removeKeyFromIndex(index: IndexNames, key: string | number): void {
         // SLOT_HISTORY uses a an ordered set (ZSET)
         if (index == IndexNames.SLOT_HISTORY) { 
-             runSync(RedisHandlesProvider.client!.zremRangeByScore)(IndexNames.SLOT_HISTORY, {value: key as number}, {value: key as number});
+             this.redisClientCall('zremRangeByScore', IndexNames.SLOT_HISTORY, {value: key as number}, {value: key as number});
         }
-        runSync(RedisHandlesProvider.client!.del)([`${index}:${key}`])
+        this.redisClientCall('del', [`${index}:${key}`])
     }
 
     // #endregion
 
     // #region SET INDEXES ************************
     public getValuesFromIndexedSet(index: IndexNames, key: string | number): Set<string> | undefined {
-        return new Set([...runSync(RedisHandlesProvider.client!.smembers)(`${index}:${key}`)].map(v => v.toString()))
+        return new Set([...this.redisClientCall('smembers', `${index}:${key}`)].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
-        runSync(RedisHandlesProvider.client!.sadd)(`${index}:${key}`, [value])
+        this.redisClientCall('sadd', `${index}:${key}`, [value])
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
-        runSync(RedisHandlesProvider.client!.srem)(`${index}:${key}`, [value])
+        this.redisClientCall('srem', `${index}:${key}`, [value])
     }
 
     // #endregion
 
     // #region METRICS *****************************
     public getMetrics(): IApiMetrics {
-        const metrics = runSync(RedisHandlesProvider.client!.hgetall)("metrics") as IApiMetrics;
+        const metrics = (this.redisClientCall('hgetall', "metrics") as HashDataType).reduce((acc, value) => acc.set(value.field.toString(), value.value), new Map()) as IApiMetrics;
         metrics.count = this.count();
         return metrics;        
     }
@@ -191,7 +196,7 @@ export class RedisHandlesProvider implements IApiStore {
     }
 
     public count(): number {
-        return runSync(RedisHandlesProvider.client!.scard)(IndexNames.HANDLE);
+        return this.redisClientCall('scard', IndexNames.HANDLE);
     }
 
     public getSchemaVersion(): number {
@@ -226,13 +231,13 @@ export class RedisHandlesProvider implements IApiStore {
             }
         }
         if (Object.keys(parentFields).length > 0) {
-            await RedisHandlesProvider.client!.hset(key, parentFields);
+            const res = await this.redisClientCall('hset', key, parentFields);
         }
     }
 
-    private async rehydrateObjectFromCache(key: string): Promise<Record<string, any>> {
+    private rehydrateObjectFromCache(key: string): Record<string, any> {
         const result: Record<string, any> = {};
-        const fields = await RedisHandlesProvider.client!.hgetall(key);
+        const fields: HashDataType = this.redisClientCall('hgetall', key);
         for (const {field, value} of Object.values(fields)) {
             if (value.toString() == `${key}:${field}`)
                 result[field.toString()] = this.rehydrateObjectFromCache(`${key}:${field}`)
@@ -260,15 +265,42 @@ export class RedisHandlesProvider implements IApiStore {
 
     }
 
-    private async removeObjectAndDescendents(key: string, obj: any): Promise<void> {
+    private removeObjectAndDescendents(key: string, obj: any): void {
         const keys = new Set<string>();
         this.scanDescendentKeys(key, obj, keys);
         const ordered = [...keys].sort((a, b) => b.length - a.length);
 
         if (ordered.length > 0) {
-            await RedisHandlesProvider.client!.del(ordered);
+            this.redisClientCall('del', ordered);
         }
 
+    }
+
+    private redisClientCall(cmd: string, ...args: any[]) {
+        const id = RedisHandlesStore._id++;
+        const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+        const view = new Int32Array(sab);
+
+        RedisHandlesStore._worker.worker.postMessage({ id, sab, payload: { id, cmd, args } });
+
+        // Block up to 30s so we don't hang forever
+        const status = Atomics.wait(view, 0, 0, 30_000);
+        if (status === 'timed-out') {
+            throw new Error(`GlideClient ${cmd} timed out`);
+        }
+
+        const msg = receiveMessageOnPort(RedisHandlesStore._worker.port);
+        if (!msg || msg.message.id !== id) {
+            throw new Error(`GlideClient ${cmd} received no/incorrect reply: ${msg}`);
+        }
+        
+        const { ok, result, error } = msg.message;
+        if (!ok) {
+            const e = new Error(error?.message || `GlideClient ${cmd} failed`);
+            if (error?.stack) e.stack = error.stack;
+            throw e;
+        }
+        return result;
     }
 
     // #endregion

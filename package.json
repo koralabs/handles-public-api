@@ -36,7 +36,6 @@
     "fastq": "^1.19.1",
     "forever": "^4.0.3",
     "ioredis": "^5.4.2",
-    "make-synchronous": "^2.0.1",
     "proper-lockfile": "^4.1.2",
     "swagger-ui-express": "^4.5.0",
     "yaml": "^2.5.0"

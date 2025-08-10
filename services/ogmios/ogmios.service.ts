@@ -26,14 +26,14 @@ class OgmiosService {
     }
 
     public async initialize(reset: () => Promise<void>, load: () => Promise<void>) {
+        await this.handlesRepo.initialize();
+
         this.handlesRepo.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
-
-        await this.handlesRepo.initialize();
 
         // attempt ogmios resume (see if starting point exists or errors)
         const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));

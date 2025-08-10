@@ -4,7 +4,8 @@ CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.5.1}
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
 CONFIG_FILES_BASE_URL=${CONFIG_FILES_BASE_URL:-'https://book.world.dev.cardano.org/environments'}
 SOCKET_PATH=${SOCKET_PATH:-/ipc/node.socket}
-sudo apt install -y && sudo apt update -y && sudo apt install -y git curl socat jq unzip tini lz4 zstd
+sudo apt install -y && sudo apt update -y && sudo apt install -y git curl socat jq unzip tini lz4 zstd valkey
+sudo systemctl enable valkey-server
 curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 rm -f ./cardano-node-${CARDANO_NODE_VER}-linux.tar.gz
