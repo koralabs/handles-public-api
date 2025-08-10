@@ -1,7 +1,7 @@
 import RootHandlesController from '../controllers/rootHandles.controller';
 import BaseRoute from './base';
 
-class HandlesRoute extends BaseRoute {
+class RootHandlesRoute extends BaseRoute {
     public path = '/root-handles';
     public rootHandlesController = new RootHandlesController();
 
@@ -15,4 +15,4 @@ class HandlesRoute extends BaseRoute {
     }
 }
 
-export default HandlesRoute;
+export default RootHandlesRoute;

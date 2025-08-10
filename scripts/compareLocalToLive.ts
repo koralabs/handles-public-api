@@ -2,7 +2,7 @@ import { asyncForEach } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import http, { OutgoingHttpHeaders } from 'http';
 import https from 'https';
-const NETWORK = 'mainnet';
+const NETWORK = 'preview';
 
 const apiRequest = (url: string): Promise<{ statusCode?: number; body?: string; error?: string, headers?: OutgoingHttpHeaders }> => {
     const client = url.startsWith('http:') ? http : https;

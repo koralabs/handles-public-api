@@ -76,7 +76,7 @@ export class HandlesRepository {
         // Attach the default Handle
         const holder = this.store.getValueFromIndex(IndexNames.HOLDER, handle.holder) as Holder | undefined;
         if (holder) {
-            handle.default_in_wallet = holder.defaultHandle;
+            handle.default_in_wallet = `${holder.defaultHandle}`; // Converts numeric handles to a string
         }
 
         // Workaround for numeric handles names
