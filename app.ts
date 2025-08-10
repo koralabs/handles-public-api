@@ -30,7 +30,7 @@ class App {
         this.env = NODE_ENV || 'development';
         this.port = PORT || 3141;
         this.startTimer = Date.now();
-        process.env.STORAGE_SCHEMA_VERSION = '42'
+        process.env.STORAGE_SCHEMA_VERSION = '49'
     }
 
     private _getDynamicLoadDirectories(): string[] {

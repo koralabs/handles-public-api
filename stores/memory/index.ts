@@ -51,7 +51,7 @@ export class HandlesMemoryStore implements IApiStore {
                 if (!currentSlot || currentSlot === 0) {
                     Logger.log({
                         message: `Slot is ${currentSlot}. Cannot save file. Current block hash: ${currentBlockHash}`,
-                        category: LogCategory.NOTIFY,
+                        category: LogCategory.INFO,
                         event: 'OgmiosService.saveFilesInterval'
                     });
                     //process.exit(2);
@@ -426,6 +426,7 @@ export class HandlesMemoryStore implements IApiStore {
         const startTime = Date.now()
         Logger.log('Preparing handles storage. Parsing file content...');
         const { handles, slot, hash, history } = filesContent;
+        // this.setMetrics({ currentSlot: slot, currentBlockHash: hash })
 
         // save all the individual handles to the store
         await asyncForEach(handles, async (handle) => {

@@ -29,9 +29,9 @@ class OgmiosService {
         await this.handlesRepo.initialize();
 
         this.handlesRepo.setMetrics({
-            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
-            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
-            firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
+            // currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
+            // currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
+            // firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
 

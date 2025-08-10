@@ -58,7 +58,7 @@ export class HandlesRepository {
     public getHandle(key: string): StoredHandle | null {
         const handle = structuredClone(this.store.getValueFromIndex(IndexNames.HANDLE, key));
         if (!handle) return null;
-        return this.returnHandleWithDefault(handle as StoredHandle);
+        return this.prepareHandle(handle as StoredHandle);
     }
 
     public getHandleByHex(hex: string): StoredHandle | null {
@@ -68,15 +68,19 @@ export class HandlesRepository {
         return handle;
     }
 
-    private returnHandleWithDefault(handle?: StoredHandle | null) {
+    private prepareHandle(handle?: StoredHandle | null) {
         if (!handle) {
             return null;
         }
 
+        // Attach the default Handle
         const holder = this.store.getValueFromIndex(IndexNames.HOLDER, handle.holder) as Holder | undefined;
         if (holder) {
             handle.default_in_wallet = holder.defaultHandle;
         }
+
+        // Workaround for numeric handles names
+        handle.name = `${handle.name}`
 
         return handle;
     }
@@ -456,6 +460,9 @@ export class HandlesRepository {
         const existingHandle = this.getHandle(name) ?? undefined;
         let handle = existingHandle ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
         
+        if (typeof handle.name != 'string') {
+            console.log('HANDLE', handle, existingHandle)
+        }
         // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
         //     debugLog('PROCESSED SCANNED INFO START', slotNumber, {...handle, utxo})
 
