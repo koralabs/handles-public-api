@@ -116,9 +116,9 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public getKeysFromIndex(index: IndexNames): (string | number)[] {
-        //@ts-ignore
-        return Array.from(this.redisClientCall('smembers', index)).map((v) => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
+        return [...this.redisClientCall('smembers', index)].map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
     }
+
 
     public getValueFromIndex(index: IndexNames, key: string | number): ApiIndexType | undefined {
         return this.rehydrateObjectFromCache(`${index}:${key}`);
@@ -140,7 +140,7 @@ export class RedisHandlesStore implements IApiStore {
             this.redisClientCall('zremRangeByScore', IndexNames.SLOT_HISTORY, { value: key as number }, { value: key as number });
             return;
         }
-        this.redisClientCall('del', [`${index}:${key}`])
+        this.redisClientCall('del', [`${index}:${key}`]);
         this.redisClientCall('srem', index, [key]);
     }
 
@@ -152,11 +152,15 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
-        this.redisClientCall('sadd', `${index}:${key}`, [value])
+        this.redisClientCall('sadd', `${index}:${key}`, [value]);
+        this.redisClientCall('sadd', index, [key]);
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
-        this.redisClientCall('srem', `${index}:${key}`, [value])
+        this.redisClientCall('srem', `${index}:${key}`, [value]);
+        if ([...this.redisClientCall('smembers', `${index}:${key}`)].length == 0) {
+            this.redisClientCall('srem', index, [key]);
+        }
     }
 
     // #endregion
