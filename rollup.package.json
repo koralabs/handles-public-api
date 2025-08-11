@@ -9,7 +9,7 @@
     "type": "module",
     "module": "esnext",
     "scripts": {      
-      "stop:forever": "forever stopall",
+      "stop:forever": "forever stop express.js",
       "start:forever": "mkdir -p forever && forever -p ./forever --minUptime 1 start express.js",
       "forever:list": "forever list"
     },

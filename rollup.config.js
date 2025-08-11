@@ -18,7 +18,7 @@ export default (async () => ({
         nodeExternals(), // Marks native modules as external
         typescript(),
         commonjs({ignoreDynamicRequires: true}),
-        nodeResolve({dedupe: ['@koralabs/kora-labs-common']}),
+        nodeResolve(),
         json(),
         multiInput()
     ],
