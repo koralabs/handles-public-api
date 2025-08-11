@@ -15,7 +15,7 @@ export default (async () => ({
         'workers/*.js'
     ],
     plugins: [
-        nodeExternals(), // Marks native modules as external
+        nodeExternals({deps: false}), // Marks native modules as external
         typescript(),
         commonjs({ignoreDynamicRequires: true}),
         nodeResolve(),
@@ -26,6 +26,6 @@ export default (async () => ({
         dir: 'dist',
         format: 'es'
     },
-    external: [ 'aws-sdk', 'forever', 'swagger-ui-express' ]
+    external: [ 'aws-sdk', 'forever', 'swagger-ui-express', '@valkey/valkey-glide' ]
 }))();
 
