@@ -1,8 +1,9 @@
-import nodeResolve from '@rollup/plugin-node-resolve';
-import typescript from 'rollup-plugin-typescript2';
-import multiInput from 'rollup-plugin-multi-input';
-import commonjs from '@rollup/plugin-commonjs'
+import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import multiInput from 'rollup-plugin-multi-input';
+import nodeExternals from 'rollup-plugin-node-externals';
+import typescript from 'rollup-plugin-typescript2';
 
 export default (async () => ({
     input: [
@@ -14,6 +15,7 @@ export default (async () => ({
         'workers/*.js'
     ],
     plugins: [
+        nodeExternals(), // Marks native modules as external
         typescript(),
         commonjs({ignoreDynamicRequires: true}),
         nodeResolve({dedupe: ['@koralabs/kora-labs-common']}),
