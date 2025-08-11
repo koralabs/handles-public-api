@@ -46,7 +46,13 @@ class App {
             Logger.log(`🚀 ${this.env} app listening on port ${this.port}`);
         });
         server.keepAliveTimeout = 61 * 1000;
-        this.initializeOgmios();
+        await this.initializeOgmios();
+    }
+
+    public async lambda() {
+        const app = await this.initialize();
+        await this.initializeOgmios();
+        return app;
     }
 
     public async initialize() {
@@ -130,11 +136,12 @@ class App {
     }
 
     private async initializeOgmios() {
+        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
         if (process.env.READ_ONLY_STORE?.toLocaleLowerCase() == 'true'|| this.env === 'test') {
+            await handlesRepo.initialize();
             return;
         }
 
-        const handlesRepo = new HandlesRepository(new this.registry.handlesStore());
         const ogmiosService = new OgmiosService(handlesRepo, this.processBlock.bind(this));
         await ogmiosService.initialize(this.resetBlockProcessors.bind(this), this.loadBlockProcessorIndexes.bind(this));
     }

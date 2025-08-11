@@ -14,7 +14,6 @@ enum HealthStatus {
 class HealthController {
     public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const ogmiosResults = await fetchHealth();
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, elapsedOgmiosExec = 0, elapsedBuildingExec = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
@@ -39,6 +38,7 @@ class HealthController {
                 schema_version: schemaVersion
             };
 
+            const ogmiosResults = await fetchHealth();
             if (!ogmiosResults) {
                 res.status(202).json({
                     ogmios: null,
