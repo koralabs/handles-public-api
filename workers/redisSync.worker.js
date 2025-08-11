@@ -1,4 +1,4 @@
-import { LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { LogCategory, Logger, REDIS_HOST } from '@koralabs/kora-labs-common';
 import { GlideClient } from '@valkey/valkey-glide';
 import { parentPort, workerData } from 'node:worker_threads';
 
@@ -7,7 +7,7 @@ let glideClient;
 async function getClient() {
   if (!glideClient) {
     glideClient = await GlideClient.createClient({
-      addresses: [{ host: REDIS_HOS, port: 6379 }],
+      addresses: [{ host: REDIS_HOST, port: 6379 }],
       // if the server uses TLS, you'll need to enable it. Otherwise, the connection attempt will time out silently.
       useTLS: process.env.REDIS_USE_TLS ? process.env.REDIS_USE_TLS == 'true' : true
     });
