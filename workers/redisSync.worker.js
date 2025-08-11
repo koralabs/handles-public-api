@@ -9,7 +9,7 @@ async function getClient() {
     glideClient = await GlideClient.createClient({
       addresses: [{ host: REDIS_HOST }],
       // if the server uses TLS, you'll need to enable it. Otherwise, the connection attempt will time out silently.
-      useTLS: process.env.REDIS_USE_TLS == 'true'
+      useTLS: process.env.REDIS_USE_TLS ? process.env.REDIS_USE_TLS == 'true' : true
     });
     const status = await glideClient.ping();
     if (status == "PONG") {
