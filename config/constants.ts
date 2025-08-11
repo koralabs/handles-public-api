@@ -6,8 +6,8 @@ export interface EraBoundaries {
 
 export const handleEraBoundaries: EraBoundaries = {
     mainnet: {
-        slot: 47931333,
-        id: '847543d30b99cbb288bee3064f83ff50140cf944ce60fa5d356f27611e94b1f0'
+        slot: 48194528,
+        id: 'e7e68f6516485154ebbe5a0072a7c5c28d935610f722c53f6f058e2456574249'
     },
     testnet: {
         slot: 42971872,

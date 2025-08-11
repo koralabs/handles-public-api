@@ -157,9 +157,11 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
-        this.redisClientCall('srem', `${index}:${key}`, [value]);
-        if ([...this.redisClientCall('smembers', `${index}:${key}`)]?.length == 0) {
-            this.redisClientCall('srem', index, [key]);
+        if (key != null) {
+            this.redisClientCall('srem', `${index}:${key}`, [value]);
+            if ([...this.redisClientCall('smembers', `${index}:${key}`)].length == 0) {
+                this.redisClientCall('srem', index, [key]);
+            }
         }
     }
 
