@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -81,6 +81,7 @@ export class HandlesRepository {
 
         // Workaround for numeric handles names
         handle.name = `${handle.name}`
+        handle.hex = `${handle.hex}`
 
         return handle;
     }
@@ -103,34 +104,76 @@ export class HandlesRepository {
         }
     }
 
-    public search(pagination?: HandlePaginationModel, search?: HandleSearchModel, showAll = false) {
-        let handles = this._filter(search);
-        const searchTotal = handles.length;
-        
-        const { page = 1, sort = 'asc', handlesPerPage = 100, slotNumber = undefined } = pagination ?? { page: 1, sort: 'asc', handlesPerPage: 100, slotNumber: undefined };
-    
-        if (slotNumber) {
-            handles.sort((a, b) => (sort === 'desc' ? b.updated_slot_number - a.updated_slot_number : a.updated_slot_number - b.updated_slot_number));
-            const slotNumberIndex = handles.findIndex((a) => a.updated_slot_number === slotNumber) ?? 0;
-            handles = handles.slice(slotNumberIndex, showAll ? undefined : slotNumberIndex + handlesPerPage);
-            return { searchTotal, handles };
-        }
+    public search(pagination?: HandlePaginationModel, searchModel?: HandleSearchModel, showAll = false) {
+        let handlesResult: StoredHandle[] = [];
 
-        switch (sort) {
+        // The ['|empty|'] is important for `AND` searches here and indicates 
+        // that we couldn't find any results for one of the search terms
+        // When intersected with all other results, ['|empty|'] ensures empty result set
+        // while [] means the term wasn't searched so return them all
+        const checkEmptyResult = (indexName: IndexNames, term: string | number | undefined) => {
+            if (!term) return [];
+            const set = this.store.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
+            return set.size === 0 ? [EMPTY] : [...set];
+        };
+
+        // get handle name arrays for all the search parameters
+        const characterArray = checkEmptyResult(IndexNames.CHARACTER, searchModel?.characters);
+        let lengthArray: string[] = [];
+        if (searchModel?.length?.includes('-')) {
+            for (let i = parseInt(searchModel?.length.split('-')[0]); i <= parseInt(searchModel?.length.split('-')[1]); i++) {
+                lengthArray = lengthArray.concat([...this.store.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
+            }
+            if (lengthArray.length === 0) lengthArray = [EMPTY];
+        } else {
+            lengthArray = checkEmptyResult(IndexNames.LENGTH, parseInt(searchModel?.length || '0'));
+        }
+        const pzArray = searchModel?.personalized ? checkEmptyResult(IndexNames.PERSONALIZED, 1) : [];
+        const typeArray = checkEmptyResult(IndexNames.HANDLE_TYPE, searchModel?.handle_type);
+        const rarityArray = checkEmptyResult(IndexNames.RARITY, searchModel?.rarity);
+        const numericModifiersArray = checkEmptyResult(IndexNames.NUMERIC_MODIFIER, searchModel?.numeric_modifiers);
+        const ogArray = searchModel?.og ? checkEmptyResult(IndexNames.OG, 1) : [];
+        const holderArray = (() => {
+            if (!searchModel?.holder_address) return [];
+            const holder = this.store.getValueFromIndex(IndexNames.HOLDER, searchModel?.holder_address) as Holder;
+            return holder ? [...holder.handles.map(h => h.name)] : [EMPTY];
+        })();
+
+        // filter out any empty arrays
+        const filtered = [characterArray, lengthArray, typeArray, rarityArray, numericModifiersArray, holderArray, ogArray, pzArray].filter((a) => a?.length)
+        // Get the intersection
+        let handleNames = [...new Set(filtered.length ? filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))) : [])];
+
+        const checkSearch = (name: string, search?: string) => {
+            if (!search) return true;
+            if (name.includes(search)) return true;
+
+            const hex = Buffer.from(name, 'utf8').toString('hex');
+            if (`${AssetNameLabel.LBL_222}${hex}`.includes(search)) return true;
+            if (`${AssetNameLabel.LBL_000}${hex}`.includes(search)) return true;
+            
+            return false;
+        }
+        // if there is an EMPTY here, there is no result set
+        handleNames = handleNames.filter((name) => name !== EMPTY && (!searchModel?.handles || searchModel?.handles.includes(name)) && checkSearch(name, searchModel?.search))
+
+        handlesResult = this.getAllHandles(handleNames, pagination);
+
+        const searchTotal = !searchModel ? this.store.getMetrics().count ?? 0 : handlesResult.length
+    
+        switch (pagination?.sort) {
             case 'random':
-                this._shuffle(handles);
+                this._shuffle(handlesResult);
                 break;
             case 'desc': 
-                handles.sort((h1, h2) => h2.name.localeCompare(h1.name));
+                handlesResult.sort((h1, h2) => h2.name.localeCompare(h1.name));
                 break;
             default:
-                handles.sort((h1, h2) => h1.name.localeCompare(h2.name));
+                handlesResult.sort((h1, h2) => h1.name.localeCompare(h2.name));
                 break;
         }
 
-        const startIndex = (page - 1) * handlesPerPage;
-        handles = handles.slice(startIndex, showAll ? undefined : startIndex + handlesPerPage);
-        return { searchTotal, handles };
+        return { searchTotal, handles: handlesResult };
     }
 
     public getMetrics(): IApiMetrics {  
@@ -576,7 +619,7 @@ export class HandlesRepository {
 
         const payment_key_hash = getPaymentKeyHash(ada)!;
         const old_payment_key_hash = getPaymentKeyHash(oldHandle?.resolved_addresses.ada!)!;
-        const ogFlag = og_number === 0 ? 0 : 1;
+        const ogFlag = og_number === 0;
         handle.payment_key_hash = payment_key_hash;
         handle.drep = buildDrep(ada, handle.id_hash?.replace('0x', ''));
 
@@ -590,21 +633,32 @@ export class HandlesRepository {
         this.store.addValueToIndexedSet(IndexNames.CHARACTER, characters, name);
         this.store.addValueToIndexedSet(IndexNames.NUMERIC_MODIFIER, numeric_modifiers, name);
         this.store.addValueToIndexedSet(IndexNames.LENGTH, length, name);
+        this.store.addValueToIndexedSet(IndexNames.HANDLE_TYPE, handle.handle_type, name);
 
         if (name.includes('@')) {
             const rootHandle = name.split('@')[1];
             this.store.addValueToIndexedSet(IndexNames.SUBHANDLE, rootHandle, name);
         }
 
+        const personalized = (() => {
+            if (handle.image_hash != handle.standard_image_hash) return true;
+            const pz = handle.personalization;
+            return pz?.designer || pz?.portal || pz?.socials
+        })();
+
         // remove the old - these can change over time
-        this.store.removeValueFromIndexedSet(IndexNames.OG, 0, name);
-        this.store.removeValueFromIndexedSet(IndexNames.OG, 1, name);
-        this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
+        this.store.removeValueFromIndexedSet(IndexNames.OG, Number(!ogFlag), name);
+        this.store.removeValueFromIndexedSet(IndexNames.PERSONALIZED, Number(!personalized), name);
         this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
+        this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
+        this.store.removeKeyFromIndex(IndexNames.SLOT, updated_slot_number);
+        
         // add the new
-        this.store.addValueToIndexedSet(IndexNames.OG, ogFlag, name);
+        this.store.addValueToIndexedSet(IndexNames.PERSONALIZED, Number(personalized), name);
+        this.store.addValueToIndexedSet(IndexNames.OG, Number(ogFlag), name);
         this.store.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
         this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
+        this.store.setValueOnIndex(IndexNames.SLOT, updated_slot_number, name);
 
         if (!(handle instanceof RewoundHandle)) {
             const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
@@ -615,6 +669,7 @@ export class HandlesRepository {
                     slotNumber: updated_slot_number
                 });
         }
+
     }
 
     public getDefaultHandle(handles: DefaultHandleInfo[]): DefaultHandleInfo {
@@ -647,8 +702,28 @@ export class HandlesRepository {
         return personalization
     }
     
-    public getAllHandles() {
-        return Array.from(this.store.getIndex(IndexNames.HANDLE)).map(([handle]) => this.getHandle(handle as string)!);
+    public getAllHandles(handleNames?: string[], pagination?: HandlePaginationModel): StoredHandle[] {
+        let limit;
+        if (pagination?.page || pagination?.handlesPerPage) {
+            limit = {count: pagination?.handlesPerPage ?? 100, offset: ((pagination?.page ?? 1) - 1)}
+        }
+        
+        let handleNamesInIndex: [string | number, ApiIndexType][];
+        if (pagination?.slotNumber) {
+            handleNamesInIndex = Array.from(this.store.getIndex(IndexNames.SLOT, limit, pagination?.sort.toUpperCase() as Sort))
+        }
+        else {
+            handleNamesInIndex = Array.from(this.store.getIndex(IndexNames.HANDLE, limit, pagination?.sort.toUpperCase() as Sort))
+        }
+
+        const handles = handleNamesInIndex.map(([handle]) => 
+            handleNames ? 
+                handleNames.includes(handle as string) ? 
+                    this.getHandle(handle as string)! 
+                    : undefined 
+                : this.getHandle(handle as string)!).filter(h => !!h);
+
+        return handles.length ? handles : [];
     }
 
     public async getStartingPoint(
@@ -656,74 +731,6 @@ export class HandlesRepository {
         failed = false
     ): Promise<Point | null> {
         return this.store.getStartingPoint(save , failed);
-    }
-    
-    private _filter(searchModel?: HandleSearchModel): StoredHandle[] {
-        if (!searchModel) return this.getAllHandles().filter((handle: StoredHandle) => !!handle.utxo);
-
-        const { characters, length, rarity, numeric_modifiers, search, holder_address, og, handle_type, handles } = searchModel;
-
-        // The ['|empty|'] is important for `AND` searches here and indicates 
-        // that we couldn't find any results for one of the search terms
-        // When intersected with all other results, ['|empty|'] ensures empty result set
-        const checkEmptyResult = (indexName: IndexNames, term: string | number | undefined) => {
-            if (!term) return [];
-            const set = this.store.getValuesFromIndexedSet(indexName, term) ?? new Set<string>();
-            return set.size === 0 ? [EMPTY] : [...set];
-        };
-
-        // get handle name arrays for all the search parameters
-        const characterArray = checkEmptyResult(IndexNames.CHARACTER, characters);
-        let lengthArray: string[] = [];
-        if (length?.includes('-')) {
-            for (let i = parseInt(length.split('-')[0]); i <= parseInt(length.split('-')[1]); i++) {
-                lengthArray = lengthArray.concat([...this.store.getValuesFromIndexedSet(IndexNames.LENGTH, i) ?? new Set<string>()]);
-            }
-            if (lengthArray.length === 0) lengthArray = [EMPTY];
-        } else {
-            lengthArray = checkEmptyResult(IndexNames.LENGTH, parseInt(length || '0'));
-        }
-        const rarityArray = checkEmptyResult(IndexNames.RARITY, rarity);
-        const numericModifiersArray = checkEmptyResult(IndexNames.NUMERIC_MODIFIER, numeric_modifiers);
-        const ogArray = og ? checkEmptyResult(IndexNames.OG, 1) : [];
-        const holderArray = (() => {
-            if (!holder_address) return [];
-            const holder = this.store.getValueFromIndex(IndexNames.HOLDER, holder_address) as Holder;
-            return holder ? [...holder.handles.map(h => h.name)] : [EMPTY];
-        })();
-
-        // filter out any empty arrays
-        const filtered = [characterArray, lengthArray, rarityArray, numericModifiersArray, holderArray, ogArray].filter((a) => a?.length)
-        // Get the intersection
-        const handleNames = [...new Set(filtered.length ? filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))) : [])]
-            // if there is an EMPTY here, there is no result set
-            .filter((name) => name !== EMPTY)
-
-        let array =
-            characters || length || rarity || numeric_modifiers || holder_address || og
-                ? handleNames.reduce<StoredHandle[]>((agg, name) => {
-                    const handle = this.getHandle(name);
-                    if (handle) {
-                        if (search && !handle.name.includes(search)) return agg;
-                        if (handle_type && handle.handle_type !== handle_type) return agg;
-                        if (handles && !handles.includes(handle.name)) return agg;
-                        agg.push(handle);
-                    }
-                    return agg;
-                }, [])
-                : this.getAllHandles().reduce<StoredHandle[]>((agg: StoredHandle[], handle: StoredHandle) => {
-                    if (search && !(handle.name.includes(search) || handle.hex.includes(search))) return agg;
-                    if (handle_type && handle.handle_type !== handle_type) return agg;
-                    if (handles && !handles.includes(handle.name)) return agg;
-
-                    agg.push(handle);
-                    return agg;
-                }, []);
-
-        if (searchModel.personalized) {
-            array = array.filter((handle: StoredHandle) => handle.image_hash != handle.standard_image_hash);
-        }
-        return array.filter((handle: StoredHandle) => !!handle.utxo);
     }
 
     private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {

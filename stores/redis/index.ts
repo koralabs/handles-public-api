@@ -1,5 +1,5 @@
-import { ApiIndexType, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, StoredHandle } from '@koralabs/kora-labs-common';
-import { GlideString, HashDataType } from '@valkey/valkey-glide';
+import { ApiIndexType, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, Sort, StoredHandle } from '@koralabs/kora-labs-common';
+import { GlideString, HashDataType, Limit, SortOptions } from '@valkey/valkey-glide';
 import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
@@ -96,16 +96,16 @@ export class RedisHandlesStore implements IApiStore {
     // #endregion
 
     // #region INDEXES *************************
-    public getIndex(index: IndexNames): Map<string | number, ApiIndexType> {
-        // SLOT_HISTORY uses a an ordered set (ZSET)
-        if (index == IndexNames.SLOT_HISTORY) {
-            return this.redisClientCall('zrangeWithScores', IndexNames.SLOT_HISTORY, { start: 0, end: -1 })
+    public getIndex(index: IndexNames, limit?: Limit, orderBy?: Sort): Map<string | number, ApiIndexType> {
+        // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index.startsWith('slot')) {
+            return this.redisClientCall('zrangeWithScores', index, { start: 0, end: -1 })
                 .reduce((acc: Map<number, ISlotHistory>, value: { score: number, element: GlideString }) => {
                     acc.set(value.score, JSON.parse(value.element.toString()) as ISlotHistory);
                     return acc;
                 }, new Map<number, ISlotHistory>());
         }
-        const keys = this.redisClientCall('smembers', index);
+        const keys = this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions);
         const values: Map<string | number, ApiIndexType> = new Map<string | number, ApiIndexType>();
         for (const key of keys) {
             const value = this.getValueFromIndex(index, key);
@@ -115,8 +115,9 @@ export class RedisHandlesStore implements IApiStore {
         return values;
     }
 
-    public getKeysFromIndex(index: IndexNames): (string | number)[] {
-        return [...this.redisClientCall('smembers', index)].map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
+    public getKeysFromIndex(index: IndexNames, limit?: Limit, orderBy?: Sort): (string | number)[] {
+        return [...this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions)]
+            .map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
     }
 
 
@@ -125,9 +126,9 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public setValueOnIndex(index: IndexNames, key: string | number, value: ApiIndexType): void {
-        // SLOT_HISTORY uses a an ordered set (ZSET)
-        if (index == IndexNames.SLOT_HISTORY) {
-            this.redisClientCall('zadd', IndexNames.SLOT_HISTORY, [{ element: JSON.stringify(value), score: key as number }]);
+        // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index.startsWith('slot')) {
+            this.redisClientCall('zadd', index, [{ element: JSON.stringify(value), score: key as number }]);
             return;
         }
         this.saveObjectToCache(`${index}:${key}`, value)
@@ -135,9 +136,16 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public removeKeyFromIndex(index: IndexNames, key: string | number): void {
-        // SLOT_HISTORY uses a an ordered set (ZSET)
+        // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
+        if (index == IndexNames.SLOT) {
+            this.redisClientCall('zrem', index, key);
+            if ([...this.redisClientCall('zrangebyscore', index, { value: key as number }, { value: key as number })].length == 0) {
+                this.redisClientCall('zrem', index, [key]);
+            }
+            return;
+        }
         if (index == IndexNames.SLOT_HISTORY) {
-            this.redisClientCall('zremRangeByScore', IndexNames.SLOT_HISTORY, { value: key as number }, { value: key as number });
+            this.redisClientCall('zremrangebyscore', index, { value: key as number }, { value: key as number });
             return;
         }
         this.redisClientCall('del', [`${index}:${key}`]);
@@ -147,8 +155,8 @@ export class RedisHandlesStore implements IApiStore {
     // #endregion
 
     // #region SET INDEXES ************************
-    public getValuesFromIndexedSet(index: IndexNames, key: string | number): Set<string> | undefined {
-        return new Set([...this.redisClientCall('smembers', `${index}:${key}`)].map(v => v.toString()))
+    public getValuesFromIndexedSet(index: IndexNames, key: string | number, limit?: Limit, orderBy?: Sort): Set<string> | undefined {
+        return new Set([...this.redisClientCall('sort', `${index}:${key}`), {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
