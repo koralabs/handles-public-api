@@ -104,9 +104,8 @@ export class HandlesRepository {
         }
     }
 
-    public search(pagination?: HandlePaginationModel, searchModel?: HandleSearchModel, showAll = false) {
-        let handlesResult: StoredHandle[] = [];
-
+    public search(pagination?: HandlePaginationModel, searchModel?: HandleSearchModel, namesOnly = false): { searchTotal: number, handles: (StoredHandle | string)[] } {
+        let handles: StoredHandle[] = [];
         // The ['|empty|'] is important for `AND` searches here and indicates 
         // that we couldn't find any results for one of the search terms
         // When intersected with all other results, ['|empty|'] ensures empty result set
@@ -139,11 +138,20 @@ export class HandlesRepository {
             return holder ? [...holder.handles.map(h => h.name)] : [EMPTY];
         })();
 
+        let handleNames:string[] | undefined = undefined;
+        
         // filter out any empty arrays
         const filtered = [characterArray, lengthArray, typeArray, rarityArray, numericModifiersArray, holderArray, ogArray, pzArray].filter((a) => a?.length)
-        // Get the intersection
-        let handleNames = [...new Set(filtered.length ? filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))) : [])];
-
+        if (filtered.length == 0) {
+            // This means request had no filtered terms, so we need to start with the whole set
+            handleNames = Array.from(this.store.getIndex(IndexNames.HANDLE)).map(([handle]) => handle as string);
+        }
+        else {
+            // Get the intersection
+            handleNames = [...new Set(filtered.reduce((a, b) => a.filter((c: string) => b.includes(c))))]
+                // if there is an EMPTY here, there are no results
+                .filter((name) => name !== EMPTY);
+        }
         const checkSearch = (name: string, search?: string) => {
             if (!search) return true;
             if (name.includes(search)) return true;
@@ -154,26 +162,33 @@ export class HandlesRepository {
             
             return false;
         }
-        // if there is an EMPTY here, there is no result set
-        handleNames = handleNames.filter((name) => name !== EMPTY && (!searchModel?.handles || searchModel?.handles.includes(name)) && checkSearch(name, searchModel?.search))
 
-        handlesResult = this.getAllHandles(handleNames, pagination);
+        // Check for the searched term or handle list
+        handleNames = handleNames.filter((name) => (!searchModel?.handles || searchModel?.handles.includes(name)) && checkSearch(name, searchModel?.search))
+        const searchTotal = handleNames.length;
 
-        const searchTotal = !searchModel ? this.store.getMetrics().count ?? 0 : handlesResult.length
+        if (namesOnly) {
+            return { searchTotal, handles: handleNames ?? [] };
+        }
+
+        const startIndex = ((pagination?.page ?? 1) - 1) * (pagination?.handlesPerPage ?? 100);
+        handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
+
+        handles = handleNames.map(h => this.getHandle(h)).filter(h => !!h);
     
         switch (pagination?.sort) {
             case 'random':
-                this._shuffle(handlesResult);
+                this._shuffle(handles);
                 break;
             case 'desc': 
-                handlesResult.sort((h1, h2) => h2.name.localeCompare(h1.name));
+                handles.sort((h1, h2) => h2.name.localeCompare(h1.name));
                 break;
             default:
-                handlesResult.sort((h1, h2) => h1.name.localeCompare(h2.name));
+                handles.sort((h1, h2) => h1.name.localeCompare(h2.name));
                 break;
         }
 
-        return { searchTotal, handles: handlesResult };
+        return { searchTotal, handles };
     }
 
     public getMetrics(): IApiMetrics {  
@@ -643,7 +658,7 @@ export class HandlesRepository {
         const personalized = (() => {
             if (handle.image_hash != handle.standard_image_hash) return true;
             const pz = handle.personalization;
-            return pz?.designer || pz?.portal || pz?.socials
+            return !!pz?.designer || !!pz?.portal || !!pz?.socials
         })();
 
         // remove the old - these can change over time
@@ -702,7 +717,7 @@ export class HandlesRepository {
         return personalization
     }
     
-    public getAllHandles(handleNames?: string[], pagination?: HandlePaginationModel): StoredHandle[] {
+    public getAllHandles(pagination?: HandlePaginationModel): StoredHandle[] {
         let limit;
         if (pagination?.page || pagination?.handlesPerPage) {
             limit = {count: pagination?.handlesPerPage ?? 100, offset: ((pagination?.page ?? 1) - 1)}
@@ -716,12 +731,7 @@ export class HandlesRepository {
             handleNamesInIndex = Array.from(this.store.getIndex(IndexNames.HANDLE, limit, pagination?.sort.toUpperCase() as Sort))
         }
 
-        const handles = handleNamesInIndex.map(([handle]) => 
-            handleNames ? 
-                handleNames.includes(handle as string) ? 
-                    this.getHandle(handle as string)! 
-                    : undefined 
-                : this.getHandle(handle as string)!).filter(h => !!h);
+        const handles = handleNamesInIndex.map(([handle]) => this.getHandle(handle as string)).filter(h => !!h);
 
         return handles.length ? handles : [];
     }

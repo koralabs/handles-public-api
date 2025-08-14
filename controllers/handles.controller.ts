@@ -8,6 +8,7 @@ import {
     IReferenceToken,
     ISearchBody,
     isEmpty,
+    isEmptyObject,
     parseAssetNameLabel,
     ProtectedWords,
     StoredHandle
@@ -74,7 +75,7 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        return handleRepo.search(pagination, search, req.headers?.accept?.startsWith('text/plain'));
+        return handleRepo.search(isEmptyObject(pagination) ? undefined : pagination, isEmptyObject(search) ? undefined : search, req.headers?.accept?.startsWith('text/plain'));
     }
 
     public async getAll (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> {
@@ -84,7 +85,7 @@ class HandlesController {
             const handles = HandlesController.parseQueryAndSearchHandles(req, handleRepo);
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handleNames = handles.handles.map(h => h.name);
+                const handleNames = handles.handles;
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handleNames.length.toString());
                 res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));
@@ -93,7 +94,7 @@ class HandlesController {
 
             res.set('x-handles-search-total', handles.searchTotal.toString())
                 .status(handleRepo.currentHttpStatus())
-                .json(handles.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle)));
+                .json((handles.handles as StoredHandle[]).filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle)));
         } catch (error) {
             next(error);
         }
@@ -105,14 +106,14 @@ class HandlesController {
 
         
         if (req.headers?.accept?.startsWith('text/plain')) {
-            const handles = handleSearchResults.handles.map(h => h.name);
+            const handles = handleSearchResults.handles;
             res.set('Content-Type', 'text/plain; charset=utf-8');
             res.set('x-handles-search-total', handles.length.toString());
             res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
             return;
         }
 
-        const handlesViewModel = handleSearchResults.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle));
+        const handlesViewModel = (handleSearchResults.handles as StoredHandle[]).filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle));
 
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
     }

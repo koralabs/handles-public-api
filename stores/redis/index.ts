@@ -1,11 +1,22 @@
 import { ApiIndexType, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, Sort, StoredHandle } from '@koralabs/kora-labs-common';
-import { GlideString, HashDataType, Limit, SortOptions } from '@valkey/valkey-glide';
+import { Boundary, GlideString, HashDataType, Limit, SortOptions } from '@valkey/valkey-glide';
 import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NODE_ENV } from '../../config';
 import { handleEraBoundaries } from '../../config/constants';
 import { RewoundHandle } from '../../repositories/handlesRepository';
+
+const INDEXES_IGNORE_ROOT = [IndexNames.ADDRESS, IndexNames.HASH_OF_STAKE_KEY_HASH, IndexNames.PAYMENT_KEY_HASH, IndexNames.SLOT, IndexNames.SLOT_HISTORY]
+
+// const glideClient = await GlideClient.createClient({
+//       addresses: [{ host: 'https://localhost', port: 6379 }],
+//       useTLS: process.env.REDIS_USE_TLS ? process.env.REDIS_USE_TLS == 'true' : true
+// });
+
+// glideClient.zremRangeByScore('', {value: 0, isInclusive: true})
+
+const bound = (val: string | number): Boundary<string | number> => ({value: val, isInclusive: true});
 
 export class RedisHandlesStore implements IApiStore {
     private static _worker: any
@@ -34,7 +45,7 @@ export class RedisHandlesStore implements IApiStore {
     public rollBackToGenesis(): void {
         Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
         // Clear all redis cache
-        this.redisClientCall('flushall');
+        this.redisClientCall('flushdb');
     }
 
     public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
@@ -42,7 +53,7 @@ export class RedisHandlesStore implements IApiStore {
             const { schemaVersion, currentSlot, currentBlockHash } = this.getMetrics();
             const currentSchemaVersion = this.getSchemaVersion();
             if (currentSchemaVersion > (schemaVersion ?? 0) || !currentBlockHash || !currentSlot) {
-                this.redisClientCall('flushall');
+                this.redisClientCall('flushdb');
                 const { id, slot } = handleEraBoundaries[NETWORK];
                 this.setMetrics({ schemaVersion: currentSchemaVersion, currentBlockHash: id, currentSlot: slot });
                 return { id, slot };
@@ -105,7 +116,7 @@ export class RedisHandlesStore implements IApiStore {
                     return acc;
                 }, new Map<number, ISlotHistory>());
         }
-        const keys = this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions);
+        const keys = this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions);
         const values: Map<string | number, ApiIndexType> = new Map<string | number, ApiIndexType>();
         for (const key of keys) {
             const value = this.getValueFromIndex(index, key);
@@ -116,7 +127,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public getKeysFromIndex(index: IndexNames, limit?: Limit, orderBy?: Sort): (string | number)[] {
-        return [...this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions)]
+        return [...this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions)]
             .map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
     }
 
@@ -128,24 +139,22 @@ export class RedisHandlesStore implements IApiStore {
     public setValueOnIndex(index: IndexNames, key: string | number, value: ApiIndexType): void {
         // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
         if (index.startsWith('slot')) {
-            this.redisClientCall('zadd', index, [{ element: JSON.stringify(value), score: key as number }]);
+            this.redisClientCall('zadd', index, [{ element: typeof value == 'string' ? value : JSON.stringify(value), score: key as number }]);
             return;
         }
         this.saveObjectToCache(`${index}:${key}`, value)
-        this.redisClientCall('sadd', index, [key]);
+        if (!INDEXES_IGNORE_ROOT.includes(index))
+            this.redisClientCall('sadd', index, [key]);
     }
 
     public removeKeyFromIndex(index: IndexNames, key: string | number): void {
         // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
         if (index == IndexNames.SLOT) {
-            this.redisClientCall('zrem', index, key);
-            if ([...this.redisClientCall('zrangebyscore', index, { value: key as number }, { value: key as number })].length == 0) {
-                this.redisClientCall('zrem', index, [key]);
-            }
+            this.redisClientCall('zrem', index, typeof key == 'string' ? key : JSON.stringify(key));
             return;
         }
         if (index == IndexNames.SLOT_HISTORY) {
-            this.redisClientCall('zremrangebyscore', index, { value: key as number }, { value: key as number });
+            this.redisClientCall('zremRangeByScore', index, bound(key), bound(key));
             return;
         }
         this.redisClientCall('del', [`${index}:${key}`]);
@@ -156,12 +165,13 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region SET INDEXES ************************
     public getValuesFromIndexedSet(index: IndexNames, key: string | number, limit?: Limit, orderBy?: Sort): Set<string> | undefined {
-        return new Set([...this.redisClientCall('sort', `${index}:${key}`), {limit, orderBy: orderBy?.toLocaleUpperCase(), isAlpha: true} as SortOptions].map(v => v.toString()))
+        return new Set([...this.redisClientCall('sort', `${index}:${key}`), {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
         this.redisClientCall('sadd', `${index}:${key}`, [value]);
-        this.redisClientCall('sadd', index, [key]);
+        if (!INDEXES_IGNORE_ROOT.includes(index))
+            this.redisClientCall('sadd', index, [key]);
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
@@ -274,14 +284,13 @@ export class RedisHandlesStore implements IApiStore {
 
         const msg = receiveMessageOnPort(RedisHandlesStore._worker.port);
         if (!msg || msg.message.id !== id) {
-            throw new Error(`GlideClient ${cmd} received no/incorrect reply: ${msg}`);
+            Logger.log({message: `GlideClient ${cmd} received no/incorrect reply: ${msg}`, category: LogCategory.ERROR, event: "redisClientCall.incorrectMessageResponse"});
+            return undefined;
         }
 
         const { ok, result, error } = msg.message;
         if (!ok) {
-            const e = new Error(error?.message || `GlideClient ${cmd} failed`);
-            if (error?.stack) e.stack = error.stack;
-            throw e;
+            Logger.log({message: error?.message || `GlideClient ${cmd} failed`, category: LogCategory.ERROR, event: "redisClientCall.errorFromPostMessage"})
         }
         return result;
     }

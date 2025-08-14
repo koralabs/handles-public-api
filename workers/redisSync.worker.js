@@ -1,4 +1,4 @@
-import { LogCategory, Logger, REDIS_HOST } from '@koralabs/kora-labs-common';
+import { Logger, REDIS_HOST } from '@koralabs/kora-labs-common';
 import { GlideClient } from '@valkey/valkey-glide';
 import { parentPort, workerData } from 'node:worker_threads';
 
@@ -23,14 +23,14 @@ parentPort.on('message', async (m) => {
   const { id, sab, payload } = m;
   const view = new Int32Array(sab);
   try {
+    //logKeyRequest('handle:', payload); // What is getting passed in?
     const client = await getClient();
     const result = await client[payload.cmd](...payload.args)
-    //logKeyRequest('handle:', payload); // What is getting passed in?
     workerData.port.postMessage({ id, ok: true, result });
     //logKeyResult('handle:', payload, result) // What is the result from Valkey?
   } catch (e) {
-    Logger.log({message: JSON.stringify(e), category: LogCategory.ERROR, event: "redisSync.worker.error"})
-    workerData.port.postMessage({ id, ok: false, error: { message: String(e?.message ?? e), stack: e?.stack } });
+    const message = `ERROR WITH PAYLOAD: ${JSON.stringify(payload)} | ERROR: ${JSON.stringify(e)} | STACK: ${e?.stack}`;
+    workerData.port.postMessage({ id, ok: false, error: { message, stack: e?.stack } });
   } finally {
     Atomics.store(view, 0, 1);
     Atomics.notify(view, 0, 1);

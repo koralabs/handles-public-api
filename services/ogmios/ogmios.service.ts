@@ -125,6 +125,8 @@ class OgmiosService {
                                         throw new Error(`Block type ${result.block.type} is not supported`);
 
                                     const block = result.block as BlockPraos
+                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });                                    
+                                    
                                     this.handlesRepo.setMetrics({
                                         currentSlot: block.slot,
                                         currentBlockHash: block.id,
@@ -132,8 +134,6 @@ class OgmiosService {
                                         lastSlot: result.tip.slot,
                                         elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished
                                     });
-
-                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });                                    
                            
                                     // start timer for ogmios rollForward
                                     startOgmiosExec = Date.now();
@@ -184,9 +184,6 @@ class OgmiosService {
         const currentSlot = txBlock?.slot ?? this.handlesRepo.getMetrics().currentSlot ?? 0;
         const currentBlockHash = txBlock.id ?? '0';
         const tipBlockHash = tip?.id ?? '1';
-
-        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
-
         for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
             const txBody = txBlock?.transactions?.[b];
             const txId = txBody?.id;
@@ -268,11 +265,11 @@ class OgmiosService {
                 }
             }
         }
-
+        
         // finish timer for our logs
         const buildingExecFinished = Date.now() - startBuildingExec;
         const { elapsedBuildingExec } = this.handlesRepo.getMetrics();
-        this.handlesRepo.setMetrics({ elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
+        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash, elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
     };
 
     private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {
