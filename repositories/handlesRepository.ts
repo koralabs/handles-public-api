@@ -431,7 +431,7 @@ export class HandlesRepository {
 
             // set all one-to-many indexes
             this.store.removeValueFromIndexedSet(IndexNames.RARITY, handle.rarity, handleName)
-            this.store.removeValueFromIndexedSet(IndexNames.OG, handle.og_number === 0 ? 0 : 1, handleName);
+            this.store.removeValueFromIndexedSet(IndexNames.OG, Number(handle.og_number), handleName);
             this.store.removeValueFromIndexedSet(IndexNames.CHARACTER, handle.characters, handleName)
             const payment_key_hash = getPaymentKeyHash(handle.resolved_addresses.ada)!;
             this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, handleName)
@@ -634,7 +634,7 @@ export class HandlesRepository {
 
         const payment_key_hash = getPaymentKeyHash(ada)!;
         const old_payment_key_hash = getPaymentKeyHash(oldHandle?.resolved_addresses.ada!)!;
-        const ogFlag = og_number === 0;
+        const ogFlag = og_number > 0;
         handle.payment_key_hash = payment_key_hash;
         handle.drep = buildDrep(ada, handle.id_hash?.replace('0x', ''));
 

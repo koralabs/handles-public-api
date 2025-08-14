@@ -165,7 +165,7 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region SET INDEXES ************************
     public getValuesFromIndexedSet(index: IndexNames, key: string | number, limit?: Limit, orderBy?: Sort): Set<string> | undefined {
-        return new Set([...this.redisClientCall('sort', `${index}:${key}`), {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions].map(v => v.toString()))
+        return new Set([...this.redisClientCall('sort', `${index}:${key}`, {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions)].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
