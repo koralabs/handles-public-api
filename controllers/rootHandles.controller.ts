@@ -10,7 +10,7 @@ class RootHandlesController {
         try {
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const handleResults = HandlesController.parseQueryAndSearchHandles(req, handleRepo, handleRepo.getRootHandleNames());
-            let handles = handleResults.handles;
+            let handles = handleResults.handles as StoredHandle[];
 
             const mintingType = req.query?.minting_type
             if (mintingType) {
