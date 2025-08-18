@@ -144,7 +144,7 @@ export class HandlesRepository {
         const filtered = [characterArray, lengthArray, typeArray, rarityArray, numericModifiersArray, holderArray, ogArray, pzArray].filter((a) => a?.length)
         if (filtered.length == 0) {
             // This means request had no filtered terms, so we need to start with the whole set
-            handleNames = Array.from(this.store.getIndex(IndexNames.HANDLE)).map(([handle]) => handle as string);
+            handleNames = Array.from(this.store.getKeysFromIndex(IndexNames.HANDLE)).map((handle) => handle as string);
         }
         else {
             // Get the intersection
