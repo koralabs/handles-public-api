@@ -85,7 +85,7 @@ class HandlesController {
             const handles = HandlesController.parseQueryAndSearchHandles(req, handleRepo);
 
             if (req.headers?.accept?.startsWith('text/plain')) {
-                const handleNames = handles.handles;
+                const handleNames = handles.handles as string[];
                 res.set('Content-Type', 'text/plain; charset=utf-8');
                 res.set('x-handles-search-total', handleNames.length.toString());
                 res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));

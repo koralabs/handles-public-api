@@ -1,5 +1,6 @@
 import { getDateStringFromSlot, getElapsedTime, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
+import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { fetchHealth } from '../services/ogmios/utils';
@@ -26,7 +27,7 @@ class HealthController {
             const slotDate = getDateStringFromSlot(currentSlot);
     
             const stats = {
-                percentage_complete: percentageComplete,
+                percentage_complete: percentageComplete ? Number(percentageComplete) : 0,
                 current_memory_used: currentMemoryUsed,
                 ogmios_elapsed: ogmiosElapsed,
                 building_elapsed: buildingElapsed,
@@ -38,25 +39,24 @@ class HealthController {
                 schema_version: schemaVersion
             };
 
-            const ogmiosResults = await fetchHealth();
-            if (!ogmiosResults) {
-                res.status(202).json({
-                    ogmios: null,
-                    stats
-                });
-                return;
-            }
-
             let status = HealthStatus.CURRENT;
             if (!handleRepo.isCaughtUp()) {
                 status = HealthStatus.STORAGE_BEHIND;
             }
-            if (ogmiosResults.networkSynchronization < 1) {
-                status = HealthStatus.OGMIOS_BEHIND;
+            let ogmios: HealthResponseBody  | string | null = null;
+            if (process.env.READ_ONLY_STORE == 'true') {
+                ogmios = '(store is in read_only mode)';
             }
-            if (ogmiosResults.connectionStatus !== 'connected') {
-                Logger.log({category:LogCategory.WARN, message: 'Ogmios can\'t connect to the node socket', event: 'healthcheck.failure'});
-                status = HealthStatus.WAITING_ON_CARDANO_NODE;
+            else {
+                // We don't try to connect to ogmios in READ_ONLY mode
+                ogmios = await fetchHealth();
+                if ((ogmios?.networkSynchronization ?? 0) < 1) {
+                    status = HealthStatus.OGMIOS_BEHIND;
+                }
+                if (ogmios?.connectionStatus !== 'connected') {
+                    Logger.log({category:LogCategory.WARN, message: 'Ogmios can\'t connect to the node socket', event: 'healthcheck.failure'});
+                    status = HealthStatus.WAITING_ON_CARDANO_NODE;
+                }
             }
 
             let statusCode = 200;
@@ -67,7 +67,7 @@ class HealthController {
             
             res.status(statusCode).json({
                 status,
-                ogmios: ogmiosResults,
+                ogmios,
                 stats
             });
         } catch (error: any) {
