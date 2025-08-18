@@ -229,7 +229,7 @@ export class RedisHandlesStore implements IApiStore {
     private rehydrateObjectFromCache(key: string): Record<string, any> | undefined {
         const result: Record<string, any> = {};
         const fields: HashDataType = this.redisClientCall('hgetall', key);
-        if (fields.length == 0)
+        if (!fields || fields.length == 0)
             return undefined
         for (const {field, value} of fields) {
             if (value.toString() == `${key}:${field}`)
