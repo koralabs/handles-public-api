@@ -31,7 +31,7 @@ class OgmiosService {
         this.handlesRepo.setMetrics({
             // currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             // currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
-            // firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
+            firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
 
@@ -79,13 +79,17 @@ class OgmiosService {
                     }
                 }
                 if (this.client) 
-                    if (this.client.CONNECTING || this.client.OPEN)
+                    if (this.client.CONNECTING || this.client.OPEN) {
                         this.client.close();
+                        this.client = undefined;
+                    }
             } catch (error: any) {
                 Logger.log({ message: `Unable to connect Ogmios: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.failed.errorMessage' });
                 if (this.client) 
-                    if (this.client.CONNECTING || this.client.OPEN)
+                    if (this.client.CONNECTING || this.client.OPEN) {
                         this.client.close();
+                        this.client = undefined;
+                    }
             }
             await delay(30 * 1000);
         }
@@ -97,7 +101,7 @@ class OgmiosService {
             const response = JSON.parse(msg);
             switch (response.id) {
                 case 'find-intersection':
-                    for (let i=1; i<=1000; i++) {
+                    for (let i=1; i<=100; i++) {
                         this._rpcRequest('nextBlock', {}, 'next-block');
                     }
                     break;

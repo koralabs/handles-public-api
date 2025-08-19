@@ -736,10 +736,7 @@ export class HandlesRepository {
         return handles.length ? handles : [];
     }
 
-    public async getStartingPoint(
-        save: (handle: StoredHandle) => void, 
-        failed = false
-    ): Promise<Point | null> {
+    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<Point | null> {
         return this.store.getStartingPoint(save , failed);
     }
 
