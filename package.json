@@ -17,6 +17,7 @@
     "build:ec2": "npm run copy-dist-files && (cd dist && npm install && chmod +x ./setup_env.sh && ./setup_env.sh) && npm exec -c 'rollup -c rollup.ec2.config.js'",
     "build:lambda": "npm run copy-dist-files && (cd dist && npm install && chmod +x ./setup_env.sh && ./setup_env.sh) && npm exec -c 'rollup -c rollup.lambda.config.js'",
     "build:docker": "npm run build:production && docker build -t koralabs/handles-api .",
+    "dev:readonly": "(export READ_ONLY_STORE=true; export PORT=3142; npm run dev:mainnet)",
     "dev:mainnet": "(export NODE_ENV=development; export NETWORK=mainnet; npm run start:ogmios && nodemon)",
     "dev:preprod": "(export NODE_ENV=development; export NETWORK=preprod; npm run start:ogmios && nodemon)",
     "dev:preview": "(export NODE_ENV=development; export NETWORK=preview; npm run start:ogmios && nodemon)",
@@ -27,8 +28,8 @@
   "dependencies": {
     "@cardano-ogmios/client": "^6.11.0",
     "@cardano-ogmios/schema": "^6.11.0",
-    "@koralabs/kora-labs-common": "6.2.2",
-    "@valkey/valkey-glide": "^1.3.2",
+    "@koralabs/kora-labs-common": "6.3.0",
+    "@valkey/valkey-glide": "^2.0.1",
     "@vendia/serverless-express": "^4.12.6",
     "bech32": "^2.0.0",
     "cors": "^2.8.5",

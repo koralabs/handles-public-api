@@ -1,16 +1,16 @@
 import { Logger, REDIS_HOST } from '@koralabs/kora-labs-common';
-import { GlideClient } from '@valkey/valkey-glide';
+import { Batch, GlideClient } from '@valkey/valkey-glide';
 import { parentPort, workerData } from 'node:worker_threads';
 
 let glideClient;
 
 async function getClient() {
   if (!glideClient) {
-    glideClient = await GlideClient.createClient({
+    glideClient = (await GlideClient.createClient({
       addresses: [{ host: REDIS_HOST, port: 6379 }],
       // if the server uses TLS, you'll need to enable it. Otherwise, the connection attempt will time out silently.
       useTLS: process.env.REDIS_USE_TLS ? process.env.REDIS_USE_TLS == 'true' : true
-    });
+    }));
     const status = await glideClient.ping();
     if (status == "PONG") {
       Logger.log("Connected to Valkey");
@@ -25,8 +25,18 @@ parentPort.on('message', async (m) => {
   try {
     //logKeyRequest('handle:', payload); // What is getting passed in?
     const client = await getClient();
-    const result = await client[payload.cmd](...payload.args)
-    workerData.port.postMessage({ id, ok: true, result });
+    if (payload.cmd == 'batch') {
+        const pipeline = new Batch(false);
+        for (const [cmd, args] of Object.entries(payload.args[0])) {
+          pipeline[cmd](...args)
+        }
+        const result = await client.exec(pipeline, true, {timeout: 10_000})
+      workerData.port.postMessage({ id, ok: true, result });
+    }
+    else {
+      const result = await client[payload.cmd](...payload.args)
+      workerData.port.postMessage({ id, ok: true, result });
+    }
     //logKeyResult('handle:', payload, result) // What is the result from Valkey?
   } catch (e) {
     const message = `ERROR WITH PAYLOAD: ${JSON.stringify(payload)} | ERROR: ${JSON.stringify(e)} | STACK: ${e?.stack}`;

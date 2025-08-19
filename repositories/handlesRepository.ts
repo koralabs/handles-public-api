@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -171,10 +171,22 @@ export class HandlesRepository {
             return { searchTotal, handles: handleNames ?? [] };
         }
 
-        const startIndex = ((pagination?.page ?? 1) - 1) * (pagination?.handlesPerPage ?? 100);
-        handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
 
-        handles = handleNames.map(h => this.getHandle(h)).filter(h => !!h);
+        if (pagination?.slotNumber) {
+            // Get all of the handleNames' slotNumbers
+            // Sort by the slot numbers
+            // 
+        }
+        else {
+            const startIndex = ((pagination?.page ?? 1) - 1) * (pagination?.handlesPerPage ?? 100);
+            handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
+        }
+
+        handles = (this.store.pipeline(() => {
+            for (const h in handleNames) {
+                this.store.getValueFromIndex(IndexNames.HANDLE, h)
+            }
+        }) as StoredHandle[]).map((h) => this.prepareHandle(structuredClone(h) as StoredHandle)!)
     
         switch (pagination?.sort) {
             case 'random':
@@ -310,13 +322,16 @@ export class HandlesRepository {
                 if (oldIndex > -1) {
                     oldHolder.handles.splice(oldIndex, 1);
                 }
-                if (Object.keys(oldHolder.handles).length === 0) {
-                    this.store.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
-                } else {
-                    oldHolder.manuallySet = oldHolder.manuallySet && oldHolder.defaultHandle != oldHandle.name;
-                    oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(oldHolder.handles)?.name ?? '';
-                    this.store.setValueOnIndex(IndexNames.HOLDER, oldHolderInfo.address, oldHolder);
-                }
+                
+                this.store.pipeline(() => {
+                    if (Object.keys(oldHolder.handles).length === 0) {
+                        this.store.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
+                    } else {
+                        oldHolder.manuallySet = oldHolder.manuallySet && oldHolder.defaultHandle != oldHandle.name;
+                        oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(oldHolder.handles)?.name ?? '';
+                        this.store.setValueOnIndex(IndexNames.HOLDER, oldHolderInfo.address, oldHolder);
+                    }
+                });
             }
         }
 
@@ -395,14 +410,19 @@ export class HandlesRepository {
             // This could return null if it is a pre-Shelley address (not bech32)
             const decodedAddress = decodeAddress(address);
             const oldDecodedAddress = decodeAddress(`${oldHandle?.holder}`);
+            if (decodedAddress == oldDecodedAddress) {
+                return {newDefault, oldDefault};
+            }
             if (decodedAddress) {
-                if (oldDecodedAddress) {
-                    // if there is an old stake key hash, remove it from the index
-                    const oldHashOfStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
-                    this.store.removeValueFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, oldHashOfStakeKeyHash, handle.name);     
-                }
-                const hashOfStakeKeyHash = handle.id_hash ? handle.id_hash.replace('0x', '').slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
-                this.store.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashOfStakeKeyHash, handle.name);
+                this.store.pipeline(() => {
+                    if (oldDecodedAddress) {
+                        // if there is an old stake key hash, remove it from the index
+                        const oldHashOfStakeKeyHash = crypto.createHash('md5').update(oldDecodedAddress, 'hex').digest('hex')
+                        this.store.removeValueFromIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, oldHashOfStakeKeyHash, handle.name);     
+                    }
+                    const hashOfStakeKeyHash = handle.id_hash ? handle.id_hash.replace('0x', '').slice(34) : crypto.createHash('md5').update(decodedAddress, 'hex').digest('hex')
+                    this.store.addValueToIndexedSet(IndexNames.HASH_OF_STAKE_KEY_HASH, hashOfStakeKeyHash, handle.name);
+                });
             }
         }
         return {newDefault, oldDefault};
@@ -640,51 +660,52 @@ export class HandlesRepository {
 
         const {newDefault, oldDefault} = this.updateHolder(handle, oldHandle);
 
-        // Set the main index (SAVES THE HANDLE)
-        this.store.setValueOnIndex(IndexNames.HANDLE, name, handle);
+        this.store.pipeline(() => {
+            // Set the main index (SAVES THE HANDLE)
+            this.store.setValueOnIndex(IndexNames.HANDLE, name, handle);
 
-        // set all one-to-many indexes
-        this.store.addValueToIndexedSet(IndexNames.RARITY, rarity, name);
-        this.store.addValueToIndexedSet(IndexNames.CHARACTER, characters, name);
-        this.store.addValueToIndexedSet(IndexNames.NUMERIC_MODIFIER, numeric_modifiers, name);
-        this.store.addValueToIndexedSet(IndexNames.LENGTH, length, name);
-        this.store.addValueToIndexedSet(IndexNames.HANDLE_TYPE, handle.handle_type, name);
+            // set all one-to-many indexes
+            this.store.addValueToIndexedSet(IndexNames.RARITY, rarity, name);
+            this.store.addValueToIndexedSet(IndexNames.CHARACTER, characters, name);
+            this.store.addValueToIndexedSet(IndexNames.NUMERIC_MODIFIER, numeric_modifiers, name);
+            this.store.addValueToIndexedSet(IndexNames.LENGTH, length, name);
+            this.store.addValueToIndexedSet(IndexNames.HANDLE_TYPE, handle.handle_type, name);
 
-        if (name.includes('@')) {
-            const rootHandle = name.split('@')[1];
-            this.store.addValueToIndexedSet(IndexNames.SUBHANDLE, rootHandle, name);
-        }
+            if (name.includes('@')) {
+                const rootHandle = name.split('@')[1];
+                this.store.addValueToIndexedSet(IndexNames.SUBHANDLE, rootHandle, name);
+            }
 
-        const personalized = (() => {
-            if (handle.image_hash != handle.standard_image_hash) return true;
-            const pz = handle.personalization;
-            return !!pz?.designer || !!pz?.portal || !!pz?.socials
-        })();
+            const personalized = (() => {
+                if (handle.image_hash != handle.standard_image_hash) return true;
+                const pz = handle.personalization;
+                return !!pz?.designer || !!pz?.portal || !!pz?.socials
+            })();
 
-        // remove the old - these can change over time
-        this.store.removeValueFromIndexedSet(IndexNames.OG, Number(!ogFlag), name);
-        this.store.removeValueFromIndexedSet(IndexNames.PERSONALIZED, Number(!personalized), name);
-        this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
-        this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
-        this.store.removeKeyFromIndex(IndexNames.SLOT, updated_slot_number);
-        
-        // add the new
-        this.store.addValueToIndexedSet(IndexNames.PERSONALIZED, Number(personalized), name);
-        this.store.addValueToIndexedSet(IndexNames.OG, Number(ogFlag), name);
-        this.store.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
-        this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
-        this.store.setValueOnIndex(IndexNames.SLOT, updated_slot_number, name);
+            // remove the old - these can change over time
+            this.store.removeValueFromIndexedSet(IndexNames.OG, Number(!ogFlag), name);
+            this.store.removeValueFromIndexedSet(IndexNames.PERSONALIZED, Number(!personalized), name);
+            this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
+            this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
+            this.store.removeKeyFromIndex(IndexNames.SLOT, updated_slot_number);
+            
+            // add the new
+            this.store.addValueToIndexedSet(IndexNames.PERSONALIZED, Number(personalized), name);
+            this.store.addValueToIndexedSet(IndexNames.OG, Number(ogFlag), name);
+            this.store.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
+            this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
+            this.store.setValueOnIndex(IndexNames.SLOT, updated_slot_number, name);
 
-        if (!(handle instanceof RewoundHandle)) {
-            const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
-            if (history)
-                this._saveSlotHistory({
-                    handleHistory: history,
-                    handleName: name,
-                    slotNumber: updated_slot_number
-                });
-        }
-
+            if (!(handle instanceof RewoundHandle)) {
+                const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
+                if (history)
+                    this._saveSlotHistory({
+                        handleHistory: history,
+                        handleName: name,
+                        slotNumber: updated_slot_number
+                    });
+            }
+        });
     }
 
     public getDefaultHandle(handles: DefaultHandleInfo[]): DefaultHandleInfo {
@@ -717,25 +738,6 @@ export class HandlesRepository {
         return personalization
     }
     
-    public getAllHandles(pagination?: HandlePaginationModel): StoredHandle[] {
-        let limit;
-        if (pagination?.page || pagination?.handlesPerPage) {
-            limit = {count: pagination?.handlesPerPage ?? 100, offset: ((pagination?.page ?? 1) - 1)}
-        }
-        
-        let handleNamesInIndex: [string | number, ApiIndexType][];
-        if (pagination?.slotNumber) {
-            handleNamesInIndex = Array.from(this.store.getIndex(IndexNames.SLOT, limit, pagination?.sort.toUpperCase() as Sort))
-        }
-        else {
-            handleNamesInIndex = Array.from(this.store.getIndex(IndexNames.HANDLE, limit, pagination?.sort.toUpperCase() as Sort))
-        }
-
-        const handles = handleNamesInIndex.map(([handle]) => this.getHandle(handle as string)).filter(h => !!h);
-
-        return handles.length ? handles : [];
-    }
-
     public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<Point | null> {
         return this.store.getStartingPoint(save , failed);
     }

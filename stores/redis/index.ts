@@ -19,8 +19,9 @@ const INDEXES_IGNORE_ROOT = [IndexNames.ADDRESS, IndexNames.HASH_OF_STAKE_KEY_HA
 const bound = (val: string | number): Boundary<string | number> => ({value: val, isInclusive: true});
 
 export class RedisHandlesStore implements IApiStore {
-    private static _worker: any
-    private static _id = 0
+    private static _worker: any;
+    private static _id = 0;
+    private static _pipeline: Record<string, any[]> | undefined = undefined;
 
     // #region SETUP **************************
     public async initialize(): Promise<IApiStore> {
@@ -38,14 +39,23 @@ export class RedisHandlesStore implements IApiStore {
         return this;
     }
 
-    public destroy(): void {
+    public pipeline(commands: CallableFunction) {
+        RedisHandlesStore._pipeline = {}
+        commands();
+        const result = this.redisClientCall('batch', RedisHandlesStore._pipeline);
+        RedisHandlesStore._pipeline = undefined;
+        return result;
+    }
 
+    public destroy(): void {
+        RedisHandlesStore._pipeline = undefined;
     }
 
     public rollBackToGenesis(): void {
         Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
         // Clear all redis cache
         this.redisClientCall('flushdb');
+        RedisHandlesStore._pipeline = undefined;
     }
 
     public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
@@ -177,7 +187,8 @@ export class RedisHandlesStore implements IApiStore {
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
         if (key != null) {
             this.redisClientCall('srem', `${index}:${key}`, [value]);
-            if ([...this.redisClientCall('smembers', `${index}:${key}`)].length == 0) {
+            const emptyCheck = [...this.redisClientCall('smembers', `${index}:${key}`)];
+            if (emptyCheck.length == 0 || emptyCheck[0] == value) { // If pipeline is turned on, this actually hasn't been removed yet
                 this.redisClientCall('srem', index, [key]);
             }
         }
@@ -222,7 +233,7 @@ export class RedisHandlesStore implements IApiStore {
             }
         }
         if (Object.keys(parentFields).length > 0) {
-            const res = await this.redisClientCall('hset', key, parentFields);
+            this.redisClientCall('hset', key, parentFields);
         }
     }
 
@@ -246,30 +257,13 @@ export class RedisHandlesStore implements IApiStore {
         return result;
     }
 
-    private scanDescendentKeys(key: string, obj: any, keys: Set<string>) {
-        keys.add(key);
-
-        for (const [field, value] of Object.entries(obj)) {
-            if (value && typeof value === "object" && !Array.isArray(value)) {
-                const childKey = `${key}:${field}`;
-                this.scanDescendentKeys(childKey, value as Record<string, any>, keys);
-            }
-        }
-
-    }
-
-    private removeObjectAndDescendents(key: string, obj: any): void {
-        const keys = new Set<string>();
-        this.scanDescendentKeys(key, obj, keys);
-        const ordered = [...keys].sort((a, b) => b.length - a.length);
-
-        if (ordered.length > 0) {
-            this.redisClientCall('del', ordered);
-        }
-
-    }
-
     private redisClientCall(cmd: string, ...args: any[]) {
+        // smembers needs to go through for removeValueFromIndexedSet to work right
+        if (cmd != 'smembers' && RedisHandlesStore._pipeline) {
+            RedisHandlesStore._pipeline[cmd] = args;
+            return;
+        }
+        
         const id = RedisHandlesStore._id++;
         const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
         const view = new Int32Array(sab);

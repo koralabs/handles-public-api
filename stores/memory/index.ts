@@ -41,6 +41,8 @@ export class HandlesMemoryStore implements IApiStore {
         memorySize: 0
     };
 
+    public pipeline(command?: CallableFunction): void {};
+    
     public async initialize(): Promise<IApiStore> {
         if (this.intervals.length === 0) {
             const saveFilesInterval = setInterval(() => {
