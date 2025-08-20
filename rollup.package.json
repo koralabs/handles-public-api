@@ -16,7 +16,7 @@
     "dependencies": {
       "forever": "^4.0.3",
       "swagger-ui-express": "^4.5.0",
-      "@valkey/valkey-glide": "^1.3.2"
+      "@valkey/valkey-glide": "^2.0.1"
     }
 }
   
