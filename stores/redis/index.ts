@@ -1,4 +1,4 @@
-import { ApiIndexType, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, NETWORK, Sort, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, isNumeric, LogCategory, Logger, NETWORK, Sort, StoredHandle } from '@koralabs/kora-labs-common';
 import { Boundary, GlideString, HashDataType, Limit, SortOptions } from '@valkey/valkey-glide';
 import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
@@ -21,7 +21,7 @@ const bound = (val: string | number): Boundary<string | number> => ({value: val,
 export class RedisHandlesStore implements IApiStore {
     private static _worker: any;
     private static _id = 0;
-    private static _pipeline: Record<string, any[]> | undefined = undefined;
+    private static _pipeline: [string, any[]][] | undefined = undefined;
 
     // #region SETUP **************************
     public async initialize(): Promise<IApiStore> {
@@ -38,13 +38,27 @@ export class RedisHandlesStore implements IApiStore {
         }
         return this;
     }
-
+    /**
+     * Be careful with the pipeline command.
+     * Since the commands are queued and executed in a batch, 
+     * you won't get results for each command until AFTER the pipeline finishes.
+     * You'll have to iterate over the batch results that come back in the 
+     * response of pipeline() to find your desired results.
+     * If it feels like your code "isn't running" or "isn't returning anything", this is probably why.
+     */
     public pipeline(commands: CallableFunction) {
-        RedisHandlesStore._pipeline = {}
+        RedisHandlesStore._pipeline = []
         commands();
-        const result = this.redisClientCall('batch', RedisHandlesStore._pipeline);
+        //console.log('PIPELINE', RedisHandlesStore._pipeline)
+        const results = this.redisClientCall('batch', RedisHandlesStore._pipeline);
+        for (let i = 0; i < results.length; i++ ) {
+            if (RedisHandlesStore._pipeline[i][0] == 'hgetall') {
+                //console.log(RedisHandlesStore._pipeline[i][1][0], results[i])
+                results[i] = this.rehydrateObject(RedisHandlesStore._pipeline[i][1][0], results[i])
+            }
+        }
         RedisHandlesStore._pipeline = undefined;
-        return result;
+        return results;
     }
 
     public destroy(): void {
@@ -131,16 +145,15 @@ export class RedisHandlesStore implements IApiStore {
         for (const key of keys) {
             const value = this.getValueFromIndex(index, key);
             if (value)
-                values.set(key, value);
+                values.set(String(key), value);
         }
         return values;
     }
 
     public getKeysFromIndex(index: IndexNames, limit?: Limit, orderBy?: Sort): (string | number)[] {
         return [...this.redisClientCall('sort', index, {limit, orderBy: orderBy?.toUpperCase(), isAlpha: true} as SortOptions)]
-            .map(v => !isNaN(Number(v.toString())) ? Number(v.toString()) : v.toString())
+            .map(v => isNumeric(v.toString()) && index != IndexNames.HANDLE ? Number(v.toString()) : v.toString())
     }
-
 
     public getValueFromIndex(index: IndexNames, key: string | number): ApiIndexType | undefined {
         return this.rehydrateObjectFromCache(`${index}:${key}`);
@@ -238,19 +251,29 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     private rehydrateObjectFromCache(key: string): Record<string, any> | undefined {
-        const result: Record<string, any> = {};
         const fields: HashDataType = this.redisClientCall('hgetall', key);
+        return this.rehydrateObject(key, fields);
+    }
+
+    private rehydrateObject(key: string, fields: HashDataType): Record<string, any> | undefined {
+        const result: Record<string, any> = {};
         if (!fields || fields.length == 0)
             return undefined
-        for (const {field, value} of fields) {
+        //                                  very annoying workaround for the difference in normal and batch variants of `hgetall()`
+        for (const {field: f, value} of fields.map((entry: any) => ({ field: entry.field ?? entry.key, value: entry.value }))) {
+            const field = f.toString();
             if (value.toString() == `${key}:${field}`)
-                result[field.toString()] = this.rehydrateObjectFromCache(`${key}:${field}`)
+                result[field] = this.rehydrateObjectFromCache(`${key}:${field}`)
             else {
-                try { // This covers object, array, boolean, number
-                    result[field.toString()] = JSON.parse(value.toString());
+                try {
+                    if (['name', 'hex', 'default_in_wallet'].includes(field))
+                        result[field] = value.toString();
+                    else
+                        result[field] = JSON.parse(value.toString()); // This covers object, array, boolean, number
+                    
                 }
                 catch {
-                    result[field.toString()] = value.toString();
+                    result[field] = value.toString();
                 }
             }
         }
@@ -258,10 +281,11 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     private redisClientCall(cmd: string, ...args: any[]) {
-        // smembers needs to go through for removeValueFromIndexedSet to work right
-        if (cmd != 'smembers' && RedisHandlesStore._pipeline) {
-            RedisHandlesStore._pipeline[cmd] = args;
-            return;
+        if (RedisHandlesStore._pipeline && cmd != 'batch') {
+            if (cmd != 'smembers') { // smembers needs to go through for removeValueFromIndexedSet to work right
+                RedisHandlesStore._pipeline.push([cmd, args]);
+                return;
+            }
         }
         
         const id = RedisHandlesStore._id++;

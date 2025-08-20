@@ -19,7 +19,7 @@ class HealthController {
             const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, elapsedOgmiosExec = 0, elapsedBuildingExec = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
             const currentSlotInRange = currentSlot - firstSlot;
-            const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+            const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
             const currentMemoryUsage = process.memoryUsage().rss;
             const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
             const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);

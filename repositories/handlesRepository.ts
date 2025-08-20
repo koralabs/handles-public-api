@@ -171,7 +171,6 @@ export class HandlesRepository {
             return { searchTotal, handles: handleNames ?? [] };
         }
 
-
         if (pagination?.slotNumber) {
             // Get all of the handleNames' slotNumbers
             // Sort by the slot numbers
@@ -183,10 +182,31 @@ export class HandlesRepository {
         }
 
         handles = (this.store.pipeline(() => {
-            for (const h in handleNames) {
-                this.store.getValueFromIndex(IndexNames.HANDLE, h)
+            let storedHandles = [];
+            for (const h of handleNames) {
+                storedHandles.push(this.store.getValueFromIndex(IndexNames.HANDLE, h))
             }
-        }) as StoredHandle[]).map((h) => this.prepareHandle(structuredClone(h) as StoredHandle)!)
+            return storedHandles;
+        }) as StoredHandle[])
+
+        const holders = (this.store.pipeline(() => {
+            const storedHolders = [];
+            for (const h of handles) {
+                if (h)
+                    storedHolders.push(this.store.getValueFromIndex(IndexNames.HOLDER, h.holder) as Holder);
+            }
+            return storedHolders;
+        }) as Holder[])
+
+        handles = handles.map((h,i) => {
+            if (h) {
+                const handle = structuredClone(h) as StoredHandle;
+                handle.name = `${handle.name}`
+                handle.hex = `${handle.hex}`
+                handle.default_in_wallet = `${holders[i]?.defaultHandle ?? handle.default_in_wallet ?? ""}`;
+                return handle;
+            }
+        }).filter(h => !!h)
     
         switch (pagination?.sort) {
             case 'random':
@@ -537,10 +557,7 @@ export class HandlesRepository {
         const data = metadata && (metadata[isCip67 ? handleHex : name] as unknown as IHandleMetadata);
         const existingHandle = this.getHandle(name) ?? undefined;
         let handle = existingHandle ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
-        
-        if (typeof handle.name != 'string') {
-            console.log('HANDLE', handle, existingHandle)
-        }
+
         // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
         //     debugLog('PROCESSED SCANNED INFO START', slotNumber, {...handle, utxo})
 
@@ -696,16 +713,16 @@ export class HandlesRepository {
             this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
             this.store.setValueOnIndex(IndexNames.SLOT, updated_slot_number, name);
 
-            if (!(handle instanceof RewoundHandle)) {
-                const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
-                if (history)
-                    this._saveSlotHistory({
-                        handleHistory: history,
-                        handleName: name,
-                        slotNumber: updated_slot_number
-                    });
-            }
         });
+        if (!(handle instanceof RewoundHandle)) {
+            const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
+            if (history)
+                this._saveSlotHistory({
+                    handleHistory: history,
+                    handleName: name,
+                    slotNumber: updated_slot_number
+                });
+        }
     }
 
     public getDefaultHandle(handles: DefaultHandleInfo[]): DefaultHandleInfo {

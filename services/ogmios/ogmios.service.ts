@@ -1,5 +1,5 @@
 import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { AssetNameLabel, checkNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, checkNameLabel, delay, getDateStringFromSlot, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
 import * as url from 'url';
 import WebSocket from 'ws';
@@ -29,15 +29,15 @@ class OgmiosService {
         await this.handlesRepo.initialize();
 
         this.handlesRepo.setMetrics({
-            // currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
-            // currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
+            currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
+            currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             firstMemoryUsage: this.firstMemoryUsage
         });
 
         // attempt ogmios resume (see if starting point exists or errors)
         const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));
-        //const firstStartingPoint = {id: 'eca47c4fb9ca7f8eb2c524b975da3db1d05ced0a9ef0c4ee2c40c4cf2fcb3ea5', slot: 134281477} as Point
+        // const firstStartingPoint = {id: 'eca47c4fb9ca7f8eb2c524b975da3db1d05ced0a9ef0c4ee2c40c4cf2fcb3ea5', slot: 134281477} as Point
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -173,7 +173,10 @@ class OgmiosService {
         while (this.client!.readyState != WebSocket.OPEN) {
             await delay(250);
         }
-        this.handlesRepo.setMetrics({ currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
+        
+        Logger.log(`Starting index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
+
+        this.handlesRepo.setMetrics({ firstSlot: startingPoint.slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
         this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
     }
 

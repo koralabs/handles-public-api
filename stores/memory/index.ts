@@ -41,7 +41,9 @@ export class HandlesMemoryStore implements IApiStore {
         memorySize: 0
     };
 
-    public pipeline(command?: CallableFunction): void {};
+    public pipeline(commands: CallableFunction) {
+         return commands();
+    }
     
     public async initialize(): Promise<IApiStore> {
         if (this.intervals.length === 0) {
