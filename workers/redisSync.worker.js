@@ -25,19 +25,18 @@ parentPort.on('message', async (m) => {
   try {
     //logKeyRequest('handle:', payload); // What is getting passed in?
     const client = await getClient();
-    //console.log('COMMAND', payload.cmd)
     if (payload.cmd == 'batch') {
+      //console.log('BATCH');
       const pipeline = new Batch(true);
-      //console.log('PAYLOAD.ARGS', payload.args)
       for (const [cmd, args] of payload.args[0]) {
-        //console.log(cmd, args)
+        //console.log(cmd, args);
         pipeline[cmd](...args)
       }
       const result = await client.exec(pipeline, true, {timeout: 10_000})
-      //console.log(result)
       workerData.port.postMessage({ id, ok: true, result });
     }
     else {
+      //console.log('VALKEY', payload.cmd, payload.args);
       const result = await client[payload.cmd](...payload.args)
       workerData.port.postMessage({ id, ok: true, result });
     }
