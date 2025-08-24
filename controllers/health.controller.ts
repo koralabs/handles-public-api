@@ -1,4 +1,4 @@
-import { getDateStringFromSlot, getElapsedTime, LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { getDateStringFromSlot, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import { IRegistry } from '../interfaces/registry.interface';
@@ -16,21 +16,17 @@ class HealthController {
     public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
-            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, elapsedOgmiosExec = 0, elapsedBuildingExec = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
+            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
             const currentSlotInRange = currentSlot - firstSlot;
             const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
             const currentMemoryUsage = process.memoryUsage().rss;
             const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
-            const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);
-            const buildingElapsed = getElapsedTime(elapsedBuildingExec);
             const slotDate = getDateStringFromSlot(currentSlot);
     
             const stats = {
                 percentage_complete: percentageComplete ? Number(percentageComplete) : 0,
                 current_memory_used: currentMemoryUsed,
-                ogmios_elapsed: ogmiosElapsed,
-                building_elapsed: buildingElapsed,
                 slot_date: slotDate,
                 handle_count: count,
                 memory_size: memorySize,

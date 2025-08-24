@@ -17,6 +17,7 @@ const INDEXES_IGNORE_ROOT = [IndexNames.ADDRESS, IndexNames.HASH_OF_STAKE_KEY_HA
 // glideClient.zremRangeByScore('', {value: 0, isInclusive: true})
 
 const bound = (val: string | number): Boundary<string | number> => ({value: val, isInclusive: true});
+const redisTimings: Record<string, number> = {};
 
 export class RedisHandlesStore implements IApiStore {
     private static _worker: any;
@@ -36,6 +37,7 @@ export class RedisHandlesStore implements IApiStore {
             worker.on('exit', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Exit" }));
             RedisHandlesStore._worker = { worker, port: port1 };
         }
+        const interval = setInterval(() => {console.log('TIMINGS', JSON.stringify(Object.entries(redisTimings).sort((a, b) => b[1] - a[1])))}, 10_000)
         return this;
     }
     /**
@@ -177,7 +179,7 @@ export class RedisHandlesStore implements IApiStore {
             return;
         }
         if (index == IndexNames.SLOT_HISTORY) {
-            this.redisClientCall('zremRangeByScore', `{root}:${index}`, bound(key), bound(key));
+            this.redisClientCall('zremRangeByScore', `{root}:${index}`, bound(key), "-");
             return;
         }
         this.redisClientCall('del', [`{root}:${index}:${key}`]);
@@ -200,9 +202,10 @@ export class RedisHandlesStore implements IApiStore {
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
         if (key != null) {
             this.redisClientCall('srem', `{root}:${index}:${key}`, [value]);
-            const emptyCheck = [...this.redisClientCall('smembers', `{root}:${index}:${key}`)];
-            if (emptyCheck.length == 0 || emptyCheck[0] == value) { // If pipeline is turned on, this actually hasn't been removed yet
-                this.redisClientCall('srem', `{root}:${index}`, [key]);
+            if (!INDEXES_IGNORE_ROOT.includes(index)) {
+                const count = this.redisClientCall('scard', `{root}:${index}:${key}`) as number;
+                if ((RedisHandlesStore._pipeline && count == 1) || !count)
+                    this.redisClientCall('srem', `{root}:${index}`, [key]);
             }
         }
     }
@@ -282,11 +285,12 @@ export class RedisHandlesStore implements IApiStore {
 
     private redisClientCall(cmd: string, ...args: any[]) {
         if (RedisHandlesStore._pipeline && cmd != 'batch') {
-            if (cmd != 'smembers') { // smembers needs to go through for removeValueFromIndexedSet to work right
+            if (cmd != 'scard') { // scard needs to go through for removeValueFromIndexedSet to work right
                 RedisHandlesStore._pipeline.push([cmd, args]);
                 return;
             }
         }
+        const start = Date.now()
         
         const id = RedisHandlesStore._id++;
         const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
@@ -301,6 +305,10 @@ export class RedisHandlesStore implements IApiStore {
         }
 
         const msg = receiveMessageOnPort(RedisHandlesStore._worker.port);
+        
+        const end = Date.now();
+        redisTimings[cmd] = (redisTimings[cmd] ?? 0) + (end - start);
+
         if (!msg || msg.message.id !== id) {
             Logger.log({message: `GlideClient ${cmd} received no/incorrect reply: ${msg}`, category: LogCategory.ERROR, event: "redisClientCall.incorrectMessageResponse"});
             return undefined;

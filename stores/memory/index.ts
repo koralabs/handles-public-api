@@ -34,8 +34,6 @@ export class HandlesMemoryStore implements IApiStore {
         firstSlot: 0,
         lastSlot: 0,
         currentSlot: 0,
-        elapsedOgmiosExec: 0,
-        elapsedBuildingExec: 0,
         firstMemoryUsage: 0,
         currentBlockHash: '',
         memorySize: 0

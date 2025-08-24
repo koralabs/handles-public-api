@@ -109,9 +109,8 @@ class OgmiosService {
                     try {
                         switch (response.result.direction) {
                             case 'backward': {
-                                const { currentSlot } = this.handlesRepo.getMetrics();
                                 Logger.log({
-                                    message: `Rollback occurred at slot: ${currentSlot}. Target point: ${JSON.stringify(response.result.point)}`,
+                                    message: `Rollback occurred to slot: ${JSON.stringify(response.result.point)}`,
                                     event: 'OgmiosService.rollBackward',
                                     category: LogCategory.INFO
                                 });
@@ -121,7 +120,6 @@ class OgmiosService {
                             case 'forward': {
                                 try {
                                     // finish timer for ogmios rollForward
-                                    const { elapsedOgmiosExec } = this.handlesRepo.getMetrics();
                                     const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
                                     const result = response.result as RollForward;
                                     
@@ -135,8 +133,7 @@ class OgmiosService {
                                         currentSlot: block.slot,
                                         currentBlockHash: block.id,
                                         tipBlockHash: result.tip.id,
-                                        lastSlot: result.tip.slot,
-                                        elapsedOgmiosExec: (elapsedOgmiosExec ?? 0) + ogmiosExecFinished
+                                        lastSlot: result.tip.slot
                                     });
                            
                                     // start timer for ogmios rollForward
@@ -274,9 +271,7 @@ class OgmiosService {
         }
         
         // finish timer for our logs
-        const buildingExecFinished = Date.now() - startBuildingExec;
-        const { elapsedBuildingExec } = this.handlesRepo.getMetrics();
-        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash, elapsedBuildingExec: elapsedBuildingExec ?? 0 + buildingExecFinished });
+        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
     };
 
     private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {

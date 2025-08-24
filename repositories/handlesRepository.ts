@@ -995,11 +995,7 @@ export class HandlesRepository {
         }
 
         const oldestSlot = slotNumber - maxSlots;
-        (this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>).forEach((_, slot) => {
-            if (slot < oldestSlot) {
-                this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slot);
-            }
-        });
+        this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, oldestSlot);
 
         this.store.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
