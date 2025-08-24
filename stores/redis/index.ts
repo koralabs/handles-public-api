@@ -37,7 +37,7 @@ export class RedisHandlesStore implements IApiStore {
             worker.on('exit', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Exit" }));
             RedisHandlesStore._worker = { worker, port: port1 };
         }
-        const interval = setInterval(() => {console.log('TIMINGS', JSON.stringify(Object.entries(redisTimings).sort((a, b) => b[1] - a[1])))}, 10_000)
+        //const interval = setInterval(() => {console.log('TIMINGS', JSON.stringify(Object.entries(redisTimings).sort((a, b) => b[1] - a[1])))}, 10_000)
         return this;
     }
     /**
