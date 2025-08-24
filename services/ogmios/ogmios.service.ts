@@ -32,7 +32,8 @@ class OgmiosService {
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
-            firstMemoryUsage: this.firstMemoryUsage
+            firstMemoryUsage: this.firstMemoryUsage,
+            startTimestamp: Date.now()
         });
 
         // attempt ogmios resume (see if starting point exists or errors)

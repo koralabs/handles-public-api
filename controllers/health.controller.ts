@@ -16,9 +16,10 @@ class HealthController {
     public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
-            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
+            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0, startTimestamp = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
             const currentSlotInRange = currentSlot - firstSlot;
+            const transpiredMs = Date.now() - startTimestamp;
             const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
             const currentMemoryUsage = process.memoryUsage().rss;
             const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
@@ -32,7 +33,8 @@ class HealthController {
                 memory_size: memorySize,
                 current_slot: currentSlot,
                 current_block_hash: currentBlockHash,
-                schema_version: schemaVersion
+                schema_version: schemaVersion,
+                estimated_sync_time: new Date(Date.now() + ((transpiredMs / currentSlotInRange) * (lastSlot - currentSlot))).toISOString()
             };
 
             let status = HealthStatus.CURRENT;
