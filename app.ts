@@ -99,7 +99,7 @@ class App {
             const processors = await dynamicallyLoad(path.resolve(`${dir}/block_processors`), DynamicLoadType.BLOCK_PROCESSOR);
             for (let i = 0; i < processors.length; i++) {
                 const processor = processors[i] as IBlockProcessor;
-                this.blockProcessors.push(await processor.initialize(this.registry));
+                //this.blockProcessors.push(await processor.initialize(this.registry));
             }
         }
         this.app.set('registry', this.registry);
