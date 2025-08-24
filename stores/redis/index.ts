@@ -81,7 +81,7 @@ export class RedisHandlesStore implements IApiStore {
             if (currentSchemaVersion > (schemaVersion ?? 0) || !currentBlockHash || !currentSlot) {
                 this.redisClientCall('flushdb');
                 const { id, slot } = handleEraBoundaries[NETWORK];
-                this.setMetrics({ schemaVersion: currentSchemaVersion, currentBlockHash: id, currentSlot: slot });
+                this.setMetrics({ schemaVersion: currentSchemaVersion, currentBlockHash: id, currentSlot: slot, startTimestamp: Date.now() });
                 return { id, slot };
             }
             else {
@@ -219,8 +219,9 @@ export class RedisHandlesStore implements IApiStore {
         return metrics;
     }
 
-    public setMetrics(metrics: IApiMetrics): void {
-        this.saveObjectToCache("metrics", { ...this.getMetrics(), ...metrics });
+    public setMetrics(metrics: Partial<IApiMetrics>): void {
+        const formattedMetrics = Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, String(v)]));
+        this.redisClientCall('hset', "metrics", formattedMetrics);
     }
 
     public count(): number {

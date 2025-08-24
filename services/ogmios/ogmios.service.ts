@@ -271,8 +271,6 @@ class OgmiosService {
             }
         }
         
-        // finish timer for our logs
-        this.handlesRepo.setMetrics({ lastSlot, currentSlot, currentBlockHash, tipBlockHash });
     };
 
     private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {
