@@ -1,6 +1,26 @@
-import { HandlesMemoryStore } from '..';
-
+import { delay } from '@koralabs/kora-labs-common';
+import { HandlesMemoryStore } from '.';
+const filePath = 'storage/handles-test.json';
 const handlesMemoryStore = new HandlesMemoryStore()
+
+describe.skip('getFile tests', () => {
+    it('should not allow reading if file is locked', async () => {
+        await handlesMemoryStore.Internal.saveHandlesFile(123, 'some-hash', filePath);
+        const file = await handlesMemoryStore.Internal.getFile(filePath);
+        expect(file).toEqual({
+            slot: 123,
+            hash: 'some-hash',
+            schemaVersion: 1,
+            handles: expect.any(Object)
+        });
+        handlesMemoryStore.Internal.saveHandlesFile(123, 'some-hash', filePath, true);
+        await delay(100);
+        const locked = await handlesMemoryStore.Internal.getFile(filePath);
+        expect(locked).toEqual(null);
+    });
+});
+
+
 describe('getFilesContent', () => {
     afterEach(() => {
         jest.clearAllMocks();

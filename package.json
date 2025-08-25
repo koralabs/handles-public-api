@@ -21,7 +21,7 @@
     "dev:mainnet": "(export NODE_ENV=development; export NETWORK=mainnet; npm run start:ogmios && nodemon)",
     "dev:preprod": "(export NODE_ENV=development; export NETWORK=preprod; npm run start:ogmios && nodemon)",
     "dev:preview": "(export NODE_ENV=development; export NETWORK=preview; npm run start:ogmios && nodemon)",
-    "test": "jest --forceExit --coverage --runInBand",
+    "test": "chmod +x ./shell/local_valkey.sh && ./shell/local_valkey.sh && jest --forceExit --coverage --runInBand",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext=.js,.ts --fix --max-warnings=0 .",
     "build:no-emit": "tsc --noEmit"
   },

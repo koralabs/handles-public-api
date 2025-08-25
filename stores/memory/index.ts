@@ -44,36 +44,38 @@ export class HandlesMemoryStore implements IApiStore {
     }
     
     public async initialize(): Promise<IApiStore> {
-        if (this.intervals.length === 0) {
-            const saveFilesInterval = setInterval(() => {
-                const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
+        if (NODE_ENV !== 'test') {
+            if (this.intervals.length === 0) {
+                const saveFilesInterval = setInterval(() => {
+                    const { currentSlot, currentBlockHash } = HandlesMemoryStore.metrics;
 
-                // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
-                // Once restarted, we should have a valid file to read from.
-                if (!currentSlot || currentSlot === 0) {
-                    Logger.log({
-                        message: `Slot is ${currentSlot}. Cannot save file. Current block hash: ${currentBlockHash}`,
-                        category: LogCategory.INFO,
-                        event: 'OgmiosService.saveFilesInterval'
-                    });
-                    //process.exit(2);
-                    return;
-                }
+                    // currentSlot should never be zero. If it is, we don't want to write it and instead exit.
+                    // Once restarted, we should have a valid file to read from.
+                    if (!currentSlot || currentSlot === 0) {
+                        Logger.log({
+                            message: `Slot is ${currentSlot}. Cannot save file. Current block hash: ${currentBlockHash}`,
+                            category: LogCategory.INFO,
+                            event: 'OgmiosService.saveFilesInterval'
+                        });
+                        //process.exit(2);
+                        return;
+                    }
 
-                this._saveHandlesFile(currentSlot, currentBlockHash ?? '');
+                    this._saveHandlesFile(currentSlot, currentBlockHash ?? '');
 
-                memoryWatcher();
-            }, 10 * 60 * 1000);
+                    memoryWatcher();
+                }, 10 * 60 * 1000);
 
-            const setMemoryInterval = setInterval(() => {
-                const memorySize = this.memorySize();
-                this.setMetrics({ memorySize });
-            }, 60000);
+                const setMemoryInterval = setInterval(() => {
+                    const memorySize = this.memorySize();
+                    this.setMetrics({ memorySize });
+                }, 60000);
 
-            this.intervals = [saveFilesInterval, setMemoryInterval];
+                this.intervals = [saveFilesInterval, setMemoryInterval];
+            }
+            this._files = await this._getFilesContent();
+            this.setMetrics({schemaVersion: this._storageSchemaVersion});
         }
-        this._files = await this._getFilesContent();
-        this.setMetrics({schemaVersion: this._storageSchemaVersion});
         return this;
     }
 
@@ -232,17 +234,13 @@ export class HandlesMemoryStore implements IApiStore {
     }
 
     public rollBackToGenesis() {
-        Logger.log({
-            message: 'Rolling back to genesis',
-            category: LogCategory.INFO,
-            event: 'this.rollBackToGenesis'
-        });
+        Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
 
         // erase all indexes
         this.eraseStorage();
 
         // clear storage files
-        this.saveFileContents({ storagePath: this.storageFilePath });
+        this._saveHandlesFile(0, "");
     }
 
     private saveFileContents({ content, storagePath, slot, hash, testDelay }: { content?: any; storagePath: string; slot?: number; hash?: string; testDelay?: boolean }): boolean {

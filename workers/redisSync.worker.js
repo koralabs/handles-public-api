@@ -25,20 +25,31 @@ parentPort.on('message', async (m) => {
   try {
     //logKeyRequest('handle:', payload); // What is getting passed in?
     const client = await getClient();
-    if (payload.cmd == 'batch') {
-      //console.log('BATCH');
-      const pipeline = new Batch(true);
-      for (const [cmd, args] of payload.args[0]) {
-        //console.log(cmd, args);
-        pipeline[cmd](...args)
+    switch (payload.cmd) {
+      case 'close':{
+        await client.close();
+        glideClient = undefined;
+        const result = 'closed';
+        await workerData.port.postMessage({ id, ok: true, result });
+        break;
       }
-      const result = await client.exec(pipeline, true, {timeout: 10_000})
-      workerData.port.postMessage({ id, ok: true, result });
-    }
-    else {
-      //console.log('VALKEY', payload.cmd, payload.args);
-      const result = await client[payload.cmd](...payload.args)
-      workerData.port.postMessage({ id, ok: true, result });
+      case 'batch': {
+        //console.log('BATCH');
+        const pipeline = new Batch(true);
+        for (const [cmd, args] of payload.args[0]) {
+          //console.log(cmd, args);
+          pipeline[cmd](...args)
+        }
+        const result = await client.exec(pipeline, true, {timeout: 10_000})
+        workerData.port.postMessage({ id, ok: true, result });
+        break;
+      }
+      default: {
+        //console.log('VALKEY', payload.cmd, payload.args);
+        const result = await client[payload.cmd](...payload.args)
+        workerData.port.postMessage({ id, ok: true, result });
+        break;
+      }
     }
     //logKeyResult('handle:', payload, result) // What is the result from Valkey?
   } catch (e) {

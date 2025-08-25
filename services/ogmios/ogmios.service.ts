@@ -174,7 +174,7 @@ class OgmiosService {
         
         Logger.log(`Starting index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
 
-        this.handlesRepo.setMetrics({ firstSlot: startingPoint.slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
+        this.handlesRepo.setMetrics({ firstSlot: handleEraBoundaries[NETWORK].slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
         this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
     }
 

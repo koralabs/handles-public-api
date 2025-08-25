@@ -1,0 +1,11 @@
+import { HandlesMemoryStore } from '../../stores/memory';
+import { RedisHandlesStore } from '../../stores/redis';
+import { HandlesRepository } from '../handlesRepository';
+
+module.exports = async () => {
+    for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+        const repo = new HandlesRepository(new store());
+        repo.initialize();
+        repo.destroy();
+    }
+}

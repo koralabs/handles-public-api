@@ -1,14 +1,14 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
 import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { decodeCborFromIPFSFile } from '../utils/ipfs';
-import { sortAlphabetically, sortByCreatedSlotNumber, sortedByLength, sortOGHandle } from './tests';
 const blackListedIpfsCids: string[] = [];
 const isTestnet = NETWORK.toLowerCase() !== 'mainnet';
+const magicSlotsRange = 50_000; // This is arbitrary and should be adjusted if not enough or too many slots come back from queries.
 
 /********** RewoundHandle IS USED TO FLAG THE HANDLE TO AVOID SAVING SLOT HISTORY ********************/
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -172,14 +172,57 @@ export class HandlesRepository {
         }
 
         if (pagination?.slotNumber) {
-            // Get all of the handleNames' slotNumbers
-            // Sort by the slot numbers
-            // 
+            const {firstSlot, lastSlot, count} = this.store.getMetrics();
+            const handleNamesInSlotRage: string[] = [];
+            let result: string[] = [];
+            let iterations = 0;
+            while (handleNamesInSlotRage.length < count! && handleNamesInSlotRage.length < (pagination?.handlesPerPage || 100)) {
+                iterations++;
+                let options;
+                // Get an arbitrary range of slots (slotNumber + magicSlotsRange)
+                if (pagination?.sort.toUpperCase() == 'ASC') {
+                    const start = pagination?.slotNumber + (magicSlotsRange * (iterations - 1));
+                    if (start > (lastSlot ?? firstSlot!)) {
+                        break;
+                    }
+                    options = {
+                        start, 
+                        end: pagination?.slotNumber + (magicSlotsRange * iterations),
+                        orderBy: 'ASC' as Sort
+                    }
+                }
+                else {
+                    const start = pagination?.slotNumber - (magicSlotsRange * (iterations - 1));
+                    if (start < firstSlot!) {
+                        break;
+                    }
+                    options = {
+                        start, 
+                        end: pagination?.slotNumber - (magicSlotsRange * iterations) ,
+                        orderBy: 'DESC' as Sort
+                    }
+                }
+                result = this.store.getKeysFromIndex(IndexNames.SLOT, options) as string[]
+                handleNamesInSlotRage.push(...result.filter(h => handleNames?.includes(h as string)) as string[]);
+            }
+            handleNames = handleNamesInSlotRage;
         }
         else {
-            const startIndex = ((pagination?.page ?? 1) - 1) * (pagination?.handlesPerPage ?? 100);
-            handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
+            switch (pagination?.sort) {
+                case 'random':
+                    this._shuffle(handleNames);
+                    break;
+                case 'desc': 
+                    handleNames.sort((h1, h2) => h2.localeCompare(h1));
+                    break;
+                default:
+                    handleNames.sort((h1, h2) => h1.localeCompare(h2));
+                    break;
+            }
         }
+        
+        const startIndex = ((pagination?.page ?? 1) - 1) * (pagination?.handlesPerPage ?? 100);
+        handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
 
         handles = (this.store.pipeline(() => {
             let storedHandles = [];
@@ -208,17 +251,6 @@ export class HandlesRepository {
             }
         }).filter(h => !!h)
     
-        switch (pagination?.sort) {
-            case 'random':
-                this._shuffle(handles);
-                break;
-            case 'desc': 
-                handles.sort((h1, h2) => h2.name.localeCompare(h1.name));
-                break;
-            default:
-                handles.sort((h1, h2) => h1.name.localeCompare(h2.name));
-                break;
-        }
 
         return { searchTotal, handles };
     }
@@ -728,19 +760,19 @@ export class HandlesRepository {
     public getDefaultHandle(handles: DefaultHandleInfo[]): DefaultHandleInfo {
 
         // OG if no default set
-        const ogHandle = sortOGHandle(handles);
+        const ogHandle = this._sortOGHandle(handles);
         if (ogHandle) return ogHandle;
     
         // filter shortest length from handles
-        const sortedHandlesByLength = sortedByLength(handles);
+        const sortedHandlesByLength = this._sortedByLength(handles);
         if (sortedHandlesByLength.length == 1) return sortedHandlesByLength[0];
     
         // earliest created slot if same length
-        const sortedHandlesBySlot = sortByCreatedSlotNumber(sortedHandlesByLength);
+        const sortedHandlesBySlot = this._sortByCreatedSlotNumber(sortedHandlesByLength);
         if (sortedHandlesBySlot.length == 1) return sortedHandlesBySlot[0];
     
         //Alphabetical if minted same time
-        return sortAlphabetically(sortedHandlesBySlot);
+        return this._sortAlphabetically(sortedHandlesBySlot);
     }
 
     public async getPersonalization(handle: StoredHandle | null | undefined): Promise<IPersonalization | undefined> {
@@ -927,6 +959,60 @@ export class HandlesRepository {
         };
     };
 
+    private _sortOGHandle = (handles: DefaultHandleInfo[]): DefaultHandleInfo | null => {
+        // filter by OG
+        const ogHandles = handles.filter((handle) => handle.og_number);
+        if (ogHandles.length > 0) {
+            // sort by the OG number
+            ogHandles.sort((a, b) => a.og_number - b.og_number);
+            return ogHandles[0];
+        }
+
+        return null;
+    };
+
+    private _sortedByLength = (handles: DefaultHandleInfo[]): DefaultHandleInfo[] => {
+        const groupedHandles = handles.reduce<Record<string, DefaultHandleInfo[]>>((acc, handle) => {
+            const length = handle.name.length;
+            if (!acc[length]) {
+                acc[length] = [];
+            }
+            acc[length].push(handle);
+            return acc;
+        }, {});
+
+        // sort grouped handles by updated_slot_number key
+        const groupedHandleKeys = Object.keys(groupedHandles);
+        groupedHandleKeys.sort((a, b) => parseInt(a) - parseInt(b));
+        const [firstKey] = groupedHandleKeys;
+        return groupedHandles[firstKey] ?? [];
+    };
+
+    private _sortByCreatedSlotNumber = (handles: DefaultHandleInfo[]): DefaultHandleInfo[] => {
+        // group handles by updated_slot_number
+        const groupedHandles = handles.reduce<Record<string, DefaultHandleInfo[]>>((acc, handle) => {
+            const createdSlotNumber = handle.created_slot_number;
+            if (!acc[createdSlotNumber]) {
+                acc[createdSlotNumber] = [];
+            }
+            acc[createdSlotNumber].push(handle);
+            return acc;
+        }, {});
+
+        // sort grouped handles by updated_slot_number key
+        const groupedHandleKeys = Object.keys(groupedHandles);
+        groupedHandleKeys.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        const [firstKey] = groupedHandleKeys;
+        return groupedHandles[firstKey] ?? [];
+    };
+
+    private _sortAlphabetically = (handles: DefaultHandleInfo[]): DefaultHandleInfo => {
+        const sortedHandles = [...handles];
+        sortedHandles.sort((a, b) => a.name.localeCompare(b.name));
+        return sortedHandles[0];
+    };
+
+
     private _getDataFromIPFSLink = async ({ link, schema }: { link?: string; schema?: any }): Promise<any | undefined> => {
         if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;
 
@@ -1037,6 +1123,10 @@ export class HandlesRepository {
         buildHandleHistory: this._buildHandleHistory.bind(this),
         buildPersonalization: this._buildPersonalization.bind(this),
         buildHandle: this._buildHandle.bind(this),
-        saveSlotHistory: this._saveSlotHistory.bind(this)
+        saveSlotHistory: this._saveSlotHistory.bind(this),
+        sortOGHandle: this._sortOGHandle.bind(this),
+        sortedByLength: this._sortedByLength.bind(this),
+        sortByCreatedSlotNumber: this._sortByCreatedSlotNumber.bind(this),
+        sortAlphabetically: this._sortAlphabetically.bind(this)
     }
 }
