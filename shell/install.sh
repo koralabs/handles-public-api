@@ -1,6 +1,6 @@
 set -eu
 
-CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.3.1}
+CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.4.1}
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
 CONFIG_FILES_BASE_URL=${CONFIG_FILES_BASE_URL:-'https://book.world.dev.cardano.org/environments'}
 apt install -y && apt update -y && apt install -y git curl socat jq unzip tini lz4 zstd
