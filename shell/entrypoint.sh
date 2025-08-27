@@ -76,7 +76,7 @@ if [[ "${MODE}" == "cardano-node" || "${MODE}" == "both" || "${MODE}" == "all" ]
         export DIGEST=latest
         chmod +x ./mithril-client
         #curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
-        ./mithril-client cardano-db download --download-dir ${NODE_DB} --include-ancillary $DIGEST
+        ./mithril-client cardano-db download --download-dir ${NODE_DB%db} --include-ancillary $DIGEST
         echo "Mithril snapshot downloaded and validated."
     fi
     
