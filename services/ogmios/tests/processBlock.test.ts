@@ -13,6 +13,7 @@ jest.mock('../../../config/index', () => ({
     getIpfsGateway: jest.fn(() => 'https://ipfs.io/ipfs/'),
 }));
 
+
 //for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
 for (const store of [RedisHandlesStore]) {
     const storeInstance = new store();
@@ -622,8 +623,39 @@ for (const store of [RedisHandlesStore]) {
                 utxo: 'some_id#0',
                 version: 0
             }
-            expect(savePersonalizationChangeSpy).toHaveBeenNthCalledWith(2, savedHandle, savedHandle);
-        });
+            expect(savePersonalizationChangeSpy).toHaveBeenNthCalledWith(2, 
+                savedHandle, 
+                {
+                    amount: 1,
+                    characters: "letters",
+                    created_slot_number: 0,
+                    default_in_wallet: "burritos",
+                    handle_type: "handle",
+                    has_datum: false,
+                    hex: "000de1406275727269746f73",
+                    holder: "stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70",
+                    holder_type: "wallet",
+                    image: "",
+                    image_hash: "",
+                    length: 8,
+                    lovelace: 1,
+                    name: "burritos",
+                    numeric_modifiers: "",
+                    og_number: 0,
+                    payment_key_hash: "9a2bb4492f1a7b2a1c10c8cc37fe3fe2b4e613704ba5331cb94b6388",
+                    policy: "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
+                    rarity: "basic",
+                    resolved_addresses: {
+                        ada: "addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q"
+                    },
+                    standard_image: "",
+                    standard_image_hash: "",
+                    svg_version: "0",
+                    updated_slot_number: 0,
+                    utxo: "some_id#0",
+                    version: 0
+                });
+            });
 
         it('Should process 001 SubHandle settings token', async () => {
             const handleName = `burritos`;
@@ -735,7 +767,7 @@ for (const store of [RedisHandlesStore]) {
                 utxo: 'some_id#0',
                 version: 0
             }
-            expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, savedHandle, savedHandle);
+            expect(saveSubHandleSettingsChangeSpy).toHaveBeenNthCalledWith(2, savedHandle, {...savedHandle, subhandle_settings: undefined});
         });
 
         it('should process as NFT Sub handle', async () => {
@@ -1173,4 +1205,3 @@ for (const store of [RedisHandlesStore]) {
             });
         });
     });
-}

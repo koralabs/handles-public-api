@@ -587,16 +587,15 @@ export class HandlesRepository {
         const {assetName, utxo, lovelace, datum, address, policy, slotNumber, script, metadata, isMintTx} = scannedHandleInfo
         const { handleHex, name, isCip67, assetLabel } = getHandleNameFromAssetName(assetName);
         const data = metadata && (metadata[isCip67 ? handleHex : name] as unknown as IHandleMetadata);
-        const existingHandle = this.getHandle(name) ?? undefined;
-        let handle = existingHandle ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
-
+        const existingHandle = this.prepareHandle(this.store.getValueFromIndex(IndexNames.HANDLE, name) as StoredHandle) ?? undefined;
+        let handle = structuredClone(existingHandle) ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slotNumber}, data);
+        
         // if (['ap@adaprotocol', 'b-263-54'].some(n => n == handle.name))
         //     debugLog('PROCESSED SCANNED INFO START', slotNumber, {...handle, utxo})
 
         const [txId, indexString] = utxo.split('#');
         const index = parseInt(indexString);
         const utxoDetails = { tx_id: txId, index, lovelace, datum: datum ?? '', address };
-
         switch (assetLabel) {
             case null:
             case AssetNameLabel.NONE:
