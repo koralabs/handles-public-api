@@ -10,8 +10,8 @@ jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplemen
 jest.spyOn(HandlesMemoryStore.prototype, 'initialize').mockImplementation();
 const firstSlot = Date.now();
 
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+//for (const store of [RedisHandlesStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();

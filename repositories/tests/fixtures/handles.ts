@@ -2,6 +2,7 @@ import { HandleType, Holder, IHandle, ISlotHistory, Rarity, StoredHandle } from 
 import { bech32 } from 'bech32';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
 import { HandlesMemoryStore } from '../../../stores/memory';
+import { RedisHandlesStore } from '../../../stores/redis';
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 export const ogHandles: IHandle[] = [
@@ -478,7 +479,7 @@ export const handlesFixture: StoredHandle[] = [
     }
 ];
 
-// @ts-expect-error
+// @ts-ignore
 export const slotHistoryFixture: Map<number, ISlotHistory> = new Map([
     [0, {}],
     [1, {
@@ -532,8 +533,8 @@ export const holdersFixture = new Map<string, Holder>([
     ]
 ]);
 
-export const createRandomHandles = async (count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
-    const repo = new HandlesRepository(new HandlesMemoryStore());
+export const createRandomHandles = async (store: HandlesMemoryStore | RedisHandlesStore, count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
+    const repo = new HandlesRepository(store);
     const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
         const handleName = createRandomHandleName();
@@ -585,8 +586,8 @@ export const createRandomHandleName = (): string => {
     return result;
 };
 
-export const performRandomHandleUpdates = async (count: number, beginningSlot = 0) => {
-    const repo = new HandlesRepository(new HandlesMemoryStore());
+export const performRandomHandleUpdates = async (store: HandlesMemoryStore | RedisHandlesStore, count: number, beginningSlot = 0) => {
+    const repo = new HandlesRepository(store);
     for (let i = 0; i < count; i++) {
         switch (i % 3) {
             case 0: { // add

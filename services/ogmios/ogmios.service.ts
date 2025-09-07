@@ -115,7 +115,7 @@ class OgmiosService {
                                     event: 'OgmiosService.rollBackward',
                                     category: LogCategory.INFO
                                 });
-                                await this.processRollback(response.result.point, response.result.tip);
+                                this.processRollback(response.result.point, response.result.tip);
                                 break;
                             }
                             case 'forward': {
@@ -183,12 +183,7 @@ class OgmiosService {
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
-        const startBuildingExec = Date.now();
-
-        const lastSlot = tip.slot;
         const currentSlot = txBlock?.slot ?? this.handlesRepo.getMetrics().currentSlot ?? 0;
-        const currentBlockHash = txBlock.id ?? '0';
-        const tipBlockHash = tip?.id ?? '1';
         for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
             const txBody = txBlock?.transactions?.[b];
             const txId = txBody?.id;
@@ -287,7 +282,7 @@ class OgmiosService {
         return assetNameInMintAssets;
     };
     
-    private processRollback = async (point: PointOrOrigin, tip: TipOrOrigin) => {
+    private processRollback = (point: PointOrOrigin, tip: TipOrOrigin) => {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);

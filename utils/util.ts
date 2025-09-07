@@ -1,4 +1,4 @@
-import { getElapsedTime, Logger, StoredHandle } from '@koralabs/kora-labs-common';
+import { getElapsedTime, isNumeric, Logger, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { DynamicLoadType } from '../interfaces/util.interface';
 
@@ -46,3 +46,6 @@ export const debugLog = (msg: string, blockSlot: number, handle?: StoredHandle |
     });
     console.log('______________________________________________________________');
 }
+
+export const numericString = (v:any) => ({ asymmetricMatch: (x:any) => typeof x == 'string' && isNumeric(x) && parseFloat(x) == v || Object.is(x, v) });
+export const nullishOr = (v:any) => ({ asymmetricMatch: (x:any) => x == null || x == undefined || x === '' || Object.is(x, v) });

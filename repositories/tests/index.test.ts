@@ -2,7 +2,9 @@ import * as klc from '@koralabs/kora-labs-common';
 import { HandleType, IHandleMetadata, IPersonalization, IReferenceToken, Logger } from '@koralabs/kora-labs-common';
 import { unlinkSync, writeFileSync } from 'fs';
 import * as config from '../../config';
+import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
+import { nullishOr } from '../../utils/util';
 import { HandlesRepository } from '../handlesRepository';
 import { handlesFixture } from './fixtures/handles';
 
@@ -36,8 +38,12 @@ jest.mock('proper-lockfile');
 
 jest.spyOn(config, 'isDatumEndpointEnabled').mockReturnValue(true);
 
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+let updatedTimeStamp1 = Date.now() + 100
+let updatedTimeStamp2 = Date.now() + 200
+let updatedTimeStamp3 = Date.now() + 300
+let updatedTimeStamp4 = Date.now() + 400
+for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+//for (const store of [RedisHandlesStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -132,7 +138,7 @@ for (const store of [RedisHandlesStore]) {
 
         describe('save tests', () => {
             it('Should save a new handle', async () => {
-                let handle = await repo.Internal.buildHandle({
+                let handle = repo.Internal.buildHandle({
                     hex: Buffer.from('nachos').toString('hex'),
                     name: 'nachos',
                     og_number: 0,
@@ -147,7 +153,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image_hash: '0x123',
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 });
 
                 repo.save(handle);
@@ -157,7 +163,7 @@ for (const store of [RedisHandlesStore]) {
                 // expect to get the correct handle properties
                 expect(handle).toEqual({
                     characters: 'letters',
-                    created_slot_number: 100,
+                    created_slot_number: updatedTimeStamp1,
                     default_in_wallet: 'taco',
                     hex: Buffer.from('nachos').toString('hex'),
                     holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
@@ -172,7 +178,7 @@ for (const store of [RedisHandlesStore]) {
                     svg_version: '1.0.0',
                     rarity: 'common',
                     resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
-                    updated_slot_number: 100,
+                    updated_slot_number: updatedTimeStamp1,
                     utxo: 'utxo123#0',
                     policy,
                     lovelace: 0,
@@ -204,10 +210,10 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: Buffer.from('chimichanga').toString('hex'),
                     name: 'chimichanga',
-                    updated_slot_number: 99,
+                    updated_slot_number: updatedTimeStamp1 - 1,
                     personalization: personalizationData,
                     reference_token: defaultReferenceToken,
                     policy,
@@ -235,31 +241,31 @@ for (const store of [RedisHandlesStore]) {
                 }));
 
                 let handle = repo.getHandle('chimichanga');
-                repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     utxo: 'utxo123#0',
                     image_hash: '0xtodo',
                     resolved_addresses: {ada:'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }), handle!);
 
                 handle = repo.getHandle('chimichanga');
 
                 // expect the personalization data to be added to the handle
                 expect(handle?.personalization).toEqual(personalizationData);
-
-                expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))).toEqual([
+                const res = Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))
+                expect(res).toEqual([
                     [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
                     [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
                     [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
-                    [99, { chimichanga: { new: { name: 'chimichanga' }, old: null } }],
+                    [updatedTimeStamp1 - 1, { chimichanga: { new: { name: 'chimichanga' }, old: null } }],
                     [
-                        100,
+                        updatedTimeStamp1,
                         {
                             chimichanga: {
                                 new: {
                                     resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g' },
-                                    updated_slot_number: 100,
+                                    updated_slot_number: updatedTimeStamp1,
                                     utxo: 'utxo123#0',
                                     image_hash: '0xtodo',
                                     holder: 'stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70',
@@ -275,12 +281,12 @@ for (const store of [RedisHandlesStore]) {
                                 },
                                 old: {
                                     resolved_addresses: { ada: '', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                                    updated_slot_number: 99,
+                                    updated_slot_number: updatedTimeStamp1 - 1,
                                     utxo: '',
                                     image_hash: '0x123',
                                     holder: '',
                                     holder_type: 'other',
-                                    payment_key_hash: null
+                                    payment_key_hash: nullishOr(null)
                                 }
                             }
                         }
@@ -396,7 +402,9 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                let updatedTimeStamp99 = Date.now() + 99
+
+                repo.save(repo.Internal.buildHandle({
                     hex: Buffer.from('chimichanga').toString('hex'),
                     name: 'chimichanga',
                     personalization: personalizationData,
@@ -416,7 +424,7 @@ for (const store of [RedisHandlesStore]) {
                     numeric_modifiers: '',
                     handle_type: HandleType.HANDLE,
                     version: 1,
-                    updated_slot_number: 99,
+                    updated_slot_number: updatedTimeStamp99,
                     standard_image: 'ipfs://zb2rhoQxa62DEDBMcWcsPHTpCuoC8FykX584jCXzNBGZdCH7M',
                     default: false,
                     last_update_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
@@ -429,7 +437,7 @@ for (const store of [RedisHandlesStore]) {
 
                 let handle = repo.getHandle('chimichanga');
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('chimichanga').toString('hex'),
                     name: 'chimichanga',
@@ -441,7 +449,7 @@ for (const store of [RedisHandlesStore]) {
                     version: 1,
                     policy: '6c32db33a422e0bc2cb535bb850b5a6e9a9572222056d6ddc9cbc26e',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 handle = repo.getHandle('chimichanga');
@@ -449,7 +457,7 @@ for (const store of [RedisHandlesStore]) {
                 expect(handle).toEqual({ 
                     amount: 1, 
                     characters: 'letters', 
-                    created_slot_number: 99, 
+                    created_slot_number: updatedTimeStamp99, 
                     default_in_wallet: 'taco',
                     handle_type: 'handle', 
                     has_datum: false, 
@@ -482,7 +490,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
                     image_hash: '0xf92d124059974e63560343f173a01f8096ea5f65a25983fcb335af4d56cd1368', 
                     svg_version: '3.0.14', 
-                    updated_slot_number: 100, 
+                    updated_slot_number: updatedTimeStamp1, 
                     utxo: 'utxo123#1', 
                     version: 1 
                 });
@@ -490,7 +498,7 @@ for (const store of [RedisHandlesStore]) {
 
             it('Should save an NFT Sub Handle', async () => {
                 const subHandleName = 'sub@hndl';
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: '000de14073756240686e646c',
                     name: subHandleName,
                     og_number: 0,
@@ -507,7 +515,7 @@ for (const store of [RedisHandlesStore]) {
                     sub_characters: 'letters',
                     sub_numeric_modifiers: 'numbers',
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const handle = repo.getHandle(subHandleName);
@@ -526,7 +534,7 @@ for (const store of [RedisHandlesStore]) {
                     public_mint: true
                 };
 
-                repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: '000000007669727475616c40686e646c',
                     name: handleName,
                     og_number: 0,
@@ -545,7 +553,7 @@ for (const store of [RedisHandlesStore]) {
                     virtual,
                     original_address: '0x123',
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const handle = repo.getHandle(handleName);
@@ -562,7 +570,7 @@ for (const store of [RedisHandlesStore]) {
         describe('savePersonalizationChange tests', () => {
             it('Should update personalization data', async () => {
                 let handle = repo.getHandle('nacho-cheese');
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('nacho-cheese').toString('hex'),
                     name: 'nacho-cheese',
@@ -576,7 +584,7 @@ for (const store of [RedisHandlesStore]) {
                     handle_type: HandleType.HANDLE,
                     pz_enabled: false,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }), handle!);
 
                 const personalizationUpdates: IPersonalization = {
@@ -595,7 +603,7 @@ for (const store of [RedisHandlesStore]) {
                 };
 
                 handle = repo.getHandle('nacho-cheese');
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('nacho-cheese').toString('hex'),
                     name: 'nacho-cheese',
@@ -614,7 +622,7 @@ for (const store of [RedisHandlesStore]) {
                     resolved_addresses: { ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g', btc: '2213kjsjkn', eth: 'sad2wsad' },
                     pz_enabled: false,
                     last_edited_time: 123,
-                    updated_slot_number: 200
+                    updated_slot_number: updatedTimeStamp2
                 }), handle!);
 
                 handle = repo.getHandle('nacho-cheese');
@@ -641,9 +649,9 @@ for (const store of [RedisHandlesStore]) {
                     [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
                     [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
                     [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
-                    [100, { 'nacho-cheese': { new: { name: 'nacho-cheese' }, old: null } }],
+                    [updatedTimeStamp1, { 'nacho-cheese': { new: { name: 'nacho-cheese' }, old: null } }],
                     [
-                        200,
+                        updatedTimeStamp2,
                         {
                             'nacho-cheese': {
                                 new: {
@@ -669,7 +677,7 @@ for (const store of [RedisHandlesStore]) {
                                         btc: '2213kjsjkn',
                                         eth: 'sad2wsad'
                                     },
-                                    updated_slot_number: 200,
+                                    updated_slot_number: updatedTimeStamp2,
                                     last_edited_time: 123,
                                     image: 'ipfs://1234'
                                 },
@@ -677,7 +685,7 @@ for (const store of [RedisHandlesStore]) {
                                     resolved_addresses: {
                                         ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'
                                     },
-                                    updated_slot_number: 100,
+                                    updated_slot_number: updatedTimeStamp1,
                                     image: 'ipfs://123'
                                 }
                             }
@@ -702,7 +710,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: Buffer.from('sour-cream').toString('hex'),
                     name: 'sour-cream',
                     personalization: designerUpdates,
@@ -713,7 +721,7 @@ for (const store of [RedisHandlesStore]) {
                     length: 2,
                     version: 0,
                     handle_type: HandleType.HANDLE,
-                    updated_slot_number: 200,
+                    updated_slot_number: updatedTimeStamp2,
                     pfp_image: 'todo',
                     bg_image: 'todo',
                     image_hash: '0x123',
@@ -727,7 +735,7 @@ for (const store of [RedisHandlesStore]) {
                 expect(storeInstance.getIndex(klc.IndexNames.HANDLE).get('sour-cream')).toEqual({
                     bg_image: 'todo',
                     characters: 'letters,special',
-                    created_slot_number: 200,
+                    created_slot_number: updatedTimeStamp2,
                     default_in_wallet: '',
                     last_update_address: '',
                     has_datum: false,
@@ -747,15 +755,15 @@ for (const store of [RedisHandlesStore]) {
                     pfp_image: 'todo',
                     rarity: 'basic',
                     resolved_addresses: { ada: '0xaaaa', btc: '2213kjsjkn', eth: 'sad2wsad' },
-                    updated_slot_number: 200,
+                    updated_slot_number: updatedTimeStamp2,
                     utxo: '',
                     lovelace: 0,
                     amount: 1,
                     holder_type: 'other',
                     version: 0,
                     handle_type: HandleType.HANDLE,
-                    payment_key_hash: null,
-                    drep: undefined,
+                    drep: nullishOr(null),
+                    payment_key_hash: nullishOr(null) ,
                     policy
                 });
             });
@@ -763,7 +771,7 @@ for (const store of [RedisHandlesStore]) {
             it('Should update personalization data and save the default handle', async () => {
                 const handleName = 'tortilla-soup';
                 const handleHex = Buffer.from(handleName).toString('hex');
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     og_number: 0,
@@ -775,7 +783,7 @@ for (const store of [RedisHandlesStore]) {
                     svg_version: '1.0.0',
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const personalizationUpdates: IPersonalization = {
@@ -789,7 +797,7 @@ for (const store of [RedisHandlesStore]) {
                 };
 
                 let handle = repo.getHandle(handleName);
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: handleHex,
                     name: handleName,
@@ -809,7 +817,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 200,
+                    updated_slot_number: updatedTimeStamp2,
                     default: true
                 }), handle!);
 
@@ -843,7 +851,7 @@ for (const store of [RedisHandlesStore]) {
                 const handleName = 'pork-belly';
                 const handleHex = Buffer.from(handleName).toString('hex');
                 let handle = repo.getHandle(handleName);
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: handleHex,
                     name: handleName,
@@ -857,7 +865,7 @@ for (const store of [RedisHandlesStore]) {
                     handle_type: HandleType.HANDLE,
                     pz_enabled: false,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }), handle!);
 
                 const personalizationUpdates: IPersonalization = {
@@ -877,7 +885,7 @@ for (const store of [RedisHandlesStore]) {
                 };
 
                 handle = repo.getHandle(handleName);
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: handleHex,
                     name: handleName,
@@ -897,7 +905,7 @@ for (const store of [RedisHandlesStore]) {
                     version: 0,
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 200,
+                    updated_slot_number: updatedTimeStamp2,
                     default: true
                 }), handle!);
 
@@ -914,7 +922,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: handleHex,
                     name: handleName,
@@ -934,7 +942,7 @@ for (const store of [RedisHandlesStore]) {
                     last_update_address: '0x333',
                     pz_enabled: false,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 300,
+                    updated_slot_number: updatedTimeStamp3,
                     default: true
                 }), handle!);
 
@@ -952,7 +960,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: handleHex,
                     name: handleName,
@@ -972,7 +980,7 @@ for (const store of [RedisHandlesStore]) {
                     last_update_address: '0x444',
                     pz_enabled: false,
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 400
+                    updated_slot_number: updatedTimeStamp4
                 }), handle!);
 
                 handle = repo.getHandle(handleName);
@@ -982,12 +990,12 @@ for (const store of [RedisHandlesStore]) {
                 expect(handle?.default_in_wallet).toEqual('taco');
 
                 // expect the first to be old null, meaning it was minted
-                expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[3]).toEqual([100, { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }]);
+                expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[3]).toEqual([updatedTimeStamp1, { 'pork-belly': { new: { name: 'pork-belly' }, old: null } }]);
 
                 // expect the second to have the first pz updates.
                 // personalization should be undefined because it was not set before
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[4]).toEqual([
-                    200,
+                    updatedTimeStamp2,
                     {
                         'pork-belly': {
                             new: {
@@ -1007,13 +1015,13 @@ for (const store of [RedisHandlesStore]) {
                                 },
                                 last_update_address: '0x222',
                                 reference_token: defaultReferenceToken,
-                                updated_slot_number: 200
+                                updated_slot_number: updatedTimeStamp2
                             },
                             old: {
                                 image: '',
                                 personalization: undefined,
                                 reference_token: undefined,
-                                updated_slot_number: 100
+                                updated_slot_number: updatedTimeStamp1
                             }
                         }
                     }
@@ -1021,7 +1029,7 @@ for (const store of [RedisHandlesStore]) {
 
                 // expect the third to have the second pz updates which didn't include social links
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[5]).toEqual([
-                    300,
+                    updatedTimeStamp3,
                     {
                         'pork-belly': {
                             new: {
@@ -1030,7 +1038,7 @@ for (const store of [RedisHandlesStore]) {
                                     socials: undefined
                                 },
                                 last_update_address: '0x333',
-                                updated_slot_number: 300
+                                updated_slot_number: updatedTimeStamp3
                             },
                             old: {
                                 personalization: {
@@ -1044,7 +1052,7 @@ for (const store of [RedisHandlesStore]) {
                                     nsfw: false
                                 },
                                 last_update_address: '0x222',
-                                updated_slot_number: 200
+                                updated_slot_number: updatedTimeStamp2
                             }
                         }
                     }
@@ -1052,13 +1060,13 @@ for (const store of [RedisHandlesStore]) {
 
                 // expect the fourth to have the last pz updates default handle should have been removed
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[6]).toEqual([
-                    400,
+                    updatedTimeStamp4,
                     {
                         'pork-belly': {
                             new: {
                                 personalization: { designer: { font_shadow_color: '0x111' }, validated_by: 'new' },
                                 last_update_address: '0x444',
-                                updated_slot_number: 400
+                                updated_slot_number: updatedTimeStamp4
                             },
                             old: {
                                 default: true,
@@ -1071,7 +1079,7 @@ for (const store of [RedisHandlesStore]) {
                                     trial: false
                                 },
                                 last_update_address: '0x333',
-                                updated_slot_number: 300
+                                updated_slot_number: updatedTimeStamp3
                             }
                         }
                     }
@@ -1090,7 +1098,7 @@ for (const store of [RedisHandlesStore]) {
 
                 let handle = repo.getHandle('taco');
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('taco').toString('hex'),
                     name: 'taco',
@@ -1109,7 +1117,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }), handle!);
 
                 handle = repo.getHandle('taco');
@@ -1124,7 +1132,7 @@ for (const store of [RedisHandlesStore]) {
                     trial: false,
                     nsfw: false
                 };
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('burrito').toString('hex'),
                     name: 'burrito',
@@ -1143,7 +1151,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 200
+                    updated_slot_number: updatedTimeStamp2
                 }), handle!);
 
                 handle = repo.getHandle('burrito');
@@ -1159,7 +1167,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('barbacoa').toString('hex'),
                     name: 'barbacoa',
@@ -1178,7 +1186,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 300,
+                    updated_slot_number: updatedTimeStamp3,
                     default: true
                 }), handle!);
 
@@ -1195,7 +1203,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('taco').toString('hex'),
                     name: 'taco',
@@ -1214,7 +1222,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g'},
-                    updated_slot_number: 400
+                    updated_slot_number: updatedTimeStamp4
                 }), handle!);
 
                 const tacoHandle2 = repo.getHandle('taco');
@@ -1224,7 +1232,7 @@ for (const store of [RedisHandlesStore]) {
             it('should save details for nft handle', async () => {
                 const handleName = 'nft@hndl';
                 const handleHex = Buffer.from(handleName).toString('hex');
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     og_number: 0,
@@ -1240,7 +1248,7 @@ for (const store of [RedisHandlesStore]) {
                     sub_characters: 'letters',
                     sub_numeric_modifiers: 'numbers',
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const personalizationUpdates: IPersonalization = {
@@ -1252,7 +1260,7 @@ for (const store of [RedisHandlesStore]) {
                     nsfw: false
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     personalization: personalizationUpdates,
@@ -1270,7 +1278,7 @@ for (const store of [RedisHandlesStore]) {
                     standard_image: '',
                     last_update_address: '',
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 300
+                    updated_slot_number: updatedTimeStamp3
                 }));
 
                 const nftSubHandle = repo.getHandle(handleName);
@@ -1309,7 +1317,7 @@ for (const store of [RedisHandlesStore]) {
                     sub_numeric_modifiers: 'numbers'
                 };
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     policy,
@@ -1331,16 +1339,16 @@ for (const store of [RedisHandlesStore]) {
                         public_mint: false
                     },
                     resolved_addresses: {ada: 'addr_test1qq9hgdhkephnvfvq7vfulmmez6kzhpmffqm5r3zj7sgtfe240h0h7dr4r98k6swwj3yjxz35f42spnhesexnvahmzs9qzkg9d7'},
-                    updated_slot_number: 300,
+                    updated_slot_number: updatedTimeStamp3,
                     utxo: `${defaultReferenceToken.tx_id}#${defaultReferenceToken.index}`
                 }));
 
                 const virtualSubHandle = repo.getHandle(handleName);
                 expect(virtualSubHandle?.personalization).toEqual(personalizationUpdates);
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...virtualSubHandle,
-                    updated_slot_number: 400,
+                    updated_slot_number: updatedTimeStamp4,
                     virtual: {
                         expires_time: 2,
                         public_mint: false
@@ -1354,7 +1362,7 @@ for (const store of [RedisHandlesStore]) {
 
         describe('saveSubHandleSettingsChange tests', () => {
             it('Should update SubHandle settings', async () => {
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: Buffer.from('shrimp-taco').toString('hex'),
                     name: 'shrimp-taco',
                     og_number: 0,
@@ -1366,14 +1374,14 @@ for (const store of [RedisHandlesStore]) {
                     svg_version: '1.0.0',
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const settings = 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168';
                 const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: settings, index: 0, lovelace: 1, tx_id: 'some_id' };
 
                 let handle = repo.getHandle('shrimp-taco')
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     hex: Buffer.from('shrimp-taco').toString('hex'),
                     name: 'shrimp-taco',
@@ -1382,7 +1390,7 @@ for (const store of [RedisHandlesStore]) {
                         payment_address: 'abc',
                         utxo: utxoDetails
                     },
-                    updated_slot_number: 200
+                    updated_slot_number: updatedTimeStamp2
                 }), handle!);
 
                 handle = repo.getHandle('shrimp-taco');
@@ -1395,9 +1403,9 @@ for (const store of [RedisHandlesStore]) {
                     [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
                     [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
                     [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
-                    [100, { 'shrimp-taco': { new: { name: 'shrimp-taco' }, old: null } }],
+                    [updatedTimeStamp1, { 'shrimp-taco': { new: { name: 'shrimp-taco' }, old: null } }],
                     [
-                        200,
+                        updatedTimeStamp2,
                         {
                             'shrimp-taco': {
                                 new: {
@@ -1405,10 +1413,10 @@ for (const store of [RedisHandlesStore]) {
                                         payment_address: 'abc',
                                         utxo: utxoDetails
                                     },
-                                    updated_slot_number: 200
+                                    updated_slot_number: updatedTimeStamp2
                                 },
                                 old: {
-                                    updated_slot_number: 100
+                                    updated_slot_number: updatedTimeStamp1
                                 }
                             }
                         }
@@ -1419,7 +1427,7 @@ for (const store of [RedisHandlesStore]) {
             it('Should update settings and history correctly when saving multiple times', async () => {
                 const handleName = 'halibut-taco';
                 const handleHex = Buffer.from(handleName).toString('hex');
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     og_number: 0,
@@ -1431,7 +1439,7 @@ for (const store of [RedisHandlesStore]) {
                     svg_version: '1.0.0',
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
@@ -1439,7 +1447,7 @@ for (const store of [RedisHandlesStore]) {
 
                 let handle = repo.getHandle(handleName);
                 // First settings change
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     name: handleName,
                     hex: handleHex,
@@ -1448,7 +1456,7 @@ for (const store of [RedisHandlesStore]) {
                         payment_address,
                         utxo: utxoDetails
                     },
-                    updated_slot_number: 200
+                    updated_slot_number: updatedTimeStamp2
                 }), handle!);
 
                 handle = repo.getHandle(handleName);
@@ -1458,33 +1466,33 @@ for (const store of [RedisHandlesStore]) {
                 });
 
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     name: handleName,
                     subhandle_settings: {
                         payment_address: 'def',
                         utxo: utxoDetails
                     },
-                    updated_slot_number: 300
+                    updated_slot_number: updatedTimeStamp3
                 }), handle!);
 
                 handle = repo.getHandle(handleName);
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...handle,
                     name: handleName,
                     subhandle_settings: {
                         payment_address: 'ghi',
                         utxo: utxoDetails
                     },
-                    updated_slot_number: 400
+                    updated_slot_number: updatedTimeStamp4
                 }), handle!);
 
                 // expect the first to be old null, meaning it was minted
-                expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[3]).toEqual([100, { [handleName]: { new: { name: handleName }, old: null } }]);
+                expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[3]).toEqual([updatedTimeStamp1, { [handleName]: { new: { name: handleName }, old: null } }]);
 
                 // expect the second to have the first pz updates.
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[4]).toEqual([
-                    200,
+                    updatedTimeStamp2,
                     {
                         [handleName]: {
                             new: {
@@ -1492,10 +1500,10 @@ for (const store of [RedisHandlesStore]) {
                                     payment_address,
                                     utxo: utxoDetails
                                 },
-                                updated_slot_number: 200
+                                updated_slot_number: updatedTimeStamp2
                             },
                             old: {
-                                updated_slot_number: 100
+                                updated_slot_number: updatedTimeStamp1
                             }
                         }
                     }
@@ -1503,21 +1511,21 @@ for (const store of [RedisHandlesStore]) {
 
                 // expect the third to have the second pz updates which didn't include social links
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[5]).toEqual([
-                    300,
+                    updatedTimeStamp3,
                     {
                         [handleName]: {
                             new: {
                                 subhandle_settings: {
                                     payment_address: 'def'
                                 },
-                                updated_slot_number: 300
+                                updated_slot_number: updatedTimeStamp3
                             },
                             old: {
                                 subhandle_settings: {
                                     payment_address,
                                     utxo: utxoDetails
                                 },
-                                updated_slot_number: 200
+                                updated_slot_number: updatedTimeStamp2
                             }
                         }
                     }
@@ -1525,21 +1533,21 @@ for (const store of [RedisHandlesStore]) {
 
                 // expect the third to have the second pz updates which didn't include social links
                 expect(Array.from(storeInstance.getIndex(klc.IndexNames.SLOT_HISTORY))[6]).toEqual([
-                    400,
+                    updatedTimeStamp4,
                     {
                         [handleName]: {
                             new: {
                                 subhandle_settings: {
                                     payment_address: 'ghi'
                                 },
-                                updated_slot_number: 400
+                                updated_slot_number: updatedTimeStamp4
                             },
                             old: {
                                 subhandle_settings: {
                                     utxo: utxoDetails,
                                     payment_address: 'def'
                                 },
-                                updated_slot_number: 300
+                                updated_slot_number: updatedTimeStamp3
                             }
                         }
                     }
@@ -1556,7 +1564,7 @@ for (const store of [RedisHandlesStore]) {
                 const address = 'addr_test1qqpdrn4j46emtfydwfc0j2gtw2ty0zgwtr3k0srmjg7nwy834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qept00g';
                 const newAddress = 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746';
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     hex: handleHex,
                     name: handleName,
                     og_number: 0,
@@ -1569,7 +1577,7 @@ for (const store of [RedisHandlesStore]) {
                     svg_version: '1.0.0',
                     handle_type: HandleType.HANDLE,
                     resolved_addresses: {ada: address},
-                    updated_slot_number: 100
+                    updated_slot_number: updatedTimeStamp1
                 }));
 
                 const existingHandle = repo.getHandle(handleName);
@@ -1579,7 +1587,7 @@ for (const store of [RedisHandlesStore]) {
                 const holderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get(stakeKey);
                 expect((holderAddress as klc.Holder)?.handles?.some(h => h.name == handleName)).toBeTruthy();
 
-                await repo.save(await repo.Internal.buildHandle({
+                repo.save(repo.Internal.buildHandle({
                     ...existingHandle,
                     lovelace: 10,
                     hex: handleHex,
@@ -1587,8 +1595,8 @@ for (const store of [RedisHandlesStore]) {
                     utxo: 'utxo_salsa2#0',
                     policy,
                     resolved_addresses: {ada: newAddress},
-                    updated_slot_number: 200,
-                    datum: undefined
+                    updated_slot_number: updatedTimeStamp2,
+                    datum: ''
                 }), existingHandle!);
 
                 const handle = repo.getHandle(handleName);
@@ -1617,13 +1625,14 @@ for (const store of [RedisHandlesStore]) {
                     holder_type: 'wallet',
                     version: 0,
                     handle_type: HandleType.HANDLE,
+                    datum: '',
                     default_in_wallet: 'salsa',
                     payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                 });
 
                 const newHolderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get(updatedStakeKey);
                 expect([...((newHolderAddress as klc.Holder)?.handles ?? [])]).toEqual([{
-                    "created_slot_number": 100,
+                    "created_slot_number": updatedTimeStamp1,
                     "name": "salsa",
                     "og_number": 0,
                 }]);
@@ -1637,9 +1646,9 @@ for (const store of [RedisHandlesStore]) {
                     [expect.any(Number), { barbacoa: { new: { name: 'barbacoa' }, old: null } }],
                     [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
                     [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
-                    [100, { [handleName]: { new: { name: 'salsa' }, old: null } }],
+                    [updatedTimeStamp1, { [handleName]: { new: { name: 'salsa' }, old: null } }],
                     [
-                        200,
+                        updatedTimeStamp2,
                         {
                             [handleName]: {
                                 new: {
@@ -1649,8 +1658,8 @@ for (const store of [RedisHandlesStore]) {
                                         ada: 'addr_test1qz8zyhdetz270qzfvkym38wx4wsqzx0m49urfu3wjkqsuchs8t4235v9t0x5grxm2hel388ypz0q3fng8k6am5hqzacq0fc746'
                                     },
                                     has_datum: false,
-                                    datum: undefined,
-                                    updated_slot_number: 200,
+                                    datum: '',
+                                    updated_slot_number: updatedTimeStamp2,
                                     utxo: 'utxo_salsa2#0',
                                     payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                                 },
@@ -1659,7 +1668,7 @@ for (const store of [RedisHandlesStore]) {
                                     holder: stakeKey,
                                     resolved_addresses: { ada: address },
                                     datum: 'a2datum_salsa',
-                                    updated_slot_number: 100,
+                                    updated_slot_number: updatedTimeStamp1,
                                     utxo: 'utxo_salsa1#0',
                                     has_datum: true,
                                     payment_key_hash: '02d1ceb2aeb3b5a48d7270f9290b729647890e58e367c07b923d3710'
@@ -1700,7 +1709,8 @@ for (const store of [RedisHandlesStore]) {
             it('Should burn a handle, update history and update the default handle', async () => {
                 const handleName = 'taco';
                 let handle = repo.getHandle(handleName);
-                await repo.removeHandle(handle!, 200);
+                const timestamp = Date.now() + 200
+                repo.removeHandle(handle!, timestamp);
 
                 // After burn, expect not to find the handle
                 handle = repo.getHandle(handleName);
@@ -1721,7 +1731,7 @@ for (const store of [RedisHandlesStore]) {
                     [expect.any(Number), { burrito: { new: { name: 'burrito' }, old: null } }],
                     [expect.any(Number), { taco: { new: { name: 'taco' }, old: null } }],
                     [
-                        200,
+                        timestamp,
                         {
                             [handleName]: {
                                 new: null,

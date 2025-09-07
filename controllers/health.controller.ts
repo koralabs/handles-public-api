@@ -34,7 +34,7 @@ class HealthController {
                 current_slot: currentSlot,
                 current_block_hash: currentBlockHash,
                 schema_version: schemaVersion,
-                estimated_sync_time: new Date(Date.now() + ((transpiredMs / currentSlotInRange) * (lastSlot - currentSlot))).toISOString()
+                estimated_sync_time: new Date(Date.now() + ((transpiredMs / (currentSlotInRange || 1)) * (lastSlot - currentSlot))).toISOString()
             };
 
             let status = HealthStatus.CURRENT;

@@ -1,10 +1,11 @@
 import { HandleHistory, IndexNames } from '@koralabs/kora-labs-common';
+import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 import { slotHistoryFixture } from './fixtures/handles';
 
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+for (const store of [RedisHandlesStore, HandlesMemoryStore]) {
+//for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -28,8 +29,9 @@ for (const store of [RedisHandlesStore]) {
             const history: HandleHistory = {
                 old: null
             };
-            repo.Internal.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5 });
-            expect(Array.from(storeInstance.getIndex(IndexNames.SLOT_HISTORY))).toEqual([
+            repo.Internal.saveSlotHistory({ handleHistory: history, handleName, slotNumber: 5, maxSlots: 5 });
+            const res = Array.from(storeInstance.getIndex(IndexNames.SLOT_HISTORY))
+            expect(res).toEqual([
                 [0, {}],
                 [
                     1,

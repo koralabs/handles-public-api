@@ -1,12 +1,12 @@
-import { Holder, IndexNames, StoredHandle } from '@koralabs/kora-labs-common';
+import { HandlePaginationModel, Holder, IndexNames, StoredHandle } from '@koralabs/kora-labs-common';
 import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 import { createRandomHandles, performRandomHandleUpdates } from './fixtures/handles';
 jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplementation();
 
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+//for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -14,10 +14,10 @@ for (const store of [RedisHandlesStore]) {
     
     describe('holder index integrity', () => {
         it('holder index should be accurate', async () => {
-            await createRandomHandles(1000, true);
-            await performRandomHandleUpdates(1000, 1001);
+            await createRandomHandles(storeInstance, 1000, true);
+            await performRandomHandleUpdates(storeInstance, 1000, 1001);
             const testHolderIndex = new Map<string, Holder>();
-            const handles = (repo.search().handles as StoredHandle[]).sort((a,b) => a.updated_slot_number - b.updated_slot_number)
+            const handles = (repo.search({handlesPerPage: 1000} as HandlePaginationModel).handles as StoredHandle[]).sort((a,b) => a.updated_slot_number - b.updated_slot_number)
             for (let i = 0; i<handles.length;i++) {
                 const handle = handles[i];
                 const holder = testHolderIndex.get(handle.holder);
@@ -35,7 +35,8 @@ for (const store of [RedisHandlesStore]) {
                     holder.handles.push({name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number});
                 } 
             }
-            expect(storeInstance.getIndex(IndexNames.HOLDER)).toEqual(testHolderIndex);
+            const allHolders = storeInstance.getIndex(IndexNames.HOLDER);
+            expect(allHolders).toEqual(testHolderIndex);
         });
     });
 }

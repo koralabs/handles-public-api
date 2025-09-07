@@ -1,4 +1,4 @@
-import { IApiMetricsViewModel } from '@koralabs/kora-labs-common';
+import { IApiMetrics } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
 import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
@@ -6,18 +6,16 @@ import * as ogmiosUtils from '../services/ogmios/utils';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-let percentage: string = '';
-const getStats = (): IApiMetricsViewModel => ({
-    percentage_complete: percentage,
-    current_memory_used: 0,
-    memory_size: 0,
-    ogmios_elapsed: '',
-    building_elapsed: '',
-    slot_date: new Date(),
-    handle_count: 0,
-    current_slot: 0,
-    current_block_hash: '',
-    schema_version: 1
+const getStats = (): IApiMetrics => ({
+    firstSlot: 1, 
+    lastSlot: 100, 
+    currentSlot: 50, 
+    firstMemoryUsage: 0, 
+    currentBlockHash: '', 
+    memorySize: 0, 
+    schemaVersion: 0, 
+    count: 100, 
+    startTimestamp: Date.now()
 });
 const caughtUp = jest.fn().mockReturnValue(true);
 jest.mock('../repositories/handlesRepository', () => ({
@@ -40,8 +38,7 @@ jest.mock('../repositories/handlesRepository', () => ({
             return ['burritos', 'tacos', 'barbacoa'];
         },
         getMetrics: () => {
-            const stats = getStats();
-            return stats;
+            return getStats();
         },
         currentHttpStatus: () => {
             return 200;
@@ -58,7 +55,6 @@ describe('Health Routes Test', () => {
     let app: App | null;
     beforeEach(async () => {
         app = await new App().initialize();
-        percentage = '';
     });
 
     afterEach(() => {
@@ -98,24 +94,24 @@ describe('Health Routes Test', () => {
     });
 
     describe('[GET] /health', () => {
-        it('Should return 202 and health stats even when ogmios does not connect', async () => {
+        it('Should return 503 and health stats when ogmios does not connect', async () => {
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(null);
             const response = await request(app?.getServer()).get('/health');
-            expect(response.status).toEqual(202);
+            expect(response.status).toEqual(503);
             expect(response.body).toEqual({
                 ogmios: null,
                 stats: {
-                    building_elapsed: expect.any(String),
                     current_block_hash: expect.any(String),
                     current_memory_used: expect.any(Number),
                     current_slot: expect.any(Number),
+                    estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
-                    ogmios_elapsed: expect.any(String),
-                    percentage_complete: expect.any(String),
+                    percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)
-                }
+                },
+                status: 'waiting_on_cardano_node'
             });
         });
 
@@ -130,14 +126,13 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: expect.any(Object),
                 stats: {
-                    building_elapsed: expect.any(String),
                     current_block_hash: expect.any(String),
                     current_memory_used: expect.any(Number),
                     current_slot: expect.any(Number),
+                    estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
-                    ogmios_elapsed: expect.any(String),
-                    percentage_complete: expect.any(String),
+                    percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)
                 },
@@ -146,11 +141,7 @@ describe('Health Routes Test', () => {
         });
 
         it('Should return 200 everything is caught up', async () => {
-            const ogmiosResult = getMockResponse({
-                networkSynchronization: 1
-            });
-
-            percentage = '100.00';
+            const ogmiosResult = getMockResponse({networkSynchronization: 1});
             jest.spyOn(ogmiosUtils, 'fetchHealth').mockResolvedValue(ogmiosResult);
             caughtUp.mockReturnValue(true);
             const response = await request(app?.getServer()).get('/health');
@@ -158,14 +149,13 @@ describe('Health Routes Test', () => {
             expect(response.body).toEqual({
                 ogmios: ogmiosResult,
                 stats: {
-                    building_elapsed: expect.any(String),
                     current_block_hash: expect.any(String),
                     current_memory_used: expect.any(Number),
                     current_slot: expect.any(Number),
+                    estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
-                    ogmios_elapsed: expect.any(String),
-                    percentage_complete: expect.any(String),
+                    percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)
                 },

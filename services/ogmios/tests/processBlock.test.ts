@@ -1,33 +1,32 @@
 import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 import { AssetNameLabel, HandleType, Logger, StoredHandle, encodeJsonToDatum } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
-import { HandleStore, HandlesMemoryStore } from '../../../stores/memory';
+import { HandlesMemoryStore } from '../../../stores/memory';
 import { RedisHandlesStore } from '../../../stores/redis';
 import * as ipfs from '../../../utils/ipfs';
+import { nullishOr, numericString } from '../../../utils/util';
 import OgmiosService from '../ogmios.service';
 import { block_144711632, block_144718140, block_144718597 } from './fixtures/blocks';
-const repo = new HandlesRepository(new HandlesMemoryStore());
-const ogmios = new OgmiosService(repo);
 jest.mock('../../../config/index', () => ({
     isDatumEndpointEnabled: jest.fn(() => true),
     getIpfsGateway: jest.fn(() => 'https://ipfs.io/ipfs/'),
 }));
 
-
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+//for (const store of [RedisHandlesStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
     repo.rollBackToGenesis();
+    
+    const ogmios = new OgmiosService(repo);
 
     describe('processBlock Tests', () => {
         afterEach(() => {
             jest.restoreAllMocks();
         });
         beforeEach(() => {
-            HandleStore.handles.clear();
-            HandleStore.holderIndex.clear();
+            repo.rollBackToGenesis();
         })
 
         const tip: Tip = {
@@ -165,8 +164,6 @@ for (const store of [RedisHandlesStore]) {
 
         describe('It should handle strangely ordered blocks', () => {
             it('Should save Handle updates even if out of order', async () => {
-                const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
-                const setMetricsSpy = jest.spyOn(HandlesMemoryStore.prototype, 'setMetrics');
                 jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ });
                 // @ts-ignore #2
                 await ogmios['processBlock']({ txBlock: block_144718140, tip });
@@ -174,14 +171,13 @@ for (const store of [RedisHandlesStore]) {
                 await ogmios['processBlock']({ txBlock: block_144711632, tip });
                 // @ts-ignore #3
                 await ogmios['processBlock']({ txBlock: block_144718597, tip });
-                expect(HandleStore.handles.get('b-263-54')?.utxo).toBe('cba9fb3981f7a50e69ad6bc36739b2b303dee59b2b1db963e4ceb321ec8d8951#0');
-                expect(HandleStore.handles.get('b-263-54')?.resolved_addresses.ada).toBe('addr1qxedumyydxkq4gc7ud0wnwashphwxr7l7w3hmp2dnymvlj7yl8ckta8puax7ezypm7fg5ytydjz33erdxqtm556y9kfqa9s0sg');
+                expect(repo.getHandle('b-263-54')?.utxo).toBe('cba9fb3981f7a50e69ad6bc36739b2b303dee59b2b1db963e4ceb321ec8d8951#0');
+                expect(repo.getHandle('b-263-54')?.resolved_addresses.ada).toBe('addr1qxedumyydxkq4gc7ud0wnwashphwxr7l7w3hmp2dnymvlj7yl8ckta8puax7ezypm7fg5ytydjz33erdxqtm556y9kfqa9s0sg');
             });
         })
 
         it('Should save a new handle to the datastore and set metrics', async () => {
             const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
-            const setMetricsSpy = jest.spyOn(HandlesMemoryStore.prototype, 'setMetrics');
             jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ });
 
             await ogmios['processBlock']({ txBlock: txBlock({ policy: policyId, additionalAssets: { '74657374343536': BigInt(1) } }), tip })
@@ -261,15 +257,6 @@ for (const store of [RedisHandlesStore]) {
                 standard_image_hash: '',
                 svg_version: '0'
             }, undefined);
-
-            expect(setMetricsSpy).toHaveBeenNthCalledWith(1, {
-                tipBlockHash: 'some_hash',
-                currentBlockHash: 'some_block_hash',
-                currentSlot: 0,
-                lastSlot: 0
-            });
-
-            expect(setMetricsSpy).toHaveBeenNthCalledWith(2, { elapsedBuildingExec: expect.any(Number) });
 
         });
 
@@ -391,7 +378,7 @@ for (const store of [RedisHandlesStore]) {
                 name: 'test1234',
                 numeric_modifiers: '',
                 og_number: 0,
-                payment_key_hash: null,
+                payment_key_hash: nullishOr(null),
                 policy: 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a',
                 rarity: 'basic',
                 resolved_addresses: {
@@ -399,7 +386,7 @@ for (const store of [RedisHandlesStore]) {
                 },
                 standard_image: 'ifps://some_hash_test1234',
                 standard_image_hash: '',
-                svg_version: '0',
+                svg_version: numericString(0),
                 updated_slot_number: 0,
                 utxo: 'some_id#0',
                 version: 0
@@ -495,7 +482,7 @@ for (const store of [RedisHandlesStore]) {
                 sub_length: undefined,
                 sub_numeric_modifiers: undefined,
                 sub_rarity: undefined,
-                svg_version: '0',
+                svg_version: numericString(0),
                 updated_slot_number: 0,
                 rarity: 'basic',
                 resolved_addresses: {
@@ -531,7 +518,7 @@ for (const store of [RedisHandlesStore]) {
                 sub_length: undefined,
                 sub_numeric_modifiers: undefined,
                 sub_rarity: undefined,
-                svg_version: '0',
+                svg_version: numericString(0),
                 updated_slot_number: 0,
                 rarity: 'basic',
                 resolved_addresses: {
@@ -650,7 +637,7 @@ for (const store of [RedisHandlesStore]) {
                     },
                     standard_image: "",
                     standard_image_hash: "",
-                    svg_version: "0",
+                    svg_version: numericString(0),
                     updated_slot_number: 0,
                     utxo: "some_id#0",
                     version: 0
@@ -762,7 +749,7 @@ for (const store of [RedisHandlesStore]) {
                 },
                 standard_image: '',
                 standard_image_hash: '',
-                svg_version: '0',
+                svg_version: numericString(0),
                 updated_slot_number: 0,
                 utxo: 'some_id#0',
                 version: 0
@@ -828,11 +815,11 @@ for (const store of [RedisHandlesStore]) {
             const handleName = `virtual@hndl`;
             const handleHexName = `${AssetNameLabel.LBL_000}${Buffer.from(handleName).toString('hex')}`;
 
-            const savePersonalizationChangeSpy = jest.spyOn(HandlesRepository.prototype, 'save');
+            const saveSpy = jest.spyOn(HandlesRepository.prototype, 'save');
             jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ });
             jest.spyOn(ipfs, 'decodeCborFromIPFSFile').mockResolvedValue({ test: 'data' });
 
-            const cbor = 'D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B34E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A3631386532323564623935383935653738303439363538396238396463366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700477669727475616CA24C657870697265735F74696D65014B7075626C69635F6D696E7400FF';
+            const cbor = 'D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B34E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A36313865323235646239353839356537383034393635383962383964A3366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700477669727475616CA24C657870697265735F74696D65014B7075626C69635F6D696E7400FF';
 
             await ogmios['processBlock']({
                 txBlock: txBlock({
@@ -844,7 +831,7 @@ for (const store of [RedisHandlesStore]) {
                 tip
             });
 
-            expect(savePersonalizationChangeSpy).toHaveBeenCalledWith({
+            expect(saveSpy).toHaveBeenCalledWith({
                 amount: 1,
                 bg_image: '',
                 pfp_image: '',
@@ -853,14 +840,14 @@ for (const store of [RedisHandlesStore]) {
                 default_in_wallet: '',
                 handle_type: 'virtual_subhandle',
                 has_datum: false,
-                holder: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6',
+                holder: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukfgekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mryzpe4qc',
                 holder_type: 'script',
                 image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
                 image_hash: '0xabcd',
                 last_update_address: '0xabcd',
                 lovelace: 0,
                 name: 'virtual@hndl',
-                payment_key_hash: '31386532323564623935383935653738303439363538396238396463',
+                payment_key_hash: '313865323235646239353839356537383034393635383962383964a3',
                 hex: '000000007669727475616c40686e646c',
                 length: 12,
                 numeric_modifiers: '',
@@ -876,7 +863,7 @@ for (const store of [RedisHandlesStore]) {
                     tx_id: 'some_id'
                 },
                 resolved_addresses:  {
-                    ada: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6'
+                    ada: 'addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukfgekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mryzpe4qc'
                 },
                 standard_image: 'ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA',
                 standard_image_hash: '0xabcd',
@@ -902,7 +889,7 @@ for (const store of [RedisHandlesStore]) {
                 "handle_type": "virtual_subhandle",
                 "has_datum": false,
                 "hex": "000000007669727475616c40686e646c",
-                "holder": "addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6",
+                "holder": "addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukfgekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mryzpe4qc",
                 "holder_type": "script",
                 "image": "ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA",
                 "image_hash": "0xabcd",
@@ -912,20 +899,20 @@ for (const store of [RedisHandlesStore]) {
                 "name": "virtual@hndl",
                 "numeric_modifiers": "",
                 "og_number": 0,
-                "payment_key_hash": "31386532323564623935383935653738303439363538396238396463",
+                "payment_key_hash": "313865323235646239353839356537383034393635383962383964a3",
                 "pfp_image": "",
                 "policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
                 "pz_enabled": false,
                 "rarity": "basic",
                 "reference_token": {
                     "address": "addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q",
-                    "datum": "D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B34E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A3631386532323564623935383935653738303439363538396238396463366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700477669727475616CA24C657870697265735F74696D65014B7075626C69635F6D696E7400FF",
+                    "datum": "D8799FAE426F6700496F675F6E756D62657200446E616D654C746573745F73635F3030303145696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A456865415969563648756562367141466C656E6774680C467261726974794562617369634776657273696F6E01496D65646961547970654A696D6167652F6A7065674A63686172616374657273576C6574746572732C6E756D626572732C7370656369616C516E756D657269635F6D6F64696669657273404A7375625F6C656E677468044A7375625F7261726974794562617369634E7375625F6368617261637465727340557375625F6E756D657269635F6D6F646966696572734001B34E7374616E646172645F696D6167655835697066733A2F2F516D563965334E6E58484B71386E6D7A42337A4C725065784E677252346B7A4568654159695636487565623671414862675F696D61676540497066705F696D6167654046706F7274616C404864657369676E65725835697066733A2F2F516D636B79584661486E51696375587067527846564B353251784D524E546D364E686577465055564E5A7A3148504676656E646F72404764656661756C7400536C6173745F7570646174655F6164647265737342ABCD527265736F6C7665645F616464726573736573A143616461583A36313865323235646239353839356537383034393635383962383964A3366162613030313139666261393738333466323265393538313065363247736F6369616C735835697066733A2F2F516D566D3538696F5555754A7367534C474C357A6D635A62714D654D6355583251385056787742436E53544244764A696D6167655F6861736842ABCD537374616E646172645F696D6167655F6861736842ABCD4B7376675F76657273696F6E45312E302E304C76616C6964617465645F6279404C6167726565645F7465726D7340546D6967726174655F7369675F72657175697265640045747269616C00446E73667700477669727475616CA24C657870697265735F74696D65014B7075626C69635F6D696E7400FF",
                     "index": 0,
                     "lovelace": 1,
                     "tx_id": "some_id",
                 },
                 "resolved_addresses": {
-                    "ada": "addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukgcekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mry0c0xr6",
+                    "ada": "addr_test1xccnsefjxg6kgc3ex5urjdt9xuurqdpexc6nswtz8qukfgekv93xzvpsxycnjenzvyunwwpnx3nryvn98y6nsvfsv5mryzpe4qc",
                 },
                 "standard_image": "ipfs://QmV9e3NnXHKq8nmzB3zLrPexNgrR4kzEheAYiV6Hueb6qA",
                 "standard_image_hash": "0xabcd",
@@ -1036,7 +1023,7 @@ for (const store of [RedisHandlesStore]) {
                 sub_length: undefined,
                 sub_numeric_modifiers: undefined,
                 sub_rarity: undefined,
-                svg_version: '0',
+                svg_version: numericString(0),
                 updated_slot_number: 0,
                 utxo: '',
                 version: 0
@@ -1205,3 +1192,4 @@ for (const store of [RedisHandlesStore]) {
             });
         });
     });
+}

@@ -1,4 +1,4 @@
-import { ApiIndexType, asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, asyncForEach, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, LogCategory, Logger, mapStringifyReplacer, SortAndLimitOptions, StoredHandle } from '@koralabs/kora-labs-common';
 import fs from 'fs';
 import { promisify } from 'util';
 import { Worker } from 'worker_threads';
@@ -10,9 +10,11 @@ import { memoryWatcher } from '../../services/ogmios/utils';
 export class HandleStore {
     public static handles = new Map<string, StoredHandle>();
     public static slotHistoryIndex = new Map<number, ISlotHistory>();
+    public static slotIndex = new Map<number, Set<string>>();
     public static holderIndex = new Map<string, Holder>();
     public static subHandlesIndex = new Map<string, Set<string>>();
     public static rarityIndex = new Map<string, Set<string>>();
+    public static typeIndex = new Map<string, Set<string>>();
     public static ogIndex = new Map<string, Set<string>>();
     public static charactersIndex = new Map<string, Set<string>>();
     public static paymentKeyHashesIndex = new Map<string, Set<string>>();
@@ -24,7 +26,6 @@ export class HandleStore {
 
 export class HandlesMemoryStore implements IApiStore {
     private storageFolder = process.env.HANDLES_STORAGE || `${process.cwd()}/handles`;
-    private _storageSchemaVersion = 48;
     intervals: NodeJS.Timeout[] = [];
     private _files: IHandleFileContent[] | null = null;
 
@@ -74,7 +75,7 @@ export class HandlesMemoryStore implements IApiStore {
                 this.intervals = [saveFilesInterval, setMemoryInterval];
             }
             this._files = await this._getFilesContent();
-            this.setMetrics({schemaVersion: this._storageSchemaVersion});
+            this.setMetrics({schemaVersion: this.getSchemaVersion()});
         }
         return this;
     }
@@ -95,7 +96,19 @@ export class HandlesMemoryStore implements IApiStore {
         return this.convertIndexNameToIndex(indexName)!;
     }
 
-    public getKeysFromIndex(indexName: IndexNames) {
+    public getKeysFromIndex(indexName: IndexNames, options?: SortAndLimitOptions): (string | number)[] {
+        if (indexName.startsWith('slot')) {
+            const desc = options?.orderBy?.toUpperCase() == 'DESC';
+            const start = (desc ? options?.end : options?.start) ?? 0
+            const end = (desc ? options?.start : options?.end) ?? 0
+            let items: [number,string][] = []
+            this.convertIndexNameToIndex(indexName).forEach((v, k) => (k as number >= start && k as number <= end) ? items.push([k as number, v as string]) : undefined);
+            items.sort(([k1], [k2]) => k1 - k2);
+            if (desc) {
+                items.reverse();
+            }
+            return items.map(([,v]) => v)
+        }
         return this.convertIndexNameToIndex(indexName)!.keys().toArray();
     }
 
@@ -118,8 +131,16 @@ export class HandlesMemoryStore implements IApiStore {
     }
 
     public removeKeyFromIndex(indexName: IndexNames, key: string | number): void {
+        if (indexName == IndexNames.SLOT_HISTORY) {
+            for (const k of HandleStore.slotHistoryIndex.keys()) {
+                if ((k as number) < (key as number))
+                    HandleStore.slotHistoryIndex.delete(k);
+                else     
+                    return;
+            }     
+            return;
+        }
         this.convertIndexNameToIndex(indexName)?.delete(key);
-
     }
 
     public getMetrics(): IApiMetrics {
@@ -157,6 +178,10 @@ export class HandlesMemoryStore implements IApiStore {
                 return HandleStore.holderIndex
             case IndexNames.SLOT_HISTORY:
                 return HandleStore.slotHistoryIndex
+            case IndexNames.HANDLE_TYPE:
+                return HandleStore.typeIndex
+            case IndexNames.SLOT:
+                return HandleStore.slotIndex
             default:
                 return new Map<string, Set<string>>()
         }
@@ -457,7 +482,6 @@ export class HandlesMemoryStore implements IApiStore {
     Internal = {
         saveHandlesFile: this._saveHandlesFile.bind(this),
         getFile: this._getFile.bind(this),
-        storageSchemaVersion: this._storageSchemaVersion,
         getFileOnline: this._getFileOnline.bind(this),
         getFilesContent: this._getFilesContent.bind(this)
     }

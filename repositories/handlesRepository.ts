@@ -405,9 +405,12 @@ export class HandlesRepository {
         if (!holder.handles.some(h => h.name == handle.name)) {
             holder.handles.push(holderHandle);
         }
+        
+        handle.holder = address;
+        handle.holder_type = holder.type;
 
         // if by this point, we have no handles, we need to remove the holder address from the index
-        if (holder.handles.length === 0) {
+        if (holder.handles.length == 0) {
             this.store.removeKeyFromIndex(IndexNames.HOLDER, address);
             return {newDefault, oldDefault};
         }
@@ -447,12 +450,10 @@ export class HandlesRepository {
         holder.defaultHandle = (() => {
             if (handle.default) {return handle.name}
             else {
-                if (holder.manuallySet) return holder.defaultHandle; 
-                else return this.getDefaultHandle([holderHandle, ...holder.handles])?.name ?? ''}
+                if (holder.manuallySet) return holder.defaultHandle;
+                else return this.getDefaultHandle([holderHandle, ...holder.handles.filter(Boolean)])?.name ?? ''}
         })();
 
-        handle.holder = address;
-        handle.holder_type = holder.type;
         newDefault = handle.default;
         delete handle.default; // This is a temp property not meant to save to the handle
 
@@ -527,10 +528,9 @@ export class HandlesRepository {
         }
     }
 
-    public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }): { name: string; action: string; handle: Partial<StoredHandle> | undefined }[] {
+    public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }) {
         // first we need to order the historyIndex desc by slot
         const orderedHistoryIndex = [...this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
-        const rewoundHandles: { name: string, action: string, handle: Partial<StoredHandle> | undefined }[] = [];
 
         // iterate through history starting with the most recent up to the slot we want to rewind to.
         for (const item of orderedHistoryIndex) {
@@ -552,8 +552,7 @@ export class HandlesRepository {
                 const existingHandle = this.getHandle(name);
                 if (!existingHandle) {
                     if (handleHistory.old) {
-                        rewoundHandles.push({ name, action: 'create', handle: handleHistory.old });
-                        this.save(new RewoundHandle(handleHistory.old as StoredHandle));
+                        this.save(new RewoundHandle({...handleHistory.old, name} as StoredHandle));
                         continue;
                     }
                     continue;
@@ -562,7 +561,6 @@ export class HandlesRepository {
                 if (handleHistory.old === null) {
                     // if the old value is null, then the handle was deleted
                     // so we need to remove it from the indexes
-                    rewoundHandles.push({ name, action: 'delete', handle: undefined });
                     this.removeHandle(new RewoundHandle(existingHandle), this.getMetrics().currentSlot ?? 0);
                     continue;
                 }
@@ -573,14 +571,12 @@ export class HandlesRepository {
                     ...(handleHistory as HandleHistory).old
                 };
 
-                rewoundHandles.push({ name, action: 'update', handle: updatedHandle });
                 this.save(new RewoundHandle(updatedHandle), existingHandle);
             }
 
             // delete the slot key since we are rolling back to it
             this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slotKey);
         }
-        return rewoundHandles;
     }
     
     public async processScannedHandleInfo(scannedHandleInfo: ScannedHandleInfo): Promise<void> {

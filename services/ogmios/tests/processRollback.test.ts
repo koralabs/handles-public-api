@@ -5,14 +5,16 @@ import OgmiosService from '../ogmios.service';
 
 const ogmios = new OgmiosService(new HandlesRepository(new HandlesMemoryStore()));
 
-//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-for (const store of [RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
     repo.rollBackToGenesis();
 
     describe('processRollback', () => {
+        beforeEach(() => {
+            jest.clearAllMocks()
+        })
         it('should apply previous changes to handle', () => {
             const rewindSpy = jest.spyOn(HandlesRepository.prototype, 'rewindChangesToSlot');
             const rollbackSlot = 1234;
@@ -24,7 +26,7 @@ for (const store of [RedisHandlesStore]) {
         });
 
         it('should rollback to genesis if point is origin', () => {
-            const rollbackSpy = jest.spyOn(HandlesMemoryStore.prototype, 'rollBackToGenesis');
+            const rollbackSpy = jest.spyOn(HandlesRepository.prototype, 'rollBackToGenesis');
             ogmios['processRollback']('origin', 'origin');
 
             expect(rollbackSpy).toHaveBeenCalledTimes(1);
