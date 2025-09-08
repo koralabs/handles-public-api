@@ -135,9 +135,10 @@ export class RedisHandlesStore implements IApiStore {
         if (index == IndexNames.SLOT_HISTORY) {
             return this.parseSlotHistory(this.redisClientCall('zrangeWithScores', `{root}:${index}`, { start: 0, end: -1 }));
         }
-        if (options?.isAlpha == undefined)
+        const command = options ? 'sort' : 'smembers'
+        if (options && options?.isAlpha == undefined)
             options = {...options, isAlpha: true}
-        const keys = this.redisClientCall('sort', `{root}:${index}`, options as SortOptions);
+        const keys = this.redisClientCall(command, `{root}:${index}`, options);
         const values: Map<string | number, ApiIndexType> = new Map<string | number, ApiIndexType>();
         for (const key of keys) {
             const value = this.getValueFromIndex(index, key);
@@ -157,7 +158,10 @@ export class RedisHandlesStore implements IApiStore {
                         {reverse: options?.orderBy?.toUpperCase() == 'DESC'}
                     )].map(v => isNumeric(v.toString()) ? Number(v.toString()) : v.toString());
         }
-        return [...this.redisClientCall('sort', `{root}:${index}`, {...options, isAlpha: true} as SortOptions)]
+        const command = options ? 'sort' : 'smembers'
+        if (options && options?.isAlpha == undefined)
+            options = {...options, isAlpha: true}
+        return [...this.redisClientCall(command, `{root}:${index}`, options)]
             .map(v => isNumeric(v.toString()) && index != IndexNames.HANDLE ? Number(v.toString()) : v.toString())
     }
 
@@ -202,9 +206,10 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region SET INDEXES ************************
     public getValuesFromIndexedSet(index: IndexNames, key: string | number, options?: SortAndLimitOptions): Set<string> | undefined {
-        if (options?.isAlpha == undefined)
+        const command = options ? 'sort' : 'smembers'
+        if (options && options?.isAlpha == undefined)
             options = {...options, isAlpha: true}
-        return new Set([...this.redisClientCall('smembers', `{root}:${index}:${key}`, options as SortOptions)].map(v => v.toString()))
+        return new Set([...this.redisClientCall(command, `{root}:${index}:${key}`, options)].map(v => v.toString()))
     }
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
