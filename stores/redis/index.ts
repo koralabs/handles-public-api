@@ -4,10 +4,8 @@ import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NODE_ENV } from '../../config';
-import { handleEraBoundaries } from '../../config/constants';
+import { handleEraBoundaries, META_INDEXES } from '../../config/constants';
 import { RewoundHandle } from '../../repositories/handlesRepository';
-
-const INDEXES_IGNORE_ROOT = [IndexNames.ADDRESS, IndexNames.HASH_OF_STAKE_KEY_HASH, IndexNames.PAYMENT_KEY_HASH, IndexNames.SLOT, IndexNames.SLOT_HISTORY]
 
 // const glideClient = await GlideClient.createClient({
 //       addresses: [{ host: 'https://localhost', port: 6379 }],
@@ -26,15 +24,10 @@ export class RedisHandlesStore implements IApiStore {
     // #region SETUP **************************
     public async initialize(): Promise<IApiStore> {
         if (!RedisHandlesStore._worker) {
-            const { port1, port2 } = new MessageChannel();
-            const worker = new Worker('./workers/redisSync.worker.js', {
-                workerData: { port: port2 },
-                //@ts-ignore
-                transferList: [port2]
-            });
+            const worker = new Worker('./workers/redisSync.worker.js');
             worker.on('error', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Error" }));
             worker.on('exit', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Exit" }));
-            RedisHandlesStore._worker = { worker, port: port1 };
+            RedisHandlesStore._worker = worker;
         }
         //const interval = setInterval(() => {console.log('TIMINGS', JSON.stringify(Object.entries(redisTimings).sort((a, b) => b[1] - a[1])))}, 10_000)
         return this;
@@ -72,7 +65,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public rollBackToGenesis(): void {
-        Logger.log({ message: 'Rolling back to genesis', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
+        Logger.log({ message: 'Calling FLUSHDB', category: LogCategory.INFO, event: 'this.rollBackToGenesis' });
         // Clear all redis cache
         this.redisClientCall('flushdb');
         RedisHandlesStore._pipeline = undefined;
@@ -187,7 +180,7 @@ export class RedisHandlesStore implements IApiStore {
             return;
         }
         this.saveObjectToCache(`{root}:${index}:${key}`, value)
-        if (!INDEXES_IGNORE_ROOT.includes(index))
+        if (META_INDEXES.includes(index))
             this.redisClientCall('sadd', `{root}:${index}`, [key]);
     }
 
@@ -216,14 +209,14 @@ export class RedisHandlesStore implements IApiStore {
 
     public addValueToIndexedSet(index: IndexNames, key: string | number, value: string): void {
         this.redisClientCall('sadd', `{root}:${index}:${key}`, [value]);
-        if (!INDEXES_IGNORE_ROOT.includes(index))
+        if (META_INDEXES.includes(index))
             this.redisClientCall('sadd', `{root}:${index}`, [key]);
     }
 
     public removeValueFromIndexedSet(index: IndexNames, key: string | number, value: string): void {
         if (key != null) {
             this.redisClientCall('srem', `{root}:${index}:${key}`, [value]);
-            if (!INDEXES_IGNORE_ROOT.includes(index)) {
+            if (META_INDEXES.includes(index)) {
                 const count = this.redisClientCall('scard', `{root}:${index}:${key}`) as number;
                 if ((RedisHandlesStore._pipeline && count == 1) || !count)
                     this.redisClientCall('srem', `{root}:${index}`, [key]);
@@ -236,7 +229,8 @@ export class RedisHandlesStore implements IApiStore {
     // #region METRICS *****************************
     public getMetrics(): IApiMetrics {
         const metrics = this.rehydrateObjectFromCache("metrics") || {} as IApiMetrics;
-        metrics.count = this.count();
+        metrics.handleCount = this.count();
+        metrics.holderCount = this.holderCount();
         return metrics;
     }
 
@@ -247,6 +241,10 @@ export class RedisHandlesStore implements IApiStore {
 
     public count(): number {
         return this.redisClientCall('scard', `{root}:${IndexNames.HANDLE}`);
+    }
+
+    public holderCount(): number {
+        return this.redisClientCall('scard', `{root}:${IndexNames.HOLDER}`);
     }
 
     public getSchemaVersion(): number {
@@ -325,7 +323,8 @@ export class RedisHandlesStore implements IApiStore {
         const sab = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
         const view = new Int32Array(sab);
 
-        RedisHandlesStore._worker.worker.postMessage({ id, sab, payload: { id, cmd, args } });
+        const { port1, port2 } = new MessageChannel();
+        RedisHandlesStore._worker.postMessage({ id, sab, payload: { id, cmd, args }, reply: port2 }, [port2]);
 
         // Block up to 30s so we don't hang forever
         const status = Atomics.wait(view, 0, 0, 30_000);
@@ -333,7 +332,8 @@ export class RedisHandlesStore implements IApiStore {
             throw new Error(`GlideClient ${cmd} timed out`);
         }
 
-        const msg = receiveMessageOnPort(RedisHandlesStore._worker.port);
+        const msg = receiveMessageOnPort(port1);
+        port1.close()
         
         const end = Date.now();
         redisTimings[cmd] = (redisTimings[cmd] ?? 0) + (end - start);

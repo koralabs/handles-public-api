@@ -3,6 +3,7 @@ import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderI
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
+import { HASHES, MAX_HASHES_PER_PIPE, MAX_SETS_PER_PIPE, MAX_ZSETS_PER_PIPE, SETS, ZSETS } from '../config/constants';
 import { BuildPersonalizationInput, ScannedHandleInfo } from '../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { decodeCborFromIPFSFile } from '../utils/ipfs';
@@ -172,11 +173,11 @@ export class HandlesRepository {
         }
 
         if (pagination?.slotNumber) {
-            const {firstSlot, lastSlot, count} = this.store.getMetrics();
+            const {firstSlot, lastSlot, handleCount} = this.store.getMetrics();
             const handleNamesInSlotRage: string[] = [];
             let result: string[] = [];
             let iterations = 0;
-            while (handleNamesInSlotRage.length < count! && handleNamesInSlotRage.length < (pagination?.handlesPerPage || 100)) {
+            while (handleNamesInSlotRage.length < handleCount! && handleNamesInSlotRage.length < (pagination?.handlesPerPage || 100)) {
                 iterations++;
                 let options;
                 // Get an arbitrary range of slots (slotNumber + magicSlotsRange)
@@ -784,6 +785,63 @@ export class HandlesRepository {
     
     public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<Point | null> {
         return this.store.getStartingPoint(save , failed);
+    }
+
+    public bulkLoad(scanningRepo: HandlesRepository) {
+        if (this.store.constructor.name == 'HandlesMemoryStore')
+            return;
+
+        this.store.rollBackToGenesis();
+
+        for (const indexName of HASHES) {
+            const index = scanningRepo.store.getIndex(indexName);
+            let counter = 0;
+            const indexSize = index.size;
+            const keys = index.keys().toArray()
+            const values = index.values().toArray()
+            while (counter < indexSize) {
+                this.store.pipeline(() => {
+                    while (counter < indexSize && (counter + 1) % MAX_HASHES_PER_PIPE != 0) {
+                        this.store.setValueOnIndex(indexName, keys[counter], values[counter]);
+                        counter++
+                    }
+                });
+            }
+        }
+
+        for (const indexName of SETS) {
+            const index = scanningRepo.store.getIndex(indexName);
+            let counter = 0;
+            const indexSize = index.size;
+            const keys = index.keys().toArray()
+            const values = index.values().toArray()
+            while (counter < indexSize) {
+                this.store.pipeline(() => {
+                    while (counter < indexSize && (counter + 1) % MAX_SETS_PER_PIPE != 0) {
+                        this.store.addValueToIndexedSet(indexName, keys[counter], values[counter] as string);
+                        counter++
+                    }
+                });
+            }
+        }
+
+        for (const indexName of ZSETS) {
+            const index = scanningRepo.store.getIndex(indexName);
+            let counter = 0;
+            const indexSize = index.size;
+            const keys = index.keys().toArray()
+            const values = index.values().toArray()
+            while (counter < indexSize) {
+                this.store.pipeline(() => {
+                    while (counter < indexSize && (counter + 1) % MAX_ZSETS_PER_PIPE != 0) {
+                        this.store.setValueOnIndex(indexName, keys[counter], values[counter]);
+                        counter++
+                    }
+                });
+            }
+        }
+
+        this.store.setMetrics(scanningRepo.getMetrics());
     }
 
     private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {

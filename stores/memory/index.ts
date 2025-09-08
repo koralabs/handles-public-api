@@ -144,7 +144,7 @@ export class HandlesMemoryStore implements IApiStore {
     }
 
     public getMetrics(): IApiMetrics {
-        HandlesMemoryStore.metrics.count = HandleStore.handles.size;
+        HandlesMemoryStore.metrics.handleCount = HandleStore.handles.size;
         return HandlesMemoryStore.metrics;
     }
 

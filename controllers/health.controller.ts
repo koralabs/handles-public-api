@@ -4,6 +4,7 @@ import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { fetchHealth } from '../services/ogmios/utils';
+import { HandlesMemoryStore } from '../stores/memory';
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -15,21 +16,26 @@ enum HealthStatus {
 class HealthController {
     public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
-            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0, startTimestamp = 0 } = handleRepo.getMetrics();
+            let handleRepo: HandlesRepository;
+            if (process.env.READ_ONLY_STORE == 'true')
+                handleRepo = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            else
+                handleRepo = new HandlesRepository(new HandlesMemoryStore());
+            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, handleCount = 0, holderCount = 0, startTimestamp = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
             const currentSlotInRange = currentSlot - firstSlot;
             const transpiredMs = Date.now() - startTimestamp;
             const percentageComplete = ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
             const currentMemoryUsage = process.memoryUsage().rss;
-            const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
+            const indexMemorySize = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
             const slotDate = getDateStringFromSlot(currentSlot);
     
             const stats = {
                 percentage_complete: percentageComplete ? Number(percentageComplete) : 0,
-                current_memory_used: currentMemoryUsed,
+                index_memory_size: indexMemorySize,
                 slot_date: slotDate,
-                handle_count: count,
+                handle_count: handleCount,
+                holder_count: holderCount,
                 memory_size: memorySize,
                 current_slot: currentSlot,
                 current_block_hash: currentBlockHash,

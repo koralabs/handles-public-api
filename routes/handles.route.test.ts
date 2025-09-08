@@ -228,7 +228,8 @@ jest.mock('../repositories/handlesRepository', () => ({
                 tipBlockHash: '',
                 memorySize: 0,
                 networkSync: 0,
-                count: 0,
+                handleCount: 0,
+                holderCount: 0,
                 schemaVersion: 0
             }
         }

@@ -47,5 +47,6 @@ export const debugLog = (msg: string, blockSlot: number, handle?: StoredHandle |
     console.log('______________________________________________________________');
 }
 
+// JEST CUSTOM MATCHERS
 export const numericString = (v:any) => ({ asymmetricMatch: (x:any) => typeof x == 'string' && isNumeric(x) && parseFloat(x) == v || Object.is(x, v) });
 export const nullishOr = (v:any) => ({ asymmetricMatch: (x:any) => x == null || x == undefined || x === '' || Object.is(x, v) });

@@ -14,7 +14,7 @@ const getStats = (): IApiMetrics => ({
     currentBlockHash: '', 
     memorySize: 0, 
     schemaVersion: 0, 
-    count: 100, 
+    handleCount: 100, 
     startTimestamp: Date.now()
 });
 const caughtUp = jest.fn().mockReturnValue(true);
@@ -102,11 +102,12 @@ describe('Health Routes Test', () => {
                 ogmios: null,
                 stats: {
                     current_block_hash: expect.any(String),
-                    current_memory_used: expect.any(Number),
+                    index_memory_size: expect.any(Number),
                     current_slot: expect.any(Number),
                     estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
+                    holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)
@@ -127,11 +128,12 @@ describe('Health Routes Test', () => {
                 ogmios: expect.any(Object),
                 stats: {
                     current_block_hash: expect.any(String),
-                    current_memory_used: expect.any(Number),
+                    index_memory_size: expect.any(Number),
                     current_slot: expect.any(Number),
                     estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
+                    holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)
@@ -150,11 +152,12 @@ describe('Health Routes Test', () => {
                 ogmios: ogmiosResult,
                 stats: {
                     current_block_hash: expect.any(String),
-                    current_memory_used: expect.any(Number),
+                    index_memory_size: expect.any(Number),
                     current_slot: expect.any(Number),
                     estimated_sync_time: expect.any(String),
                     memory_size: expect.any(Number),
                     handle_count: expect.any(Number),
+                    holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
                     schema_version: expect.any(Number)

@@ -1,6 +1,6 @@
 import { Logger, REDIS_HOST } from '@koralabs/kora-labs-common';
 import { Batch, GlideClient } from '@valkey/valkey-glide';
-import { parentPort, workerData } from 'node:worker_threads';
+import { parentPort } from 'node:worker_threads';
 
 let glideClient;
 
@@ -20,7 +20,7 @@ async function getClient() {
 }
 
 parentPort.on('message', async (m) => {
-  const { id, sab, payload } = m;
+  const { id, sab, payload, reply } = m;
   const view = new Int32Array(sab);
   try {
     //logKeyRequest('handle:', payload); // What is getting passed in?
@@ -30,7 +30,7 @@ parentPort.on('message', async (m) => {
         await client.close();
         glideClient = undefined;
         const result = 'closed';
-        await workerData.port.postMessage({ id, ok: true, result });
+        await reply.postMessage({ id, ok: true, result });
         break;
       }
       case 'batch': {
@@ -41,21 +41,22 @@ parentPort.on('message', async (m) => {
           pipeline[cmd](...args)
         }
         const result = await client.exec(pipeline, true, {timeout: 10_000})
-        workerData.port.postMessage({ id, ok: true, result });
+        reply.postMessage({ id, ok: true, result });
         break;
       }
       default: {
         //console.log('VALKEY', payload.cmd, payload.args);
         const result = await client[payload.cmd](...payload.args)
-        workerData.port.postMessage({ id, ok: true, result });
+        reply.postMessage({ id, ok: true, result });
         break;
       }
     }
     //logKeyResult('handle:', payload, result) // What is the result from Valkey?
   } catch (e) {
     const message = `ERROR WITH PAYLOAD: ${JSON.stringify(payload)} | ERROR: ${JSON.stringify(e)} | STACK: ${e?.stack}`;
-    workerData.port.postMessage({ id, ok: false, error: { message, stack: e?.stack } });
+    reply.postMessage({ id, ok: false, error: { message, stack: e?.stack } });
   } finally {
+    reply.close();
     Atomics.store(view, 0, 1);
     Atomics.notify(view, 0, 1);
   }

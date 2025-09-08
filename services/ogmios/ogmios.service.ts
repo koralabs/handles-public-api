@@ -4,31 +4,34 @@ import fastq from 'fastq';
 import * as url from 'url';
 import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
-import { handleEraBoundaries } from '../../config/constants';
+import { ACCEPTABLE_TIP_PROXIMITY, handleEraBoundaries, ScanningMode } from '../../config/constants';
 import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from '../../interfaces/ogmios.interfaces';
 import { HandlesRepository } from '../../repositories/handlesRepository';
+import { HandlesMemoryStore } from '../../stores/memory';
 import { getHandleNameFromAssetName } from './utils';
 
-let startOgmiosExec = 0;
+let firstBlockProcessed = false;
 
 class OgmiosService {
-    private startTime: number;
     private firstMemoryUsage: number;
     private handlesRepo: HandlesRepository;
+    private scanningRepo: HandlesRepository;
+    private scanningMode = ScanningMode.BACKFILL;
     client?: WebSocket;
     processBlockCallback?: (block: NextBlockResponse) => Promise<void>;
 
     constructor(handlesRepo: HandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
+        this.scanningRepo = new HandlesRepository(new HandlesMemoryStore());
         this.handlesRepo = handlesRepo;
-        this.startTime = Date.now();
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.processBlockCallback = processBlockCallback;
     }
 
     public async initialize(reset: () => Promise<void>, load: () => Promise<void>) {
+        await this.scanningRepo.initialize();
         await this.handlesRepo.initialize();
 
-        this.handlesRepo.setMetrics({
+        this.scanningRepo.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
             currentBlockHash: handleEraBoundaries[process.env.NETWORK ?? 'preview'].id,
             firstSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
@@ -37,7 +40,7 @@ class OgmiosService {
         });
 
         // attempt ogmios resume (see if starting point exists or errors)
-        const firstStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save.bind(this.handlesRepo));
+        const firstStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.save.bind(this.scanningRepo));
         // const firstStartingPoint = {id: 'eca47c4fb9ca7f8eb2c524b975da3db1d05ced0a9ef0c4ee2c40c4cf2fcb3ea5', slot: 134281477} as Point
 
         // eslint-disable-next-line no-constant-condition
@@ -58,10 +61,10 @@ class OgmiosService {
                         break;
                     } catch (error: any) {
                         Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
-                        const secondStartingPoint = await this.handlesRepo.getStartingPoint(this.handlesRepo.save, true);
+                        const secondStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.save, true);
                         // If error, try the other file's starting point
                         if (error.code === 1000) {
-                            this.handlesRepo.destroy();
+                            this.scanningRepo.destroy();
                             if (secondStartingPoint) {
                                 try {
                                     await load();
@@ -120,25 +123,35 @@ class OgmiosService {
                             }
                             case 'forward': {
                                 try {
-                                    // finish timer for ogmios rollForward
-                                    const ogmiosExecFinished = startOgmiosExec === 0 ? 0 : Date.now() - startOgmiosExec;
                                     const result = response.result as RollForward;
                                     
                                     if (result.block.type !== 'praos')
                                         throw new Error(`Block type ${result.block.type} is not supported`);
 
                                     const block = result.block as BlockPraos
-                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });                                    
-                                    
-                                    this.handlesRepo.setMetrics({
+
+                                    if (!firstBlockProcessed) {
+                                        firstBlockProcessed = true;
+                                        if (block.slot >= result.tip.slot - ACCEPTABLE_TIP_PROXIMITY)
+                                            this.scanningMode = ScanningMode.TIP
+                                    }
+                                    if (this.scanningMode == ScanningMode.BACKFILL && block.slot == result.tip.slot) {
+                                        this.handlesRepo.bulkLoad(this.scanningRepo);
+                                        this.scanningMode = ScanningMode.TIP;
+                                    }
+
+                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });    
+                                                                    
+                                    const metrics = {
                                         currentSlot: block.slot,
                                         currentBlockHash: block.id,
                                         tipBlockHash: result.tip.id,
                                         lastSlot: result.tip.slot
-                                    });
-                           
-                                    // start timer for ogmios rollForward
-                                    startOgmiosExec = Date.now();
+                                    }
+                                    
+                                    this.scanningRepo.setMetrics(metrics);
+                                    if (this.scanningMode == ScanningMode.TIP)
+                                        this.handlesRepo.setMetrics(metrics);
                                 }
                                 catch (error: any) {
                                     Logger.log({
@@ -171,10 +184,8 @@ class OgmiosService {
         while (this.client!.readyState != WebSocket.OPEN) {
             await delay(250);
         }
-        
-        Logger.log(`Starting index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
-
-        this.handlesRepo.setMetrics({ firstSlot: handleEraBoundaries[NETWORK].slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
+        Logger.log(`Resuming index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
+        this.scanningRepo.setMetrics({ firstSlot: handleEraBoundaries[NETWORK].slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
         this._rpcRequest('findIntersection', { points: startingPoint.slot == 0 ? ['origin'] : [startingPoint] }, 'find-intersection');
     }
 
@@ -183,7 +194,7 @@ class OgmiosService {
     }
 
     private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
-        const currentSlot = txBlock?.slot ?? this.handlesRepo.getMetrics().currentSlot ?? 0;
+        const currentSlot = txBlock?.slot ?? this.scanningRepo.getMetrics().currentSlot ?? 0;
         for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
             const txBody = txBlock?.transactions?.[b];
             const txId = txBody?.id;
@@ -199,9 +210,9 @@ class OgmiosService {
                         if (quantity == BigInt(-1)) {
                             const { name, isCip67 } = getHandleNameFromAssetName(assetName);
                             if (!isCip67 || assetName.startsWith(AssetNameLabel.LBL_222) || assetName.startsWith(AssetNameLabel.LBL_000)) {
-                                const handle = this.handlesRepo.getHandle(name);
+                                const handle = this.scanningRepo.getHandle(name);
                                 if (!handle) continue;
-                                this.handlesRepo.removeHandle(handle, currentSlot);
+                                this.scanningRepo.removeHandle(handle, currentSlot);
                             }
                         }
                     }
@@ -260,7 +271,9 @@ class OgmiosService {
                             isMintTx
                         };
 
-                        await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo)
+                        await this.scanningRepo.processScannedHandleInfo(scannedHandleInfo)
+                        if (this.scanningMode == ScanningMode.TIP)
+                            await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo)
                     }
                 }
             }
@@ -286,7 +299,11 @@ class OgmiosService {
         if (point === 'origin') {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
-            this.handlesRepo.rollBackToGenesis();
+            this.scanningRepo.rollBackToGenesis();
+            if (this.scanningMode == ScanningMode.TIP) {
+                this.handlesRepo.rollBackToGenesis();
+                this.scanningMode = ScanningMode.BACKFILL;
+            }
         } else {
             const { slot, id } = point;
             let lastSlot = 0;
@@ -295,7 +312,9 @@ class OgmiosService {
             }
 
             // The idea here is we need to rollback all changes from a given slot
-            this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            this.scanningRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            if (this.scanningMode == ScanningMode.TIP)
+                this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
 }

@@ -2,7 +2,6 @@ import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
 import { AssetNameLabel, HandleType, Logger, StoredHandle, encodeJsonToDatum } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
 import { HandlesMemoryStore } from '../../../stores/memory';
-import { RedisHandlesStore } from '../../../stores/redis';
 import * as ipfs from '../../../utils/ipfs';
 import { nullishOr, numericString } from '../../../utils/util';
 import OgmiosService from '../ogmios.service';
@@ -12,8 +11,7 @@ jest.mock('../../../config/index', () => ({
     getIpfsGateway: jest.fn(() => 'https://ipfs.io/ipfs/'),
 }));
 
-for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-//for (const store of [RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();

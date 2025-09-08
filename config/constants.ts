@@ -1,4 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
+import { IndexNames } from '@koralabs/kora-labs-common';
 
 export interface EraBoundaries {
     [network: string]: Point;
@@ -22,3 +23,29 @@ export const handleEraBoundaries: EraBoundaries = {
         id: '82e74d8a1fe161fa9f601548c4440df9b3b7151e85a94a571ee4731c79868446'
     }
 };
+
+export const SETS = [IndexNames.ADDRESS,
+    IndexNames.CHARACTER,
+    IndexNames.HASH_OF_STAKE_KEY_HASH,
+    IndexNames.PAYMENT_KEY_HASH,
+    IndexNames.LENGTH,
+    IndexNames.NUMERIC_MODIFIER,
+    IndexNames.OG,
+    IndexNames.PERSONALIZED,
+    IndexNames.RARITY,
+    IndexNames.SUBHANDLE,
+    IndexNames.HANDLE_TYPE,
+
+]
+export const HASHES = [IndexNames.HANDLE, IndexNames.HOLDER]
+export const ZSETS = [IndexNames.SLOT, IndexNames.SLOT_HISTORY]
+export const META_INDEXES = [IndexNames.HANDLE, IndexNames.HOLDER, IndexNames.SUBHANDLE]
+export const MAX_SETS_PER_PIPE = 20_000;
+export const MAX_ZSETS_PER_PIPE = 5_000;
+export const MAX_HASHES_PER_PIPE = 5_000;
+export const ACCEPTABLE_TIP_PROXIMITY = 1200; // ~20 mins (memory store writes a file every 10 mins + 10 mins to restart)
+
+export const enum ScanningMode {
+    BACKFILL,
+    TIP
+}
