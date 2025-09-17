@@ -97,19 +97,23 @@ export class HandlesMemoryStore implements IApiStore {
     }
 
     public getKeysFromIndex(indexName: IndexNames, options?: SortAndLimitOptions): (string | number)[] {
-        if (indexName.startsWith('slot')) {
-            const desc = options?.orderBy?.toUpperCase() == 'DESC';
-            const start = (desc ? options?.end : options?.start) ?? 0
-            const end = (desc ? options?.start : options?.end) ?? 0
-            let items: [number,string][] = []
-            this.convertIndexNameToIndex(indexName).forEach((v, k) => (k as number >= start && k as number <= end) ? items.push([k as number, v as string]) : undefined);
-            items.sort(([k1], [k2]) => k1 - k2);
-            if (desc) {
-                items.reverse();
-            }
-            return items.map(([,v]) => v)
+        if (indexName == IndexNames.HOLDER) {
+            // This logic sort of sucks when using the HandlesMemoryStore as we already 
+            // have what we need right here when this function gets called from the repo
+            // We do it so it is congruent with the RedisHandlesStore
+            let items = [...HandleStore.holderIndex].sort((a, b) => a[1].handles.length - b[1].handles.length);
+            if ((options?.orderBy ?? "ASC").toUpperCase() == "ASC")
+                return items.slice(options?.start ?? 0, options?.end ?? Infinity).map(i => i[0]);
+            else
+                return items.reverse().slice(options?.end ?? Infinity, options?.start ?? 0).map(i => i[0]);
         }
-        return this.convertIndexNameToIndex(indexName)!.keys().toArray();
+            
+        let items = this.convertIndexNameToIndex(indexName)!.keys().toArray();
+        if (!options)
+            return items;
+        if (options.start || options.end)
+            items = items.filter((i) => (i as number) >= (options.start ?? 0) && (i as number) <= (options.end ?? Infinity))
+        return items;
     }
 
     public getValuesFromIndexedSet(indexName: IndexNames, key: string | number): Set<string> | undefined {
@@ -135,16 +139,39 @@ export class HandlesMemoryStore implements IApiStore {
             for (const k of HandleStore.slotHistoryIndex.keys()) {
                 if ((k as number) < (key as number))
                     HandleStore.slotHistoryIndex.delete(k);
-                else     
-                    return;
             }     
             return;
         }
         this.convertIndexNameToIndex(indexName)?.delete(key);
     }
 
+    public getValuesFromOrderedSet(index: IndexNames, ordinal: number, options?: SortAndLimitOptions): ApiIndexType[] | undefined {
+        if (index == IndexNames.SLOT_HISTORY)
+            return [this.getValueFromIndex(index, ordinal) as ApiIndexType];
+        
+        const desc = options?.orderBy?.toUpperCase() == 'DESC';
+        const start = (desc ? options?.end : options?.start) ?? -Infinity
+        const end = (desc ? options?.start : options?.end) ?? Infinity
+        let items: [number,string][] = []
+        this.convertIndexNameToIndex(index).forEach((v, k) => (k as number >= start && k as number <= end) ? items.push([k as number, v as string]) : undefined);
+        items.sort(([k1], [k2]) => k1 - k2);
+        if (desc) {
+            items.reverse();
+        }
+        return items.map(([,v]) => v)
+    }
+
+    public addValueToOrderedSet(index: IndexNames, ordinal: number, value: string | ISlotHistory): void {
+        this.setValueOnIndex(index, ordinal, value);
+    }
+
+    public removeValuesFromOrderedSet(index: IndexNames, keyOrOrdinal: string | number): void {
+        this.removeKeyFromIndex(index, keyOrOrdinal);
+    }
+
     public getMetrics(): IApiMetrics {
         HandlesMemoryStore.metrics.handleCount = HandleStore.handles.size;
+        HandlesMemoryStore.metrics.holderCount = HandleStore.holderIndex.size;
         return HandlesMemoryStore.metrics;
     }
 
@@ -449,8 +476,8 @@ export class HandlesMemoryStore implements IApiStore {
 
     private async prepareHandlesStorage(save: (handle: StoredHandle) => void, filesContent: IHandleFileContent): Promise<void> {
         const startTime = Date.now()
-        Logger.log('Preparing handles storage. Parsing file content...');
         const { handles, slot, hash, history } = filesContent;
+        Logger.log(`Loading ${handles.length} Handles from file into store at slot ${slot} and hash ${hash}...`);
         // this.setMetrics({ currentSlot: slot, currentBlockHash: hash })
 
         // save all the individual handles to the store
@@ -461,7 +488,7 @@ export class HandlesMemoryStore implements IApiStore {
         // save the slot history to the store
         HandleStore.slotHistoryIndex = new Map(history);
 
-        Logger.log(`Handle storage context parsed in ${(Date.now() - startTime)/1000}s at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
+        Logger.log(`Handle store loaded from snapshot in ${(Date.now() - startTime)/1000}s`);
     }
 
     private eraseStorage() {

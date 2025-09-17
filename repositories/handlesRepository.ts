@@ -1,5 +1,5 @@
 import { Point } from '@cardano-ogmios/schema';
-import { AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -203,7 +203,7 @@ export class HandlesRepository {
                         orderBy: 'DESC' as Sort
                     }
                 }
-                result = this.store.getKeysFromIndex(IndexNames.SLOT, options) as string[]
+                result = this.store.getValuesFromOrderedSet(IndexNames.SLOT, 0, options) as string[]
                 handleNamesInSlotRage.push(...result.filter(h => handleNames?.includes(h as string)) as string[]);
             }
             handleNames = handleNamesInSlotRage;
@@ -275,25 +275,34 @@ export class HandlesRepository {
     }
 
     public getAllHolders(params: { pagination: HolderPaginationModel; }): HolderViewModel[] {
-        const { page, sort, recordsPerPage } = params.pagination;
-        const items: HolderViewModel[] = [];
-        (this.store.getIndex(IndexNames.HOLDER) as Map<string, Holder>).forEach((holder, key) => {
+        const pagination = params.pagination;
+        const startRecord = (pagination.page - 1) * pagination.recordsPerPage
+        const holderAddresses = this.store.getKeysFromIndex(IndexNames.HOLDER,
+            { limit: { offset: startRecord, count: startRecord + pagination.recordsPerPage}, orderBy: pagination.sort }
+        ) as string[];
+        const holders: HolderViewModel[] = [];
+
+        const items: Holder[] = (this.store.pipeline(() => {
+            const storedHolders = [];
+            for (const h of holderAddresses) {
+                storedHolders.push(this.store.getValueFromIndex(IndexNames.HOLDER, h) as Holder);
+            }
+            return storedHolders;
+        }) as Holder[]);
+        
+        items.forEach((holder, key) => {
             if (holder) {
                 const { handles, defaultHandle, manuallySet, type, knownOwnerName } = holder;
-                items.push({
+                holders.push({
                     total_handles: handles?.length ?? 0,
-                    default_handle: defaultHandle,
+                    default_handle: `${defaultHandle}`,
                     manually_set: manuallySet,
-                    address: key,
+                    address: holderAddresses[key],
                     known_owner_name: knownOwnerName,
                     type
                 });
             }
         });
-
-        items.sort((a, b) => (sort === 'desc' ? b.total_handles - a.total_handles : a.total_handles - b.total_handles));
-        const startIndex = (page - 1) * recordsPerPage;
-        const holders = items.slice(startIndex, startIndex + recordsPerPage);
 
         return holders;
     }
@@ -379,6 +388,7 @@ export class HandlesRepository {
                 this.store.pipeline(() => {
                     if (Object.keys(oldHolder.handles).length === 0) {
                         this.store.removeKeyFromIndex(IndexNames.HOLDER, oldHolderInfo.address);
+                        
                     } else {
                         oldHolder.manuallySet = oldHolder.manuallySet && oldHolder.defaultHandle != oldHandle.name;
                         oldHolder.defaultHandle = oldHolder.manuallySet ? oldHolder.defaultHandle : this.getDefaultHandle(oldHolder.handles)?.name ?? '';
@@ -576,7 +586,7 @@ export class HandlesRepository {
             }
 
             // delete the slot key since we are rolling back to it
-            this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, slotKey);
+            this.store.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, slotKey);
         }
     }
     
@@ -732,14 +742,14 @@ export class HandlesRepository {
             this.store.removeValueFromIndexedSet(IndexNames.PERSONALIZED, Number(!personalized), name);
             this.store.removeValueFromIndexedSet(IndexNames.ADDRESS, oldHandle?.resolved_addresses.ada!, name); 
             this.store.removeValueFromIndexedSet(IndexNames.PAYMENT_KEY_HASH, old_payment_key_hash, name);
-            this.store.removeKeyFromIndex(IndexNames.SLOT, updated_slot_number);
+            this.store.removeValuesFromOrderedSet(IndexNames.SLOT, updated_slot_number);
             
             // add the new
             this.store.addValueToIndexedSet(IndexNames.PERSONALIZED, Number(personalized), name);
             this.store.addValueToIndexedSet(IndexNames.OG, Number(ogFlag), name);
             this.store.addValueToIndexedSet(IndexNames.ADDRESS, ada, name);
             this.store.addValueToIndexedSet(IndexNames.PAYMENT_KEY_HASH, payment_key_hash, name);
-            this.store.setValueOnIndex(IndexNames.SLOT, updated_slot_number, name);
+            this.store.addValueToOrderedSet(IndexNames.SLOT, updated_slot_number, name);
 
         });
         if (!(handle instanceof RewoundHandle)) {
@@ -787,6 +797,25 @@ export class HandlesRepository {
         return this.store.getStartingPoint(save , failed);
     }
 
+    private _runBulkLoadBatching(indexName: string, index: Map<string | number, ApiIndexType>, max: number, repoCall: CallableFunction) {
+            let counter = 0;
+            const indexSize = index.size;
+            const keys = index.keys().toArray()
+            const values = index.values().toArray()
+            while (counter < indexSize) {
+                //console.log(`BULK_LOADING: ${indexName} - ${indexSize} records. Current count: ${counter}. Max: ${max}`)
+                let batch = 0;
+                this.store.pipeline(() => {
+                    while (counter < indexSize && batch < max) {
+                        repoCall(indexName, keys[counter], values[counter]);
+                        counter++
+                        batch++;
+                    }
+                });
+            }
+
+    }
+
     public bulkLoad(scanningRepo: HandlesRepository) {
         if (this.store.constructor.name == 'HandlesMemoryStore')
             return;
@@ -794,51 +823,15 @@ export class HandlesRepository {
         this.store.rollBackToGenesis();
 
         for (const indexName of HASHES) {
-            const index = scanningRepo.store.getIndex(indexName);
-            let counter = 0;
-            const indexSize = index.size;
-            const keys = index.keys().toArray()
-            const values = index.values().toArray()
-            while (counter < indexSize) {
-                this.store.pipeline(() => {
-                    while (counter < indexSize && (counter + 1) % MAX_HASHES_PER_PIPE != 0) {
-                        this.store.setValueOnIndex(indexName, keys[counter], values[counter]);
-                        counter++
-                    }
-                });
-            }
+            this._runBulkLoadBatching(indexName, scanningRepo.store.getIndex(indexName), MAX_HASHES_PER_PIPE, this.store.setValueOnIndex.bind(this.store))
         }
 
         for (const indexName of SETS) {
-            const index = scanningRepo.store.getIndex(indexName);
-            let counter = 0;
-            const indexSize = index.size;
-            const keys = index.keys().toArray()
-            const values = index.values().toArray()
-            while (counter < indexSize) {
-                this.store.pipeline(() => {
-                    while (counter < indexSize && (counter + 1) % MAX_SETS_PER_PIPE != 0) {
-                        this.store.addValueToIndexedSet(indexName, keys[counter], values[counter] as string);
-                        counter++
-                    }
-                });
-            }
+            this._runBulkLoadBatching(indexName, scanningRepo.store.getIndex(indexName), MAX_SETS_PER_PIPE, this.store.addValueToIndexedSet.bind(this.store))
         }
 
         for (const indexName of ZSETS) {
-            const index = scanningRepo.store.getIndex(indexName);
-            let counter = 0;
-            const indexSize = index.size;
-            const keys = index.keys().toArray()
-            const values = index.values().toArray()
-            while (counter < indexSize) {
-                this.store.pipeline(() => {
-                    while (counter < indexSize && (counter + 1) % MAX_ZSETS_PER_PIPE != 0) {
-                        this.store.setValueOnIndex(indexName, keys[counter], values[counter]);
-                        counter++
-                    }
-                });
-            }
+            this._runBulkLoadBatching(indexName, scanningRepo.store.getIndex(indexName), MAX_ZSETS_PER_PIPE, this.store.setValueOnIndex.bind(this.store))
         }
 
         this.store.setMetrics(scanningRepo.getMetrics());
@@ -1124,7 +1117,7 @@ export class HandlesRepository {
     };
 
     private _saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = TWELVE_HOURS_IN_SLOTS }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
-        let slotHistory = this.store.getValueFromIndex(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory;
+        let slotHistory = (this.store.getValuesFromOrderedSet(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory[])[0];
         if (!slotHistory) {
             slotHistory = {
                 [handleName]: handleHistory
@@ -1134,9 +1127,9 @@ export class HandlesRepository {
         }
 
         const oldestSlot = slotNumber - maxSlots;
-        this.store.removeKeyFromIndex(IndexNames.SLOT_HISTORY, oldestSlot);
+        this.store.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, oldestSlot);
 
-        this.store.setValueOnIndex(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
+        this.store.addValueToOrderedSet(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
     }
 
     private _parseSubHandleSettingsDatum(datum: string) {

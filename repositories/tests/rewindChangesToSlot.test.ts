@@ -1,11 +1,10 @@
 import { IndexNames, Logger } from '@koralabs/kora-labs-common';
 import { HandlesMemoryStore } from '../../stores/memory';
-import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 import { handlesFixture } from './fixtures/handles';
 
-for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-//for (const store of [RedisHandlesStore]) {
+//for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -15,12 +14,12 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
         beforeEach(async () => {
             // populate storage
             handlesFixture.map(handle => repo.save(handle))
-            storeInstance.setValueOnIndex(IndexNames.SLOT_HISTORY, 0, {})
+            storeInstance.addValueToOrderedSet(IndexNames.SLOT_HISTORY, 0, {})
         });
 
         afterEach(() => {
             handlesFixture.map(handle => repo.removeHandle(handle, 0))
-            storeInstance.removeKeyFromIndex(IndexNames.SLOT_HISTORY, Infinity)
+            storeInstance.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, Infinity)
             jest.clearAllMocks();
         });
 

@@ -1,9 +1,9 @@
-import { HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
+import { HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import * as config from '../../config';
 import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
-import { handlesFixture, holdersFixture } from './fixtures/handles';
+import { handlesFixture } from './fixtures/handles';
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
 jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplementation();
@@ -11,7 +11,7 @@ jest.spyOn(HandlesMemoryStore.prototype, 'initialize').mockImplementation();
 const firstSlot = Date.now();
 
 for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
-//for (const store of [RedisHandlesStore]) {
+//for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -66,6 +66,9 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
         };
 
         beforeAll(async () => {
+        });
+
+        beforeEach(() => {
             handlesFixture.map((handle) => {
                 return repo.save(handle);
             });
@@ -74,9 +77,6 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                 lastSlot: Date.now() + 10000,
                 firstSlot
             })
-        });
-
-        beforeEach(() => {
             jest.clearAllMocks();
         });
 
@@ -230,28 +230,20 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
             });
         });
 
+        /* 
+        * IF YOU RUN THIS ONE BY ITSELF IT WORKS! ¯\_(ツ)_/¯
+        */
         describe('getAllHolders', () => {
             it('should get holderAddress list', async () => {
-                const mockHandleStore = store as unknown as { holderIndex: Map<string, Holder> };
-                mockHandleStore.holderIndex = holdersFixture;
-                jest.spyOn(store.prototype, 'getIndex').mockReturnValue(mockHandleStore.holderIndex);
                 const result = repo.getAllHolders({ pagination: new HolderPaginationModel() });
                 expect(result).toEqual([
                     {
-                        total_handles: 2,
-                        default_handle: 'tacos',
+                        address: "stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70",
+                        default_handle: "taco",
+                        known_owner_name: "",
                         manually_set: false,
-                        address: 'addr2',
-                        known_owner_name: '',
-                        type: 'wallet'
-                    },
-                    {
-                        total_handles: 1,
-                        default_handle: 'burritos',
-                        manually_set: false,
-                        address: 'addr1',
-                        known_owner_name: 'funnable.token',
-                        type: 'script'
+                        total_handles: 4,
+                        type: "wallet",
                     }
                 ]);
             });

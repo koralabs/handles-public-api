@@ -5,7 +5,7 @@ import { HandlesRepository } from '../handlesRepository';
 import { slotHistoryFixture } from './fixtures/handles';
 
 for (const store of [RedisHandlesStore, HandlesMemoryStore]) {
-//for (const store of [HandlesMemoryStore]) {
+//for (const store of [RedisHandlesStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
     repo.initialize();
@@ -15,12 +15,12 @@ for (const store of [RedisHandlesStore, HandlesMemoryStore]) {
         beforeEach(() => {
             // set the slotHistoryIndex
             for(const [slot, history] of slotHistoryFixture) {
-                storeInstance.setValueOnIndex(IndexNames.SLOT_HISTORY, slot, history)
+                storeInstance.addValueToOrderedSet(IndexNames.SLOT_HISTORY, slot, history)
             }
         });
 
         afterEach(() => {
-            storeInstance.removeKeyFromIndex(IndexNames.SLOT_HISTORY, Infinity)
+            storeInstance.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, Infinity)
             jest.clearAllMocks();
         });
 

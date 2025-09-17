@@ -1,13 +1,14 @@
 import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
 import { AssetNameLabel, checkNameLabel, delay, getDateStringFromSlot, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
+import fs from 'fs';
 import * as url from 'url';
 import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
 import { ACCEPTABLE_TIP_PROXIMITY, handleEraBoundaries, ScanningMode } from '../../config/constants';
 import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from '../../interfaces/ogmios.interfaces';
 import { HandlesRepository } from '../../repositories/handlesRepository';
-import { HandlesMemoryStore } from '../../stores/memory';
+import { HandlesMemoryStore, HandleStore } from '../../stores/memory';
 import { getHandleNameFromAssetName } from './utils';
 
 let firstBlockProcessed = false;
@@ -132,8 +133,12 @@ class OgmiosService {
 
                                     if (!firstBlockProcessed) {
                                         firstBlockProcessed = true;
-                                        if (block.slot >= result.tip.slot - ACCEPTABLE_TIP_PROXIMITY)
-                                            this.scanningMode = ScanningMode.TIP
+                                        if (block.slot >= result.tip.slot - ACCEPTABLE_TIP_PROXIMITY) {
+                                            if ((this.handlesRepo.getMetrics().currentSlot ?? 0) >= block.slot) {
+                                                Logger.log('Starting in TIP mode')
+                                                this.scanningMode = ScanningMode.TIP
+                                            }
+                                        }
                                     }
                                     if (this.scanningMode == ScanningMode.BACKFILL && block.slot == result.tip.slot) {
                                         this.handlesRepo.bulkLoad(this.scanningRepo);
@@ -159,6 +164,7 @@ class OgmiosService {
                                         category: LogCategory.NOTIFY,
                                         event: 'OgmiosService.processBlock'
                                     });
+                                    fs.writeFileSync('wtf.json', JSON.stringify(HandleStore.slotHistoryIndex))
                                     //process.exit(1);
                                 }
                             }

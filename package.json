@@ -11,7 +11,7 @@
   "scripts": {
     "start": "(export NODE_ENV=development; export NETWORK=preview; export ENABLE_DATUM_ENDPOINT=true; cd dist && node express.js)",
     "stop:forever": "forever stop express.js",
-    "start:forever": "mkdir -p forever && forever -p ./forever --minUptime 1 start express.js",
+    "start:forever": "mkdir -p forever && NODE_OPTIONS='--max-old-space-size=12288' forever -p ./forever --minUptime 1 start express.js",
     "start:ogmios": "chmod +x ./shell/start_local.sh && ./shell/start_local.sh",
     "copy-dist-files": "mkdir -p dist && cp rollup.package.json dist/package.json && cp docs/swagger.yml dist/swagger.yml && cp ./shell/setup_env.sh dist/setup_env.sh",
     "build:ec2": "npm run copy-dist-files && (cd dist && npm install && chmod +x ./setup_env.sh && ./setup_env.sh) && npm exec -c 'rollup -c rollup.ec2.config.js'",
@@ -21,14 +21,14 @@
     "dev:mainnet": "(export NODE_ENV=development; export NETWORK=mainnet; npm run start:ogmios && nodemon)",
     "dev:preprod": "(export NODE_ENV=development; export NETWORK=preprod; npm run start:ogmios && nodemon)",
     "dev:preview": "(export NODE_ENV=development; export NETWORK=preview; npm run start:ogmios && nodemon)",
-    "test": "chmod +x ./shell/local_valkey.sh && ./shell/local_valkey.sh && jest --forceExit --coverage --runInBand",
+    "test": "chmod +x ./shell/local_valkey.sh && ./shell/local_valkey.sh && (export NETWORK=preview; jest --forceExit --coverage --runInBand)",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext=.js,.ts --fix --max-warnings=0 .",
     "build:no-emit": "tsc --noEmit"
   },
   "dependencies": {
     "@cardano-ogmios/client": "^6.11.0",
     "@cardano-ogmios/schema": "^6.11.0",
-    "@koralabs/kora-labs-common": "6.3.4",
+    "@koralabs/kora-labs-common": "6.3.9",
     "@valkey/valkey-glide": "^2.0.1",
     "@vendia/serverless-express": "^4.12.6",
     "bech32": "^2.0.0",

@@ -59,7 +59,8 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
             address: ''
         };
         beforeEach(async () => {
-            repo.setMetrics({ currentSlot: 1, lastSlot: 2 });
+            const mostRecentSlot = handlesFixture.reduce((slot, h) => Math.max(slot, h.updated_slot_number), 0)
+            repo.setMetrics({ currentSlot: mostRecentSlot, lastSlot: mostRecentSlot + 1 });
             // populate storage
             for (const key in handlesFixture) {
                 const handle = handlesFixture[key];
@@ -76,7 +77,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
             for (const handle of handles) {            
                 repo.removeHandle(repo.getHandle(handle)!, 0);
             }
-            storeInstance.removeKeyFromIndex(klc.IndexNames.SLOT_HISTORY, Infinity);
+            storeInstance.removeValuesFromOrderedSet(klc.IndexNames.SLOT_HISTORY, Infinity);
             jest.clearAllMocks();
         });
 
@@ -829,7 +830,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                 expect(handle?.personalization).toEqual(personalizationUpdates);
 
                 // Expect the handles array to have the new handle with defaultHandle and manuallySet true
-                const holderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70');
+                const holderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER, {}).get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70');
                 expect(holderAddress).toEqual(
                     expect.objectContaining({
                         defaultHandle: 'tortilla-soup',
@@ -1584,7 +1585,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                 expect(existingHandle?.resolved_addresses.ada).toEqual(address);
                 expect(existingHandle?.holder).toEqual(stakeKey);
 
-                const holderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get(stakeKey);
+                const holderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER, {}).get(stakeKey);
                 expect((holderAddress as klc.Holder)?.handles?.some(h => h.name == handleName)).toBeTruthy();
 
                 repo.save(repo.Internal.buildHandle({
@@ -1630,7 +1631,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                     payment_key_hash: '8e225db95895e780496589b89dc6aba00119fba97834f22e95810e62'
                 });
 
-                const newHolderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get(updatedStakeKey);
+                const newHolderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER, {}).get(updatedStakeKey);
                 expect([...((newHolderAddress as klc.Holder)?.handles ?? [])]).toEqual([{
                     "created_slot_number": updatedTimeStamp1,
                     "name": "salsa",
@@ -1638,7 +1639,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                 }]);
 
                 // expect the handle to be removed from the old holder
-                const updatedHolderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER).get(stakeKey);
+                const updatedHolderAddress = storeInstance.getIndex(klc.IndexNames.HOLDER, {}).get(stakeKey);
                 expect((updatedHolderAddress as klc.Holder)?.handles?.some(h => h.name == handleName)).toBeFalsy();
 
                 // expect to get the correct slot history with all new handles
@@ -1717,7 +1718,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                 expect(handle).toEqual(null);
 
                 // Once a handle is burned, expect it to be removed from the holderIndex and a NEW defaultHandle set
-                expect(storeInstance.getIndex(klc.IndexNames.HOLDER).get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70')).toEqual({
+                expect(storeInstance.getIndex(klc.IndexNames.HOLDER, {}).get('stake_test1urc63cmezfacz9vrqu867axmqrvgp4zsyllxzud3k6danjsn0dn70')).toEqual({
                     defaultHandle: 'burrito',
                     handles: [{name: 'barbacoa', og_number: 0, created_slot_number: expect.any(Number)}, {name: 'burrito', og_number: 0, created_slot_number: expect.any(Number)}],
                     knownOwnerName: '',

@@ -35,7 +35,13 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                     holder.handles.push({name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number});
                 } 
             }
-            const allHolders = storeInstance.getIndex(IndexNames.HOLDER);
+            const holdersList = storeInstance.getKeysFromIndex(IndexNames.HOLDER) as string[];
+            const allHolders = new Map();
+            holdersList.forEach((h) => {
+                const holder = storeInstance.getValueFromIndex(IndexNames.HOLDER, h) as Holder;
+                holder.defaultHandle = `${holder.defaultHandle}`
+                allHolders.set(h, holder)
+            });
             expect(allHolders).toEqual(testHolderIndex);
         });
     });
