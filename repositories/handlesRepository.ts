@@ -800,8 +800,8 @@ export class HandlesRepository {
     private _runBulkLoadBatching(indexName: string, index: Map<string | number, ApiIndexType>, max: number, repoCall: CallableFunction) {
             let counter = 0;
             const indexSize = index.size;
-            const keys = index.keys().toArray()
-            const values = index.values().toArray()
+            const keys = Array.from(index.keys());
+            const values = Array.from(index.values());
             while (counter < indexSize) {
                 //console.log(`BULK_LOADING: ${indexName} - ${indexSize} records. Current count: ${counter}. Max: ${max}`)
                 let batch = 0;

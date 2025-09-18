@@ -215,12 +215,12 @@ export class RedisHandlesStore implements IApiStore {
                 this.redisClientCall('zrangeWithScores', `{root}:${index}`, {type: 'byScore', start: { value: ordinal }, end: { value: ordinal }})
             ).values().toArray();
         }
-        console.log('OPTIONS', options);
+        const reverse = options?.orderBy?.toUpperCase() == 'DESC'
         return [...this.redisClientCall(
             'zrange', 
             `{root}:${index}`, 
-            {...options, type: 'byScore', start: { value: options?.start ?? -Infinity }, end: { value: options?.end ?? Infinity }} as SortOptions, 
-            {reverse: options?.orderBy?.toUpperCase() == 'DESC'}
+            {...options, type: 'byScore', start: { value: options?.start ?? (reverse ? Infinity : -Infinity) }, end: { value: options?.end ?? (reverse ? -Infinity : Infinity) }} as SortOptions, 
+            {reverse}
         )].map(v => isNumeric(v.toString()) ? Number(v.toString()) : v.toString());
     }
 
