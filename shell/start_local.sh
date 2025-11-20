@@ -26,6 +26,7 @@ if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
     echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
     unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
+    mkdir -p  $HOME/.local/bin
     cp ./ogmios-install/bin/ogmios $HOME/.local/bin/ogmios && chmod +x $HOME/.local/bin/ogmios && rm -rf ./ogmios-install
 fi
 
