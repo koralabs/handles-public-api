@@ -46,7 +46,7 @@ done
 
 if ! pgrep -x "valkey-server" > /dev/null
 then
-    if [ grep -q "ID=amzn" /etc/os-release ] || [ "$(printf '%s\n' 24.04 "$(lsb_release -rs)" | sort -V | head -n1)" = "24.04" ]
+    if grep -q "ID=amzn" /etc/os-release || [ "$(printf '%s\n' 24.04 "$(lsb_release -rs)" | sort -V | head -n1)" = "24.04" ]
     then
         echo "Starting Valkey - connecting to 6379"
         sudo apt install valkey
