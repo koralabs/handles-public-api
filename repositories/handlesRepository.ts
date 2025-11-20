@@ -798,22 +798,21 @@ export class HandlesRepository {
     }
 
     private _runBulkLoadBatching(indexName: string, index: Map<string | number, ApiIndexType>, max: number, repoCall: CallableFunction) {
-            let counter = 0;
-            const indexSize = index.size;
-            const keys = Array.from(index.keys());
-            const values = Array.from(index.values());
-            while (counter < indexSize) {
-                //console.log(`BULK_LOADING: ${indexName} - ${indexSize} records. Current count: ${counter}. Max: ${max}`)
-                let batch = 0;
-                this.store.pipeline(() => {
-                    while (counter < indexSize && batch < max) {
-                        repoCall(indexName, keys[counter], values[counter]);
-                        counter++
-                        batch++;
-                    }
-                });
-            }
-
+        let counter = 0;
+        const indexSize = index.size;
+        const keys = Array.from(index.keys());
+        const values = Array.from(index.values());
+        while (counter < indexSize) {
+            //console.log(`BULK_LOADING: ${indexName} - ${indexSize} records. Current count: ${counter}. Max: ${max}`)
+            let batch = 0;
+            this.store.pipeline(() => {
+                while (counter < indexSize && batch < max) {
+                    repoCall(indexName, keys[counter], values[counter]);
+                    counter++
+                    batch++;
+                }
+            });
+        }
     }
 
     public bulkLoad(scanningRepo: HandlesRepository) {
@@ -1057,7 +1056,6 @@ export class HandlesRepository {
         sortedHandles.sort((a, b) => a.name.localeCompare(b.name));
         return sortedHandles[0];
     };
-
 
     private _getDataFromIPFSLink = async ({ link, schema }: { link?: string; schema?: any }): Promise<any | undefined> => {
         if (!link?.startsWith('ipfs://') || blackListedIpfsCids.includes(link)) return;

@@ -6,6 +6,7 @@ let glideClient;
 
 async function getClient() {
   if (!glideClient) {
+    console.log('REDIS_HOST_WORKER', process.env.REDIS_HOST_US_EAST_1, process.env.AWS_REGION, `REDIS_HOST_${process.env.AWS_REGION}`.toUpperCase().replace(/-/g, '_'))
     glideClient = (await GlideClient.createClient({
       addresses: [{ host: REDIS_HOST, port: 6379 }],
       useTLS: process.env.REDIS_USE_TLS ? process.env.REDIS_USE_TLS == 'true' : true,

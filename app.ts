@@ -56,6 +56,7 @@ class App {
     }
 
     public async initialize() {
+        console.log('REDIS_HOST_APP', process.env.REDIS_HOST_US_EAST_1, process.env.AWS_REGION)
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         this.app.use(errorMiddleware);

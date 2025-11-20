@@ -1,15 +1,14 @@
-import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, Tip, TipOrOrigin, Transaction } from '@cardano-ogmios/schema';
-import { AssetNameLabel, checkNameLabel, delay, getDateStringFromSlot, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from '@koralabs/kora-labs-common';
+import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, TipOrOrigin } from '@cardano-ogmios/schema';
+import { delay, getDateStringFromSlot, LogCategory, Logger, NETWORK } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
 import fs from 'fs';
 import * as url from 'url';
 import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
 import { ACCEPTABLE_TIP_PROXIMITY, handleEraBoundaries, ScanningMode } from '../../config/constants';
-import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from '../../interfaces/ogmios.interfaces';
 import { HandlesRepository } from '../../repositories/handlesRepository';
 import { HandlesMemoryStore, HandleStore } from '../../stores/memory';
-import { getHandleNameFromAssetName } from './utils';
+import { processBlock } from '../processBlock';
 
 let firstBlockProcessed = false;
 
@@ -145,7 +144,7 @@ class OgmiosService {
                                         this.scanningMode = ScanningMode.TIP;
                                     }
 
-                                    await this.processBlock({ txBlock: block, tip: result.tip as Tip });    
+                                    await this.processBlock(block);    
                                                                     
                                     const metrics = {
                                         currentSlot: block.slot,
@@ -199,107 +198,12 @@ class OgmiosService {
         this.client!.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }));
     }
 
-    private processBlock = async ({ txBlock, tip }: { txBlock: BlockPraos; tip: Tip }) => {
-        const currentSlot = txBlock?.slot ?? this.scanningRepo.getMetrics().currentSlot ?? 0;
-        for (let b = 0; b < (txBlock?.transactions ?? []).length; b++) {
-            const txBody = txBlock?.transactions?.[b];
-            const txId = txBody?.id;
-
-            // Look for burn transactions
-            
-            //const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
-            const mintAssets = Object.entries(txBody?.mint ?? {});
-            for (let i = 0; i < mintAssets.length; i++) {
-                const [policy, assetInfo] = mintAssets[i];
-                if (HANDLE_POLICIES.contains(NETWORK as Network, policy)) {
-                    for (const [assetName, quantity] of Object.entries(assetInfo)) {
-                        if (quantity == BigInt(-1)) {
-                            const { name, isCip67 } = getHandleNameFromAssetName(assetName);
-                            if (!isCip67 || assetName.startsWith(AssetNameLabel.LBL_222) || assetName.startsWith(AssetNameLabel.LBL_000)) {
-                                const handle = this.scanningRepo.getHandle(name);
-                                if (!handle) continue;
-                                this.scanningRepo.removeHandle(handle, currentSlot);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Iterate through all the outputs and find asset keys that start with our policyId
-            for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
-                const o = txBody?.outputs[i];
-                const values = Object.entries(o?.value ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
-                for (const [policyId, assets] of values) {
-                    for (const [assetName] of Object.entries(assets ?? {})) {
-                        const { datum = null, script: outputScript } = o!;
-
-                        // We need to get the datum. This can either be a string or json object.
-                        let datumString;
-                        try {
-                            datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                        } catch {
-                            Logger.log({
-                                message: `Error decoding datum for ${txId}`,
-                                category: LogCategory.ERROR,
-                                event: 'processBlock.decodingDatum'
-                            });
-                        }
-                        const isMintTx = this.isMintingTransaction(assetName, policyId, txBody);
-                        if (assetName === '') {
-                            // Don't process the nameless token.
-                            continue;
-                        }
-
-                        let script: { type: string; cbor: string } | undefined;
-                        if (outputScript) {
-                            try {
-                                script = {
-                                    type: outputScript.language.replace(':', '_'),
-                                    cbor: outputScript.cbor ?? ''
-                                };
-                            } catch {
-                                Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
-                            }
-                        }
-
-                        const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
-
-                        const scannedHandleInfo: ScannedHandleInfo = {
-                            assetName,
-                            address: o!.address,
-                            slotNumber: currentSlot,
-                            utxo: `${txId}#${i}`,
-                            policy: policyId,
-                            lovelace: parseInt(o!.value['ada'].lovelace.toString()),
-                            datum: datumString,
-                            script,
-                            metadata: handleMetadata,
-                            isMintTx
-                        };
-
-                        await this.scanningRepo.processScannedHandleInfo(scannedHandleInfo)
-                        if (this.scanningMode == ScanningMode.TIP)
-                            await this.handlesRepo.processScannedHandleInfo(scannedHandleInfo)
-                    }
-                }
-            }
+    private processBlock = async (txBlock :BlockPraos) => {
+        await processBlock(txBlock, this.scanningRepo);
+        if (this.scanningMode == ScanningMode.TIP) {
+            await processBlock(txBlock, this.handlesRepo);
         }
-        
-    };
-
-    private isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {
-        const assetNameInMintAssets = (txBody?.mint?.[policyId]?.[assetName] ?? 0) > 0;
-        // is CIP67 is false OR is CIP67 is true and label is 222
-        const { isCip67, assetLabel } = checkNameLabel(assetName);
-        if (isCip67) {
-            if (assetLabel === AssetNameLabel.LBL_222) {
-                return assetNameInMintAssets;
-            }
-            return false;
-        }
-        // not cip68
-        return assetNameInMintAssets;
-    };
+    }
     
     private processRollback = (point: PointOrOrigin, tip: TipOrOrigin) => {
         if (point === 'origin') {
