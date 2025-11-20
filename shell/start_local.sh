@@ -18,7 +18,9 @@ then
     NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
-cp ../api.handle.me/workers/* ./workers/ 
+if [ -d "../api.handle.me/workers" ]; then
+    cp ../api.handle.me/workers/* ./workers/ 
+fi
 
 if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
     echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
