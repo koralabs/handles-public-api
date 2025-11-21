@@ -52,7 +52,7 @@ then
         sudo apt install valkey
         sudo systemctl enable valkey-server
     else
-        echo "You need to update your OS to Ubuntu 24.04 or Amazon Linujx to install and run Valkey"
+        echo "You need to update your OS to Ubuntu 24.04 or Amazon Linux to install and run Valkey"
     fi
 fi
 
