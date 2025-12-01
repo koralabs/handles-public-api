@@ -198,7 +198,7 @@ class OgmiosService {
         this.client!.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }));
     }
 
-    private processBlock = async (txBlock :BlockPraos) => {
+    private processBlock = async (txBlock: BlockPraos) => {
         await processBlock(txBlock, this.scanningRepo);
         if (this.scanningMode == ScanningMode.TIP) {
             await processBlock(txBlock, this.handlesRepo);

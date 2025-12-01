@@ -231,7 +231,7 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
         });
 
         /* 
-        * IF YOU RUN THIS ONE BY ITSELF IT WORKS! ¯\_(ツ)_/¯
+        * IF YOU RUN THIS ONE REPO AT A TIME IT WORKS! ¯\_(ツ)_/¯
         */
         describe('getAllHolders', () => {
             it('should get holderAddress list', async () => {
