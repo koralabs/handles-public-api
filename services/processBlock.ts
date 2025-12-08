@@ -1,6 +1,6 @@
-import { BlockPraos, Transaction } from "@cardano-ogmios/schema";
-import { AssetNameLabel, checkNameLabel, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from "@koralabs/kora-labs-common";
-import { HandleOnChainMetadata, MetadataLabel, ScannedHandleInfo } from "../interfaces/ogmios.interfaces";
+import { BlockPraos } from "@cardano-ogmios/schema";
+import { AssetNameLabel, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from "@koralabs/kora-labs-common";
+import { UTxO } from "../interfaces/ogmios.interfaces";
 import { HandlesRepository } from "../repositories/handlesRepository";
 import { getHandleNameFromAssetName } from "./ogmios/utils";
 
@@ -11,7 +11,6 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
         const txId = txBody?.id;
 
         // Look for burn transactions
-        
         //const assetNameInMintAssets = txBody?.mint?.[policyId]?.[assetName] !== undefined;
         const mintAssets = Object.entries(txBody?.mint ?? {});
         for (let i = 0; i < mintAssets.length; i++) {
@@ -33,72 +32,62 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
         // Iterate through all the outputs and find asset keys that start with our policyId
         for (let i = 0; i < (txBody?.outputs ?? []).length; i++) {
             const o = txBody?.outputs[i];
+
             const values = Object.entries(o?.value ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
-            for (const [policyId, assets] of values) {
-                for (const [assetName] of Object.entries(assets ?? {})) {
-                    const { datum = null, script: outputScript } = o!;
-
-                    // We need to get the datum. This can either be a string or json object.
-                    let datumString;
-                    try {
-                        datumString = !datum ? undefined : typeof datum === 'string' ? datum : JSON.stringify(datum);
-                    } catch {
-                        Logger.log({
-                            message: `Error decoding datum for ${txId}`,
-                            category: LogCategory.ERROR,
-                            event: 'processBlock.decodingDatum'
-                        });
-                    }
-                    const isMintTx = isMintingTransaction(assetName, policyId, txBody);
-                    if (assetName === '') {
-                        // Don't process the nameless token.
-                        continue;
-                    }
-
-                    let script: { type: string; cbor: string } | undefined;
-                    if (outputScript) {
-                        try {
-                            script = {
-                                type: outputScript.language.replace(':', '_'),
-                                cbor: outputScript.cbor ?? ''
-                            };
-                        } catch {
-                            Logger.log({ message: `Error error getting script for ${txId}`, category: LogCategory.ERROR, event: 'processBlock.decodingScript' });
-                        }
-                    }
-
-                    const handleMetadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (txBody?.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policyId];
-
-                    const scannedHandleInfo: ScannedHandleInfo = {
-                        assetName,
-                        address: o!.address,
-                        slotNumber: currentSlot,
-                        utxo: `${txId}#${i}`,
-                        policy: policyId,
-                        lovelace: parseInt(o!.value['ada'].lovelace.toString()),
-                        datum: datumString,
-                        script,
-                        metadata: handleMetadata,
-                        isMintTx
-                    };
-                    await repo.processScannedHandleInfo(scannedHandleInfo)
+            const minted = Object.entries(txBody?.mint ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
+            if (values.length) {
+                const handles: [string, string[]][] = values.map(([policy, handles]) => [policy, Object.keys(handles),]);
+                const mint: [string, string[]][] = minted.map(([policy, handles]) => [policy, Object.keys(handles).filter(k => handles[k] > 0n),]);
+                // We need to get the datum. This can either be a string or json object.
+                let datum;
+                try {
+                    datum = !o?.datum ? undefined : typeof o?.datum === 'string' ? o?.datum : JSON.stringify(o?.datum);
+                } catch {
+                    Logger.log({ message: `Error decoding datum for ${txId}#${i}`, category: LogCategory.ERROR, event: 'processBlock.decodingDatum' });
                 }
+                // extract handle related UTxO information
+                const utxo: UTxO = {
+                    id: `${txId}#${i}`,
+                    slot: currentSlot,
+                    address: o?.address!,
+                    lovelace: Number(o?.value!.ada.lovelace!),
+                    datum,
+                    script: o?.script?.cbor ? {
+                        type: o?.script?.language.replace(':', '_'),
+                        cbor: o?.script?.cbor
+                    } : undefined,
+                    handles,
+                    mint: mint.filter(m => handles.includes(m)),
+                    // filtered for the minted assets in this UTxO
+                    metadata: Object.fromEntries(
+                        Object.entries(txBody?.metadata ?? {}).filter(([label]) => label == '721') // We only need 721 label
+                        .map(([label, labelObj]) => {
+                            const { version, ...policies } = labelObj as any;
+                            const filteredPolicies = Object.fromEntries(
+                                Object.entries(policies)
+                                .filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId))
+                                .map(([policyId, assets]) => {
+                                    // Only handles in this UTxO
+                                    const filteredAssets = Object.fromEntries(Object.entries(assets as any).filter(([assetName]) => handles.includes(assetName)));
+                                    return [policyId, filteredAssets];
+                                })
+                                .filter(([, assets]) => Object.keys(assets as any).length > 0)
+                            );
+
+                            return [label, { ...filteredPolicies, ...(version && { version }) }];
+                        })
+                        // drop labels that ended up with no assets under any policyId
+                        .filter(([, labelObj]) => Object.keys(labelObj as any).some(k => k !== "version"))
+                    )
+                }
+
+                // save UTxO to repo
+                await repo.addUTxO(utxo);
+                await repo.updateHandleIndexes(utxo); // be sure to include mint:handle index {created_slot, metadata, txhash}
             }
         }
+        // remove all the utxos that were spent as inputs to this tx
+        await repo.removeUTxOs(txBody?.inputs.flatMap((x) => `${x.transaction.id}#${x.index}`))
     }
     
-};
-
-export const isMintingTransaction = (assetName: string, policyId: string, txBody?: Transaction) : boolean => {
-    const assetNameInMintAssets = (txBody?.mint?.[policyId]?.[assetName] ?? 0) > 0;
-    // is CIP67 is false OR is CIP67 is true and label is 222
-    const { isCip67, assetLabel } = checkNameLabel(assetName);
-    if (isCip67) {
-        if (assetLabel === AssetNameLabel.LBL_222) {
-            return assetNameInMintAssets;
-        }
-        return false;
-    }
-    // not cip68
-    return assetNameInMintAssets;
 };

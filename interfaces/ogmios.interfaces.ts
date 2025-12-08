@@ -1,4 +1,4 @@
-import { NextBlockResponse } from '@cardano-ogmios/schema';
+import { Metadata, NextBlockResponse } from '@cardano-ogmios/schema';
 import { IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 import { IRegistry } from './registry.interface';
 
@@ -176,4 +176,19 @@ export interface IBlockProcessor {
     processBlock: (response: NextBlockResponse) => Promise<void>;
     loadIndexes: () => Promise<void>;
     resetIndexes: () => Promise<void>;
+}
+
+export interface UTxO {
+    id: string,
+    slot: number,
+    address: string,
+    lovelace: number,
+    datum?: string,
+    script?: {
+        type: string;
+        cbor: string;
+    },
+    handles: [string, string[]][],
+    mint: [string, string[]][],
+    metadata: Metadata // filtered for the minted assets in this UTxO
 }

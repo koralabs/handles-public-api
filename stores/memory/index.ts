@@ -176,7 +176,7 @@ export class HandlesMemoryStore implements IApiStore {
     }
 
     public getSchemaVersion(): number {
-        return Number(process.env.STORAGE_SCHEMA_VERSION);
+        return Number(process.env.INDEX_SCHEMA_VERSION);
     }
 
     private convertIndexNameToIndex(indexName: IndexNames): Map<string|number, ApiIndexType> {
