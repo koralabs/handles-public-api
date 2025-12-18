@@ -618,7 +618,7 @@ export class HandlesRepository {
                 const index = parseInt(indexString);
                 const utxoDetails = { tx_id: txId, index, lovelace, datum: datum ?? '', address };
                 if (isMintTx) {
-                    // TODO: Save the mint:handle index info {created_slot, metadata, txhash}
+                    // TODO: Save the mint:handle index info {created_slot, metadata, txhashes}
                 }
                 switch (assetLabel) {
                     case null:

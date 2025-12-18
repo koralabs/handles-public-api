@@ -3,8 +3,11 @@ set -eu
 set -a && source .env && set +a
 mkdir -p tmp
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
+CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.4.1}
 SOCKET_PATH=${SOCKET_PATH:-"${PWD}/node.socket"}
 BASE_URL=${CONFIG_FILES_BASE_URL:-'https://public.koralabs.io/cardano'}
+CARDANO_DB_PATH=${CARDANO_DB_PATH:-"./tmp"}
+
 if [[ "$@" != *"--host"* ]]
 then
     HOST="--host 0.0.0.0"
@@ -18,18 +21,31 @@ then
     NODE_SOCKET="--node-socket ${SOCKET_PATH}"
 fi
 
+mkdir -p  $HOME/.local/bin
+
 if [ -d "../api.handle.me/workers" ]; then
     cp ../api.handle.me/workers/* ./workers/ 
 fi
 
-if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
-    echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
-    curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
-    unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
-    mkdir -p  $HOME/.local/bin
-    cp ./ogmios-install/bin/ogmios $HOME/.local/bin/ogmios && chmod +x $HOME/.local/bin/ogmios && rm -rf ./ogmios-install
+###############################################
+#                  VALKEY                     #
+###############################################
+if ! pgrep -x "valkey-server" > /dev/null
+then
+    if grep -q "ID=amzn" /etc/os-release || [ "$(printf '%s\n' 24.04 "$(lsb_release -rs)" | sort -V | head -n1)" = "24.04" ]
+    then
+        echo "Starting Valkey - connecting to 6379"
+        sudo apt install valkey
+        sudo systemctl enable valkey-server
+    else
+        echo "You need to update your OS to Ubuntu 24.04 or Amazon Linux to install and run Valkey"
+    fi
 fi
 
+
+###############################################
+#               CARDANO NODE                  #
+###############################################
 echo 'Downloading cardano-node config files...'
 declare -a NETWORKS=(preview preprod mainnet)
 declare -a ERAS=(byron shelley alonzo conway)
@@ -44,16 +60,69 @@ do \
     done; \
 done
 
-if ! pgrep -x "valkey-server" > /dev/null
-then
-    if grep -q "ID=amzn" /etc/os-release || [ "$(printf '%s\n' 24.04 "$(lsb_release -rs)" | sort -V | head -n1)" = "24.04" ]
-    then
-        echo "Starting Valkey - connecting to 6379"
-        sudo apt install valkey
-        sudo systemctl enable valkey-server
+release_host() {
+    case $NETWORK in
+        preprod | mainnet)
+            echo -n "release-${NETWORK}";;
+        preview)
+            echo -n "pre-release-preview";;
+    esac
+}
+export RELEASE_HOST=$(release_host)
+
+NODE_DB="${CARDANO_DB_PATH}/${NETWORK}/db"
+
+if [[ -d "${NODE_DB}/immutable" ]]; then
+    echo "Previous Cardano database found. Continuing scan"
+else
+    rm -rf ${NODE_DB}
+    mkdir -p ${NODE_DB}
+    mkdir -p ./tmp/mithril
+    echo "Grabbing latest snapshot with Mithril."
+    MITHRIL_VERSION=2524.0
+    (cd ./tmp/mithril && curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz)
+    export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
+    export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
+    export ANCILLARY_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/ancillary.vkey)
+    export DIGEST=latest
+    chmod +x ./tmp/mithril/mithril-client
+    #curl -o - $(./mithril-client cardano-db snapshot show --json $SNAPSHOT_DIGEST | jq -r '.locations[0]') | tar --use-compress-program=unzstd -x -C ${NODE_DB}
+    if [[ "${NODE_DB%db}" == "" ]]; then
+        ./tmp/mithril/mithril-client cardano-db download --include-ancillary $DIGEST
     else
-        echo "You need to update your OS to Ubuntu 24.04 or Amazon Linux to install and run Valkey"
+        ./tmp/mithril/mithril-client cardano-db download --download-dir "${NODE_DB%db}" --include-ancillary $DIGEST
     fi
+    echo "Mithril snapshot downloaded and validated."
+fi
+
+NODE_CONFIG_PATH="tmp/${NETWORK}"
+
+if [ ! -x "$(command -v $HOME/.local/bin/cardano-node)" ]; then
+    mkdir -p ./cardano-node
+    (cd cardano-node && curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz)
+    cp ./cardano-node/* $HOME/.local/bin && chmod +x $HOME/.local/bin/cardano-node && rm -rf ./cardano-node
+fi
+
+# Workaround for Mithril not outputting the protocolMagicId
+cat ${NODE_CONFIG_PATH}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
+
+exec cardano-node run \
+    --config ${NODE_CONFIG_PATH}/config.json \
+    --topology ${NODE_CONFIG_PATH}/topology.json \
+    --database-path ${NODE_DB} \
+    --port 3000 \
+    --host-addr 0.0.0.0 \
+    --socket-path ${SOCKET_PATH} &
+
+###############################################
+#                  OGMIOS                     #
+###############################################
+if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
+    echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
+    curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
+    unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
+    mkdir -p  $HOME/.local/bin
+    cp ./ogmios-install/bin/ogmios $HOME/.local/bin/ogmios && chmod +x $HOME/.local/bin/ogmios && rm -rf ./ogmios-install
 fi
 
 if ! pgrep -x "ogmios" > /dev/null
