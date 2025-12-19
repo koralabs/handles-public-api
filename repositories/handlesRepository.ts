@@ -256,6 +256,14 @@ export class HandlesRepository {
         return { searchTotal, handles };
     }
 
+    public addUTxO(utxo: UTxO) {
+
+    }
+
+    public removeUTxOs(utxos?: string[]) {
+
+    }
+
     public getMetrics(): IApiMetrics {  
         return this.store.getMetrics();
     }
@@ -590,7 +598,7 @@ export class HandlesRepository {
         }
     }
 
-    public async updateHandleIndexes(utxo: UTxO): Promise<void> {
+    public updateHandleIndexes(utxo: UTxO): void {
         for (const asset of utxo.handles) {
             const policy = asset[0];
             for (const assetName of asset[1]) {

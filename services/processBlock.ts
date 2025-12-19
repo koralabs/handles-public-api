@@ -83,13 +83,13 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
                 }
 
                 // save UTxO to repo
-                await repo.addUTxO(utxo);
-                await repo.updateHandleIndexes(utxo); // be sure to include mint:handle index {created_slot, metadata, txhashes}
+                repo.addUTxO(utxo);
+                repo.updateHandleIndexes(utxo); // be sure to include mint:handle index {created_slot, metadata, txhashes}
                 // Create two separate valkey instances, one for UTxOs/mints and the other for
             }
         }
         // remove all the utxos that were spent as inputs to this tx
-        await repo.removeUTxOs(txBody?.inputs.flatMap((x) => `${x.transaction.id}#${x.index}`))
+        repo.removeUTxOs(txBody?.inputs.flatMap((x) => `${x.transaction.id}#${x.index}`))
     }
     
 };
