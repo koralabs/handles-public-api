@@ -76,7 +76,7 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent, context:AWSLambda
                     signatories: [],
                     metadata: {hash:'', labels: Object.fromEntries(Object.entries(t.metadata).map(([label, value]) => [label, { json: value as Metadatum }]))}
                 }
-                console.log('TX', JSON.stringify(tx, ( _, value) => typeof value == 'bigint' ? Number(value.toString()) : value, 4))
+                //console.log('TX', JSON.stringify(tx, ( _, value) => typeof value == 'bigint' ? Number(value.toString()) : value, 4))
                 block.transactions.push(tx);
             }
 

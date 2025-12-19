@@ -3,10 +3,11 @@ set -eu
 set -a && source .env && set +a
 mkdir -p tmp
 OGMIOS_VER=${OGMIOS_VER:-6.11.2}
-CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.4.1}
-SOCKET_PATH=${SOCKET_PATH:-"${PWD}/node.socket"}
-BASE_URL=${CONFIG_FILES_BASE_URL:-'https://public.koralabs.io/cardano'}
+CARDANO_NODE_VER=${CARDANO_NODE_VER:-10.5.3}
+SOCKET_PATH=${SOCKET_PATH:-"${PWD}/tmp/node.socket"}
+BASE_URL=${CONFIG_FILES_BASE_URL:-'https://book.play.dev.cardano.org/environments'}
 CARDANO_DB_PATH=${CARDANO_DB_PATH:-"./tmp"}
+NODE_CONFIG_PATH="./tmp/${NETWORK}"
 
 if [[ "$@" != *"--host"* ]]
 then
@@ -14,7 +15,7 @@ then
 fi
 if [[ "$@" != *"--node-config"* ]]
 then
-    NODE_CONFIG="--node-config ./tmp/${NETWORK}/config.json"
+    NODE_CONFIG="--node-config ${NODE_CONFIG_PATH}/config.json"
 fi
 if [[ "$@" != *"--node-socket"* ]]
 then
@@ -35,7 +36,7 @@ then
     if grep -q "ID=amzn" /etc/os-release || [ "$(printf '%s\n' 24.04 "$(lsb_release -rs)" | sort -V | head -n1)" = "24.04" ]
     then
         echo "Starting Valkey - connecting to 6379"
-        sudo apt install valkey
+        sudo apt install -y valkey
         sudo systemctl enable valkey-server
     else
         echo "You need to update your OS to Ubuntu 24.04 or Amazon Linux to install and run Valkey"
@@ -54,6 +55,7 @@ do \
     mkdir -p tmp/${net}
     curl -sL ${BASE_URL}/${net}/config.json -o tmp/${net}/config.json
     curl -sL ${BASE_URL}/${net}/topology.json -o tmp/${net}/topology.json
+    curl -sL ${BASE_URL}/${net}/peer-snapshot.json -o tmp/${net}/peer-snapshot.json
     for era in "${ERAS[@]}"; \
     do \
         curl -sL ${BASE_URL}/${net}/${era}-genesis.json -o tmp/${net}/${era}-genesis.json; \
@@ -79,7 +81,7 @@ else
     mkdir -p ${NODE_DB}
     mkdir -p ./tmp/mithril
     echo "Grabbing latest snapshot with Mithril."
-    MITHRIL_VERSION=2524.0
+    MITHRIL_VERSION=2543.1
     (cd ./tmp/mithril && curl -fsSL https://github.com/input-output-hk/mithril/releases/download/${MITHRIL_VERSION}/mithril-${MITHRIL_VERSION}-linux-x64.tar.gz | tar -xz)
     export AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE_HOST}.api.mithril.network/aggregator
     export GENESIS_VERIFICATION_KEY=$(curl https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE_HOST}/genesis.vkey)
@@ -95,12 +97,10 @@ else
     echo "Mithril snapshot downloaded and validated."
 fi
 
-NODE_CONFIG_PATH="tmp/${NETWORK}"
-
 if [ ! -x "$(command -v $HOME/.local/bin/cardano-node)" ]; then
     mkdir -p ./cardano-node
     (cd cardano-node && curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz)
-    cp ./cardano-node/* $HOME/.local/bin && chmod +x $HOME/.local/bin/cardano-node && rm -rf ./cardano-node
+    cp ./cardano-node/bin/* $HOME/.local/bin && chmod +x $HOME/.local/bin/cardano-node && rm -rf ./cardano-node
 fi
 
 # Workaround for Mithril not outputting the protocolMagicId
@@ -112,7 +112,7 @@ exec cardano-node run \
     --database-path ${NODE_DB} \
     --port 3000 \
     --host-addr 0.0.0.0 \
-    --socket-path ${SOCKET_PATH} &
+    --socket-path ${SOCKET_PATH} 2>&1 | stdbuf -oL -eL egrep --line-buffered '\b(startup:Info:|local socket:|ChainDB:Notice:|:Critical:)\b' &
 
 ###############################################
 #                  OGMIOS                     #
@@ -127,7 +127,6 @@ fi
 
 if ! pgrep -x "ogmios" > /dev/null
 then
-    ./shell/connectToNode.sh
     echo "Starting Ogmios - connecting to ${SOCKET_PATH}"
     $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Error &
 fi
