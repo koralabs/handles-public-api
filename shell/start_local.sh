@@ -97,16 +97,16 @@ else
     echo "Mithril snapshot downloaded and validated."
 fi
 
-if [ ! -x "$(command -v $HOME/.local/bin/cardano-node)" ]; then
-    mkdir -p ./cardano-node
-    (cd cardano-node && curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz)
-    cp ./cardano-node/bin/* $HOME/.local/bin && chmod +x $HOME/.local/bin/cardano-node && rm -rf ./cardano-node
+if [ ! -x "$(command -v ./tmp/cardano-node/bin/cardano-node)" ]; then
+    mkdir -p ./tmp/cardano-node
+    (cd ./tmp/cardano-node && curl -fsSL https://github.com/IntersectMBO/cardano-node/releases/download/${CARDANO_NODE_VER}/cardano-node-${CARDANO_NODE_VER}-linux.tar.gz | tar -xz)
+    chmod +x ./tmp/cardano-node/bin/cardano-node
 fi
 
 # Workaround for Mithril not outputting the protocolMagicId
 cat ${NODE_CONFIG_PATH}/shelley-genesis.json | jq -r .networkMagic > ${NODE_DB}/protocolMagicId
 
-exec cardano-node run \
+exec ./tmp/cardano-node/bin/cardano-node run \
     --config ${NODE_CONFIG_PATH}/config.json \
     --topology ${NODE_CONFIG_PATH}/topology.json \
     --database-path ${NODE_DB} \
@@ -117,16 +117,14 @@ exec cardano-node run \
 ###############################################
 #                  OGMIOS                     #
 ###############################################
-if [ ! -x "$(command -v $HOME/.local/bin/ogmios)" ]; then
+if [ ! -x "$(command -v ./tmp/ogmios/bin/ogmios)" ]; then
     echo 'OGMIOS NOT FOUND. INSTALLING OGMIOS...';
     curl -sL https://github.com/CardanoSolutions/ogmios/releases/download/v${OGMIOS_VER}/ogmios-v${OGMIOS_VER}-x86_64-linux.zip -o ogmios.zip
-    unzip ogmios.zip -d ./ogmios-install && rm ogmios.zip
-    mkdir -p  $HOME/.local/bin
-    cp ./ogmios-install/bin/ogmios $HOME/.local/bin/ogmios && chmod +x $HOME/.local/bin/ogmios && rm -rf ./ogmios-install
+    unzip ogmios.zip -d ./tmp/ogmios && rm ogmios.zip && chmod +x ./tmp/ogmios/bin/ogmios
 fi
 
 if ! pgrep -x "ogmios" > /dev/null
 then
     echo "Starting Ogmios - connecting to ${SOCKET_PATH}"
-    $HOME/.local/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Error &
+    ./tmp/ogmios/bin/ogmios $HOST $NODE_CONFIG $NODE_SOCKET $@ --include-transaction-cbor --log-level Error &
 fi
