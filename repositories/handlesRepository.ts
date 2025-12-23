@@ -1,5 +1,5 @@
-import { Point } from '@cardano-ogmios/schema';
-import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandleHistory, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { Metadata, Point } from '@cardano-ogmios/schema';
+import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, MintingData, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
@@ -98,8 +98,8 @@ export class HandlesRepository {
         while (last > 0)
         { 
             n = 0 | Math.random() * last;
-            let q = t[n]
-            let j = --last;
+            const q = t[n]
+            const j = --last;
             t[n] = t[j]
             t[j] = q
         }
@@ -226,7 +226,7 @@ export class HandlesRepository {
         handleNames = handleNames.slice(startIndex, startIndex + (pagination?.handlesPerPage ?? 100));
 
         handles = (this.store.pipeline(() => {
-            let storedHandles = [];
+            const storedHandles = [];
             for (const h of handleNames) {
                 storedHandles.push(this.store.getValueFromIndex(IndexNames.HANDLE, h))
             }
@@ -247,7 +247,7 @@ export class HandlesRepository {
                 const handle = structuredClone(h) as StoredHandle;
                 handle.name = `${handle.name}`
                 handle.hex = `${handle.hex}`
-                handle.default_in_wallet = `${holders[i]?.defaultHandle ?? handle.default_in_wallet ?? ""}`;
+                handle.default_in_wallet = `${holders[i]?.defaultHandle ?? handle.default_in_wallet ?? ''}`;
                 return handle;
             }
         }).filter(h => !!h)
@@ -257,11 +257,37 @@ export class HandlesRepository {
     }
 
     public addUTxO(utxo: UTxO) {
+        this.store.pipeline(() => {
+            // save the UTxO id to the store with slot as the key
+            this.store.addValueToOrderedSet(IndexNames.UTXO_SLOT, utxo.slot, utxo.id);
 
+            // save the UTxO to the store
+            this.store.setValueOnIndex(IndexNames.UTXO, utxo.id, utxo);
+        });
     }
 
-    public removeUTxOs(utxos?: string[]) {
+    public getUTxOs(slot: number): UTxO[] {
+        const utxoIds = this.store.getValuesFromOrderedSet(IndexNames.UTXO_SLOT, slot)
+        if (!utxoIds) return [];
 
+        return [...utxoIds as string[]].map(id => this.store.getValueFromIndex(IndexNames.UTXO, id) as UTxO);
+    }
+
+    public removeUTxOs(utxos: string[]) {
+        this.store.pipeline(() => {
+            for (const utxo of utxos) {
+                this.store.removeValuesFromOrderedSet(IndexNames.UTXO_SLOT, utxo);
+                this.store.removeKeyFromIndex(IndexNames.UTXO, utxo);
+            }
+        });
+    }
+
+    public addMintData(items: { handleName: string, mintingData: MintingData }[]) {
+        this.store.pipeline(() => {
+            for (const item of items) {
+                this.store.setValueOnIndex(IndexNames.MINT, item.handleName, item.mintingData);
+            }
+        });
     }
 
     public getMetrics(): IApiMetrics {  
@@ -350,7 +376,7 @@ export class HandlesRepository {
         return datum;
     }
 
-    public getSubHandleSettings(handleName: string): { settings?: string; utxo: IUTxO } | null {
+    public getSubHandleSettings(handleName: string): { settings?: string; utxo?: IUTxO; utxo_id?: string } | null {
         const handle = this.getHandle(handleName);
         if (!handle || !handle.utxo) {
             throw new HttpException(404, 'Not found');
@@ -613,8 +639,8 @@ export class HandlesRepository {
                         : false 
                     : utxo.mint.flatMap(([, handles]) => Object.keys(handles)).includes(assetName)
 
-                const {lovelace, datum, address, slot, script} = utxo
-                const metadata: { [handleName: string]: HandleOnChainMetadata } | undefined = (utxo.metadata?.labels?.[MetadataLabel.NFT]?.json as any)?.[policy];
+                const {lovelace, datum, address, slot } = utxo
+                const metadata: { [handleName: string]: HandleOnChainMetadata } | undefined = ((utxo.metadata as Metadata)?.labels?.[MetadataLabel.NFT]?.json as any)?.[policy];
                 const data = metadata && (metadata[isCip67 ? handleHex : name] as unknown as IHandleMetadata);
                 const existingHandle = this.prepareHandle(this.store.getValueFromIndex(IndexNames.HANDLE, name) as StoredHandle) ?? undefined;
                 let handle = structuredClone(existingHandle) ?? this._buildHandle({name, hex: handleHex, policy, resolved_addresses: {ada: address}, updated_slot_number: slot}, data);
@@ -625,9 +651,6 @@ export class HandlesRepository {
                 const [txId, indexString] = utxo.id.split('#');
                 const index = parseInt(indexString);
                 const utxoDetails = { tx_id: txId, index, lovelace, datum: datum ?? '', address };
-                if (isMintTx) {
-                    // TODO: Save the mint:handle index info {created_slot, metadata, txhashes}
-                }
                 switch (assetLabel) {
                     case null:
                     case AssetNameLabel.NONE:
@@ -646,8 +669,8 @@ export class HandlesRepository {
                                     Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slot}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
                             }
                             handle.updated_slot_number = slot;
-                            handle.script = script;
-                            handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
+                            // handle.script = script;
+                            // handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
                             handle.has_datum = !!datum;
                             handle.lovelace = lovelace;
                             handle.utxo = utxo.id;
@@ -667,7 +690,7 @@ export class HandlesRepository {
                             const { projectAttributes } = this._buildPersonalizationData(handle, datum); // <- handle is mutated
 
                             handle.updated_slot_number = slot
-                            handle.reference_token = utxoDetails
+                            handle.reference_utxo = utxoDetails.tx_id
                             handle.resolved_addresses = {
                                 ...projectAttributes?.resolved_addresses,
                                 ada: existingHandle?.resolved_addresses?.ada ?? ''
@@ -696,9 +719,10 @@ export class HandlesRepository {
                                 return;
                             }
 
+                            // TODO: change to utxo_id to utxo and update handle.me to requst /subhandle-settings/utxo
                             handle.subhandle_settings = {
                                 ...(this._parseSubHandleSettingsDatum(datum)),
-                                utxo: utxoDetails
+                                utxo_id: utxoDetails.tx_id
                             }
                             handle.updated_slot_number = slot;
                             handle.resolved_addresses = {
@@ -820,8 +844,8 @@ export class HandlesRepository {
         return personalization
     }
     
-    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<Point | null> {
-        return this.store.getStartingPoint(save , failed);
+    public async getStartingPoint(updateHandleIndexes: (utxo: UTxO) => void, failed = false): Promise<Point | null> {
+        return this.store.getStartingPoint(updateHandleIndexes , failed);
     }
 
     private _runBulkLoadBatching(indexName: string, index: Map<string | number, ApiIndexType>, max: number, repoCall: CallableFunction) {

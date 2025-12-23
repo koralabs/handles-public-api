@@ -1,4 +1,4 @@
-import { Metadata, NextBlockResponse } from '@cardano-ogmios/schema';
+import { NextBlockResponse } from '@cardano-ogmios/schema';
 import { IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema } from '@koralabs/kora-labs-common';
 import { IRegistry } from './registry.interface';
 
@@ -190,5 +190,5 @@ export interface UTxO {
     },
     handles: [string, string[]][],
     mint: [string, string[]][],
-    metadata: Metadata // filtered for the minted assets in this UTxO
+    metadata: any // filtered for the minted assets in this UTxO
 }

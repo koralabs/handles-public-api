@@ -35,7 +35,7 @@ const fetchKoios = async(path: string, method = 'GET', body?: string) => {
 export const lambdaHandler = async (event: AWSLambda.ALBEvent, context:AWSLambda.Context) => {
     
     // Get last block from Valkey
-    let handlesRepo = new HandlesRepository(new RedisHandlesStore());
+    const handlesRepo = new HandlesRepository(new RedisHandlesStore());
     const { lastSlot = Infinity, currentSlot = 0, currentBlockHash } = handlesRepo.getMetrics();
     
     if (lastSlot - currentSlot <= MAX_TIP_SCAN_SLOTS) {

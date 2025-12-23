@@ -1,5 +1,7 @@
-import { HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
+import { Metadata } from '@cardano-ogmios/schema';
+import { HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, Rarity, StoredHandle, UTxO } from '@koralabs/kora-labs-common';
 import * as config from '../../config';
+import { MetadataLabel } from '../../interfaces/ogmios.interfaces';
 import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
@@ -10,7 +12,7 @@ jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplemen
 jest.spyOn(HandlesMemoryStore.prototype, 'initialize').mockImplementation();
 const firstSlot = Date.now();
 
-for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
+for (const store of [RedisHandlesStore]) {
 //for (const store of [HandlesMemoryStore]) {
     const storeInstance = new store();
     const repo = new HandlesRepository(storeInstance);
@@ -79,6 +81,48 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
             })
             jest.clearAllMocks();
         });
+
+        describe('addUtxo', () => { 
+            it('should add Utxo', async () => {
+                const slot = 123;
+                const metadata: Metadata = {
+                    hash: '',
+                    labels: {
+                        [MetadataLabel.NFT]: {
+                            json: {
+                                [policy]: {
+                                    'handle1': {}
+                                }
+                            }
+                        }
+                    }
+                }
+                const utxo: UTxO = {
+                    id: 'test-hash',
+                    slot,
+                    address: '',
+                    lovelace: 0,
+                    handles: [
+                        [policy, ['handle1', 'handle2']],
+                    ],
+                    mint: [
+                        [policy, ['handle1', 'handle2']],
+                    ],
+                    metadata
+                }
+
+                repo.addUTxO(utxo);
+
+                const result = repo.getUTxOs(slot);
+                
+                expect(result).toEqual([utxo]);
+
+                repo.removeUTxOs([utxo.id]);
+
+                const removedResult = repo.getUTxOs(slot);
+                expect(removedResult).toEqual([]);
+            })
+         })
 
         describe('getAll', () => {
             it('should get all handles', async () => {

@@ -5,31 +5,31 @@ import fs from 'fs';
 import * as url from 'url';
 import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
-import { ACCEPTABLE_TIP_PROXIMITY, handleEraBoundaries, ScanningMode } from '../../config/constants';
+import { handleEraBoundaries, ScanningMode } from '../../config/constants';
 import { HandlesRepository } from '../../repositories/handlesRepository';
-import { HandlesMemoryStore, HandleStore } from '../../stores/memory';
+import { HandleStore } from '../../stores/memory';
 import { processBlock } from '../processBlock';
 
-let firstBlockProcessed = false;
+// let firstBlockProcessed = false;
 
 class OgmiosService {
     private firstMemoryUsage: number;
-    private handlesRepo: HandlesRepository;
+    // private handlesRepo: HandlesRepository;
     private scanningRepo: HandlesRepository;
     private scanningMode = ScanningMode.BACKFILL;
     client?: WebSocket;
     processBlockCallback?: (block: NextBlockResponse) => Promise<void>;
 
     constructor(handlesRepo: HandlesRepository, processBlockCallback?: (block: NextBlockResponse) => Promise<void>) {
-        this.scanningRepo = new HandlesRepository(new HandlesMemoryStore());
-        this.handlesRepo = handlesRepo;
+        this.scanningRepo = handlesRepo;
+        // this.handlesRepo = handlesRepo;
         this.firstMemoryUsage = process.memoryUsage().rss;
         this.processBlockCallback = processBlockCallback;
     }
 
     public async initialize(reset: () => Promise<void>, load: () => Promise<void>) {
         await this.scanningRepo.initialize();
-        await this.handlesRepo.initialize();
+        //await this.handlesRepo.initialize();
 
         this.scanningRepo.setMetrics({
             currentSlot: handleEraBoundaries[process.env.NETWORK ?? 'preview'].slot,
@@ -40,7 +40,7 @@ class OgmiosService {
         });
 
         // attempt ogmios resume (see if starting point exists or errors)
-        const firstStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.save.bind(this.scanningRepo));
+        const firstStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.updateHandleIndexes.bind(this.scanningRepo));
         // const firstStartingPoint = {id: 'eca47c4fb9ca7f8eb2c524b975da3db1d05ced0a9ef0c4ee2c40c4cf2fcb3ea5', slot: 134281477} as Point
 
         // eslint-disable-next-line no-constant-condition
@@ -49,7 +49,8 @@ class OgmiosService {
                 if (!this.client) {
                     this.client = this._createWebSocketClient();
                 }
-                if (!firstStartingPoint) {                    
+                if (!firstStartingPoint) {        
+                    // start from first Handle mint            
                     const initialStartingPoint = handleEraBoundaries[process.env.NETWORK ?? 'preview'];
                     await reset();
                     await this._resume(initialStartingPoint);
@@ -57,11 +58,13 @@ class OgmiosService {
                 } else {
                     try {
                         await load();
+                        // try to resume from first file's starting point
+                        // it's possible that a bad starting point was saved (e.g., from a forked block)
                         await this._resume(firstStartingPoint);
                         break;
                     } catch (error: any) {
                         Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
-                        const secondStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.save, true);
+                        const secondStartingPoint = await this.scanningRepo.getStartingPoint(this.scanningRepo.updateHandleIndexes, true);
                         // If error, try the other file's starting point
                         if (error.code === 1000) {
                             this.scanningRepo.destroy();
@@ -130,19 +133,19 @@ class OgmiosService {
 
                                     const block = result.block as BlockPraos
 
-                                    if (!firstBlockProcessed) {
-                                        firstBlockProcessed = true;
-                                        if (block.slot >= result.tip.slot - ACCEPTABLE_TIP_PROXIMITY) {
-                                            if ((this.handlesRepo.getMetrics().currentSlot ?? 0) >= block.slot) {
-                                                Logger.log('Starting in TIP mode')
-                                                this.scanningMode = ScanningMode.TIP
-                                            }
-                                        }
-                                    }
-                                    if (this.scanningMode == ScanningMode.BACKFILL && block.slot == result.tip.slot) {
-                                        this.handlesRepo.bulkLoad(this.scanningRepo);
-                                        this.scanningMode = ScanningMode.TIP;
-                                    }
+                                    // if (!firstBlockProcessed) {
+                                    //     firstBlockProcessed = true;
+                                    //     if (block.slot >= result.tip.slot - ACCEPTABLE_TIP_PROXIMITY) {
+                                    //         if ((this.handlesRepo.getMetrics().currentSlot ?? 0) >= block.slot) {
+                                    //             Logger.log('Starting in TIP mode')
+                                    //             this.scanningMode = ScanningMode.TIP
+                                    //         }
+                                    //     }
+                                    // }
+                                    // if (this.scanningMode == ScanningMode.BACKFILL && block.slot == result.tip.slot) {
+                                    //     this.handlesRepo.bulkLoad(this.scanningRepo);
+                                    //     this.scanningMode = ScanningMode.TIP;
+                                    // }
 
                                     await this.processBlock(block);    
                                                                     
@@ -154,8 +157,8 @@ class OgmiosService {
                                     }
                                     
                                     this.scanningRepo.setMetrics(metrics);
-                                    if (this.scanningMode == ScanningMode.TIP)
-                                        this.handlesRepo.setMetrics(metrics);
+                                    // if (this.scanningMode == ScanningMode.TIP)
+                                    //     this.handlesRepo.setMetrics(metrics);
                                 }
                                 catch (error: any) {
                                     Logger.log({
@@ -200,9 +203,9 @@ class OgmiosService {
 
     private processBlock = async (txBlock: BlockPraos) => {
         await processBlock(txBlock, this.scanningRepo);
-        if (this.scanningMode == ScanningMode.TIP) {
-            await processBlock(txBlock, this.handlesRepo);
-        }
+        // if (this.scanningMode == ScanningMode.TIP) {
+        //     await processBlock(txBlock, this.handlesRepo);
+        // }
     }
     
     private processRollback = (point: PointOrOrigin, tip: TipOrOrigin) => {
@@ -210,10 +213,10 @@ class OgmiosService {
             // this is a rollback to genesis. We need to clear the memory store and start over
             Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
             this.scanningRepo.rollBackToGenesis();
-            if (this.scanningMode == ScanningMode.TIP) {
-                this.handlesRepo.rollBackToGenesis();
-                this.scanningMode = ScanningMode.BACKFILL;
-            }
+            // if (this.scanningMode == ScanningMode.TIP) {
+            //     this.handlesRepo.rollBackToGenesis();
+            //     this.scanningMode = ScanningMode.BACKFILL;
+            // }
         } else {
             const { slot, id } = point;
             let lastSlot = 0;
@@ -223,8 +226,8 @@ class OgmiosService {
 
             // The idea here is we need to rollback all changes from a given slot
             this.scanningRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
-            if (this.scanningMode == ScanningMode.TIP)
-                this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
+            // if (this.scanningMode == ScanningMode.TIP)
+            //     this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
         }
     };
 }

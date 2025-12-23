@@ -75,7 +75,7 @@ export class HandlesMemoryStore implements IApiStore {
                 this.intervals = [saveFilesInterval, setMemoryInterval];
             }
             this._files = await this._getFilesContent();
-            this.setMetrics({schemaVersion: this.getSchemaVersion()});
+            this.setMetrics({schemaVersion: this.getUTxOSchemaVersion()});
         }
         return this;
     }
@@ -175,7 +175,7 @@ export class HandlesMemoryStore implements IApiStore {
         return HandlesMemoryStore.metrics;
     }
 
-    public getSchemaVersion(): number {
+    public getUTxOSchemaVersion(): number {
         return Number(process.env.INDEX_SCHEMA_VERSION);
     }
 
@@ -304,7 +304,7 @@ export class HandlesMemoryStore implements IApiStore {
                     slot,
                     hash,
                     testDelay,
-                    storageSchemaVersion: this.getSchemaVersion()
+                    storageSchemaVersion: this.getUTxOSchemaVersion()
                 }
             });
             worker.on('message', (data) => {
@@ -375,7 +375,7 @@ export class HandlesMemoryStore implements IApiStore {
         }
 
         try {
-            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getSchemaVersion()}/${fileName}`;
+            const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getUTxOSchemaVersion()}/${fileName}`;
             Logger.log(`Fetching ${url}`);
             const awsResponse = await fetch(url);
             if (awsResponse.status === 200) {
@@ -402,8 +402,8 @@ export class HandlesMemoryStore implements IApiStore {
             this._getFileOnline<IHandleFileContent>(fileName)
         ]);
 
-        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.getSchemaVersion() ? localHandles : null;
-        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.getSchemaVersion() ? externalHandles : null;
+        const localContent = localHandles && (localHandles?.schemaVersion ?? 0) == this.getUTxOSchemaVersion() ? localHandles : null;
+        const externalContent = externalHandles && (externalHandles?.schemaVersion ?? 0) == this.getUTxOSchemaVersion() ? externalHandles : null;
 
         // If we don't have any valid files, return null
         if (!externalContent && !localContent) {

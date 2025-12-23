@@ -24,7 +24,8 @@ export const handleEraBoundaries: EraBoundaries = {
     }
 };
 
-export const SETS = [IndexNames.ADDRESS,
+export const SETS = [
+    IndexNames.ADDRESS,
     IndexNames.CHARACTER,
     IndexNames.HASH_OF_STAKE_KEY_HASH,
     IndexNames.PAYMENT_KEY_HASH,
@@ -34,9 +35,9 @@ export const SETS = [IndexNames.ADDRESS,
     IndexNames.PERSONALIZED,
     IndexNames.RARITY,
     IndexNames.SUBHANDLE,
-    IndexNames.HANDLE_TYPE,
-
+    IndexNames.HANDLE_TYPE
 ]
+
 export const HASHES = [IndexNames.HANDLE, IndexNames.HOLDER]
 export const ZSETS = [IndexNames.SLOT, IndexNames.SLOT_HISTORY]
 export const META_INDEXES = [IndexNames.HANDLE, IndexNames.SUBHANDLE]

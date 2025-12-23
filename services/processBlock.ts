@@ -1,8 +1,8 @@
-import { BlockPraos } from "@cardano-ogmios/schema";
-import { AssetNameLabel, HANDLE_POLICIES, LogCategory, Logger, NETWORK, Network } from "@koralabs/kora-labs-common";
-import { UTxO } from "../interfaces/ogmios.interfaces";
-import { HandlesRepository } from "../repositories/handlesRepository";
-import { getHandleNameFromAssetName } from "./ogmios/utils";
+import { BlockPraos } from '@cardano-ogmios/schema';
+import { AssetNameLabel, HANDLE_POLICIES, LogCategory, Logger, MintingData, NETWORK, Network } from '@koralabs/kora-labs-common';
+import { UTxO } from '../interfaces/ogmios.interfaces';
+import { HandlesRepository } from '../repositories/handlesRepository';
+import { getHandleNameFromAssetName } from './ogmios/utils';
 
 export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository) => {
     const currentSlot = txBlock?.slot ?? repo.getMetrics().currentSlot ?? 0;
@@ -36,28 +36,28 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
             const values = Object.entries(o?.value ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
             if (values.length) {
                 const minted = Object.entries(txBody?.mint ?? {}).filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId));
-                const handleAssets: [string, string[]][] = values.map(([policy, handles]) => [policy, Object.keys(handles),]);
+                const handleAssets: [string, string[]][] = values.map(([policy, handles]) => [policy, Object.keys(handles)]);
                 const handles = handleAssets.flatMap(h => h[1])
-                const mintAssets: [string, string[]][] = minted.map(([policy, handles]) => [policy, Object.keys(handles).filter(k => handles[k] > 0n),]);
+                const mintAssets: [string, string[]][] = minted.map(([policy, mintedHandles]) => [policy, Object.keys(handles).filter(k => mintedHandles[k] > 0n)]);
                 const metadata = Object.fromEntries(
                     Object.entries(txBody?.metadata ?? {}).filter(([label]) => label == '721') // We only need 721 label
-                    .map(([label, labelObj]) => {
-                        const { version, ...policies } = labelObj as any;
-                        const filteredPolicies = Object.fromEntries(
-                            Object.entries(policies)
-                            .filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId))
-                            .map(([policyId, assets]) => {
-                                // Only handles in this UTxO
-                                const filteredAssets = Object.fromEntries(Object.entries(assets as any).filter(([assetName]) => handleAssets.includes(assetName)));
-                                return [policyId, filteredAssets];
-                            })
-                            .filter(([, assets]) => Object.keys(assets as any).length > 0)
-                        );
+                        .map(([label, labelObj]) => {
+                            const { version, ...policies } = labelObj as any;
+                            const filteredPolicies = Object.fromEntries(
+                                Object.entries(policies)
+                                    .filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId))
+                                    .map(([policyId, assets]) => {
+                                        // Only handles in this UTxO
+                                        const filteredAssets = Object.fromEntries(Object.entries(assets as any).filter(([assetName]) => handles.includes(assetName)));
+                                        return [policyId, filteredAssets];
+                                    })
+                                    .filter(([, assets]) => Object.keys(assets as any).length > 0)
+                            );
 
-                        return [label, { ...filteredPolicies, ...(version && { version }) }];
-                    })
-                    // drop labels that ended up with no assets under any policyId
-                    .filter(([, labelObj]) => Object.keys(labelObj as any).some(k => k !== "version"))
+                            return [label, { ...filteredPolicies, ...(version && { version }) }];
+                        })
+                        // drop labels that ended up with no assets under any policyId
+                        .filter(([, labelObj]) => Object.keys(labelObj as any).some(k => k !== 'version'))
                 )
                 // We need to get the datum. This can either be a string or json object.
                 let datum;
@@ -86,10 +86,31 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
                 repo.addUTxO(utxo);
                 repo.updateHandleIndexes(utxo); // be sure to include mint:handle index {created_slot, metadata, txhashes}
                 // Create two separate valkey instances, one for UTxOs/mints and the other for
+
+                const mintData: { handleName: string, mintingData: MintingData }[] = [];
+                for (const asset of utxo.handles) {
+                    for (const assetName of asset[1]) {
+                        if (assetName === '') {
+                            // Don't process the nameless token.
+                            continue;
+                        }
+                        const { isCip67, name, assetLabel } = getHandleNameFromAssetName(assetName);
+                        const isMintTx = isCip67 
+                            ? (assetLabel === AssetNameLabel.LBL_222 || assetLabel === AssetNameLabel.LBL_000)
+                                ? utxo.mint.flatMap(([, handles]) => Object.keys(handles)).includes(assetName) 
+                                : false 
+                            : utxo.mint.flatMap(([, handles]) => Object.keys(handles)).includes(assetName);
+
+                        if (isMintTx) {
+                            mintData.push({ handleName: name, mintingData: { created_slot: currentSlot, metadata: utxo.metadata, txHash: `${txId}` } });
+                        }
+                    }
+                }
+                repo.addMintData(mintData);
             }
         }
         // remove all the utxos that were spent as inputs to this tx
-        repo.removeUTxOs(txBody?.inputs.flatMap((x) => `${x.transaction.id}#${x.index}`))
+        repo.removeUTxOs(txBody?.inputs.flatMap((x) => `${x.transaction.id}#${x.index}`) ?? []);
     }
     
 };

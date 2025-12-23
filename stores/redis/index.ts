@@ -1,11 +1,10 @@
-import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, isNumeric, LogCategory, Logger, NETWORK, SortAndLimitOptions, StoredHandle } from '@koralabs/kora-labs-common';
+import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, isNumeric, LogCategory, Logger, NETWORK, SortAndLimitOptions, UTxO } from '@koralabs/kora-labs-common';
 import { GlideString, HashDataType, SortOptions } from '@valkey/valkey-glide';
 import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
-import { DISABLE_HANDLES_SNAPSHOT, isDatumEndpointEnabled, NODE_ENV } from '../../config';
+import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV } from '../../config';
 import { handleEraBoundaries, META_INDEXES } from '../../config/constants';
-import { RewoundHandle } from '../../repositories/handlesRepository';
 
 // const glideClient = await GlideClient.createClient({
 //       addresses: [{ host: 'https://localhost', port: 6379 }],
@@ -25,8 +24,8 @@ export class RedisHandlesStore implements IApiStore {
     public async initialize(): Promise<IApiStore> {
         if (!RedisHandlesStore._worker) {
             const worker = new Worker('./workers/redisSync.worker.js');
-            worker.on('error', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Error" }));
-            worker.on('exit', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: "ValkeySyncWorker.Exit" }));
+            worker.on('error', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: 'ValkeySyncWorker.Error' }));
+            worker.on('exit', (e) => Logger.log({ message: `Error: ${e}`, category: LogCategory.ERROR, event: 'ValkeySyncWorker.Exit' }));
             RedisHandlesStore._worker = worker;
         }
         //const interval = setInterval(() => {console.log('TIMINGS', JSON.stringify(Object.entries(redisTimings).sort((a, b) => b[1] - a[1])))}, 10_000)
@@ -71,19 +70,73 @@ export class RedisHandlesStore implements IApiStore {
         RedisHandlesStore._pipeline = undefined;
     }
 
-    public async getStartingPoint(save: (handle: StoredHandle) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
+    public async tryPopulateFromS3UTxOs(updateHandleIndexes: (utxo: UTxO) => void): Promise<{ slot: number; id: string; }> {
+        this.redisClientCall('flushdb');
+        let id = handleEraBoundaries[NETWORK].id;
+        let slot = handleEraBoundaries[NETWORK].slot;
+        const currentUTxOSchemaVersion = this.getUTxOSchemaVersion();
+        const fileName = 'handles_utxos.gz';
+        const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getUTxOSchemaVersion()}/${fileName}`;
+        Logger.log(`Fetching ${url}`);
+        const awsResponse = await fetch(url);
+        if (awsResponse.status === 200) {
+            const buff = await awsResponse.arrayBuffer();
+            const unZipPromise = promisify(inflate);
+            const result = await unZipPromise(buff);
+            const text = result.toString('utf8');
+            Logger.log(`Found ${url}`);
+            const storedS3HandlesUTxOJson = JSON.parse(text) as IHandleFileContent;
+            const { utxos, slot: s3Slot, mintingData, hash: s3Hash, utxoSchemaVersion } = storedS3HandlesUTxOJson;
+
+            if (utxoSchemaVersion == currentUTxOSchemaVersion) {
+                // save all the individual handles to the store
+                utxos.sort((a, b) => a.slot - b.slot);
+                for (let i = 0; i < utxos.length; i++) {
+                    // clone it
+                    const newUTxO = { ...utxos[i] };
+                    updateHandleIndexes(newUTxO);
+                }
+
+                this.pipeline(() => {
+                    Object.entries(mintingData).forEach(([handle, mintData]) => {
+                        this.setValueOnIndex(IndexNames.MINT, handle, mintData)
+                    });
+                });
+
+                id = s3Hash;
+                slot = s3Slot;
+            }
+        }
+
+        const metrics = this.getMetrics();
+        Logger.log(`UTxO storage starting at slot: ${slot} and hash: ${id} with ${metrics.handleCount} Handles`);
+
+        this.setMetrics({ utxoSchemaVersion: currentUTxOSchemaVersion, currentBlockHash: id, currentSlot: slot, startTimestamp: Date.now() });
+        return { id, slot };
+    }
+
+    public async getStartingPoint(updateHandleIndexes: (utxo: UTxO) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
+        // repo.getsUTxos();
+        // if process.env.UTXO_SCHEMA_VERSION matches redis utxoSchemaVersion (should hardly change) but process.env.INDEX_SCHEMA_VERSION doesn't match redis IndexSchemaVersion
+        //  we need to loop through slots to get the utxos in redis in order and call repo.updateHandleIndexes(utxo);
+        // if the utxo version is wrong, we should check S3 to see if we have a utxo version snapshot.
+        //      if so, use it.  
+        //      if not return the origin from this function. (flushdb)
         if (!failed) {
-            const { schemaVersion, currentSlot, currentBlockHash } = this.getMetrics();
-            const currentSchemaVersion = this.getSchemaVersion();
-            if (currentSchemaVersion > (schemaVersion ?? 0) || !currentBlockHash || !currentSlot) {
-                this.redisClientCall('flushdb');
-                const { id, slot } = handleEraBoundaries[NETWORK];
-                this.setMetrics({ schemaVersion: currentSchemaVersion, currentBlockHash: id, currentSlot: slot, startTimestamp: Date.now() });
+            const { indexSchemaVersion, utxoSchemaVersion, currentSlot, currentBlockHash } = this.getMetrics();
+            
+            const currentSchemaVersion = this.getUTxOSchemaVersion();
+            if (currentSchemaVersion > (utxoSchemaVersion ?? 0) || !currentBlockHash || !currentSlot) {
+                // start at Handle genesis
+                const { id, slot } = await this.tryPopulateFromS3UTxOs(updateHandleIndexes);
                 return { id, slot };
             }
-            else {
-                return { id: currentBlockHash, slot: currentSlot };
+
+            if (this.getIndexSchemaVersion() > (indexSchemaVersion ?? 0)) {
+                
             }
+
+            return { id: currentBlockHash, slot: currentSlot };
         }
         else {
             if (NODE_ENV === 'local' || DISABLE_HANDLES_SNAPSHOT == 'true') {
@@ -91,34 +144,8 @@ export class RedisHandlesStore implements IApiStore {
             }
 
             try {
-                const fileName = isDatumEndpointEnabled() ? 'handles.gz' : 'handles-no-datum.gz';
-                const url = `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${NETWORK}/snapshot/${this.getSchemaVersion()}/${fileName}`;
-                Logger.log(`Fetching ${url}`);
-                const awsResponse = await fetch(url);
-                if (awsResponse.status === 200) {
-                    const buff = await awsResponse.arrayBuffer();
-                    const unZipPromise = promisify(inflate);
-                    const result = await unZipPromise(buff);
-                    const text = result.toString('utf8');
-                    Logger.log(`Found ${url}`);
-                    const storedS3HandlesJson = JSON.parse(text) as IHandleFileContent;
-                    const { handles, slot, hash, history } = storedS3HandlesJson;
-
-                    // save all the individual handles to the store
-                    for (let i = 0; i < handles.length; i++) {
-                        // clone it
-                        const newHandle = { ...handles[i] };
-                        save(new RewoundHandle(newHandle));
-                    }
-
-                    // save the slot history to the store
-                    this.redisClientCall('del', [`{root}:${IndexNames.SLOT_HISTORY}`])
-                    await this.redisClientCall('zadd', `{root:}${IndexNames.SLOT_HISTORY}`, history.map(([slot, hist]) => ({ score: slot, element: JSON.stringify(hist) })));
-                    Logger.log(`Handle storage found at slot: ${slot} and hash: ${hash} with ${Object.keys(handles ?? {}).length} handles and ${history?.length} history entries`);
-                }
-
-                Logger.log(`Unable to find ${url} online`);
-                return null;
+                const { id, slot } = await this.tryPopulateFromS3UTxOs(updateHandleIndexes);
+                return { id, slot };
             } catch (error: any) {
                 Logger.log(`Error fetching file from online with error: ${error.message}`);
                 return null;
@@ -149,7 +176,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public getKeysFromIndex(index: IndexNames, options?: SortAndLimitOptions): (string | number)[] {
-        if (index == IndexNames.HOLDER)
+        if (index == IndexNames.HOLDER || index == IndexNames.UTXO_SLOT)
             return this.getValuesFromOrderedSet(index, 0, options) as string[];
         const command = options ? 'sort' : 'smembers'
         if (options && options?.isAlpha == undefined)
@@ -235,7 +262,7 @@ export class RedisHandlesStore implements IApiStore {
 
     public removeValuesFromOrderedSet(index:IndexNames, keyOrOrdinal: string | number) {
         if (index == IndexNames.SLOT_HISTORY) {
-                this.redisClientCall('zremRangeByScore', `{root}:${index}`, "-", { value: keyOrOrdinal, isInclusive: false });
+            this.redisClientCall('zremRangeByScore', `{root}:${index}`, '-', { value: keyOrOrdinal, isInclusive: false });
             return;
         }
         this.redisClientCall('zrem', `{root}:${index}`, typeof keyOrOrdinal == 'string' ? keyOrOrdinal : JSON.stringify(keyOrOrdinal));
@@ -246,7 +273,7 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region METRICS *****************************
     public getMetrics(): IApiMetrics {
-        const metrics = this.rehydrateObjectFromCache("metrics") || {} as IApiMetrics;
+        const metrics = this.rehydrateObjectFromCache('metrics') || {} as IApiMetrics;
         metrics.handleCount = this.count();
         metrics.holderCount = this.holderCount();
         return metrics;
@@ -254,7 +281,7 @@ export class RedisHandlesStore implements IApiStore {
 
     public setMetrics(metrics: Partial<IApiMetrics>): void {
         const formattedMetrics = Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, String(v)]));
-        this.redisClientCall('hset', "metrics", formattedMetrics);
+        this.redisClientCall('hset', 'metrics', formattedMetrics);
     }
 
     public count(): number {
@@ -265,7 +292,11 @@ export class RedisHandlesStore implements IApiStore {
         return this.redisClientCall('zcount', `{root}:${IndexNames.HOLDER}`, {value: -Infinity}, {value:Infinity});
     }
 
-    public getSchemaVersion(): number {
+    public getUTxOSchemaVersion(): number {
+        return Number(process.env.UTXO_SCHEMA_VERSION);
+    }
+
+    public getIndexSchemaVersion(): number {
         return Number(process.env.INDEX_SCHEMA_VERSION);
     }
 
@@ -284,7 +315,7 @@ export class RedisHandlesStore implements IApiStore {
         const parentFields: Record<string, string> = {};
         for (const [field, value] of Object.entries(obj)) {
             if (value != undefined && value != null) {
-                if (typeof value === "object") {
+                if (typeof value === 'object') {
                     // JSON value → add to parent hash
                     parentFields[field] = JSON.stringify(value)
                 } else {
@@ -357,13 +388,13 @@ export class RedisHandlesStore implements IApiStore {
         redisTimings[cmd] = (redisTimings[cmd] ?? 0) + (end - start);
 
         if (!msg || msg.message.id !== id) {
-            Logger.log({message: `GlideClient ${cmd} received no/incorrect reply: ${msg}`, category: LogCategory.ERROR, event: "redisClientCall.incorrectMessageResponse"});
+            Logger.log({message: `GlideClient ${cmd} received no/incorrect reply: ${msg}`, category: LogCategory.ERROR, event: 'redisClientCall.incorrectMessageResponse'});
             return undefined;
         }
 
         const { ok, result, error } = msg.message;
         if (!ok) {
-            Logger.log({message: error?.message || `GlideClient ${cmd} failed`, category: LogCategory.ERROR, event: "redisClientCall.errorFromPostMessage"})
+            Logger.log({message: error?.message || `GlideClient ${cmd} failed`, category: LogCategory.ERROR, event: 'redisClientCall.errorFromPostMessage'})
         }
         return result;
     }
