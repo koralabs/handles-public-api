@@ -125,7 +125,7 @@ async function countKeys(close = false) {
         await initializeClient();
         console.log('Connected to Valkey');
 
-        let cursor = 0;
+        let cursor = '0';
         let totalKeys = 0;
 
         console.log('Counting keys in database...');
@@ -165,7 +165,7 @@ async function deleteAllKeys() {
         await initializeClient();
         console.log('Connected to Valkey');
 
-        let cursor = 0;
+        let cursor = '0';
         let deleted = 0;
         const startTime = Date.now();
 
