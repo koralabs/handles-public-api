@@ -157,7 +157,7 @@ export interface HealthResponseBody {
     slotInEpoch: number;
 }
 
-export interface ProcessOwnerTokenInput {
+export interface ScannedHandleInfo {
     assetName: string;
     slotNumber: number;
     address: string;
@@ -165,9 +165,10 @@ export interface ProcessOwnerTokenInput {
     lovelace: number;
     datum?: string;
     script?: { type: string; cbor: string };
-    handleMetadata?: { [handleName: string]: HandleOnChainMetadata };
+    metadata?: { [handleName: string]: HandleOnChainMetadata };
     isMintTx: boolean;
     policy: string;
+    reference_token?: {datum: string}
 }
 
 export interface IBlockProcessor {

@@ -1,5 +1,4 @@
-import { AssetNameLabel, LogCategory, Logger } from '@koralabs/kora-labs-common';
-import { Buffer } from 'buffer';
+import { AssetNameLabel, checkNameLabel, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import fetch from 'cross-fetch';
 import v8 from 'v8';
 import { NODE_ENV, OGMIOS_HOST } from '../../../config';
@@ -65,23 +64,26 @@ export const buildOnChainObject = <T>(cborData: any): T | null => {
     }
 };
 
-export const getHandleNameFromAssetName = (assetName: string): { name: string; hex: string } => {
-    let hex = `${assetName}`;
-
+export const getHandleNameFromAssetName = (asset: string): { name: string; handleHex: string, isCip67: boolean, assetLabel: AssetNameLabel } => {
+    let handleHex = `${asset}`;
+    
     // check if asset name has a period. If so, it includes the policyId
-    if (hex.includes('.')) {
-        hex = hex.split('.')[1];
+    if (handleHex.includes('.')) {
+        handleHex = handleHex.split('.')[1];
+    }
+    const {isCip67, name, assetLabel} = checkNameLabel(handleHex)
+    if (isCip67) {
+        // We need to return the hex of the associated Handle (not the current asset being processed)
+        handleHex = `${assetLabel == AssetNameLabel.LBL_000 ? AssetNameLabel.LBL_000 : AssetNameLabel.LBL_222}${handleHex.replace(assetLabel ?? '', '')}`
     }
 
-    const nameWithoutLabel: string = Object.values(AssetNameLabel).reduce((acc, label) => acc.replace(label, ''), hex);
-
     return {
-        name: Buffer.from(nameWithoutLabel, 'hex').toString('utf8'),
-        hex
+        name,
+        handleHex,
+        isCip67,
+        assetLabel
     };
 };
-
-export const stringifyBlock = (metadata: any) => JSON.stringify(metadata, (k, v) => (typeof v === 'bigint' ? v.toString() : v));
 
 export const fetchHealth = async (): Promise<HealthResponseBody | null> => {
     let ogmiosResults = null;

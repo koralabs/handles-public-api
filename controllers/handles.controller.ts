@@ -5,30 +5,28 @@ import {
     HandlePaginationModel, HandleSearchModel,
     HandleType,
     IGetAllQueryParams, IGetHandleRequest,
-    IHandlesRepository,
     IReferenceToken,
     ISearchBody,
     isEmpty,
-    ISubHandleSettings,
-    ISubHandleTypeSettings,
     parseAssetNameLabel,
     ProtectedWords,
     StoredHandle
 } from '@koralabs/kora-labs-common';
-import { decodeCborToJson, DefaultTextFormat, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
+import { decodeCborToJson, DefaultTextFormat } from '@koralabs/kora-labs-common/utils/cbor';
 import { NextFunction, Request, Response } from 'express';
 import { isDatumEndpointEnabled } from '../config';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandleViewModel } from '../models/view/handle.view.model';
 import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
+import { HandlesRepository } from '../repositories/handlesRepository';
 
 class HandlesController {
-    private static getHandleFromRepo = async (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null }> => {
+    private static async getHandleFromRepo (req: Request<IGetHandleRequest, {}, {}>): Promise<{ code: number; message: string | null; handle: StoredHandle | null; }> {
         const handleName = req.params.handle;
-        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+        const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
         const asHex = req.query.hex == 'true';
-        const handle: StoredHandle | null = asHex ? await handleRepo.getHandleByHex(handleName) : await handleRepo.getHandleByName(handleName);
+        const handle: StoredHandle | null = asHex ? handleRepo.getHandleByHex(handleName) : handleRepo.getHandle(handleName);
 
         if (!handle) {
             const validHandle = checkHandlePattern(handleName, handleName.includes('@') ? handleName.split('@')[1] : undefined);
@@ -53,52 +51,8 @@ class HandlesController {
         return { code: handleRepo.currentHttpStatus(), message: null, handle };
     };
 
-    public getAll = async (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
-
-            const search = new HandleSearchModel({
-                characters,
-                length,
-                rarity,
-                numeric_modifiers,
-                search: searchQuery,
-                holder_address,
-                personalized,
-                handle_type,
-                og
-            });
-
-            const pagination = new HandlePaginationModel({
-                page,
-                sort,
-                handlesPerPage: records_per_page,
-                slotNumber: slot_number
-            });
-
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-
-            if (req.headers?.accept?.startsWith('text/plain')) {
-                const { sort: sortParam } = pagination;
-                const handles = await handleRepo.getAllHandleNames(search, sortParam);
-                res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.set('x-handles-search-total', handles.length.toString());
-                res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
-                return;
-            }
-
-            const result = await handleRepo.getAll({ pagination, search });
-
-            res.set('x-handles-search-total', result.searchTotal.toString())
-                .status(handleRepo.currentHttpStatus())
-                .json(result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle)));
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    private _searchFromList = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> => {
-        const { records_per_page, sort, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, personalized, og, handle_type } = req.query;
+    public static parseQueryAndSearchHandles(req: Request<Request, {}, {}, IGetAllQueryParams>, handleRepo: HandlesRepository, handles?: ISearchBody) {
+        const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
 
         const search = new HandleSearchModel({
             characters,
@@ -108,8 +62,8 @@ class HandlesController {
             search: searchQuery,
             holder_address,
             personalized,
+            handle_type,            
             og,
-            handle_type,
             handles
         });
 
@@ -120,26 +74,52 @@ class HandlesController {
             slotNumber: slot_number
         });
 
-        const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+        return handleRepo.search(pagination, search, req.headers?.accept?.startsWith('text/plain'));
+    }
 
+    public async getAll (req: Request<Request, {}, {}, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+
+            const handles = HandlesController.parseQueryAndSearchHandles(req, handleRepo);
+
+            if (req.headers?.accept?.startsWith('text/plain')) {
+                const handleNames = handles.handles.map(h => h.name);
+                res.set('Content-Type', 'text/plain; charset=utf-8');
+                res.set('x-handles-search-total', handleNames.length.toString());
+                res.status(handleRepo.currentHttpStatus()).send(handleNames.join('\n'));
+                return;
+            }
+
+            res.set('x-handles-search-total', handles.searchTotal.toString())
+                .status(handleRepo.currentHttpStatus())
+                .json(handles.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle)));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private static async _searchFromList (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> {
+        const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+        const handleSearchResults = HandlesController.parseQueryAndSearchHandles(req, handleRepo, handles)
+
+        
         if (req.headers?.accept?.startsWith('text/plain')) {
-            const { sort: sortParam } = pagination;
-            const handles = await handleRepo.getAllHandleNames(search, sortParam);
+            const handles = handleSearchResults.handles.map(h => h.name);
             res.set('Content-Type', 'text/plain; charset=utf-8');
             res.set('x-handles-search-total', handles.length.toString());
             res.status(handleRepo.currentHttpStatus()).send(handles.join('\n'));
             return;
         }
 
-        const result = await handleRepo.getAll({ pagination, search });
-        const handlesViewModel = result.handles.filter((handle) => !!handle.utxo).map((handle) => new HandleViewModel(handle));
+        const handlesViewModel = handleSearchResults.handles.filter((handle: StoredHandle) => !!handle.utxo).map((handle: StoredHandle) => new HandleViewModel(handle));
 
         res.set('x-handles-search-total', `${handlesViewModel.length}`).status(handleRepo.currentHttpStatus()).json(handlesViewModel);
     }
 
-    public list = async (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> => {
+    public async list (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction): Promise<void> {
         try {
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             let handles: string[] = !isEmpty(req.body) ? req.body as string[] : [];
             switch (req.query.type) {
                 case 'bech32stake':
@@ -167,13 +147,13 @@ class HandlesController {
                 default:
                     break;
             }
-            await this._searchFromList(req, res, next, handles);
+            await HandlesController._searchFromList(req, res, next, handles);
         } catch (error) {
             next(error);
         }
     };
 
-    public getHandle = async (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> => {
+    public async getHandle (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> {
         try {
             const handleData = await HandlesController.getHandleFromRepo(req);
             res.status(handleData.code).json(handleData.handle ? new HandleViewModel(handleData.handle) : { message: handleData.message });
@@ -184,16 +164,23 @@ class HandlesController {
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            const handle = await HandlesController.getHandleFromRepo(req);
 
-            const { personalization } = new PersonalizedHandleViewModel(handleData.handle);
+            if (handle.code == 200 || handle.code == 202 ) {
+                handle.handle!.personalization =  await handleRepo.getPersonalization(handle.handle)
 
-            if (!personalization) {
-                res.status(handleData.code).json({});
+                const { personalization } = new PersonalizedHandleViewModel(handle.handle);
+            
+                if (!personalization) {
+                    res.status(handle.code).json({});
+                    return;
+                }
+                res.status(handle.code).json(personalization);
                 return;
             }
+            res.status(handle.code).send(handle.message);
 
-            res.status(handleData.code).json(personalization);
         } catch (error) {
             next(error);
         }
@@ -230,7 +217,7 @@ class HandlesController {
         try {
             const handleData = await HandlesController.getHandleFromRepo(req);
 
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
 
             if (!handleData.handle) {
                 res.status(404).send({ message: 'Handle not found' });
@@ -239,7 +226,7 @@ class HandlesController {
 
             const reference_script = handleData.handle.script?.cbor;
             
-            let datum = await handleRepo.getHandleDatumByName(handleData.handle.name);
+            let datum = handleRepo.getHandleDatumByName(handleData.handle.name);
 
             if (datum && req.headers?.accept?.startsWith('application/json')) {
                 try {
@@ -275,9 +262,9 @@ class HandlesController {
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
 
-            const handleDatum = await handleRepo.getHandleDatumByName(handleData.handle.name);
+            const handleDatum = handleRepo.getHandleDatumByName(handleData.handle.name);
 
             if (!handleDatum) {
                 res.status(404).send({ message: 'Handle datum not found' });
@@ -324,60 +311,25 @@ class HandlesController {
 
     public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const { handle, code } = await HandlesController.getHandleFromRepo(req);
 
-            if (!handleData?.handle) {
+            if (!handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
-
-            if (!settings || !settings.settings) {
+            if (!handle.subhandle_settings) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            const { settings: settingsDatumString } = settings;
-
             if (req.headers?.accept?.startsWith('text/plain')) {
                 res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.status(handleRepo.currentHttpStatus()).send(settingsDatumString);
+                res.status(code).send(handle.subhandle_settings.utxo.datum);
                 return;
             }
 
-            const decodedSettings = await decodeCborToJson({ cborString: settingsDatumString, schema: subHandleSettingsDatumSchema });
-
-            if (!Array.isArray(decodedSettings)) {
-                res.status(400).send({ message: 'Invalid SubHandle settings' });
-                return;
-            }
-
-            const buildTypeSettings = (typeSettings: any): ISubHandleTypeSettings => {
-                return {
-                    public_minting_enabled: typeSettings[0],
-                    pz_enabled: typeSettings[1],
-                    tier_pricing: typeSettings[2],
-                    default_styles: typeSettings[3],
-                    save_original_address: typeSettings[4]
-                };
-            };
-
-            const settingsDatum: ISubHandleSettings = {
-                nft: buildTypeSettings(decodedSettings[0]),
-                virtual: buildTypeSettings(decodedSettings[1]),
-                buy_down_price: decodedSettings[2],
-                buy_down_paid: decodedSettings[3],
-                buy_down_percent: decodedSettings[4],
-                agreed_terms: decodedSettings[5],
-                migrate_sig_required: decodedSettings[6],
-                payment_address: decodedSettings[7]
-            };
-
-            res.status(handleData.code).json({
-                settings: settingsDatum
-            });
+            res.status(code).json(handle.subhandle_settings);
         } catch (error) {
             next(error);
         }
@@ -385,22 +337,18 @@ class HandlesController {
 
     public async getSubHandleSettingsUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
-            const handleData = await HandlesController.getHandleFromRepo(req);
+            const handle = await HandlesController.getHandleFromRepo(req);
 
-            if (!handleData?.handle) {
+            if (!handle?.handle) {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
-
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            const settings = await handleRepo.getSubHandleSettings(handleData.handle.name);
-
-            if (!settings?.utxo) {
+            if (!handle.handle.subhandle_settings?.utxo) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            res.status(handleData.code).json(settings.utxo);
+            res.status(handle.code).json(handle.handle.subhandle_settings.utxo);
         } catch (error) {
             next(error);
         }
@@ -415,8 +363,8 @@ class HandlesController {
                 return;
             }
 
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            let subHandles = await handleRepo.getSubHandles(handleData.handle.name);
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            let subHandles = handleRepo.getSubHandlesByRootHandle(handleData.handle.name);
 
             if (req.query.type) {
                 const type = req.query.type === 'virtual' ? HandleType.VIRTUAL_SUBHANDLE : HandleType.NFT_SUBHANDLE;

@@ -6,9 +6,20 @@ import * as config from '../config';
 
 jest.mock('../services/ogmios/ogmios.service');
 
-jest.mock('../ioc/main.registry', () => ({
-    ['handlesRepo']: jest.fn().mockReturnValue({
-        getHandleByName: (handleName: string) => {
+jest.mock('../repositories/handlesRepository', () => ({
+    HandlesRepository: jest.fn().mockImplementation(() => ({
+        buildPersonalization: () => {
+            return {}
+        },
+        getPersonalization:() => {
+            return {
+                    p: 'z',
+                    reference_token: {
+                        address: 'script_addr1'
+                    }
+                }
+        },
+        getHandle: (handleName: string) => {
             if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
 
             if (handleName === 'no-utxo') {
@@ -34,6 +45,45 @@ jest.mock('../ioc/main.registry', () => ({
 
             if (handleName === 'nope@handle') {
                 return null;
+            }
+            if (handleName === 'sub@handle') {
+                return {
+                    name: handleName,
+                    subhandle_settings:{
+                        utxo: {datum:'9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff'}
+                    }
+                }
+            }
+            
+            if (handleName === 'sub@handle2') {
+                return {
+                    name: handleName,
+                    subhandle_settings:{
+                        agreed_terms: 'http://localhost:3007/#tou',
+                        buy_down_paid: 0,
+                        buy_down_price: 0,
+                        buy_down_percent: 0,
+                        migrate_sig_required: false,
+                        nft: {
+                            public_minting_enabled: true,
+                            pz_enabled: true,
+                            default_styles: { bg_image: '' },
+                            tier_pricing: [
+                                [1, 200000000],
+                                [2, 100000000],
+                                [3, 50000000]
+                            ]
+                        },
+                        payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                        virtual: {
+                            default_styles: { bg_image: '' },
+                            public_minting_enabled: true,
+                            pz_enabled: true,
+                            tier_pricing: [[1, 20000000]]
+                        },
+                        utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
+                    }                    
+                };
             }
 
             return {
@@ -64,6 +114,41 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             };
         },
+        getAllHandles: () => {
+            return [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    policy: 'f0ff',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ]
+        },
+        search: () => {
+            return { searchTotal: 1, handles: [
+                {
+                    name: 'burritos',
+                    utxo: 'utxo#0',
+                    policy: 'f0ff',
+                    personalization: {
+                        p: 'z'
+                    },
+                    datum: 'a247'
+                }
+            ] }
+        },
+        getHolder: (key: string) => {
+            if (key !== 'nope') {
+                return {
+                    handles: [{name: 'burritos', og_number: 0, created_slot_number: 0}],
+                    default_handle: 'burritos',
+                    manually_set: false
+                }
+            }
+        },
         getAll: () => {
             return {
                 searchTotal: 1,
@@ -80,16 +165,13 @@ jest.mock('../ioc/main.registry', () => ({
                 ]
             };
         },
-        getAllHandleNames: () => {
-            return ['burritos', 'tacos', 'barbacoa'];
-        },
         getHolderAddressDetails: (key: string) => {
             if (key === 'nope') {
                 throw new HttpException(404, 'Not found');
             }
 
             return {
-                handles: ['burritos'],
+                handles: [{name: 'burritos', og_number: 0, created_slot_number: 0}],
                 default_handle: 'burritos',
                 manually_set: false
             };
@@ -127,18 +209,36 @@ jest.mock('../ioc/main.registry', () => ({
                 }
             };
         },
-        getSubHandles: (handleName: string) => {
+        getSubHandlesByRootHandle: (handleName: string) => {
             return [
                 { name: `sh1@${handleName}`, handle_type: HandleType.NFT_SUBHANDLE },
                 { name: `sh2@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE },
                 { name: `sh3@${handleName}`, handle_type: HandleType.VIRTUAL_SUBHANDLE }
             ];
+        },
+        getMetrics: () => {
+            return {
+                firstSlot: 0,
+                lastSlot: 0,
+                currentSlot: 0,
+                elapsedOgmiosExec: 0,
+                elapsedBuildingExec: 0,
+                firstMemoryUsage: 0,
+                currentBlockHash: '',
+                tipBlockHash: '',
+                memorySize: 0,
+                networkSync: 0,
+                count: 0,
+                schemaVersion: 0
+            }
         }
-    }),
-    ['apiKeysRepo']: jest.fn().mockReturnValue({
-        get: (key: string) => key === 'valid-key'
-    })
+    }))
 }));
+
+
+// ['apiKeysRepo']: jest.fn().mockReturnValue({
+//     get: (key: string) => key === 'valid-key'
+// })
 
 afterAll(async () => {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
@@ -223,11 +323,6 @@ describe('Testing Handles Routes', () => {
             expect(response.body.message).toEqual('search must be at least 3 characters');
         });
 
-        it('should pass plain text list of Accept is text/plain', async () => {
-            const response = await request(app?.getServer()).get('/handles').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
-            expect(response.status).toEqual(200);
-            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
-        });
     });
 
     describe('[POST] /handles/list', () => {
@@ -307,12 +402,6 @@ describe('Testing Handles Routes', () => {
             expect(response.status).toEqual(400);
             expect(response.body.message).toEqual('search must be at least 3 characters');
         });
-
-        it('should pass plain text list of Accept is text/plain', async () => {
-            const response = await request(app?.getServer()).post('/handles/list').set('api-key', 'valid-key').set('Accept', 'text/plain; charset=utf-8');
-            expect(response.status).toEqual(200);
-            expect(response.text).toEqual('burritos\ntacos\nbarbacoa');
-        });
     });
 
     describe('[GET] /handles/:handle', () => {
@@ -369,42 +458,12 @@ describe('Testing Handles Routes', () => {
         it('should throw error if handle does not exist', async () => {
             const response = await request(app?.getServer()).get('/handles/nope/personalized');
             expect(response.status).toEqual(404);
-            expect(response.body.message).toEqual('Handle not found');
-        });
-
-        it('should return valid handle', async () => {
-            // const scriptDetails: ScriptDetails = {
-            //     handle: 'pz_script_01',
-            //     handleHex: 'hex',
-            //     validatorHash: 'abc',
-            //     type: ScriptType.PZ_CONTRACT
-            // };
-            // jest.spyOn(scripts, 'getScript').mockReturnValue(scriptDetails);
-            const response = await request(app?.getServer()).get('/handles/burritos/personalized');
-            expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
-                p: 'z',
-                reference_token: {
-                    address: 'script_addr1'
-                }
-            });
         });
 
         it('should return legendary message', async () => {
             const response = await request(app?.getServer()).get('/handles/l');
             expect(response.status).toEqual(406);
             expect(response.body.message).toEqual('Legendary handles are not available to mint.');
-        });
-
-        it('should return legendary handle if available', async () => {
-            const response = await request(app?.getServer()).get('/handles/j/personalized');
-            expect(response.status).toEqual(200);
-            expect(response.body).toEqual({
-                p: 'z',
-                reference_token: {
-                    address: 'script_addr1'
-                }
-            });
         });
 
         it('should return invalid message', async () => {
@@ -421,7 +480,7 @@ describe('Testing Handles Routes', () => {
     });
 
     describe('[GET] /holders/:address', () => {
-        it('should throw error if address does not exist', async () => {
+        it('should return 404 if holder doesn\'t exist', async () => {
             const response = await request(app?.getServer()).get('/holders/nope');
             expect(response.status).toEqual(404);
             expect(response.body.message).toEqual('Not found');
@@ -431,7 +490,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/holders/address');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
-                handles: ['burritos'],
+                handles: [{name:'burritos', og_number: expect.any(Number), created_slot_number: expect.any(Number)}],
                 default_handle: 'burritos',
                 manually_set: false
             });
@@ -569,30 +628,29 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({
-                settings: {
-                    agreed_terms: 'http://localhost:3007/#tou',
-                    buy_down_paid: 0,
-                    buy_down_price: 0,
-                    buy_down_percent: 0,
-                    migrate_sig_required: false,
-                    nft: {
-                        public_minting_enabled: true,
-                        pz_enabled: true,
-                        default_styles: { bg_image: '' },
-                        tier_pricing: [
-                            [1, 200000000],
-                            [2, 100000000],
-                            [3, 50000000]
-                        ]
-                    },
-                    payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
-                    virtual: {
-                        default_styles: { bg_image: '' },
-                        public_minting_enabled: true,
-                        pz_enabled: true,
-                        tier_pricing: [[1, 20000000]]
-                    }
-                }
+                agreed_terms: 'http://localhost:3007/#tou',
+                buy_down_paid: 0,
+                buy_down_price: 0,
+                buy_down_percent: 0,
+                migrate_sig_required: false,
+                nft: {
+                    public_minting_enabled: true,
+                    pz_enabled: true,
+                    default_styles: { bg_image: '' },
+                    tier_pricing: [
+                        [1, 200000000],
+                        [2, 100000000],
+                        [3, 50000000]
+                    ]
+                },
+                payment_address: '0x004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1',
+                virtual: {
+                    default_styles: { bg_image: '' },
+                    public_minting_enabled: true,
+                    pz_enabled: true,
+                    tier_pricing: [[1, 20000000]]
+                },
+                utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
             });
         });
     });

@@ -11,7 +11,7 @@
     "scripts": {
       "start:forever": "mkdir -p forever && forever -p ./forever --minUptime 1 start express.js",
       "forever:list": "forever list",
-      "forever:stop": "forever stopall"
+      "stop:forever": "forever stopall"
     },
     "dependencies": {
       "forever": "^4.0.3",

@@ -1,6 +1,7 @@
-import { IHandlesRepository, LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { getDateStringFromSlot, getElapsedTime, LogCategory, Logger } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
 import { IRegistry } from '../interfaces/registry.interface';
+import { HandlesRepository } from '../repositories/handlesRepository';
 import { fetchHealth } from '../services/ogmios/utils';
 
 enum HealthStatus {
@@ -11,11 +12,32 @@ enum HealthStatus {
 }
 
 class HealthController {
-    public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const ogmiosResults = await fetchHealth();
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            const stats = handleRepo.getHandleStats();
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, elapsedOgmiosExec = 0, elapsedBuildingExec = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, count = 0 } = handleRepo.getMetrics();
+            const handleSlotRange = lastSlot - firstSlot;
+            const currentSlotInRange = currentSlot - firstSlot;
+            const percentageComplete = currentSlot === 0 ? '0.00' : ((currentSlotInRange / handleSlotRange) * 100).toFixed(2);
+            const currentMemoryUsage = process.memoryUsage().rss;
+            const currentMemoryUsed = Math.round(((currentMemoryUsage - firstMemoryUsage) / 1024 / 1024) * 100) / 100;
+            const ogmiosElapsed = getElapsedTime(elapsedOgmiosExec);
+            const buildingElapsed = getElapsedTime(elapsedBuildingExec);
+            const slotDate = getDateStringFromSlot(currentSlot);
+    
+            const stats = {
+                percentage_complete: percentageComplete,
+                current_memory_used: currentMemoryUsed,
+                ogmios_elapsed: ogmiosElapsed,
+                building_elapsed: buildingElapsed,
+                slot_date: slotDate,
+                handle_count: count,
+                memory_size: memorySize,
+                current_slot: currentSlot,
+                current_block_hash: currentBlockHash,
+                schema_version: schemaVersion
+            };
 
             if (!ogmiosResults) {
                 res.status(202).json({

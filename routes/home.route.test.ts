@@ -1,4 +1,4 @@
-import { IHandleStats } from '@koralabs/kora-labs-common';
+import { IApiMetricsViewModel } from '@koralabs/kora-labs-common';
 import request from 'supertest';
 import App from '../app';
 
@@ -6,7 +6,7 @@ jest.mock('../services/ogmios/ogmios.service');
 
 jest.mock('../ioc/main.registry', () => ({
     ['handlesRepo']: jest.fn().mockReturnValue({
-        getHandleByName: (handleName: string) => {
+        getHandle: (handleName: string) => {
             if (['nope'].includes(handleName)) return null;
 
             return {
@@ -24,7 +24,7 @@ jest.mock('../ioc/main.registry', () => ({
             return ['burritos', 'tacos', 'barbacoa'];
         },
         getHandleStats: () => {
-            const stats: IHandleStats = {
+            const stats: IApiMetricsViewModel = {
                 percentage_complete: '',
                 current_memory_used: 0,
                 memory_size: 0,

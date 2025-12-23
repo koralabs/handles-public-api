@@ -113,3 +113,14 @@ api/*
 handles/*
 workers/apiStore.worker.js
 /swagger.yml
+mainnet
+preprod
+preview
+mainnet-node.ip
+preprod-node.ip
+preview-node.ip
+scripts/localHandles.json
+.gitignore
+scripts/discrepancies.json
+scripts/liveHandles.json
+tmp

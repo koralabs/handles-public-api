@@ -726,6 +726,65 @@ paths:
           description: Script not found
       security:
       - api-key: []
+  
+  "/root-handles":
+    get:
+      tags:
+      - handles
+      description: Get all root handles (has at least one SubHandles minted).
+        This may be combined with the all of the search and filtering
+        parameters of the `/handles` endpoint 
+        (see [/handles](#/handles/get_handles) for more information).
+      parameters:
+      - name: minting_type
+        in: query
+        schema:
+          $ref: "#/components/schemas/MintingType"
+      responses:
+        '200':
+          description: Successful and up to date
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+              description: Number of total search results, regardless of pagination
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: |-
+                  handle123
+                  my.handle
+                  i-always-hodl
+                  ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Handle"
+        '202':
+          description: Successful, but scanning is still catching up to the tip of the blockchain
+          headers:
+            x-handles-search-total:
+              schema:
+                type: integer
+              description: Number of total search results, regardless of pagination
+          content:
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: |-
+                  handle123
+                  my.handle
+                  i-always-hodl
+                  ...
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Handle"
+        '400':
+          description: Invalid filter
   "/holders":
     get:
       tags:
@@ -1258,6 +1317,16 @@ components:
             <br />If no OG Handle then shortest Handle
             <br />If many have the same length, then the earliest minted slot number
             <br />If multiple minted at the same time, then ascending alpha order
+    MintingType:
+      type: string
+      example: nft
+      description: |-
+        Minting Types (leave blank for all):
+        <br />`nft`, 
+        <br />`virtual`
+      enum:
+      - nft
+      - virtual
     NumericModifiers:
       type: string
       description: |-

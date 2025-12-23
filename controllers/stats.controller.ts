@@ -1,12 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
-import { IHandlesRepository } from '@koralabs/kora-labs-common';
 import { IRegistry } from '../interfaces/registry.interface';
+import { HandlesRepository } from '../repositories/handlesRepository';
 
 class StatsController {
-    public index = async (req: Request<Request>, res: Response, next: NextFunction): Promise<void> => {
+    public async index (req: Request<Request>, res: Response, next: NextFunction): Promise<void> {
         try {
-            const handleRepo: IHandlesRepository = new (req.app.get('registry') as IRegistry).handlesRepo();
-            res.status(handleRepo.currentHttpStatus()).json(handleRepo.getTotalHandlesStats());
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            res.status(handleRepo.currentHttpStatus()).json(handleRepo.getMetrics());
         } catch (error) {
             next(error);
         }

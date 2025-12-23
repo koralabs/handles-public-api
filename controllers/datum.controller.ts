@@ -1,8 +1,8 @@
+import { decodeCborToJson, encodeJsonToDatum, KeyType } from '@koralabs/kora-labs-common';
 import { NextFunction, Request, Response } from 'express';
-import { encodeJsonToDatum, decodeCborToJson, KeyType } from '@koralabs/kora-labs-common';
 
 class DatumController {
-    public index = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             if (req.query.from === 'json' && req.query.to === 'plutus_data_cbor') {
                 const encoded = await encodeJsonToDatum(req.body, { 
@@ -17,7 +17,7 @@ class DatumController {
 
             if (req.query.from === 'plutus_data_cbor' && req.query.to === 'json') {
                 if (req.headers?.['content-type']?.startsWith('text/plain')) {
-                    const decoded = await decodeCborToJson({ cborString: req.body, schema: {}, defaultKeyType: req.query.default_key_type as KeyType });
+                    const decoded = decodeCborToJson({ cborString: req.body, schema: {}, defaultKeyType: req.query.default_key_type as KeyType });
                     res.status(200).json(decoded);
                     return;
                 }
@@ -28,7 +28,7 @@ class DatumController {
                     return;
                 }
 
-                const decoded = await decodeCborToJson({ cborString: cbor, schema, defaultKeyType: req.query.default_key_type as KeyType });
+                const decoded = decodeCborToJson({ cborString: cbor, schema, defaultKeyType: req.query.default_key_type as KeyType });
                 res.status(200).json(decoded);
                 return;
             }
