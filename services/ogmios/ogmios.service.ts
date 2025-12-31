@@ -185,8 +185,8 @@ class OgmiosService {
     }
 
     private async _resume(startingPoint: Point) {
-        let attempts = 0;
-        while (true) {
+        const checkOpenConnection = true;
+        while (checkOpenConnection) {
             if (!this.client || this.client.readyState === WebSocket.CLOSED || this.client.readyState === WebSocket.CLOSING) {
                 this._resetClient();
                 this.client = this._createWebSocketClient();
