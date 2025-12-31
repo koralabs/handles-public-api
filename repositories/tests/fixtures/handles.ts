@@ -1,7 +1,6 @@
 import { HandleType, Holder, IHandle, ISlotHistory, Rarity, StoredHandle } from '@koralabs/kora-labs-common';
 import { bech32 } from 'bech32';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
-import { HandlesMemoryStore } from '../../../stores/memory';
 import { RedisHandlesStore } from '../../../stores/redis';
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
@@ -533,7 +532,7 @@ export const holdersFixture = new Map<string, Holder>([
     ]
 ]);
 
-export const createRandomHandles = async (store: HandlesMemoryStore | RedisHandlesStore, count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
+export const createRandomHandles = async (store: RedisHandlesStore, count: number, saveToHandleStore = false): Promise<StoredHandle[]> => {
     const repo = new HandlesRepository(store);
     const handles: StoredHandle[] = [];
     for (let i = 0; i < count; i++) {
@@ -586,7 +585,7 @@ export const createRandomHandleName = (): string => {
     return result;
 };
 
-export const performRandomHandleUpdates = async (store: HandlesMemoryStore | RedisHandlesStore, count: number, beginningSlot = 0) => {
+export const performRandomHandleUpdates = async (store: RedisHandlesStore, count: number, beginningSlot = 0) => {
     const repo = new HandlesRepository(store);
     for (let i = 0; i < count; i++) {
         switch (i % 3) {

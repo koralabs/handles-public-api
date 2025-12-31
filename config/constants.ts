@@ -39,8 +39,9 @@ export const SETS = [
 ]
 
 export const HASHES = [IndexNames.HANDLE, IndexNames.HOLDER]
-export const ZSETS = [IndexNames.SLOT, IndexNames.SLOT_HISTORY]
+export const ZSETS = [IndexNames.SLOT]
 export const META_INDEXES = [IndexNames.HANDLE, IndexNames.SUBHANDLE]
+export const ORDERED_SLOTS: string[] = []
 export const MAX_SETS_PER_PIPE = 20_000;
 export const MAX_ZSETS_PER_PIPE = 5_000;
 export const MAX_HASHES_PER_PIPE = 5_000;

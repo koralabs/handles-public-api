@@ -1,10 +1,10 @@
-import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, isNumeric, LogCategory, Logger, NETWORK, SortAndLimitOptions, UTxO } from '@koralabs/kora-labs-common';
+import { ApiIndexType, Holder, IApiMetrics, IApiStore, IHandleFileContent, IndexNames, ISlotHistory, isNumeric, LogCategory, Logger, NETWORK, SortAndLimitOptions, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { GlideString, HashDataType, SortOptions } from '@valkey/valkey-glide';
 import { promisify } from 'util';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
 import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV } from '../../config';
-import { handleEraBoundaries, META_INDEXES } from '../../config/constants';
+import { handleEraBoundaries, META_INDEXES, ORDERED_SLOTS } from '../../config/constants';
 
 // const glideClient = await GlideClient.createClient({
 //       addresses: [{ host: 'https://localhost', port: 6379 }],
@@ -70,7 +70,45 @@ export class RedisHandlesStore implements IApiStore {
         RedisHandlesStore._pipeline = undefined;
     }
 
-    public async tryPopulateFromS3UTxOs(updateHandleIndexes: (utxo: UTxO) => void): Promise<{ slot: number; id: string; }> {
+    async repopulateIndexesFromUTxOs(updateHandleIndexes: (utxo: UTxOWithTxInfo) => void): Promise<void> {
+        let cursor = '0';
+        let deleted = 0;
+        const startTime = Date.now();
+        for (const indexName of Object.values(IndexNames)) {
+            // Skip UTXO and MINT indexes
+            if ([IndexNames.UTXO_SLOT, IndexNames.UTXO, IndexNames.MINT].includes(indexName)) continue;
+            do {
+                const [nextCursor, keys] = await this.redisClientCall('scan', cursor, { match: `{root}:${indexName}:*`, count: 1000 }) as [string, string[]];
+                cursor = nextCursor;
+
+                if (keys && keys.length > 0) {
+                    // Delete keys directly using del with spread operator
+                    await this.redisClientCall('del', keys);
+                    deleted += keys.length;
+
+                    // Log progress every 100k keys
+                    if (deleted % 100000 === 0 || deleted % 100000 < keys.length) {
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                        const rate = (deleted / ((Date.now() - startTime) / 1000)).toFixed(0);
+                        console.log(`Deleted: ${deleted.toLocaleString()} keys (${elapsed}s, ~${rate} keys/sec): firstKey ${keys[0]}, lastKey ${keys[keys.length - 1]}`);
+                    }
+                }
+            } while (cursor !== '0');
+        }
+
+        // iterate through UTXO_SLOT and grab the UTxOs using the slot.
+        const utxoIds = (this.getValuesFromOrderedSet(IndexNames.UTXO_SLOT, 0) ?? []) as string[];
+        for (const utxoId of utxoIds) {
+            const utxo = this.getValueFromIndex(IndexNames.UTXO, utxoId);
+            if (utxo) {
+                updateHandleIndexes(utxo as UTxOWithTxInfo);
+            } else {
+                Logger.log({ message: `UTxO not found for key: ${utxoId}`, category: LogCategory.NOTIFY, event: 'repopulateIndexesFromUTxOs.missingUTxO' });
+            }
+        }
+    }
+
+    public async tryPopulateFromS3UTxOs(updateHandleIndexes: (utxo: UTxOWithTxInfo) => void): Promise<{ slot: number; id: string; }> {
         this.redisClientCall('flushdb');
         let id = handleEraBoundaries[NETWORK].id;
         let slot = handleEraBoundaries[NETWORK].slot;
@@ -115,7 +153,7 @@ export class RedisHandlesStore implements IApiStore {
         return { id, slot };
     }
 
-    public async getStartingPoint(updateHandleIndexes: (utxo: UTxO) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
+    public async getStartingPoint(updateHandleIndexes: (utxo: UTxOWithTxInfo) => void, failed = false): Promise<{ slot: number; id: string; } | null> {
         // repo.getsUTxos();
         // if process.env.UTXO_SCHEMA_VERSION matches redis utxoSchemaVersion (should hardly change) but process.env.INDEX_SCHEMA_VERSION doesn't match redis IndexSchemaVersion
         //  we need to loop through slots to get the utxos in redis in order and call repo.updateHandleIndexes(utxo);
@@ -133,7 +171,11 @@ export class RedisHandlesStore implements IApiStore {
             }
 
             if (this.getIndexSchemaVersion() > (indexSchemaVersion ?? 0)) {
-                
+                // we need to delete all keys that don't start with {root}:mint nd {root}:utxo
+                // then we need to rebuild the indexes by looping through the utxos in order
+                Logger.log({ message: `Repopulating indexes from UTxOs to schema version ${this.getIndexSchemaVersion()}`, category: LogCategory.INFO, event: 'getStartingPoint.repopulateIndexesFromUTxOs' });
+                await this.repopulateIndexesFromUTxOs(updateHandleIndexes);
+                this.setMetrics({ indexSchemaVersion: this.getIndexSchemaVersion() });
             }
 
             return { id: currentBlockHash, slot: currentSlot };
@@ -159,8 +201,8 @@ export class RedisHandlesStore implements IApiStore {
     // #region INDEXES *************************
     public getIndex(index: IndexNames, options?: SortAndLimitOptions): Map<string | number, ApiIndexType> {
         // SLOT & SLOT_HISTORY uses a an ordered set (ZSET)
-        if (index == IndexNames.SLOT_HISTORY) {
-            return this.parseSlotHistory(this.redisClientCall('zrangeWithScores', `{root}:${index}`, { start: 0, end: -1 }));
+        if (ORDERED_SLOTS.includes(index)) {
+            return this.parseOrderedSlot(this.redisClientCall('zrangeWithScores', `{root}:${index}`, { start: 0, end: -1 }));
         }
         const command = options ? 'sort' : 'smembers'
         if (options && options?.isAlpha == undefined)
@@ -176,7 +218,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public getKeysFromIndex(index: IndexNames, options?: SortAndLimitOptions): (string | number)[] {
-        if (index == IndexNames.HOLDER || index == IndexNames.UTXO_SLOT)
+        if (index == IndexNames.HOLDER)
             return this.getValuesFromOrderedSet(index, 0, options) as string[];
         const command = options ? 'sort' : 'smembers'
         if (options && options?.isAlpha == undefined)
@@ -237,8 +279,8 @@ export class RedisHandlesStore implements IApiStore {
     // #region ORDERED INDEXES  ************************
 
     public getValuesFromOrderedSet(index:IndexNames, ordinal: number, options?: SortAndLimitOptions): ApiIndexType[] | undefined {
-        if (index == IndexNames.SLOT_HISTORY) {
-            return this.parseSlotHistory(
+        if (ORDERED_SLOTS.includes(index)) {
+            return this.parseOrderedSlot(
                 this.redisClientCall('zrangeWithScores', `{root}:${index}`, {type: 'byScore', start: { value: ordinal }, end: { value: ordinal }})
             ).values().toArray();
         }
@@ -252,7 +294,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public addValueToOrderedSet(index:IndexNames, ordinal: number, value: string | ISlotHistory) {
-        if (index == IndexNames.SLOT_HISTORY) {
+        if (ORDERED_SLOTS.includes(index)) {
             value = `${ordinal}|${JSON.stringify(value)}`;
             this.redisClientCall('zremRangeByScore', `{root}:${index}`, { value: ordinal, isInclusive: true }, { value: ordinal, isInclusive: true });
         }
@@ -261,7 +303,7 @@ export class RedisHandlesStore implements IApiStore {
     }
 
     public removeValuesFromOrderedSet(index:IndexNames, keyOrOrdinal: string | number) {
-        if (index == IndexNames.SLOT_HISTORY) {
+        if (ORDERED_SLOTS.includes(index)) {
             this.redisClientCall('zremRangeByScore', `{root}:${index}`, '-', { value: keyOrOrdinal, isInclusive: false });
             return;
         }
@@ -304,11 +346,11 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region PRIVATE *******************************
 
-    private parseSlotHistory(results: { score: number, element: GlideString }[]) {
-        return results.reduce((acc: Map<number, ISlotHistory>, value: { score: number, element: GlideString }) => {
-            acc.set(value.score, JSON.parse(value.element.toString().split('|', 2)[1]) as ISlotHistory);
+    private parseOrderedSlot(results: { score: number, element: GlideString }[]) {
+        return results.reduce((acc: Map<number, ISlotHistory | string>, value: { score: number, element: GlideString }) => {
+            acc.set(value.score, JSON.parse(value.element.toString().split('|', 2)[1]) as ISlotHistory | string);
             return acc;
-        }, new Map<number, ISlotHistory>())
+        }, new Map<number, ISlotHistory | string>())
     }
 
     private async saveObjectToCache(key: string, obj: any) {

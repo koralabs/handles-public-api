@@ -4,7 +4,6 @@ import { HealthResponseBody } from '../interfaces/ogmios.interfaces';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { fetchHealth } from '../services/ogmios/utils';
-import { HandlesMemoryStore } from '../stores/memory';
 
 enum HealthStatus {
     CURRENT = 'current',
@@ -16,12 +15,8 @@ enum HealthStatus {
 class HealthController {
     public async index (req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            let handleRepo: HandlesRepository;
-            if (process.env.READ_ONLY_STORE == 'true')
-                handleRepo = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
-            else
-                handleRepo = new HandlesRepository(new HandlesMemoryStore());
-            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, schemaVersion = 0, handleCount = 0, holderCount = 0, startTimestamp = 0 } = handleRepo.getMetrics();
+            const handleRepo = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            const { firstSlot = 0, lastSlot = 0, currentSlot = 0, firstMemoryUsage = 0, currentBlockHash = '', memorySize = 0, utxoSchemaVersion = 0, indexSchemaVersion = 0, handleCount = 0, holderCount = 0, startTimestamp = 0 } = handleRepo.getMetrics();
             const handleSlotRange = lastSlot - firstSlot;
             const currentSlotInRange = currentSlot - firstSlot;
             const transpiredMs = Date.now() - startTimestamp;
@@ -39,7 +34,8 @@ class HealthController {
                 memory_size: memorySize,
                 current_slot: currentSlot,
                 current_block_hash: currentBlockHash,
-                schema_version: schemaVersion,
+                utxo_schema_version: utxoSchemaVersion,
+                index_schema_version: indexSchemaVersion,
                 estimated_sync_time: new Date(Date.now() + ((transpiredMs / (currentSlotInRange || 1)) * (lastSlot - currentSlot))).toISOString()
             };
 
@@ -77,7 +73,7 @@ class HealthController {
         } catch (error: any) {
             next(error);
         }
-    };
+    }
 }
 
 export default HealthController;
