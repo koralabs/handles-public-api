@@ -1,103 +1,108 @@
-import { BlockPraos, Metadatum, Transaction } from '@cardano-ogmios/schema';
-import { NETWORK } from '@koralabs/kora-labs-common';
-import { fetch } from 'cross-fetch';
+import { BlockPraos } from '@cardano-ogmios/schema';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { processBlock } from '../services/processBlock';
 import { RedisHandlesStore } from '../stores/redis';
 
-const koiosSettings = {_inputs: false, _withdrawals: false, _certs: false, _scripts: false, _bytecode: false, _governance: false, _metadata: true, _assets: true}
-const MAX_TIP_SCAN_SLOTS = 60 * 30 // 30 mins of blocks
+const storeInstance = new RedisHandlesStore();
+const repo = new HandlesRepository(storeInstance);
+repo.initialize();
+repo.rollBackToGenesis();
 
-const blockfrostApiCall = async (endpointSegment: string) => {
-    const headers = {
-        project_id: process.env.BLOCKFROST_API_KEY ?? '',
-        'Content-Type': 'application/json'
-    };
-
-    const url = `https://cardano-${NETWORK.toLowerCase()}.blockfrost.io/api/v0/${endpointSegment}`;
-    return await fetch(url, {headers})
-};
-
-const fetchKoios = async(path: string, method = 'GET', body?: string) => {
-    const url = `https://${NETWORK.toLowerCase() === 'mainnet' ? 'api' : NETWORK.toLowerCase()}.koios.rest/api/v1/${path}`;
-    const res = await fetch(url, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.KOIOS_API_BEARER_TOKEN}`
-        },
-        body
-    }).then((res) => res.json());
-
-    return res;
+const block = {
+    "id": "0000000000000000000000000000000000000000000000000000000000000000",
+    "slot": 123456789,
+    "transactions": [
+        {
+            "mint": {
+                "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+                    "000643b070617061676f6f7365": 1,
+                    "000de14070617061676f6f7365": 1,
+                    "70617061676f6f7365": -1
+                }
+            },
+            "id": "fe40d980c3105c956c2cf29567966b6cafcab0e150e856ec6d4969a4d08aa353",
+            "spends": "inputs",
+            "inputs": [],
+            "outputs": [
+                {
+                    "address": "addr1qy0vj5ktefac7mtsdrg7flef7yqhlrw8d60e86c78fctv7wz28dq2p72el5pgmwt0efgc626xkpyhswsqkyqkg622plspph4a7",
+                    "value": {
+                        "ada": {
+                            "lovelace": 1176630
+                        },
+                        "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+                            "000de14070617061676f6f7365": 1
+                        }
+                    }
+                },
+                {
+                    "address": "addr1qy0vj5ktefac7mtsdrg7flef7yqhlrw8d60e86c78fctv7wz28dq2p72el5pgmwt0efgc626xkpyhswsqkyqkg622plspph4a7",
+                    "value": {
+                        "ada": {
+                            "lovelace": 2698523204
+                        }
+                    }
+                },
+                {
+                    "address": "addr1w9kqg07fu06dlw47q8s8548ulz4ra23caqnh0vg0j3sct8qrsqrpc",
+                    "value": {
+                        "ada": {
+                            "lovelace": 3672120
+                        },
+                        "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+                            "000643b070617061676f6f7365": 1
+                        }
+                    },
+                    "datum": "d8799faa446e616d654a2470617061676f6f736545696d6167655838697066733a2f2f7a623272686e3733506f647a426436616868757345524a336534325a4e78366539567244364b677a666d62504666794233496d65646961547970654a696d6167652f6a706567426f6700496f675f6e756d6265720046726172697479456261736963466c656e677468094a63686172616374657273476c657474657273516e756d657269635f6d6f64696669657273404776657273696f6e0101af4e7374616e646172645f696d6167655838697066733a2f2f7a623272686e3733506f647a426436616868757345524a336534325a4e78366539567244364b677a666d62504666794233537374616e646172645f696d6167655f686173685820e5ba62039483661322e045be73c5ebb98eb7e6bd6387a7159b3fc4542ebd65364a696d6167655f686173685820e5ba62039483661322e045be73c5ebb98eb7e6bd6387a7159b3fc4542ebd653646706f7274616c404864657369676e65724047736f6369616c73404676656e646f72404764656661756c7400536c6173745f7570646174655f616464726573735839011ec952cbca7b8f6d7068d1e4ff29f1017f8dc76e9f93eb1e3a70b679c251da0507cacfe8146dcb7e528c695a35824bc1d005880b234a507f4c76616c6964617465645f6279581c4da965a049dfd15ed1ee19fba6e2974a0b79fc416dd1796a1f97f5e14b7376675f76657273696f6e46312e31352e304c6167726565645f7465726d7340546d6967726174655f7369675f72657175697265640045747269616c00446e73667700ff"
+                }
+            ],
+            "signatories": [],
+            "metadata": {
+                "hash": "",
+                "labels": {
+                    "721": {
+                        "json": {
+                            "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a": {
+                                "000de14070617061676f6f7365": {
+                                    "og": 0,
+                                    "name": "$papagoose",
+                                    "image": "ipfs://zb2rhn73PodzBd6ahhusERJ3e42ZNx6e9VrD6KgzfmbPFfyB3",
+                                    "length": 9,
+                                    "rarity": "basic",
+                                    "version": 1,
+                                    "mediaType": "image/jpeg",
+                                    "og_number": 0,
+                                    "characters": "letters",
+                                    "numeric_modifiers": ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
 }
 
-export const lambdaHandler = async (event: AWSLambda.ALBEvent, context:AWSLambda.Context) => {
-    
-    // Get last block from Valkey
-    const handlesRepo = new HandlesRepository(new RedisHandlesStore());
-    const { lastSlot = Infinity, currentSlot = 0, currentBlockHash } = handlesRepo.getMetrics();
-    
-    if (lastSlot - currentSlot <= MAX_TIP_SCAN_SLOTS) {
-        // - Get blocks fom Blockfrost
+describe('processBlock Tests', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+    beforeEach(() => {
+        repo.rollBackToGenesis();
+    })
 
-        // TODO: At MAX_TIP_SCAN_SLOTS of 30 mins, that should be ~90 blocks. But could exceed Blockfrost page limit of 100 
-        const bResp: {hash: string, slot: number, confirmations: number}[] = await (await blockfrostApiCall(`blocks/${currentBlockHash}/next`)).json()
-        bResp.sort((a, b) => b.confirmations - a.confirmations);
-        for (const b of bResp) {
-            const block = {id: b.hash, slot: b.slot, confirmations: b.confirmations, transactions: [] as Transaction[]}
-            
-            if (block.confirmations < 20) break;
+    it('Lambda Scanner should process block correctly', async () => {
+        jest.spyOn(HandlesRepository.prototype, 'getMetrics').mockReturnValue({ });
+        await processBlock(block as unknown as BlockPraos, repo);
 
-            // TODO: This could theoretically be >100 (Blockfrost page limit). But eutxo says 100 is the current all time high
-            const _tx_hashes = await (await blockfrostApiCall(`blocks/${b.hash}/txs`)).json()
-
-            const txList: any[] = await (await fetchKoios(`tx_info`, 'POST', JSON.stringify({_tx_hashes, ...koiosSettings}))).json()
-            
-            for (const t of txList) {
-                // - Convert to format that processBlock expects
-                const tx: Transaction = {
-                    mint: t.assets_minted.reduce((acc: any, a: any) => {
-                        (acc[a.policy_id] ??= {})[a.asset_name] = BigInt(a.quantity);
-                        return acc;
-                    }, {}),
-                    id: t.tx_hash,
-                    spends: 'inputs',
-                    inputs: [],
-                    outputs: t.outputs.map((o: any) => { return {
-                        address: o.payment_addr.bech32,
-                        value: {
-                            ada: {lovelace: BigInt(o.value)},
-                            ...o.asset_list?.reduce((acc: any, a: any) => {
-                                (acc[a.policy_id] ??= {})[a.asset_name] = BigInt(a.quantity);
-                                return acc;
-                            }, {})
-                        },
-                        datum: o.inline_datum?.bytes,
-                        script: o.reference_script ?? undefined
-                    }}),
-                    signatories: [],
-                    metadata: {hash:'', labels: Object.fromEntries(Object.entries(t.metadata).map(([label, value]) => [label, { json: value as Metadatum }]))}
-                }
-                //console.log('TX', JSON.stringify(tx, ( _, value) => typeof value == 'bigint' ? Number(value.toString()) : value, 4))
-                block.transactions.push(tx);
-            }
-
-            // - Call processBlock
-            processBlock(block as unknown as BlockPraos, handlesRepo) 
-
-            handlesRepo.setMetrics({
-                currentSlot: block.slot,
-                currentBlockHash: block.id,
-                tipBlockHash: bResp[bResp.length - 1].hash,
-                lastSlot: bResp[bResp.length - 1].slot
-            });
-        }
-    }
-    
-    return {
-        isBase64Encoded: false,
-        statusCode: 200,
-        body: ''
-    };
-};
+        const handle = repo.getHandle('papagoose')
+        
+        // Correct UTxO
+        expect(handle?.utxo).toBe('fe40d980c3105c956c2cf29567966b6cafcab0e150e856ec6d4969a4d08aa353#0');
+        // test metadata
+        expect(handle?.image).toBe('ipfs://zb2rhn73PodzBd6ahhusERJ3e42ZNx6e9VrD6KgzfmbPFfyB3');
+        // test datum
+        expect(handle?.last_update_address).toBe('0x011ec952cbca7b8f6d7068d1e4ff29f1017f8dc76e9f93eb1e3a70b679c251da0507cacfe8146dcb7e528c695a35824bc1d005880b234a507f');
+    });
+});

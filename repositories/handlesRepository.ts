@@ -586,9 +586,9 @@ export class HandlesRepository {
                     case null:
                     case AssetNameLabel.NONE:
                     case AssetNameLabel.LBL_222:
-                        if (!existingHandle && !isMintTx) {
-                            Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.INFO, event: 'saveHandleUpdate.noHandleFound' });
-                        }
+                        // if (!existingHandle && !isMintTx) {
+                        //     Logger.log({ message: `Handle was updated but there is no existing handle in storage with name: ${name}`, category: LogCategory.INFO, event: 'saveHandleUpdate.noHandleFound' });
+                        // }
                         if (slot < handle.updated_slot_number && isMintTx) {
                             handle.created_slot_number = Math.min(handle.created_slot_number, slot, existingHandle?.created_slot_number ?? Number.POSITIVE_INFINITY);
                         }
@@ -621,7 +621,7 @@ export class HandlesRepository {
                             const { projectAttributes } = this._buildPersonalizationData(handle, datum); // <- handle is mutated
 
                             handle.updated_slot_number = slot
-                            handle.reference_utxo = utxoDetails.tx_id
+                            handle.reference_utxo = utxo.id;
                             handle.resolved_addresses = {
                                 ...projectAttributes?.resolved_addresses,
                                 ada: existingHandle?.resolved_addresses?.ada ?? ''
@@ -653,7 +653,7 @@ export class HandlesRepository {
                             // TODO: change to utxo_id to utxo and update handle.me to requst /subhandle-settings/utxo
                             handle.subhandle_settings = {
                                 ...(this._parseSubHandleSettingsDatum(datum)),
-                                utxo_id: utxoDetails.tx_id
+                                utxo_id: utxo.id
                             }
                             handle.updated_slot_number = slot;
                             handle.resolved_addresses = {

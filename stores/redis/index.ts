@@ -98,6 +98,7 @@ export class RedisHandlesStore implements IApiStore {
 
         // iterate through UTXO_SLOT and grab the UTxOs using the slot.
         const utxoIds = (this.getValuesFromOrderedSet(IndexNames.UTXO_SLOT, 0) ?? []) as string[];
+        Logger.log(`Repopulating indexes from ${utxoIds.length.toLocaleString()} UTxOs, ${utxoIds[0]}`);
         for (const utxoId of utxoIds) {
             const utxo = this.getValueFromIndex(IndexNames.UTXO, utxoId);
             if (utxo) {
