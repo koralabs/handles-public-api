@@ -1,4 +1,4 @@
-import { BlockPraos, Script, Tip } from '@cardano-ogmios/schema';
+import { BlockPraos, Point, Script, Tip } from '@cardano-ogmios/schema';
 import { AssetNameLabel, HandleType, Logger, StoredHandle, encodeJsonToDatum } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../../../repositories/handlesRepository';
 import { RedisHandlesStore } from '../../../stores/redis';
@@ -6,6 +6,7 @@ import * as ipfs from '../../../utils/ipfs';
 import { nullishOr, numericString } from '../../../utils/util';
 import OgmiosService from '../ogmios.service';
 import { block_144711632, block_144718140, block_144718597 } from './fixtures/blocks';
+import WebSocket from 'ws';
 jest.mock('../../../config/index', () => ({
     isDatumEndpointEnabled: jest.fn(() => true),
     getIpfsGateway: jest.fn(() => 'https://ipfs.io/ipfs/')
@@ -1175,6 +1176,24 @@ describe('processBlock Tests', () => {
             });
             const result = await repo['_buildPersonalizationData']({ name: 'taco', hex: '7461636F' } as StoredHandle, datum);
             expect(result).toBeTruthy();
+        });
+    });
+
+    describe('_resume connection handling', () => {
+        it('recreates closed websocket clients instead of throwing', async () => {
+            const closedClient = { readyState: WebSocket.CLOSED, close: jest.fn(), send: jest.fn() } as unknown as WebSocket;
+            const openClient = { readyState: WebSocket.OPEN, send: jest.fn() } as unknown as WebSocket;
+            const service = ogmios as any;
+            service.client = closedClient;
+
+            const createSpy = jest.spyOn(service, '_createWebSocketClient').mockReturnValue(openClient);
+
+            await service._resume({ id: 'abc', slot: 0 } as Point);
+
+            expect(createSpy).toHaveBeenCalled();
+            expect(closedClient.close).toHaveBeenCalled();
+            expect(service.client).toBe(openClient);
+            expect(openClient.send).toHaveBeenCalled();
         });
     });
 });

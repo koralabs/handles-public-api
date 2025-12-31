@@ -56,11 +56,9 @@ class OgmiosService {
                 } else {
                     try {
                         await load();
-                        console.log('LOADED!')
                         // try to resume from first file's starting point
                         // it's possible that a bad starting point was saved (e.g., from a forked block)
                         await this._resume(firstStartingPoint);
-                        console.log('RESUMED!')
                         break;
                     } catch (error: any) {
                         Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
@@ -85,27 +83,25 @@ class OgmiosService {
                         }
                     }
                 }
-                if (this.client) 
-                    if (this.client.CONNECTING || this.client.OPEN) {
-                        this.client.close();
-                        this.client = undefined;
-                    }
+                this._resetClient();
             } catch (error: any) {
                 Logger.log({ message: `Unable to connect Ogmios: ${error.message}`, category: LogCategory.ERROR, event: 'initializeStorage.failed.errorMessage' });
-                if (this.client) 
-                    if (this.client.CONNECTING || this.client.OPEN) {
-                        this.client.close();
-                        this.client = undefined;
-                    }
+                this._resetClient();
             }
             await delay(30 * 1000);
         }
     }
 
+    private _resetClient() {
+        if (!this.client) return;
+        if (this.client.readyState === WebSocket.CONNECTING || this.client.readyState === WebSocket.OPEN || this.client.readyState === WebSocket.CLOSING) {
+            this.client.close();
+        }
+        this.client = undefined;
+    }
+
     private _createWebSocketClient(): WebSocket {
-        console.log(`CREATING WEB SOCKET`)
         const client = new WebSocket(new url.URL(OGMIOS_HOST).toString(), {allowSynchronousEvents: false});
-        console.log(`CREATED WEB SOCKET`, client)
         client.on('message', fastq.promise(async (msg: string) => {
             const response = JSON.parse(msg);
             switch (response.id) {
@@ -189,9 +185,14 @@ class OgmiosService {
     }
 
     private async _resume(startingPoint: Point) {
-        while (this.client!.readyState != WebSocket.OPEN) {
+        let attempts = 0;
+        while (true) {
+            if (!this.client || this.client.readyState === WebSocket.CLOSED || this.client.readyState === WebSocket.CLOSING) {
+                this._resetClient();
+                this.client = this._createWebSocketClient();
+            }
+            if (this.client.readyState === WebSocket.OPEN) break;
             await delay(250);
-            console.log('Waiting for Ogmios connection to open...', this.client!.readyState);
         }
         Logger.log(`Resuming index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
         this.scanningRepo.setMetrics({ firstSlot: handleEraBoundaries[NETWORK].slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
