@@ -1,13 +1,11 @@
-import { BlockPraos, NextBlockResponse, Point, PointOrOrigin, RollForward, TipOrOrigin } from '@cardano-ogmios/schema';
+import { BlockPraos, NextBlockResponse, Point, RollForward } from '@cardano-ogmios/schema';
 import { delay, getDateStringFromSlot, LogCategory, Logger, NETWORK } from '@koralabs/kora-labs-common';
 import fastq from 'fastq';
-import fs from 'fs';
 import * as url from 'url';
 import WebSocket from 'ws';
 import { OGMIOS_HOST } from '../../config';
 import { handleEraBoundaries, ScanningMode } from '../../config/constants';
 import { HandlesRepository } from '../../repositories/handlesRepository';
-import { HandleStore } from '../../stores/memory';
 import { processBlock } from '../processBlock';
 
 // let firstBlockProcessed = false;
@@ -58,9 +56,11 @@ class OgmiosService {
                 } else {
                     try {
                         await load();
+                        console.log('LOADED!')
                         // try to resume from first file's starting point
                         // it's possible that a bad starting point was saved (e.g., from a forked block)
                         await this._resume(firstStartingPoint);
+                        console.log('RESUMED!')
                         break;
                     } catch (error: any) {
                         Logger.log({ message: `Error initializing Handles: ${error.message} code: ${error.code}`, category: LogCategory.ERROR, event: 'initializeStorage.firstFileFailed' });
@@ -103,7 +103,9 @@ class OgmiosService {
     }
 
     private _createWebSocketClient(): WebSocket {
+        console.log(`CREATING WEB SOCKET`)
         const client = new WebSocket(new url.URL(OGMIOS_HOST).toString(), {allowSynchronousEvents: false});
+        console.log(`CREATED WEB SOCKET`, client)
         client.on('message', fastq.promise(async (msg: string) => {
             const response = JSON.parse(msg);
             switch (response.id) {
@@ -121,7 +123,6 @@ class OgmiosService {
                                     event: 'OgmiosService.rollBackward',
                                     category: LogCategory.INFO
                                 });
-                                this.processRollback(response.result.point, response.result.tip);
                                 break;
                             }
                             case 'forward': {
@@ -166,7 +167,6 @@ class OgmiosService {
                                         category: LogCategory.NOTIFY,
                                         event: 'OgmiosService.processBlock'
                                     });
-                                    fs.writeFileSync('wtf.json', JSON.stringify(HandleStore.slotHistoryIndex))
                                     //process.exit(1);
                                 }
                             }
@@ -191,6 +191,7 @@ class OgmiosService {
     private async _resume(startingPoint: Point) {
         while (this.client!.readyState != WebSocket.OPEN) {
             await delay(250);
+            console.log('Waiting for Ogmios connection to open...', this.client!.readyState);
         }
         Logger.log(`Resuming index at slot ${startingPoint.slot} and hash ${startingPoint.id} (${getDateStringFromSlot(startingPoint.slot)})`);
         this.scanningRepo.setMetrics({ firstSlot: handleEraBoundaries[NETWORK].slot, currentSlot: startingPoint.slot, currentBlockHash: startingPoint.id });
@@ -207,29 +208,6 @@ class OgmiosService {
         //     await processBlock(txBlock, this.handlesRepo);
         // }
     }
-    
-    private processRollback = (point: PointOrOrigin, tip: TipOrOrigin) => {
-        if (point === 'origin') {
-            // this is a rollback to genesis. We need to clear the memory store and start over
-            Logger.log(`ROLLBACK POINT: ${JSON.stringify(point)}`);
-            this.scanningRepo.rollBackToGenesis();
-            // if (this.scanningMode == ScanningMode.TIP) {
-            //     this.handlesRepo.rollBackToGenesis();
-            //     this.scanningMode = ScanningMode.BACKFILL;
-            // }
-        } else {
-            const { slot, id } = point;
-            let lastSlot = 0;
-            if (tip !== 'origin') {
-                lastSlot = tip.slot;
-            }
-
-            // The idea here is we need to rollback all changes from a given slot
-            this.scanningRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
-            // if (this.scanningMode == ScanningMode.TIP)
-            //     this.handlesRepo.rewindChangesToSlot({ slot, hash: id, lastSlot });
-        }
-    };
 }
 
 export default OgmiosService;

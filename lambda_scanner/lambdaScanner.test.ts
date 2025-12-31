@@ -1,9 +1,9 @@
 import { BlockPraos } from '@cardano-ogmios/schema';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { processBlock } from '../services/processBlock';
-import { HandlesMemoryStore } from '../stores/memory';
+import { RedisHandlesStore } from '../stores/redis';
 
-const storeInstance = new HandlesMemoryStore();
+const storeInstance = new RedisHandlesStore();
 const repo = new HandlesRepository(storeInstance);
 repo.initialize();
 repo.rollBackToGenesis();

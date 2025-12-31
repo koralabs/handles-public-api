@@ -411,6 +411,8 @@ for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
                     personalization: personalizationData,
                     reference_token: {
                         tx_id: 'utxo123',
+                        slot: 0,
+                        id: 'utxo123#0',
                         index: 0,
                         lovelace: 50,
                         datum: 'datum123',

@@ -99,6 +99,7 @@ jest.mock('../repositories/handlesRepository', () => ({
                         address: 'script_addr1'
                     }
                 },
+                reference_utxo: 'tx_id#0',
                 reference_token: {
                     tx_id: 'tx_id',
                     index: 0,
@@ -113,6 +114,19 @@ jest.mock('../repositories/handlesRepository', () => ({
                     cbor: 'a247'
                 }
             };
+        },
+        getUTxO: (utxoId: string) => {
+            if (utxoId === 'tx_id#0' || utxoId === 'ref_token_utxo') {
+                return {
+                    tx_id: 'tx_id',
+                    index: 0,
+                    lovelace: 0,
+                    datum: '',
+                    address: 'addr1_ref_token',
+                    script: { type: 'plutus_v2', cbor: 'a247' }
+                }
+            }
+            return null;
         },
         getAllHandles: () => {
             return [

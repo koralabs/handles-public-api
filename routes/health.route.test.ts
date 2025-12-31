@@ -13,7 +13,7 @@ const getStats = (): IApiMetrics => ({
     firstMemoryUsage: 0, 
     currentBlockHash: '', 
     memorySize: 0, 
-    schemaVersion: 0, 
+    indexSchemaVersion: 0, 
     handleCount: 100, 
     startTimestamp: Date.now()
 });
@@ -110,7 +110,8 @@ describe('Health Routes Test', () => {
                     holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
-                    schema_version: expect.any(Number)
+                    index_schema_version: expect.any(Number),
+                    utxo_schema_version: expect.any(Number)
                 },
                 status: 'waiting_on_cardano_node'
             });
@@ -136,7 +137,8 @@ describe('Health Routes Test', () => {
                     holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
-                    schema_version: expect.any(Number)
+                    index_schema_version: expect.any(Number),
+                    utxo_schema_version: expect.any(Number)
                 },
                 status: 'storage_behind'
             });
@@ -160,7 +162,8 @@ describe('Health Routes Test', () => {
                     holder_count: expect.any(Number),
                     percentage_complete: expect.any(Number),
                     slot_date: expect.any(String),
-                    schema_version: expect.any(Number)
+                    index_schema_version: expect.any(Number),
+                    utxo_schema_version: expect.any(Number)
                 },
                 status: 'current'
             });

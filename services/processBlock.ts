@@ -1,6 +1,5 @@
 import { BlockPraos } from '@cardano-ogmios/schema';
-import { AssetNameLabel, HANDLE_POLICIES, LogCategory, Logger, MintingData, NETWORK, Network } from '@koralabs/kora-labs-common';
-import { UTxO } from '../interfaces/ogmios.interfaces';
+import { AssetNameLabel, HANDLE_POLICIES, LogCategory, Logger, MintingData, NETWORK, Network, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { getHandleNameFromAssetName } from './ogmios/utils';
 
@@ -67,8 +66,10 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
                     Logger.log({ message: `Error decoding datum for ${txId}#${i}`, category: LogCategory.ERROR, event: 'processBlock.decodingDatum' });
                 }
                 // extract handle related UTxO information
-                const utxo: UTxO = {
+                const utxo: UTxOWithTxInfo = {
                     id: `${txId}#${i}`,
+                    tx_id: txId!,
+                    index: i,
                     slot: currentSlot,
                     address: o?.address!,
                     lovelace: Number(o?.value!.ada.lovelace!),

@@ -1,48 +1,43 @@
 import { HandlePaginationModel, Holder, IndexNames, StoredHandle } from '@koralabs/kora-labs-common';
-import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 import { createRandomHandles, performRandomHandleUpdates } from './fixtures/handles';
-jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplementation();
 
-for (const store of [HandlesMemoryStore, RedisHandlesStore]) {
 //for (const store of [HandlesMemoryStore]) {
-    const storeInstance = new store();
-    const repo = new HandlesRepository(storeInstance);
-    repo.initialize();
-    repo.rollBackToGenesis();
-    
-    describe('holder index integrity', () => {
-        it('holder index should be accurate', async () => {
-            await createRandomHandles(storeInstance, 1000, true);
-            await performRandomHandleUpdates(storeInstance, 1000, 1001);
-            const testHolderIndex = new Map<string, Holder>();
-            const handles = (repo.search({handlesPerPage: 1000} as HandlePaginationModel).handles as StoredHandle[]).sort((a,b) => a.updated_slot_number - b.updated_slot_number)
-            for (let i = 0; i<handles.length;i++) {
-                const handle = handles[i];
-                const holder = testHolderIndex.get(handle.holder);
-                if (!holder) {
-                    testHolderIndex.set(handle.holder, {
-                        defaultHandle: handle.default_in_wallet,
-                        handles: [{name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number}],
-                        knownOwnerName: '',
-                        manuallySet: false,
-                        type: 'wallet'
-                    } as unknown as any);
-                } 
-                else {
-                    holder.defaultHandle = handle.default_in_wallet;
-                    holder.handles.push({name:handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number});
-                } 
+const storeInstance = new RedisHandlesStore();
+const repo = new HandlesRepository(storeInstance);
+repo.initialize();
+repo.rollBackToGenesis();
+
+describe('holder index integrity', () => {
+    it('holder index should be accurate', async () => {
+        await createRandomHandles(storeInstance, 1000, true);
+        await performRandomHandleUpdates(storeInstance, 1000, 1001);
+        const testHolderIndex = new Map<string, Holder>();
+        const handles = (repo.search({ handlesPerPage: 1000 } as HandlePaginationModel).handles as StoredHandle[]).sort((a, b) => a.updated_slot_number - b.updated_slot_number);
+        for (let i = 0; i < handles.length; i++) {
+            const handle = handles[i];
+            const holder = testHolderIndex.get(handle.holder);
+            if (!holder) {
+                testHolderIndex.set(handle.holder, {
+                    defaultHandle: handle.default_in_wallet,
+                    handles: [{ name: handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number }],
+                    knownOwnerName: '',
+                    manuallySet: false,
+                    type: 'wallet'
+                } as unknown as any);
+            } else {
+                holder.defaultHandle = handle.default_in_wallet;
+                holder.handles.push({ name: handle.name, og_number: handle.og_number, created_slot_number: handle.created_slot_number });
             }
-            const holdersList = storeInstance.getKeysFromIndex(IndexNames.HOLDER) as string[];
-            const allHolders = new Map();
-            holdersList.forEach((h) => {
-                const holder = storeInstance.getValueFromIndex(IndexNames.HOLDER, h) as Holder;
-                holder.defaultHandle = `${holder.defaultHandle}`
-                allHolders.set(h, holder)
-            });
-            expect(allHolders).toEqual(testHolderIndex);
+        }
+        const holdersList = storeInstance.getKeysFromIndex(IndexNames.HOLDER) as string[];
+        const allHolders = new Map();
+        holdersList.forEach((h) => {
+            const holder = storeInstance.getValueFromIndex(IndexNames.HOLDER, h) as Holder;
+            holder.defaultHandle = `${holder.defaultHandle}`;
+            allHolders.set(h, holder);
         });
+        expect(allHolders).toEqual(testHolderIndex);
     });
-}
+});

@@ -5,20 +5,19 @@ import {
     HandlePaginationModel, HandleSearchModel,
     HandleType,
     IGetAllQueryParams, IGetHandleRequest,
-    IReferenceToken,
     ISearchBody,
     isEmpty,
     isEmptyObject,
     parseAssetNameLabel,
     ProtectedWords,
-    StoredHandle
+    StoredHandle,
+    UTxO
 } from '@koralabs/kora-labs-common';
 import { decodeCborToJson, DefaultTextFormat } from '@koralabs/kora-labs-common/utils/cbor';
 import { NextFunction, Request, Response } from 'express';
 import { isDatumEndpointEnabled } from '../config';
 import { IRegistry } from '../interfaces/registry.interface';
 import { HandleViewModel } from '../models/view/handle.view.model';
-import { HandleReferenceTokenViewModel } from '../models/view/handleReferenceToken.view.model';
 import { PersonalizedHandleViewModel } from '../models/view/personalizedHandle.view.model';
 import { HandlesRepository } from '../repositories/handlesRepository';
 
@@ -50,7 +49,7 @@ class HandlesController {
             return { code: 404, message: 'Handle not found', handle };
         }
         return { code: handleRepo.currentHttpStatus(), message: null, handle };
-    };
+    }
 
     public static parseQueryAndSearchHandles(req: Request<Request, {}, {}, IGetAllQueryParams>, handleRepo: HandlesRepository, handles?: ISearchBody) {
         const { records_per_page, page, characters, length, rarity, numeric_modifiers, slot_number, search: searchQuery, holder_address, og, handle_type, sort, personalized } = req.query;
@@ -98,7 +97,7 @@ class HandlesController {
         } catch (error) {
             next(error);
         }
-    };
+    }
 
     private static async _searchFromList (req: Request<Request, {}, ISearchBody, IGetAllQueryParams>, res: Response, next: NextFunction, handles?: ISearchBody): Promise<void> {
         const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
@@ -152,7 +151,7 @@ class HandlesController {
         } catch (error) {
             next(error);
         }
-    };
+    }
 
     public async getHandle (req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction): Promise<void> {
         try {
@@ -161,7 +160,7 @@ class HandlesController {
         } catch (error) {
             next(error);
         }
-    };
+    }
 
     public async getPersonalizedHandle(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
@@ -187,16 +186,19 @@ class HandlesController {
         }
     }
 
-    private static async buildHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>): Promise<{ reference_token?: IReferenceToken; code: number }> {
+    private static async buildHandleReferenceToken(req: Request<IGetHandleRequest, {}, {}>): Promise<{ reference_token?: UTxO; code: number }> {
         const handleData = await HandlesController.getHandleFromRepo(req);
 
-        const { reference_token } = new HandleReferenceTokenViewModel(handleData.handle);
-
-        if (!reference_token) {
-            return { code: handleData.code };
+        if (handleData.handle?.reference_utxo) {
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            const refUtxo = handleRepo.getUTxO(handleData.handle?.reference_utxo)
+            if (refUtxo) {
+                const reference_token = new UTxO(refUtxo);
+                return { reference_token, code: handleData.code };
+            }
         }
 
-        return { reference_token, code: handleData.code };
+        return { code: handleData.code };
     }
 
     public async getPersonalizationUTxO(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
@@ -312,6 +314,7 @@ class HandlesController {
 
     public async getSubHandleSettings(req: Request<IGetHandleRequest, {}, {}>, res: Response, next: NextFunction) {
         try {
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
             const { handle, code } = await HandlesController.getHandleFromRepo(req);
 
             if (!handle) {
@@ -319,15 +322,21 @@ class HandlesController {
                 return;
             }
 
-            if (!handle.subhandle_settings) {
+            if (!handle.subhandle_settings || !handle.subhandle_settings.utxo_id) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
 
-            if (req.headers?.accept?.startsWith('text/plain')) {
-                res.set('Content-Type', 'text/plain; charset=utf-8');
-                res.status(code).send(handle.subhandle_settings.utxo.datum);
-                return;
+            const utxo = handleRepo.getUTxO(handle.subhandle_settings.utxo_id); 
+            if (utxo) {
+                const subHandleSettingsUTxO = new UTxO(utxo);
+                handle.subhandle_settings.utxo = subHandleSettingsUTxO;
+
+                if (req.headers?.accept?.startsWith('text/plain')) {
+                    res.set('Content-Type', 'text/plain; charset=utf-8');
+                    res.status(code).send(handle.subhandle_settings.utxo.datum);
+                    return;
+                }
             }
 
             res.status(code).json(handle.subhandle_settings);
@@ -344,10 +353,19 @@ class HandlesController {
                 res.status(404).send({ message: 'Handle not found' });
                 return;
             }
-            if (!handle.handle.subhandle_settings?.utxo) {
+            if (!handle.handle.subhandle_settings?.utxo_id) {
                 res.status(404).send({ message: 'SubHandle settings not found' });
                 return;
             }
+
+            const handleRepo: HandlesRepository = new HandlesRepository(new (req.app.get('registry') as IRegistry).handlesStore());
+            const utxo = handleRepo.getUTxO(handle.handle.subhandle_settings.utxo_id); 
+            if (!utxo) {
+                res.status(404).send({ message: 'SubHandle settings UTxO not found' });
+                return;
+            }
+            
+            handle.handle.subhandle_settings.utxo = new UTxO(utxo);
 
             res.status(handle.code).json(handle.handle.subhandle_settings.utxo);
         } catch (error) {

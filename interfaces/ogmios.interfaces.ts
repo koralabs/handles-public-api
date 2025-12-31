@@ -177,18 +177,3 @@ export interface IBlockProcessor {
     loadIndexes: () => Promise<void>;
     resetIndexes: () => Promise<void>;
 }
-
-export interface UTxO {
-    id: string,
-    slot: number,
-    address: string,
-    lovelace: number,
-    datum?: string,
-    script?: {
-        type: string;
-        cbor: string;
-    },
-    handles: [string, string[]][],
-    mint: [string, string[]][],
-    metadata: any // filtered for the minted assets in this UTxO
-}

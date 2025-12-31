@@ -1,10 +1,10 @@
 import { Metadata, Point } from '@cardano-ogmios/schema';
-import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, diff, EMPTY, getPaymentKeyHash, getRarity, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISlotHistory, ISubHandleSettings, ISubHandleTypeSettings, IUTxO, LogCategory, Logger, MINTED_OG_LIST, MintingData, NETWORK, Sort, StoredHandle, TWELVE_HOURS_IN_SLOTS } from '@koralabs/kora-labs-common';
+import { ApiIndexType, AssetNameLabel, bech32FromHex, buildCharacters, buildDrep, buildHolderInfo, buildNumericModifiers, decodeAddress, decodeCborToJson, DefaultHandleInfo, EMPTY, getPaymentKeyHash, getRarity, HandlePaginationModel, HandleSearchModel, HandleType, Holder, HolderPaginationModel, HolderViewModel, HttpException, IApiMetrics, IApiStore, IHandleMetadata, IndexNames, IPersonalization, IPzDatum, IPzDatumConvertedUsingSchema, ISubHandleSettings, ISubHandleTypeSettings, LogCategory, Logger, MINTED_OG_LIST, MintingData, NETWORK, Sort, StoredHandle, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { designerSchema, handleDatumSchema, portalSchema, socialsSchema, subHandleSettingsDatumSchema } from '@koralabs/kora-labs-common/utils/cbor';
 import * as crypto from 'crypto';
 import { isDatumEndpointEnabled } from '../config';
 import { HASHES, MAX_HASHES_PER_PIPE, MAX_SETS_PER_PIPE, MAX_ZSETS_PER_PIPE, SETS, ZSETS } from '../config/constants';
-import { BuildPersonalizationInput, HandleOnChainMetadata, MetadataLabel, UTxO } from '../interfaces/ogmios.interfaces';
+import { BuildPersonalizationInput, HandleOnChainMetadata, MetadataLabel } from '../interfaces/ogmios.interfaces';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { decodeCborFromIPFSFile } from '../utils/ipfs';
 const blackListedIpfsCids: string[] = [];
@@ -256,7 +256,7 @@ export class HandlesRepository {
         return { searchTotal, handles };
     }
 
-    public addUTxO(utxo: UTxO) {
+    public addUTxO(utxo: UTxOWithTxInfo) {
         this.store.pipeline(() => {
             // save the UTxO id to the store with slot as the key
             this.store.addValueToOrderedSet(IndexNames.UTXO_SLOT, utxo.slot, utxo.id);
@@ -266,11 +266,11 @@ export class HandlesRepository {
         });
     }
 
-    public getUTxOs(slot: number): UTxO[] {
+    public getUTxOs(slot: number): UTxOWithTxInfo[] {
         const utxoIds = this.store.getValuesFromOrderedSet(IndexNames.UTXO_SLOT, slot)
         if (!utxoIds) return [];
 
-        return [...utxoIds as string[]].map(id => this.store.getValueFromIndex(IndexNames.UTXO, id) as UTxO);
+        return [...utxoIds as string[]].map(id => this.store.getValueFromIndex(IndexNames.UTXO, id) as UTxOWithTxInfo);
     }
 
     public removeUTxOs(utxos: string[]) {
@@ -374,16 +374,6 @@ export class HandlesRepository {
         const { has_datum, datum = null } = handle;
         if (!has_datum) return null;
         return datum;
-    }
-
-    public getSubHandleSettings(handleName: string): { settings?: string; utxo?: IUTxO; utxo_id?: string } | null {
-        const handle = this.getHandle(handleName);
-        if (!handle || !handle.utxo) {
-            throw new HttpException(404, 'Not found');
-        }
-
-        const { subhandle_settings } = handle;
-        return subhandle_settings ?? null;
     }
 
     public getSubHandlesByRootHandle(handleName: string): StoredHandle[] {
@@ -538,14 +528,6 @@ export class HandlesRepository {
             // if (handle.name == 'ap@adaprotocol')
             //     debugLog('ap@adaprotocol being burned', slotNumber, handle);
             this.store.removeKeyFromIndex(IndexNames.HANDLE, handle.name);
-            if (!(handle instanceof RewoundHandle)) {
-                const history: HandleHistory = { old: handle, new: null };
-                this._saveSlotHistory({
-                    handleHistory: history,
-                    handleName,
-                    slotNumber
-                });
-            }
 
             // set all one-to-many indexes
             this.store.removeValueFromIndexedSet(IndexNames.RARITY, handle.rarity, handleName)
@@ -573,58 +555,7 @@ export class HandlesRepository {
         }
     }
 
-    public rewindChangesToSlot({ slot, hash, lastSlot }: { slot: number; hash: string; lastSlot: number }) {
-        // first we need to order the historyIndex desc by slot
-        const orderedHistoryIndex = [...this.store.getIndex(IndexNames.SLOT_HISTORY) as Map<number, ISlotHistory>].sort((a, b) => b[0] - a[0]);
-
-        // iterate through history starting with the most recent up to the slot we want to rewind to.
-        for (const item of orderedHistoryIndex) {
-            const [slotKey, history] = item;
-
-            // once we reach the slot we want to rewind to, we can stop
-            if (slotKey <= slot) {
-                // Set metrics to get the correct slot saving and percentage if there are no new blocks
-                this.setMetrics({ currentSlot: slot, currentBlockHash: hash, lastSlot });
-                break;
-            }
-
-            // iterate through each handle hex in the history and revert it to the previous state
-            const keys = Object.keys(history);
-            for (let i = 0; i < keys.length; i++) {
-                const name = keys[i];
-                const handleHistory = history[name] as HandleHistory;
-
-                const existingHandle = this.getHandle(name);
-                if (!existingHandle) {
-                    if (handleHistory.old) {
-                        this.save(new RewoundHandle({...handleHistory.old, name} as StoredHandle));
-                        continue;
-                    }
-                    continue;
-                }
-
-                if (handleHistory.old === null) {
-                    // if the old value is null, then the handle was deleted
-                    // so we need to remove it from the indexes
-                    this.removeHandle(new RewoundHandle(existingHandle), this.getMetrics().currentSlot ?? 0);
-                    continue;
-                }
-
-                // otherwise we need to update the handle with the old values
-                const updatedHandle: StoredHandle = {
-                    ...existingHandle,
-                    ...(handleHistory as HandleHistory).old
-                };
-
-                this.save(new RewoundHandle(updatedHandle), existingHandle);
-            }
-
-            // delete the slot key since we are rolling back to it
-            this.store.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, slotKey);
-        }
-    }
-
-    public updateHandleIndexes(utxo: UTxO): void {
+    public updateHandleIndexes(utxo: UTxOWithTxInfo): void {
         for (const asset of utxo.handles) {
             const policy = asset[0];
             for (const assetName of asset[1]) {
@@ -639,7 +570,7 @@ export class HandlesRepository {
                         : false 
                     : utxo.mint.flatMap(([, handles]) => Object.keys(handles)).includes(assetName)
 
-                const {lovelace, datum, address, slot } = utxo
+                const {lovelace, datum, address, slot, script } = utxo
                 const metadata: { [handleName: string]: HandleOnChainMetadata } | undefined = ((utxo.metadata as Metadata)?.labels?.[MetadataLabel.NFT]?.json as any)?.[policy];
                 const data = metadata && (metadata[isCip67 ? handleHex : name] as unknown as IHandleMetadata);
                 const existingHandle = this.prepareHandle(this.store.getValueFromIndex(IndexNames.HANDLE, name) as StoredHandle) ?? undefined;
@@ -669,8 +600,8 @@ export class HandlesRepository {
                                     Logger.log({ message: `POSSIBLE DOUBLE MINT! Name: ${name} | Old UTxO ${existingHandle?.utxo} | Old Slot: ${existingHandle.created_slot_number} | New UTxO: ${utxo} | New Slot: ${slot}`, category: LogCategory.NOTIFY, event: 'saveHandleUpdate.utxoAlreadyExists'});
                             }
                             handle.updated_slot_number = slot;
-                            // handle.script = script;
-                            // handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
+                            handle.script = script;
+                            handle.datum = isDatumEndpointEnabled() && datum ? datum : undefined;
                             handle.has_datum = !!datum;
                             handle.lovelace = lovelace;
                             handle.utxo = utxo.id;
@@ -764,7 +695,7 @@ export class HandlesRepository {
         handle.payment_key_hash = payment_key_hash;
         handle.drep = buildDrep(ada, handle.id_hash?.replace('0x', ''));
 
-        const {newDefault, oldDefault} = this.updateHolder(handle, oldHandle);
+        this.updateHolder(handle, oldHandle);
 
         this.store.pipeline(() => {
             // Set the main index (SAVES THE HANDLE)
@@ -803,15 +734,6 @@ export class HandlesRepository {
             this.store.addValueToOrderedSet(IndexNames.SLOT, updated_slot_number, name);
 
         });
-        if (!(handle instanceof RewoundHandle)) {
-            const history = this._buildHandleHistory({...handle, default: newDefault}, oldHandle ? {...oldHandle, default: oldDefault || undefined} : undefined);
-            if (history)
-                this._saveSlotHistory({
-                    handleHistory: history,
-                    handleName: name,
-                    slotNumber: updated_slot_number
-                });
-        }
     }
 
     public getDefaultHandle(handles: DefaultHandleInfo[]): DefaultHandleInfo {
@@ -844,7 +766,7 @@ export class HandlesRepository {
         return personalization
     }
     
-    public async getStartingPoint(updateHandleIndexes: (utxo: UTxO) => void, failed = false): Promise<Point | null> {
+    public async getStartingPoint(updateHandleIndexes: (utxo: UTxOWithTxInfo) => void, failed = false): Promise<Point | null> {
         return this.store.getStartingPoint(updateHandleIndexes , failed);
     }
 
@@ -885,6 +807,10 @@ export class HandlesRepository {
         }
 
         this.store.setMetrics(scanningRepo.getMetrics());
+    }
+
+    public getUTxO(utxoId: string): UTxOWithTxInfo | null {
+        return this.store.getValueFromIndex(IndexNames.UTXO, utxoId) as UTxOWithTxInfo | null;
     }
 
     private _buildHandle(handle: Partial<StoredHandle>, data?: IHandleMetadata): StoredHandle {
@@ -930,29 +856,6 @@ export class HandlesRepository {
         handle.has_datum = handle.has_datum ?? false;
         handle.svg_version = handle.svg_version ?? '0';
         return handle as StoredHandle;
-    }
-
-    private _buildHandleHistory(newHandle: Partial<StoredHandle>, oldHandle?: Partial<StoredHandle>, testMode = true): HandleHistory | null {
-        const { name } = newHandle;
-        if (!oldHandle) {
-            return testMode ? { old: null, new: { name } } : { old: null };
-        }
-
-        // the diff will give us only properties that have been updated
-        const difference = diff(oldHandle, newHandle);
-        if (Object.keys(difference).length === 0) {
-            return null;
-        }
-
-        // using the diff, we need to get the same properties from oldHandle
-        const old = Object.keys(difference).reduce<Record<string, unknown>>((agg, key) => {
-            agg[key] = oldHandle[key as keyof StoredHandle];
-            return agg;
-        }, {});
-
-        // Only save old details if the network is production.
-        // Otherwise, save the new for testing purposes
-        return testMode ? { old, new: difference } : { old };
     }
 
     /**
@@ -1165,22 +1068,6 @@ export class HandlesRepository {
         return updatedPersonalization;
     };
 
-    private _saveSlotHistory({ handleHistory, handleName, slotNumber, maxSlots = TWELVE_HOURS_IN_SLOTS }: { handleHistory: HandleHistory; handleName: string; slotNumber: number; maxSlots?: number }) {
-        let slotHistory = (this.store.getValuesFromOrderedSet(IndexNames.SLOT_HISTORY, slotNumber) as ISlotHistory[])[0];
-        if (!slotHistory) {
-            slotHistory = {
-                [handleName]: handleHistory
-            };
-        } else {
-            slotHistory[handleName] = handleHistory;
-        }
-
-        const oldestSlot = slotNumber - maxSlots;
-        this.store.removeValuesFromOrderedSet(IndexNames.SLOT_HISTORY, oldestSlot);
-
-        this.store.addValueToOrderedSet(IndexNames.SLOT_HISTORY, slotNumber, slotHistory);
-    }
-
     private _parseSubHandleSettingsDatum(datum: string) {
         try {
             const decodedSettings = decodeCborToJson({ cborString: datum, schema: subHandleSettingsDatumSchema });
@@ -1215,10 +1102,8 @@ export class HandlesRepository {
     }
     // Used for unit testing
     Internal = {
-        buildHandleHistory: this._buildHandleHistory.bind(this),
         buildPersonalization: this._buildPersonalization.bind(this),
         buildHandle: this._buildHandle.bind(this),
-        saveSlotHistory: this._saveSlotHistory.bind(this),
         sortOGHandle: this._sortOGHandle.bind(this),
         sortedByLength: this._sortedByLength.bind(this),
         sortByCreatedSlotNumber: this._sortByCreatedSlotNumber.bind(this),

@@ -1,15 +1,12 @@
 import { Metadata } from '@cardano-ogmios/schema';
-import { HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, Rarity, StoredHandle, UTxO } from '@koralabs/kora-labs-common';
+import { HandlePaginationModel, HandleSearchModel, HandleType, HolderPaginationModel, Rarity, StoredHandle, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import * as config from '../../config';
 import { MetadataLabel } from '../../interfaces/ogmios.interfaces';
-import { HandlesMemoryStore } from '../../stores/memory';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 import { handlesFixture } from './fixtures/handles';
 const policy = 'f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a';
 
-jest.spyOn(HandlesMemoryStore.prototype as any, '_saveHandlesFile').mockImplementation();
-jest.spyOn(HandlesMemoryStore.prototype, 'initialize').mockImplementation();
 const firstSlot = Date.now();
 
 for (const store of [RedisHandlesStore]) {
@@ -49,7 +46,9 @@ for (const store of [RedisHandlesStore]) {
                 datum: '',
                 index: 0,
                 lovelace: 0,
-                tx_id: ''
+                tx_id: '',
+                slot: 0,
+                id: ''
             },
             resolved_addresses: {
                 ada: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'
@@ -97,7 +96,7 @@ for (const store of [RedisHandlesStore]) {
                         }
                     }
                 }
-                const utxo: UTxO = {
+                const utxo: UTxOWithTxInfo = {
                     id: 'test-hash',
                     slot,
                     address: '',
@@ -108,7 +107,9 @@ for (const store of [RedisHandlesStore]) {
                     mint: [
                         [policy, ['handle1', 'handle2']],
                     ],
-                    metadata
+                    metadata,
+                    tx_id: '',
+                    index: 0
                 }
 
                 repo.addUTxO(utxo);
@@ -355,59 +356,6 @@ for (const store of [RedisHandlesStore]) {
                 } catch (error: any) {
                     expect(error.message).toEqual('Not found');
                 }
-            });
-        });
-
-        describe('getSubHandleSettings', () => {
-            const rootHandleName = 'chili-colorado';
-
-            beforeAll(async () => {
-                const handle = await repo.Internal.buildHandle({
-                    hex: Buffer.from(rootHandleName).toString('hex'),
-                    name: rootHandleName,
-                    og_number: 0,
-                    image: '',
-                    utxo: 'test_tx#0',
-                    lovelace: 0,
-                    datum: 'a2some2key6another2key',
-                    image_hash: '',
-                    svg_version: '',
-                    handle_type: HandleType.HANDLE,
-                    policy,
-                    resolved_addresses: {ada:'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q'},
-                    updated_slot_number: 0
-                });
-                await Promise.all([repo.save(handle)]);
-            });
-
-            it('should not get subhandle settings if handle does not exist', () => {
-                try {
-                    repo.getSubHandleSettings('nope@handle');
-                    throw new Error('expected error');
-                } catch (error: any) {
-                    expect(error.message).toEqual('Not found');
-                }
-            });
-
-            it('should get subhandle settings by name', async () => {
-                const utxoDetails = { address: 'addr_test1qzdzhdzf9ud8k2suzryvcdl78l3tfesnwp962vcuh99k8z834r3hjynmsy2cxpc04a6dkqxcsr29qfl7v9cmrd5mm89qfmc97q', datum: 'a2436e6674a347656e61626c6564014b7469657250726963696e679f9f011903e8ff9f021901f4ff9f0318faff9f040affff48656e61626c65507a00477669727475616ca447656e61626c6564014b7469657250726963696e679f9f010fffff48656e61626c65507a004f657870697265735f696e5f64617973190168', index: 0, lovelace: 1, tx_id: 'some_id' };
-                let handle = repo.getHandle(rootHandleName)!;
-                handle = await repo.Internal.buildHandle({
-                    ...handle,
-                    subhandle_settings: {
-                        utxo: utxoDetails,
-                        payment_address: 'abc'
-                    },
-                    updated_slot_number: 0,
-                    resolved_addresses: {ada: ''}
-                })
-                await repo.save(handle);
-
-                const result = repo.getSubHandleSettings(rootHandleName);
-                expect(result).toEqual({
-                    utxo: utxoDetails,
-                    payment_address: 'abc'
-                });
             });
         });
 
