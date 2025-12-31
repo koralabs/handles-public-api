@@ -42,9 +42,12 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent, context:AWSLambda
         // - Get blocks fom Blockfrost
 
         // TODO: At MAX_TIP_SCAN_SLOTS of 30 mins, that should be ~90 blocks. But could exceed Blockfrost page limit of 100 
-        const bResp: {hash: string, slot: number}[] = await (await blockfrostApiCall(`blocks/${currentBlockHash}/next`)).json()
+        const bResp: {hash: string, slot: number, confirmations: number}[] = await (await blockfrostApiCall(`blocks/${currentBlockHash}/next`)).json()
+        bResp.sort((a, b) => b.confirmations - a.confirmations);
         for (const b of bResp) {
-            const block = {id: b.hash, slot: b.slot, transactions: [] as Transaction[]}
+            const block = {id: b.hash, slot: b.slot, confirmations: b.confirmations, transactions: [] as Transaction[]}
+            
+            if (block.confirmations < 20) break;
 
             // TODO: This could theoretically be >100 (Blockfrost page limit). But eutxo says 100 is the current all time high
             const _tx_hashes = await (await blockfrostApiCall(`blocks/${b.hash}/txs`)).json()
