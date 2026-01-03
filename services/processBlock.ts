@@ -39,15 +39,16 @@ export const processBlock = async (txBlock: BlockPraos, repo: HandlesRepository)
                 const handles = handleAssets.flatMap(h => h[1])
                 const mintAssets: [string, string[]][] = minted.map(([policy, mintedHandles]) => [policy, Object.keys(handles).filter(k => mintedHandles[k] > 0n)]);
                 const metadata = Object.fromEntries(
-                    Object.entries(txBody?.metadata ?? {}).filter(([label]) => label == '721') // We only need 721 label
+                    Object.entries(txBody?.metadata?.labels ?? {}).filter(([label]) => label == '721') // We only need 721 label
                         .map(([label, labelObj]) => {
-                            const { version, ...policies } = labelObj as any;
+                            const { json } = labelObj;
+                            const { version, ...policies } = json as any;
                             const filteredPolicies = Object.fromEntries(
                                 Object.entries(policies)
                                     .filter(([policyId]) => HANDLE_POLICIES.contains(NETWORK as Network, policyId))
                                     .map(([policyId, assets]) => {
                                         // Only handles in this UTxO
-                                        const filteredAssets = Object.fromEntries(Object.entries(assets as any).filter(([assetName]) => handles.includes(assetName)));
+                                        const filteredAssets = Object.fromEntries(Object.entries(assets as any).filter(([assetName]) => handles.includes(assetName) || handles.includes(Buffer.from(assetName).toString('hex'))));
                                         return [policyId, filteredAssets];
                                     })
                                     .filter(([, assets]) => Object.keys(assets as any).length > 0)

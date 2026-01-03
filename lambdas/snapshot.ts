@@ -1,14 +1,11 @@
 import { IHandleFileContent, IndexNames, MintingData, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
-import { GlideClient, GlideString } from '@valkey/valkey-glide';
 import AWS from 'aws-sdk';
 import zlib from 'zlib';
 import { RedisHandlesStore } from '../stores/redis';
 
 const s3 = new AWS.S3({ region: 'us-west-2' });
 
-let client: GlideClient | undefined;
-
-async function getRedisItems() {
+const getRedisItems = async () => {
     const utxos: Map<string, UTxOWithTxInfo | null> = new Map();
     const mints: Map<string, MintingData | null> = new Map();
 
@@ -20,7 +17,7 @@ async function getRedisItems() {
         const redisHandleStore = new RedisHandlesStore();
         console.log('Connected to Valkey');
 
-        let cursor: GlideString = '0';
+        let cursor = '0';
         let totalKeys = 0;
 
         console.log('Counting keys in database...');
@@ -31,7 +28,7 @@ async function getRedisItems() {
         utxoSchemaVersion = Number(metrics.utxoSchemaVersion);
 
         do {
-            const [nextCursor, keys] = await client!.scan(cursor, { count: 1000, match: '{root}:utxo:*' });
+            const [nextCursor, keys] = redisHandleStore.redisClientCall('scan', cursor, { match: `{root}:${IndexNames.UTXO}:*`, count: 1000 }) as [string, string[]];
             cursor = nextCursor;
 
             if (keys && keys.length > 0) {
@@ -43,18 +40,21 @@ async function getRedisItems() {
                 }
 
                 // check if keys starts with ({root}:utxo_slot | {root}:utxo) and add to utxoKeys
-                redisHandleStore.pipeline(() => {
+                const pipelineResults: UTxOWithTxInfo[] = redisHandleStore.pipeline(() => {
                     for (const key of keys) {
                         const keyParts = `${key}`.split(':');
-                        const result = redisHandleStore.getValueFromIndex(IndexNames.UTXO, keyParts[2]) as UTxOWithTxInfo | null;
-                        if (result && result?.slot <= lastSlot) utxos.set(keyParts[2], result);
+                        const utxoKey = keyParts[2];
+                        redisHandleStore.getValueFromIndex(IndexNames.UTXO, utxoKey) as UTxOWithTxInfo | null;
                     }
                 });
+                for (const item of pipelineResults) {
+                    if (item && item?.slot <= lastSlot) utxos.set(item.id, item);
+                }
             }
         } while (cursor !== '0');
 
         do {
-            const [nextCursor, keys] = await client!.scan(cursor, { count: 1000, match: '{root}:mint*' });
+            const [nextCursor, keys] = redisHandleStore.redisClientCall('scan', cursor, { match: `{root}:${IndexNames.MINT}:*`, count: 1000 }) as [string, string[]];
             cursor = nextCursor;
 
             if (keys && keys.length > 0) {
@@ -66,13 +66,18 @@ async function getRedisItems() {
                 }
 
                 // check if keys starts with ({root}:utxo_slot | {root}:utxo) and add to utxoKeys
-                redisHandleStore.pipeline(() => {
+                const pipelineResults: MintingData[] = redisHandleStore.pipeline(() => {
                     for (const key of keys) {
                         const keyParts = `${key}`.split(':');
-                        const result = redisHandleStore.getValueFromIndex(IndexNames.MINT, keyParts[2]) as MintingData | null;
-                        if (result && result?.created_slot <= lastSlot) mints.set(keyParts[2], result);
+                        const mintKey = keyParts[2];
+                        const result = redisHandleStore.getValueFromIndex(IndexNames.MINT, mintKey) as MintingData | null;
+                        if (result && result?.created_slot <= lastSlot) mints.set(mintKey, result);
                     }
                 });
+                for (let i = 0; i < pipelineResults.length; i++) {
+                    const item = pipelineResults[i];
+                    if (item && item?.created_slot <= lastSlot) mints.set(keys[i], item);
+                }
             }
         } while (cursor !== '0');
     } catch (error) {
@@ -99,8 +104,8 @@ exports.handler = async (event: any) => {
                 slot: results.lastSlot,
                 hash: results.lastHash,
                 utxoSchemaVersion: results.utxoSchemaVersion,
-                utxos: Array.from(results.utxos.entries().map(([_, v]) => v).filter((v): v is UTxOWithTxInfo => v !== null)),
-                mintingData: Array.from(results.mints.entries()).reduce<Record<string, MintingData>>((acc, [k, v]) => {
+                utxos: Array.from(results.utxos).map(([_, v]) => v).filter((v): v is UTxOWithTxInfo => v !== null),
+                mintingData: Object.entries(results.mints).reduce<Record<string, MintingData>>((acc, [k, v]) => {
                     if (v !== null) acc[k] = v;
                     return acc;
                 }, {})

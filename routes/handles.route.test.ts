@@ -50,7 +50,8 @@ jest.mock('../repositories/handlesRepository', () => ({
                 return {
                     name: handleName,
                     subhandle_settings:{
-                        utxo: {datum:'9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff'}
+                        utxo: {datum:'9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff'},
+                        utxo_id: 'tx_id_sub#0'
                     }
                 }
             }
@@ -81,7 +82,8 @@ jest.mock('../repositories/handlesRepository', () => ({
                             pz_enabled: true,
                             tier_pricing: [[1, 20000000]]
                         },
-                        utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
+                        utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' },
+                        utxo_id: 'tx_id_sub_2#0'
                     }                    
                 };
             }
@@ -125,6 +127,10 @@ jest.mock('../repositories/handlesRepository', () => ({
                     address: 'addr1_ref_token',
                     script: { type: 'plutus_v2', cbor: 'a247' }
                 }
+            } else if (utxoId === 'tx_id_sub#0') {
+                return {datum:'9f9f01019f9f011a0bebc200ff9f021a05f5e100ff9f031a02faf080ffffa14862675f696d61676540ff9f01019f9f011a01312d00ffffa14862675f696d61676540ff000000581a687474703a2f2f6c6f63616c686f73743a333030372f23746f75005839004988cad9aa1ebd733b165695cfef965fda2ee42dab2d8584c43b039c96f91da5bdb192de2415d3e6d064aec54acee648c2c6879fad1ffda1ff'}
+            } else if (utxoId === 'tx_id_sub_2#0') {
+                return { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
             }
             return null;
         },
@@ -665,6 +671,7 @@ describe('Testing Handles Routes', () => {
                     pz_enabled: true,
                     tier_pricing: [[1, 20000000]]
                 },
+                utxo_id: 'tx_id_sub_2#0',
                 utxo: { address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' }
             });
         });

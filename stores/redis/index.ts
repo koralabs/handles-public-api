@@ -360,7 +360,7 @@ export class RedisHandlesStore implements IApiStore {
             if (value != undefined && value != null) {
                 if (typeof value === 'object') {
                     // JSON value → add to parent hash
-                    parentFields[field] = JSON.stringify(value)
+                    parentFields[field] = JSON.stringify(value, (_, val) => typeof val === 'bigint' ? `${Number(val)}` : val)
                 } else {
                     // Primitive value → add to parent hash
                     parentFields[field] = String(value);
@@ -402,7 +402,7 @@ export class RedisHandlesStore implements IApiStore {
         return result;
     }
 
-    private redisClientCall(cmd: string, ...args: any[]) {
+    public redisClientCall(cmd: string, ...args: any[]) {
         if (RedisHandlesStore._pipeline && cmd != 'batch') {
             if (cmd != 'scard') { // scard needs to go through for removeValueFromIndexedSet to work right
                 RedisHandlesStore._pipeline.push([cmd, args]);
