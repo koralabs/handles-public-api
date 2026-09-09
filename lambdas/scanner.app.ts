@@ -5,6 +5,7 @@ import { HandlesRepository } from '../repositories/handlesRepository';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
 import { getHandlesStore } from '../stores/redis';
 import { getApiMptRebuildPendingKey, getApiScannerLeaseKey, getApiScannerRecoveryKey } from '../stores/redis/keys';
+import { DemeterDeadlineError, DemeterRollbackError, isDemeterScannerEnabled, scanDemeterBlocks } from '../services/demeter/utxorpc.service';
 import { discoverHandleTxsBySlotRange, isMaestroConfigured, MaestroDiscoveryResult } from '../services/maestro/policy-txs.service';
 import { blockfrostApiCall, buildUTxOsFromKoiosTxs, defaultKoiosSettings, fetchBlockfrostDatumCbor, fetchBlockfrostTxHashes, fetchBlockfrostTxInfo, fetchKoios, fetchPaginatedResults } from '../utils/helpers';
 import { buildAndStoreMptRootHash, getChainMintingDataRootHash } from '../utils/snapshotVerification';
@@ -1036,6 +1037,80 @@ const clearStaleLockIfNeeded = (metrics: ReturnType<HandlesRepository['getMetric
     return true;
 };
 
+// Shared per-block processing, called by both the legacy scan loop and the Demeter WatchTx path.
+// Label-blind (mainnet parity): the value/root here is NOT WS1 label-aware, so the scanner-computed
+// handle set and the finally-block MPT root stay byte-identical to mainnet's current behavior and
+// keep matching the label-blind on-chain handle_root.
+const processScannerBlock = (
+    block: { id: string; slot: number },
+    blockTxList: KoiosTxInfo[],
+    tip: { hash: string; slot: number },
+    datumInfoByHash = new Map<string, string>()
+) => {
+    const builtUTxOs = buildUTxOsFromKoiosTxs(blockTxList, datumInfoByHash);
+
+    const handleNames = builtUTxOs.flatMap((u) => u.handles?.flatMap((h) => h[1].map((assetName) => getHandleNameFromAssetName(assetName).name)) ?? []) ?? [];
+    Logger.local(`Processing block ${block.id} at slot ${block.slot} with ${builtUTxOs.length} UTxOs containing ${handleNames.join(', ')} handles from ${blockTxList.length} transactions`);
+
+    builtUTxOs.forEach((utxo) => {
+        // ********** BURNS ************* //
+        const burnHandles = (store.pipeline(() => {
+            utxo.burn
+                ?.flatMap((b) => b[1])
+                .forEach((hex) => {
+                    handlesRepo.getHandle(getHandleNameFromAssetName(hex).name);
+                });
+        }) as (StoredHandle | undefined)[]).filter((burned): burned is StoredHandle => !!burned);
+
+        const uniqueBurnHandles = Array.from(new Map(burnHandles.map((handle) => [handle.name, handle])).values());
+        store.pipeline(() => {
+            uniqueBurnHandles.forEach((burned) => {
+                handlesRepo.removeHandle(burned);
+            });
+        });
+    });
+
+    // ********* UPDATES ************ //
+    handlesRepo.addUTxOsWithMintDataAndUpdateIndexes(builtUTxOs);
+
+    // ******** SPENT UTxOs *********** //
+    const spentUtxoIds = blockTxList.flatMap((tx) => tx.inputs).map((input) => `${input.tx_hash}#${input.tx_index}`);
+    if (spentUtxoIds.length) handlesRepo.removeUTxOs(spentUtxoIds);
+
+    handlesRepo.setMetrics({
+        currentSlot: block.slot,
+        currentBlockHash: block.id,
+        tipBlockHash: tip.hash,
+        lastSlot: tip.slot
+    });
+
+    // Record the block we just processed, independent of whether it had handle txs.
+    store.recordScannedBlock(block.slot, block.id);
+};
+
+const scanWithDemeter = async (metrics: ReturnType<HandlesRepository['getMetrics']>, scanBreadcrumb: (step: string, extra?: string) => void) => {
+    const start = {
+        slot: Number(metrics.currentSlot ?? 0),
+        hash: `${metrics.currentBlockHash ?? ''}`
+    };
+    if (!start.slot || !start.hash) {
+        throw new Error('Demeter scan requires a verified snapshot cursor with currentSlot and currentBlockHash');
+    }
+    const policies = Object.keys(HANDLE_POLICIES[NETWORK.toLowerCase() as Network] ?? {});
+    const timeoutMs = Math.max(1_000, scannerDeadline - Date.now() - 5_000);
+    scanBreadcrumb('demeterWatch_start', `from=${start.slot} policies=${policies.length}`);
+    const tip = await scanDemeterBlocks(start, policies, timeoutMs, async (demeterBlock, targetTip) => {
+        checkDeadline(`demeter block ${demeterBlock.ref.height}`);
+        processScannerBlock(
+            { id: demeterBlock.ref.hash, slot: demeterBlock.ref.slot },
+            demeterBlock.transactions,
+            { hash: targetTip.hash, slot: targetTip.slot }
+        );
+    });
+    scanBreadcrumb('demeterWatch_done', `tip=${tip.slot}`);
+    store.trimScannedBlocksToRecent(3000);
+};
+
 const scan = async () => {
     Logger.local(`Running scan...`);
     const metrics = handlesRepo.getMetrics();
@@ -1050,6 +1125,10 @@ const scan = async () => {
     // Is scanning fast enough to do this without MAX_TIP_SLOTS? Or a much higher one?
     handlesRepo.setMetrics({ lockLambdas: LockedLambdaReason.SCANNING, lockLambdasTimestamp: Date.now() });
     try {
+        if (isDemeterScannerEnabled()) {
+            await scanWithDemeter(metrics, scanBreadcrumb);
+            return;
+        }
         scanBreadcrumb('fetchPaginatedResults_start', `from=${metrics.currentBlockHash}`);
         let bResp: { hash: string; slot: number; confirmations: number; tx_count?: number }[] = await fetchPaginatedResults(
             `blocks/${metrics.currentBlockHash}/next`,
@@ -1238,50 +1317,10 @@ const scan = async () => {
                     });
                     return;
                 }
-                const block = { id: b.hash, slot: b.slot, confirmations: b.confirmations };
                 const blockTxList = txInfoByBlockHash.get(b.hash) ?? [];
-                const builtUTxOs = buildUTxOsFromKoiosTxs(blockTxList, datumInfoByHash);
-
-                const handleNames = builtUTxOs.flatMap((u) => u.handles?.flatMap((h) => h[1].map((assetName) => getHandleNameFromAssetName(assetName).name)) ?? []) ?? [];
-                Logger.local(`Processing block ${block.id} at slot ${block.slot} with ${builtUTxOs.length} UTxOs containing ${handleNames.join(', ')} handles from ${blockTxList.length} transactions`);
-
-                builtUTxOs.forEach((utxo) => {
-                    // ********** BURNS ************* //
-                    const burnHandles = (store.pipeline(() => {
-                        utxo.burn
-                            ?.flatMap((b) => b[1])
-                            .forEach((hex) => {
-                                handlesRepo.getHandle(getHandleNameFromAssetName(hex).name);
-                            });
-                    }) as (StoredHandle | undefined)[]).filter((burned): burned is StoredHandle => !!burned);
-
-                    const uniqueBurnHandles = Array.from(new Map(burnHandles.map((handle) => [handle.name, handle])).values());
-                    store.pipeline(() => {
-                        uniqueBurnHandles.forEach((burned) => {
-                            handlesRepo.removeHandle(burned);
-                        });
-                    });
-                });
-
-                // ********* UPDATES ************ //
-                handlesRepo.addUTxOsWithMintDataAndUpdateIndexes(builtUTxOs);
-
-                // ******** SPENT UTxOs *********** //
-                const spentUtxoIds = blockTxList.flatMap((tx) => tx.inputs).map((input) => `${input.tx_hash}#${input.tx_index}`);
-                if (spentUtxoIds.length) handlesRepo.removeUTxOs(spentUtxoIds);
-
-                handlesRepo.setMetrics({
-                    currentSlot: block.slot,
-                    currentBlockHash: block.id,
-                    tipBlockHash,
-                    lastSlot
-                });
-
-                // Record the block we just processed, independent of whether it had handle txs.
-                // processRollback's missed-block drift check relies on this ledger being a true
-                // record of what we've scanned — deriving it from stored UTxO blockHashes would
-                // miss the large fraction of blocks with zero handle activity.
-                store.recordScannedBlock(block.slot, block.id);
+                // processRollback's missed-block drift check relies on recordScannedBlock (inside
+                // processScannerBlock) being a true record of every block we scanned, handle txs or not.
+                processScannerBlock({ id: b.hash, slot: b.slot }, blockTxList, { hash: tipBlockHash, slot: lastSlot }, datumInfoByHash);
             }
         }
         // Keep enough history to cover the deepest rollback check window with margin. 3000
@@ -1295,6 +1334,23 @@ const scan = async () => {
                 category: LogCategory.INFO,
                 event: 'scannerLambda.deadlineReached'
             });
+            return;
+        }
+        if (error instanceof DemeterDeadlineError) {
+            Logger.log({
+                message: `${error.message}. Pausing this invocation — next invocation will resume from the last complete block.`,
+                category: LogCategory.INFO,
+                event: 'scannerLambda.demeterDeadlineReached'
+            });
+            return;
+        }
+        if (error instanceof DemeterRollbackError) {
+            Logger.log({
+                message: `${error.message}. Entering canonical rollback reconciliation.`,
+                category: LogCategory.WARN,
+                event: 'scannerLambda.demeterRollback'
+            });
+            await processRollback({ currentSlot: Number(metrics.currentSlot ?? 0), rollbackOffset: 2160, suppressNotify: true });
             return;
         }
         if (isRetriableKoiosError(error)) {
