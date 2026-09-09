@@ -12,10 +12,7 @@ jest.mock('../stores/redis');
 jest.mock('../repositories/handlesRepository');
 jest.mock('../services/ogmios/utils');
 jest.mock('../services/demeter/utxorpc.service');
-jest.mock('../services/maestro/policy-txs.service');
 
-import * as maestroService from '../services/maestro/policy-txs.service';
-const mockedMaestro = maestroService as jest.Mocked<typeof maestroService>;
 const mockedDemeter = demeterService as jest.Mocked<typeof demeterService>;
 
 const mockedHelpers = helpers as jest.Mocked<typeof helpers>;
@@ -2204,7 +2201,7 @@ describe('Scanner lambda unit tests', () => {
     it('scan halts at the first block whose tx_info coverage is incomplete (block_txs path)', async () => {
         // Validates: when Koios's /tx_info returns HTTP 200 with fewer rows
         // than the request listed (empirically observed — see
-        // project_known_integrity_gaps.md gap #3, dominant cause is Maestro
+        // project_known_integrity_gaps.md gap #3, dominant cause is a provider tx-index
         // outpacing Koios's tx_info indexer), the scanner halts before
         // advancing past any block in the affected chunk. The next
         // invocation will retry from currentBlockHash, by which time Koios
@@ -2323,92 +2320,6 @@ describe('Scanner lambda unit tests', () => {
         }
     });
 
-    it('scan processes complete blocks and halts at the first incomplete block (Maestro path)', async () => {
-        // Validates the per-block coverage check on the Maestro discovery
-        // path: blocks whose Maestro-listed tx_hashes are all present in
-        // tx_info advance normally; the first block missing any expected
-        // tx_hash halts the scan so the next invocation retries from there.
-        // Failure mode caught: a regression that either (a) advances past
-        // an incomplete block, or (b) halts unnecessarily on a complete
-        // block ahead of an incomplete one.
-        const { handlesRepo, store, scannerModule } = setup();
-        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
-
-        mockedHelpers.fetchPaginatedResults.mockImplementation(async (endpoint: string) => {
-            if (endpoint.includes('blocks/start_hash/next')) {
-                return [
-                    { hash: 'block_complete', slot: 100, confirmations: 5 },
-                    { hash: 'block_incomplete', slot: 110, confirmations: 5 },
-                    { hash: 'block_after', slot: 120, confirmations: 5 }
-                ] as never;
-            }
-            return [] as never;
-        });
-
-        mockedMaestro.isMaestroConfigured.mockReturnValue(true);
-        mockedMaestro.discoverHandleTxsBySlotRange.mockResolvedValue({
-            txHashes: ['tx_in_complete', 'tx_in_incomplete'],
-            slotByTx: new Map<string, number>([
-                ['tx_in_complete', 100],
-                ['tx_in_incomplete', 110]
-            ])
-        } as never);
-
-        mockedHelpers.fetchKoios.mockImplementation(async (path: string, _method?: string, body?: string) => {
-            if (path === 'tx_info') {
-                const parsedBody = JSON.parse(body ?? '{}');
-                const requested: string[] = parsedBody._tx_hashes ?? [];
-                // Koios has tx_in_complete but not tx_in_incomplete yet
-                // (the lag scenario). Return only the one it has.
-                return requested
-                    .filter((hash) => hash === 'tx_in_complete')
-                    .map((tx_hash) => ({
-                        tx_hash,
-                        block_hash: 'block_complete',
-                        block_height: 1,
-                        absolute_slot: 100,
-                        inputs: [],
-                        outputs: [],
-                        assets_minted: [],
-                        metadata: {},
-                        reference_inputs: []
-                    })) as never;
-            }
-            return [] as never;
-        });
-
-        mockedHelpers.buildUTxOsFromKoiosTxs.mockReturnValue([] as never);
-
-        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-        try {
-            await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
-
-            // block_complete must be processed (currentSlot advances to 100,
-            // recordScannedBlock called).
-            expect(handlesRepo.setMetrics).toHaveBeenCalledWith(
-                expect.objectContaining({ currentBlockHash: 'block_complete', currentSlot: 100 })
-            );
-            expect(store.recordScannedBlock).toHaveBeenCalledWith(100, 'block_complete');
-
-            // block_incomplete and block_after must NOT advance — coverage
-            // check halted the scan at block_incomplete.
-            expect(handlesRepo.setMetrics).not.toHaveBeenCalledWith(
-                expect.objectContaining({ currentBlockHash: 'block_incomplete' })
-            );
-            expect(handlesRepo.setMetrics).not.toHaveBeenCalledWith(
-                expect.objectContaining({ currentBlockHash: 'block_after' })
-            );
-            expect(store.recordScannedBlock).not.toHaveBeenCalledWith(110, 'block_incomplete');
-            expect(store.recordScannedBlock).not.toHaveBeenCalledWith(120, 'block_after');
-
-            expect(mockedHelpers.fetchBlockfrostTxInfo).not.toHaveBeenCalled();
-        } finally {
-            logSpy.mockRestore();
-            warnSpy.mockRestore();
-        }
-    });
-
     // NOTE: datum_info Blockfrost fallback is tested via fetchBlockfrostDatumCbor in helpers.blockfrost-fallback.test.ts.
     // A scanner-level datum_info fallback test is impractical here because asyncForEach in kora-labs-common
     // creates a dangling rejected promise during its internal delay, which triggers Jest's unhandled rejection detection.
@@ -2458,111 +2369,6 @@ describe('Scanner lambda unit tests', () => {
                 lastSlot: 170
             });
             expect(store.recordScannedBlock).toHaveBeenCalledWith(150, 'demeter_block');
-        });
-    });
-
-    // ===== Maestro discovery integration =====
-    describe('Maestro discovery integration', () => {
-        beforeEach(() => {
-            mockedMaestro.isMaestroConfigured.mockReset();
-            mockedMaestro.discoverHandleTxsBySlotRange.mockReset();
-        });
-
-        it('uses Maestro-discovered tx_hashes and skips block_txs when discovery succeeds', async () => {
-            // Validates: when MAESTRO_API_KEY is set and the window's last block is past the
-            // safety lag threshold, scan() consults Maestro for handle-touching tx_hashes
-            // and feeds them straight to tx_info — bypassing the block_txs fan-out.
-            // Failure mode caught: a missing wire-up would still call block_txs (wasted work)
-            // or, worse, drop Maestro's hashes and process the block as empty (silent miss).
-            const { handlesRepo, scannerModule } = setup();
-            handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
-            mockedHelpers.fetchPaginatedResults.mockResolvedValue([
-                { hash: 'block_a', slot: 500, confirmations: 100 }
-            ] as never);
-            mockedMaestro.isMaestroConfigured.mockReturnValue(true);
-            mockedMaestro.discoverHandleTxsBySlotRange.mockResolvedValue({
-                txHashes: ['handle_tx_1'],
-                slotByTx: new Map([['handle_tx_1', 500]])
-            });
-            mockedHelpers.fetchKoios.mockImplementation(async (path: string, _method?: string, body?: string) => {
-                if (path === 'tx_info') {
-                    const parsedBody = JSON.parse(body ?? '{}');
-                    return (parsedBody._tx_hashes ?? []).map((txHash: string) => ({ tx_hash: txHash, block_hash: 'block_a', inputs: [] })) as never;
-                }
-                return [] as never;
-            });
-            mockedHelpers.buildUTxOsFromKoiosTxs.mockReturnValue([] as never);
-
-            await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
-
-            expect(mockedMaestro.discoverHandleTxsBySlotRange).toHaveBeenCalledTimes(1);
-            const blockTxsCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'block_txs');
-            expect(blockTxsCalls).toHaveLength(0);
-            const txInfoCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'tx_info');
-            expect(txInfoCalls).toHaveLength(1);
-            const parsedTxInfoBody = JSON.parse((txInfoCalls[0][2] ?? '{}') as string);
-            expect(parsedTxInfoBody._tx_hashes).toEqual(['handle_tx_1']);
-        });
-
-        it('falls back to block_txs when Maestro discovery returns null', async () => {
-            // Validates: Maestro returning null (configured but failing — e.g., 429 cool-down
-            // or post-retry transient failure) is transparently handled by falling through
-            // to the existing block_txs path, with no scan correctness loss.
-            // Failure mode caught: a missing fallback branch would mean any Maestro outage
-            // immediately breaks the scanner; we want it to be a transparent perf optimization.
-            const { handlesRepo, scannerModule } = setup();
-            handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
-            mockedHelpers.fetchPaginatedResults.mockResolvedValue([
-                { hash: 'block_a', slot: 500, confirmations: 100 }
-            ] as never);
-            mockedMaestro.isMaestroConfigured.mockReturnValue(true);
-            mockedMaestro.discoverHandleTxsBySlotRange.mockResolvedValue(null);
-            mockedHelpers.fetchKoios.mockImplementation(async (path: string, _method?: string, body?: string) => {
-                if (path === 'block_txs') return [{ tx_hash: 'block_txs_tx_1' }] as never;
-                if (path === 'tx_info') {
-                    const parsedBody = JSON.parse(body ?? '{}');
-                    return (parsedBody._tx_hashes ?? []).map((txHash: string) => ({ tx_hash: txHash, block_hash: 'block_a', inputs: [] })) as never;
-                }
-                return [] as never;
-            });
-            mockedHelpers.buildUTxOsFromKoiosTxs.mockReturnValue([] as never);
-
-            await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
-
-            expect(mockedMaestro.discoverHandleTxsBySlotRange).toHaveBeenCalledTimes(1);
-            const blockTxsCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'block_txs');
-            expect(blockTxsCalls).toHaveLength(1); // fallback engaged
-            const txInfoCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'tx_info');
-            const parsedTxInfoBody = JSON.parse((txInfoCalls[0][2] ?? '{}') as string);
-            expect(parsedTxInfoBody._tx_hashes).toEqual(['block_txs_tx_1']);
-        });
-
-        it('does not invoke Maestro when not configured', async () => {
-            // Validates: when MAESTRO_API_KEY is unset (most common in dev/preview/preprod),
-            // scan() never reaches discoverHandleTxsBySlotRange and uses block_txs unchanged.
-            // Failure mode caught: invoking a Maestro service with no key would throw or
-            // log noise on every scan tick in non-mainnet environments.
-            const { handlesRepo, scannerModule } = setup();
-            handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
-            mockedHelpers.fetchPaginatedResults.mockResolvedValue([
-                { hash: 'block_a', slot: 500, confirmations: 100 }
-            ] as never);
-            mockedMaestro.isMaestroConfigured.mockReturnValue(false);
-            mockedHelpers.fetchKoios.mockImplementation(async (path: string, _method?: string, body?: string) => {
-                if (path === 'block_txs') return [{ tx_hash: 'block_txs_tx' }] as never;
-                if (path === 'tx_info') {
-                    const parsedBody = JSON.parse(body ?? '{}');
-                    return (parsedBody._tx_hashes ?? []).map((txHash: string) => ({ tx_hash: txHash, block_hash: 'block_a', inputs: [] })) as never;
-                }
-                return [] as never;
-            });
-            mockedHelpers.buildUTxOsFromKoiosTxs.mockReturnValue([] as never);
-
-            await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
-
-            expect(mockedMaestro.discoverHandleTxsBySlotRange).not.toHaveBeenCalled();
-            const blockTxsCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'block_txs');
-            expect(blockTxsCalls).toHaveLength(1);
         });
     });
 });
