@@ -7,7 +7,6 @@ import { isRegistryLabel } from '../utils/assetLabelRegistry';
 import { getHandlesStore } from '../stores/redis';
 import { getApiMptRebuildPendingKey, getApiScannerLeaseKey, getApiScannerRecoveryKey } from '../stores/redis/keys';
 import { DemeterDeadlineError, DemeterRollbackError, isDemeterScannerEnabled, scanDemeterBlocks } from '../services/demeter/utxorpc.service';
-import { discoverHandleTxsBySlotRange, isMaestroConfigured, MaestroDiscoveryResult } from '../services/maestro/policy-txs.service';
 import { blockfrostApiCall, buildUTxOsFromKoiosTxs, defaultKoiosSettings, fetchBlockfrostDatumCbor, fetchBlockfrostTxHashes, fetchBlockfrostTxInfo, fetchKoios, fetchPaginatedResults } from '../utils/helpers';
 import { buildAndStoreMptRootHash, getChainMintingDataRootHash } from '../utils/snapshotVerification';
 
@@ -1226,59 +1225,20 @@ const scan = async () => {
                 event: 'scannerLambda.latestBlockUnavailable'
             });
         }
-        // Maestro discovery: pre-compute the set of handle-touching tx_hashes for the
-        // entire window in one cheap pass, replacing the bulk block_txs+filter work in
-        // each chunk. Returns null (caller falls back to block_txs + tx_info filter)
-        // when MAESTRO_API_KEY is unset, when a Redis cool-down is active (after a 429
-        // or low-credits warning), or when the underlying call fails after retries.
-        let maestroDiscovery: MaestroDiscoveryResult | null = null;
-        if (isMaestroConfigured()) {
-            const policiesForNetwork = Object.keys(HANDLE_POLICIES[NETWORK.toLowerCase() as Network] ?? {});
-            const windowFromSlot = bResp[0].slot;
-            const windowToSlot = bResp[bResp.length - 1].slot;
-            scanBreadcrumb('maestroDiscovery_start', `from=${windowFromSlot} to=${windowToSlot} policies=${policiesForNetwork.length}`);
-            maestroDiscovery = await discoverHandleTxsBySlotRange(NETWORK.toLowerCase() as Network, policiesForNetwork, windowFromSlot, windowToSlot);
-            scanBreadcrumb('maestroDiscovery_done', maestroDiscovery ? `txCount=${maestroDiscovery.txHashes.length}` : 'fallback');
-        }
-        // Bucket Maestro tx hashes by block hash so each chunk gets only its slice.
-        // bResp slots are unique per Cardano consensus, so slot → blockHash is 1:1.
-        const maestroHashesByBlock = maestroDiscovery
-            ? (() => {
-                  const slotToHash = new Map<number, string>();
-                  for (const b of bResp) slotToHash.set(b.slot, b.hash);
-                  const byBlock = new Map<string, string[]>();
-                  for (const txHash of maestroDiscovery.txHashes) {
-                      const slot = maestroDiscovery.slotByTx.get(txHash);
-                      if (slot === undefined) continue;
-                      const blockHash = slotToHash.get(slot);
-                      if (!blockHash) continue;
-                      const list = byBlock.get(blockHash) ?? [];
-                      list.push(txHash);
-                      byBlock.set(blockHash, list);
-                  }
-                  return byBlock;
-              })()
-            : null;
+        // Legacy chunk discovery uses Koios block_txs (Maestro removed 2026-09; all networks scan
+        // via Demeter/UTxORPC now, so this legacy path is only a block_txs fallback).
 
         for (let blockIndex = 0; blockIndex < bResp.length; blockIndex += SCANNER_BLOCK_PREFETCH_CHUNK_SIZE) {
             checkDeadline(`scan_chunk offset=${blockIndex}/${bResp.length}`);
             const blockChunk = bResp.slice(blockIndex, blockIndex + SCANNER_BLOCK_PREFETCH_CHUNK_SIZE);
             scanBreadcrumb('chunk_start', `offset=${blockIndex}/${bResp.length} chunkSize=${blockChunk.length}`);
             scanBreadcrumb('getBatchedTxHashes_start');
-            // For the block_txs path we keep the per-block mapping returned
-            // by Koios so we can compare its row count to Blockfrost's
-            // tx_count below. Maestro path has its own per-block expected
-            // map already populated above.
-            const blockTxRows = maestroHashesByBlock
-                ? null
-                : await getBatchedTxHashesWithFallback(blockChunk.map((block) => block.hash));
-            const blockTxCountByBlock = blockTxRows
-                ? blockTxRows.reduce<Map<string, number>>((acc, r) => { acc.set(r.block_hash, (acc.get(r.block_hash) ?? 0) + 1); return acc; }, new Map())
-                : null;
-            const txHashes = maestroHashesByBlock
-                ? [...new Set(blockChunk.flatMap((block) => maestroHashesByBlock.get(block.hash) ?? []))]
-                : [...new Set((blockTxRows ?? []).map((r) => r.tx_hash))];
-            scanBreadcrumb('getBatchedTxHashes_done', `txCount=${txHashes.length} source=${maestroHashesByBlock ? 'maestro' : 'block_txs'}`);
+            // Keep the per-block mapping returned by Koios block_txs so we can compare its row
+            // count to Blockfrost's tx_count below.
+            const blockTxRows = await getBatchedTxHashesWithFallback(blockChunk.map((block) => block.hash));
+            const blockTxCountByBlock = blockTxRows.reduce<Map<string, number>>((acc, r) => { acc.set(r.block_hash, (acc.get(r.block_hash) ?? 0) + 1); return acc; }, new Map());
+            const txHashes = [...new Set(blockTxRows.map((r) => r.tx_hash))];
+            scanBreadcrumb('getBatchedTxHashes_done', `txCount=${txHashes.length} source=block_txs`);
             scanBreadcrumb('getBatchedTxInfo_start');
             const txList = await getBatchedTxInfoWithFallback(txHashes);
             scanBreadcrumb('getBatchedTxInfo_done', `txInfoCount=${txList.length}`);
@@ -1293,21 +1253,13 @@ const scan = async () => {
                 existing.push(tx);
                 txInfoByBlockHash.set(blockHash, existing);
             }
-            // Tx discovery (Maestro on mainnet) and tx-info fetch (Koios) are
-            // independent indexers running at different speeds. Maestro can
-            // list a freshly-included handle-touching tx_hash before Koios's
-            // /tx_info has ingested it, in which case /tx_info responds 200
-            // with a shortened array. If we kept advancing currentSlot past
-            // a block whose tx_info we don't yet have, that tx would be lost
-            // forever — concretely observed at preview slot 111168833 /
-            // tx abbf7e561505d8, which left pz_settings pointing at a UTxO
-            // consumed 3+ days earlier. Instead, halt the scan at the first
-            // block with incomplete tx_info coverage so the next invocation
-            // retries from currentBlockHash, by which time Koios will have
-            // caught up.
+            // block_txs discovery (Koios) and tx-info fetch (Koios) can run at slightly different
+            // speeds: /tx_info may respond 200 with a shortened array for a freshly-included tx. If
+            // we advanced currentSlot past a block whose tx_info we don't yet have, that tx would be
+            // lost forever. Halt the scan at the first block with incomplete coverage so the next
+            // invocation retries from currentBlockHash, by which time Koios will have caught up.
             const chunkHasShortResponse = txList.length < txHashes.length;
             for (const b of blockChunk) {
-                const expectedTxs = maestroHashesByBlock?.get(b.hash);
                 const receivedTxHashes = (txInfoByBlockHash.get(b.hash) ?? []).map((t) => t.tx_hash);
 
                 // block_txs-vs-Blockfrost cross-check: when Blockfrost lists
@@ -1329,19 +1281,12 @@ const scan = async () => {
                     }
                 }
 
-                // Maestro path knows expected tx_hashes per block, so coverage
-                // is checked exactly. The block_txs path doesn't carry a
-                // per-block mapping at this point — if anything in the chunk
-                // is short, halt at this chunk's first block so we don't
-                // advance past a block that *might* have contained the
-                // missing tx.
-                const coverageOk = expectedTxs !== undefined
-                    ? expectedTxs.every((hash) => receivedTxHashes.includes(hash))
-                    : !chunkHasShortResponse;
-                if (!coverageOk) {
-                    const missing = expectedTxs?.filter((hash) => !receivedTxHashes.includes(hash)) ?? [];
+                // The block_txs path has no per-block expected mapping here: if anything in the chunk
+                // is short, halt at the chunk's first block so we don't advance past a block that
+                // *might* have contained the missing tx.
+                if (chunkHasShortResponse) {
                     Logger.log({
-                        message: `tx_info coverage incomplete for block ${b.hash} (slot ${b.slot}); pausing scan, next invocation will resume from currentBlockHash. expected=${expectedTxs?.length ?? 'unknown'} received=${receivedTxHashes.length}${missing.length ? ` missing=${missing.slice(0, 3).join(',')}${missing.length > 3 ? '…' : ''}` : ''}`,
+                        message: `tx_info coverage incomplete for block ${b.hash} (slot ${b.slot}); pausing scan, next invocation will resume from currentBlockHash. received=${receivedTxHashes.length}`,
                         category: LogCategory.WARN,
                         event: 'scannerLambda.koiosTxInfo.coverageIncompletePause'
                     });
