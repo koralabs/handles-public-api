@@ -3,15 +3,40 @@ import { WHITELISTED_API_KEYS } from '../config';
 import { BlockfrostBlock, KoiosAssetUTxO, KoiosDatumInfo, KoiosTxInfo } from '../interfaces/provider.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
+import { isRegistryLabel } from '../utils/assetLabelRegistry';
 import { getHandlesStore } from '../stores/redis';
 import { getApiMptRebuildPendingKey, getApiScannerLeaseKey, getApiScannerRecoveryKey } from '../stores/redis/keys';
 import { DemeterDeadlineError, DemeterRollbackError, isDemeterScannerEnabled, scanDemeterBlocks } from '../services/demeter/utxorpc.service';
 import { blockfrostApiCall, buildUTxOsFromKoiosTxs, defaultKoiosSettings, fetchBlockfrostDatumCbor, fetchBlockfrostTxHashes, fetchBlockfrostTxInfo, fetchKoios, fetchPaginatedResults } from '../utils/helpers';
 import { buildAndStoreMptRootHash, getChainMintingDataRootHash } from '../utils/snapshotVerification';
 
-const store = getHandlesStore();
-const handlesRepo = new HandlesRepository(store);
+type ScannerStore = ReturnType<typeof getHandlesStore>;
+
+let storeInstance: ScannerStore | undefined;
+let handlesRepoInstance: HandlesRepository | undefined;
 let initialized = false;
+
+const getStore = (): ScannerStore => {
+    if (!storeInstance) storeInstance = getHandlesStore();
+    return storeInstance;
+};
+
+const getHandlesRepo = (): HandlesRepository => {
+    if (!handlesRepoInstance) handlesRepoInstance = new HandlesRepository(getStore());
+    return handlesRepoInstance;
+};
+
+const createLazyProxy = <T extends object>(factory: () => T): T => new Proxy({} as T, {
+    get: (_target, property) => {
+        const instance = factory();
+        const value = Reflect.get(instance, property, instance);
+        return typeof value === 'function' ? value.bind(instance) : value;
+    },
+    set: (_target, property, value) => Reflect.set(factory(), property, value)
+});
+
+const store = createLazyProxy(getStore);
+const handlesRepo = createLazyProxy(getHandlesRepo);
 
 const SCANNER_LEASE_KEY = getApiScannerLeaseKey();
 const SCANNER_RECOVERY_KEY = getApiScannerRecoveryKey();
@@ -1036,10 +1061,6 @@ const clearStaleLockIfNeeded = (metrics: ReturnType<HandlesRepository['getMetric
     return true;
 };
 
-// Shared per-block processing, called by both the legacy scan loop and the Demeter WatchTx path.
-// Label-blind (mainnet parity): the value/root here is NOT WS1 label-aware, so the scanner-computed
-// handle set and the finally-block MPT root stay byte-identical to mainnet's current behavior and
-// keep matching the label-blind on-chain handle_root.
 const processScannerBlock = (
     block: { id: string; slot: number },
     blockTxList: KoiosTxInfo[],
@@ -1047,32 +1068,42 @@ const processScannerBlock = (
     datumInfoByHash = new Map<string, string>()
 ) => {
     const builtUTxOs = buildUTxOsFromKoiosTxs(blockTxList, datumInfoByHash);
-
     const handleNames = builtUTxOs.flatMap((u) => u.handles?.flatMap((h) => h[1].map((assetName) => getHandleNameFromAssetName(assetName).name)) ?? []) ?? [];
     Logger.local(`Processing block ${block.id} at slot ${block.slot} with ${builtUTxOs.length} UTxOs containing ${handleNames.join(', ')} handles from ${blockTxList.length} transactions`);
 
-    builtUTxOs.forEach((utxo) => {
-        // ********** BURNS ************* //
-        const burnHandles = (store.pipeline(() => {
-            utxo.burn
-                ?.flatMap((b) => b[1])
-                .forEach((hex) => {
-                    handlesRepo.getHandle(getHandleNameFromAssetName(hex).name);
-                });
-        }) as (StoredHandle | undefined)[]).filter((burned): burned is StoredHandle => !!burned);
-
-        const uniqueBurnHandles = Array.from(new Map(burnHandles.map((handle) => [handle.name, handle])).values());
-        store.pipeline(() => {
-            uniqueBurnHandles.forEach((burned) => {
-                handlesRepo.removeHandle(burned);
-            });
+    const mainBurnNames = new Set<string>();
+    const labelBurns = new Map<string, Set<string>>();
+    blockTxList.flatMap((tx) => tx.assets_minted ?? [])
+        .filter((asset) => BigInt(asset.quantity) < 0n && HANDLE_POLICIES.contains(NETWORK as Network, asset.policy_id))
+        .forEach((asset) => {
+            const { name, assetLabel, isCip67 } = getHandleNameFromAssetName(asset.asset_name);
+            if (isRegistryLabel(assetLabel)) {
+                const labels = labelBurns.get(name) ?? new Set<string>();
+                labels.add(`${assetLabel}`.toLowerCase());
+                labelBurns.set(name, labels);
+            } else if (!isCip67 || asset.asset_name.startsWith(AssetNameLabel.LBL_222) || asset.asset_name.startsWith(AssetNameLabel.LBL_000)) {
+                mainBurnNames.add(name);
+            }
         });
+
+    const burnHandles = (store.pipeline(() => {
+        mainBurnNames.forEach((name) => handlesRepo.getHandle(name));
+    }) as (StoredHandle | undefined)[]).filter((burned): burned is StoredHandle => !!burned);
+
+    store.pipeline(() => {
+        burnHandles.forEach((burned) => handlesRepo.removeHandle(burned));
     });
 
-    // ********* UPDATES ************ //
+    if (labelBurns.size) {
+        store.pipeline(() => {
+            labelBurns.forEach((labels, name) => {
+                labels.forEach((label) => handlesRepo.removeHandleLabel(name, label));
+            });
+        });
+    }
+
     handlesRepo.addUTxOsWithMintDataAndUpdateIndexes(builtUTxOs);
 
-    // ******** SPENT UTxOs *********** //
     const spentUtxoIds = blockTxList.flatMap((tx) => tx.inputs).map((input) => `${input.tx_hash}#${input.tx_index}`);
     if (spentUtxoIds.length) handlesRepo.removeUTxOs(spentUtxoIds);
 
@@ -1082,8 +1113,6 @@ const processScannerBlock = (
         tipBlockHash: tip.hash,
         lastSlot: tip.slot
     });
-
-    // Record the block we just processed, independent of whether it had handle txs.
     store.recordScannedBlock(block.slot, block.id);
 };
 
@@ -1128,6 +1157,7 @@ const scan = async () => {
             await scanWithDemeter(metrics, scanBreadcrumb);
             return;
         }
+
         scanBreadcrumb('fetchPaginatedResults_start', `from=${metrics.currentBlockHash}`);
         let bResp: { hash: string; slot: number; confirmations: number; tx_count?: number }[] = await fetchPaginatedResults(
             `blocks/${metrics.currentBlockHash}/next`,
@@ -1263,9 +1293,12 @@ const scan = async () => {
                     return;
                 }
                 const blockTxList = txInfoByBlockHash.get(b.hash) ?? [];
-                // processRollback's missed-block drift check relies on recordScannedBlock (inside
-                // processScannerBlock) being a true record of every block we scanned, handle txs or not.
-                processScannerBlock({ id: b.hash, slot: b.slot }, blockTxList, { hash: tipBlockHash, slot: lastSlot }, datumInfoByHash);
+                processScannerBlock(
+                    { id: b.hash, slot: b.slot },
+                    blockTxList,
+                    { hash: tipBlockHash, slot: lastSlot },
+                    datumInfoByHash
+                );
             }
         }
         // Keep enough history to cover the deepest rollback check window with margin. 3000
@@ -1501,16 +1534,23 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent | AWSLambda.APIGat
         }
 
         logBreadcrumb('rollback_check_start');
-        const postScanMetrics = handlesRepo.getMetrics();
-        const slotsBelow = Number(postScanMetrics.lastSlot ?? 0) - Number(postScanMetrics.currentSlot ?? 0);
-        if (slotsBelow > ROLLBACK_20_SLOT_WINDOW) {
-            Logger.log({
-                message: `Scanner is ${slotsBelow} slots behind tip, skipping rollback check until caught up`,
-                category: LogCategory.INFO,
-                event: 'scannerLambda.rollbackCheckDeferred'
-            });
+        if (isDemeterScannerEnabled()) {
+            // WatchTx reports canonical undo events and validates the persisted intersection.
+            // Running the legacy provider comparison as well would reintroduce the indexer
+            // disagreement this source is intended to remove.
+            logBreadcrumb('rollback_check_demeter_stream_owned');
         } else {
-            await checkRollback();
+            const postScanMetrics = handlesRepo.getMetrics();
+            const slotsBelow = Number(postScanMetrics.lastSlot ?? 0) - Number(postScanMetrics.currentSlot ?? 0);
+            if (slotsBelow > ROLLBACK_20_SLOT_WINDOW) {
+                Logger.log({
+                    message: `Scanner is ${slotsBelow} slots behind tip, skipping rollback check until caught up`,
+                    category: LogCategory.INFO,
+                    event: 'scannerLambda.rollbackCheckDeferred'
+                });
+            } else {
+                await checkRollback();
+            }
         }
         logBreadcrumb('rollback_check_done');
 

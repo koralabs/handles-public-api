@@ -5,19 +5,59 @@
 ### Symptom: API returns `status: storage_behind` and slot not advancing
 
 **Diagnosis:**
-1. Check CloudWatch logs for `api-scanner` — look for `NOTIFY` or `ERROR` category messages
-2. Check metrics via valkey-utility: `lockLambdas`, `currentSlot`, `currentBlockHash`
-3. Check if Lambda is timing out: look for `platform.report` with `status: timeout`
+1. Check box logs with `kora-logs <env> api.handle.me --pattern 'scannerLambda|ERROR|NOTIFY' --days 1`
+2. Check `/health` and Valkey metrics: `lockLambdas`, `currentSlot`, `currentBlockHash`, `lastSlot`
+3. Check the worker's box deployment `logTail` and systemd/Fn timeout messages
 
 **Common causes and fixes:**
 
 ---
 
-### Cause: Scanner Lambda timing out (15 min)
+### Cause: Demeter UTxORPC stream failure
 
 **Symptoms:**
-- CloudWatch shows repeated `scannerLambda.lockedTooLong` warnings
-- `platform.report` shows `status: timeout`, `durationMs: 900000`
+- `scannerLambda.error`, `scannerLambda.demeterDeadlineReached`, or `scannerLambda.demeterRollback`
+- `currentSlot` remains on the last complete block
+- Logs mention a missing intersection, non-contiguous block height, conflicting tip hash, or missing payload field
+
+**Root cause:** In Demeter mode the scanner intentionally fails closed. It never falls back to another provider because advancing on two providers' conflicting views can permanently omit transactions. Matching blocks are buffered until the next block begins, so the scanner normally remains one block behind `ReadTip`.
+
+**Recovery:**
+1. Confirm `SCANNER_CHAIN_SOURCE=demeter`, `DEMETER_UTXORPC_ENDPOINT`, and `DEMETER_UTXORPC_API_KEY` are present in the function config without printing their values.
+2. Verify `ReadTip` succeeds and that `currentBlockHash/currentSlot` is a retained Demeter intersection.
+3. For `undo`, allow canonical rollback reconciliation to complete; do not edit UTxOs directly.
+4. If the intersection is no longer retained or reconciliation cannot establish a canonical cursor, restore a verified pre-fork snapshot and replay through `WatchTx`.
+
+### Read-only Demeter parity monitor
+
+Run the bounded parity monitor during rollout and soak periods:
+
+```bash
+NETWORK=preview \
+DEMETER_UTXORPC_ENDPOINT=... \
+DEMETER_UTXORPC_API_KEY=... \
+BLOCKFROST_API_KEY=... \
+PARITY_CONFIRMATIONS=20 \
+PARITY_BLOCK_COUNT=100 \
+npm run monitor:demeter-parity
+```
+
+The monitor starts from a Blockfrost-confirmed intersection, follows the same two Handle policies
+through Demeter, and compares every block identity, matching transaction set and order, input and
+reference-input references, output addresses/assets/datums/reference scripts, mint and burn
+quantities, and metadata against the legacy Blockfrost scanner representation. It is read-only and
+exits with status 2 on a parity mismatch. A window with no matching Handle transaction proves block
+coverage but not transaction-payload conversion; retain the report and continue monitoring until a
+matching transaction is observed. Verify `/mpt-root` separately to compare the scanner projection
+against the chain-published root.
+
+---
+
+### Cause: Scanner worker timing out (15 min)
+
+**Symptoms:**
+- Box logs show repeated `scannerLambda.lockedTooLong` warnings
+- Worker runtime logs show a timeout near 900 seconds
 - `lockLambdas: SCANNING` or `lockLambdas: ROLLBACK` in metrics
 - Slot not advancing
 
@@ -26,7 +66,7 @@
 The scanner falls back to Blockfrost when Koios calls fail. If both providers are down or the head points to an orphaned block, `processRollback`'s hash-set orphan detection identifies orphaned UTxOs and repairs only the affected handles. Drift candidates are scoped via the `scanned_blocks` ZSET (blocks canonical has that we never processed); if that ledger is missing or incomplete (e.g., cold boot after a reimport from a pre-`scannedBlocks` snapshot), the rollback check may either false-positive (extra `tx_info` fetches for canonical blocks we correctly scanned as handle-free) or miss genuine missed-block drift for a few scan cycles until the ledger rebuilds. This is self-healing — the scan loop writes one ledger entry per processed block and the behavior converges quickly.
 
 **Recovery:**
-1. Check breadcrumb logs in CloudWatch — they show exactly which step hung
+1. Check breadcrumb logs with `kora-logs` — they show exactly which step hung
 2. If the scanner head is stuck on an orphaned block, the hash-set rollback should self-recover on the next invocation
 3. If self-recovery is not working, clear metrics via valkey-utility to trigger a snapshot reimport:
    ```json
@@ -98,6 +138,54 @@ The scanner falls back to Blockfrost when Koios calls fail. If both providers ar
 5. **Restore memory after reimport** — Once scanning is at tip, drop back to 4GB and publish/update alias again.
 
 6. **API Lambda stale cache** — After reimport, the API Lambda may show `slot: 0` or `percentage_complete: 0` for up to 30 minutes until its warm instances cycle out. The data in Valkey is correct — verify with valkey-utility.
+
+## Reindex Without Reimport (recompute indexes, no schema bump)
+
+Use this when a **secondary index's membership changed additively** but its shape/contract did
+**not** — e.g. broadening the `is_personalized` predicate so `PERSONALIZED` also counts custom
+(non-`ada`) chain addresses. This rebuilds the secondary indexes from the UTxOs **already in
+Valkey** — no S3 reimport, no chain rescan (~5 min for ~265K handles).
+
+> ⚠️ This is **not** a schema-version bump. Do **not** touch `INDEX_SCHEMA_VERSION` /
+> `UTXO_SCHEMA_VERSION` — they are a breaking-change contract published on `/health`
+> (see [`schema-versions.md`](./schema-versions.md)). Adding a field or broadening index membership
+> is additive; bumping would falsely tell every consumer the schema broke.
+
+**Mechanism:** set the recovery flag `{api:<network>}:scanner:recovery = reindex`. The next
+scheduled scanner tick reads it (`scanner.app.ts`: `getRecoveryFlag()` → `processReindex()` →
+`repopulateIndexesFromUTxOs()`), rebuilds indexes with the **currently deployed code**, then clears
+the flag. `indexSchemaVersion` / `utxoSchemaVersion` stay untouched. On AWS the scanner runs this
+in-process (`KORA_SCANNER_DEFER_IMPORTS` is unset); the 409/deferred path is box-only.
+
+**Procedure — one region at a time, east verified before west:**
+1. Deploy the code first (the predicate must live in a single shared helper used by both the view
+   model field and the index `save()`, e.g. `utils/isPersonalized.ts`).
+2. Bump that region's `api-scanner` to **10GB** (`update-function-configuration --memory-size 10240`
+   → `wait function-updated` → `publish-version` → `update-alias <network>`; verify `NETWORK`). The
+   rebuild iterates every handle and OOMs at 4GB.
+3. `valkey-utility` **`trigger_reindex`** (sets the recovery flag):
+   ```bash
+   aws lambda invoke --function-name valkey-utility --region us-east-1 \
+       --cli-binary-format raw-in-base64-out \
+       --payload '{"action":"trigger_reindex","region":"us-east-1","network":"mainnet"}' /tmp/r.json
+   ```
+4. Watch the region's metrics: `lockLambdas` goes `REINDEX` (~5 min), then clears; the recovery flag
+   returns to `null`; the scanner resumes `SCANNING` and catches back to tip
+   (`currentBlockHash == tipBlockHash`).
+5. Verify (`indexSchemaVersion` unchanged, the affected filter e.g. `?personalized=true` returns
+   200, region at tip).
+6. Restore that region's scanner to **4GB** (config → publish → alias).
+7. Repeat for the other region.
+
+> ⚠️ **`api.handle.me` is CNAME'd to the _west_ ELB only — there is NO Route53/east failover.**
+> `east.api.handle.me` is the east-direct endpoint. Consequences during a reindex:
+> - A **west** reindex briefly degrades the **main** `api.handle.me` (~5 min). It returns **HTTP
+>   `202` with the full handle body** — "a region is reindexing", not an error — but consumers that
+>   reject non-`200` will see it. Prefer low-traffic windows for west.
+> - An **east** reindex only affects `east.api.handle.me`; main traffic is unaffected.
+>
+> Done 2026-06-22 for `is_personalized` (api.handle.me#199), both regions, on the eef2391-based
+> mainnet deploy. `trigger_reindex` is a permanent `valkey-utility` action.
 
 ## Valkey-Utility Usage
 

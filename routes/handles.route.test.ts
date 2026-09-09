@@ -1,4 +1,4 @@
-import { ERROR_TEXT, HandleType, HttpException } from '@koralabs/kora-labs-common';
+import { AvailabilityResponseCode, ERROR_TEXT, HandleType, HttpException, ProtectedWords } from '@koralabs/kora-labs-common';
 import * as cbor from '@koralabs/kora-labs-common/utils/cbor';
 import request from 'supertest';
 import App from '../app';
@@ -23,7 +23,7 @@ jest.mock('../repositories/handlesRepository', () => ({
                 }
         },
         getHandle: (handleName: string) => {
-            if (['nope', 'l', 'japan', '***'].includes(handleName)) return null;
+            if (['nope', 'l', 'japan', '***', 'abcdefghijklmnopqrstuvwxyz12'].includes(handleName)) return null;
 
             if (handleName === 'no-utxo') {
                 return {
@@ -366,6 +366,35 @@ describe('Testing Handles Routes', () => {
         jest.restoreAllMocks();
     });
 
+    describe('[GET] /handles/:handle 28-char support', () => {
+        it('accepts a valid 28-char handle (not 400 handleNameInvalid) and 404s if unminted', async () => {
+            // kora-labs-common >= 6.7.8 raised the Ada Handle cap 15 -> 28. A valid, unminted
+            // 28-char handle must resolve to 404 handleNotFound, NOT 400 handleNameInvalid (the
+            // old {1,15} regex). 'abcdefghijklmnopqrstuvwxyz12' is exactly 28 chars.
+            const response = await request(app?.getServer()).get('/handles/abcdefghijklmnopqrstuvwxyz12');
+            expect(response.status).toEqual(404);
+        });
+    });
+
+    describe('[GET] /handles/:handle protected words', () => {
+        it('passes through the legal restriction status and reason for protected handles', async () => {
+            jest.spyOn(ProtectedWords, 'checkAvailability').mockResolvedValue({
+                available: false,
+                code: AvailabilityResponseCode.NOT_AVAILABLE_FOR_LEGAL_REASONS,
+                reason: 'Handle cannot be minted',
+                message: 'not available'
+            } as any);
+
+            const response = await request(app?.getServer()).get('/handles/nope');
+
+            expect(response.status).toEqual(451);
+            expect(response.body).toEqual(expect.objectContaining({
+                error: 'unavailable_for_legal_reasons',
+                message: 'Handle cannot be minted'
+            }));
+        });
+    });
+
     describe('[GET] /handles', () => {
         it('should throw error if records_per_page is invalid', async () => {
             const response = await request(app?.getServer()).get('/handles?records_per_page=two');
@@ -408,7 +437,42 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff', is_personalized: false }]);
+        });
+
+        it('should reject `?holder=...` (typo for `holder_address`) with 400 unknown_query_params', async () => {
+            // Regression: an unrecognized filter key used to be silently dropped,
+            // so `?holder=stake1...` reported the unfiltered first page plus the
+            // full handle-set count in X-Total-Count, looking like a real filter.
+            // The 400 body must carry the standard `docs` URL the way 404s do.
+            const response = await request(app?.getServer())
+                .get('/handles?holder=stake1u9k8e3krslcm2p2s6kfd5dl3ekt6vmmvk7w0r2u3suw5slcgzj9ds');
+
+            expect(response.status).toEqual(400);
+            expect(response.body).toEqual({
+                error: 'unknown_query_params',
+                message: "Unknown query parameter: 'holder'",
+                docs: 'https://api.handle.me/'
+            });
+        });
+
+        it('should accept `?holder_address=...` (canonical name)', async () => {
+            const response = await request(app?.getServer())
+                .get('/handles?holder_address=stake1u9k8e3krslcm2p2s6kfd5dl3ekt6vmmvk7w0r2u3suw5slcgzj9ds');
+
+            expect(response.status).toEqual(200);
+        });
+
+        it('should return X-Total-Count from the full searchTotal, not the page length', async () => {
+            // Regression: the JSON branches of getAll / list previously echoed
+            // the returned page's view-model length (or records_per_page),
+            // making client pagination useless. The header must be the
+            // unpaginated match count produced by repo.search.
+            const response = await request(app?.getServer()).get('/handles?records_per_page=1&sort=asc');
+
+            expect(response.status).toEqual(200);
+            expect(response.headers['x-handles-search-total']).toEqual('7777');
+            expect(response.headers['x-total-count']).toEqual('7777');
         });
 
         it('should reject `?holder=...` (typo for `holder_address`) with 400 unknown_query_params', async () => {
@@ -477,6 +541,18 @@ describe('Testing Handles Routes', () => {
             const repoInstance = MockedHandlesRepository.mock.results.at(-1)?.value;
             const [pagination, , namesOnly] = repoInstance.search.mock.calls.at(-1);
             expect(pagination).toEqual(expect.objectContaining({ handlesPerPage: 50000 }));
+            expect(namesOnly).toBe(true);
+        });
+
+        it('passes explicit text/plain records_per_page above the JSON cap to the repository', async () => {
+            const response = await request(app?.getServer())
+                .get('/handles?records_per_page=5000&sort=asc')
+                .set('Accept', 'text/plain');
+
+            expect(response.status).toEqual(200);
+            const repoInstance = MockedHandlesRepository.mock.results.at(-1)?.value;
+            const [pagination, , namesOnly] = repoInstance.search.mock.calls.at(-1);
+            expect(pagination).toEqual(expect.objectContaining({ handlesPerPage: 5000 }));
             expect(namesOnly).toBe(true);
         });
 
@@ -575,7 +651,7 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).post('/handles/list?records_per_page=1&sort=asc');
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff', is_personalized: false }]);
         });
 
         it('should fail if handles is not an array', async () => {
@@ -592,7 +668,46 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).post('/handles/list').set('Content-Type', 'application/json').send(['burritos']);
 
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff' }]);
+            expect(response.body).toEqual([{ name: 'burritos', utxo: 'utxo#0', policy: 'f0ff', is_personalized: false }]);
+        });
+
+        it('should return X-Total-Count from the full searchTotal on JSON list, not the returned page length', async () => {
+            // Regression: _searchFromList's JSON branch was using
+            // handlesViewModel.length, so paginated clients saw the count
+            // of THIS page (or 0 when all returned handles lacked utxo)
+            // instead of the total across all pages.
+            const response = await request(app?.getServer())
+                .post('/handles/list?records_per_page=1&sort=asc')
+                .set('Content-Type', 'application/json')
+                .send(['burritos']);
+
+            expect(response.status).toEqual(200);
+            expect(response.headers['x-handles-search-total']).toEqual('7777');
+            expect(response.headers['x-total-count']).toEqual('7777');
+        });
+
+        it('should reject object entries for stake key hash lookup without a 500', async () => {
+            const response = await request(app?.getServer())
+                .post('/handles/list?type=stakekeyhash')
+                .set('Content-Type', 'application/json')
+                .send([{ hash: 'deadbeef' }]);
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('expected string entries and received object');
+            const repoInstance = MockedHandlesRepository.mock.results.at(-1)?.value;
+            expect(repoInstance.getHandlesByStakeKeyHashes).not.toHaveBeenCalled();
+        });
+
+        it('should reject array entries for stake key hash lookup without a 500', async () => {
+            const response = await request(app?.getServer())
+                .post('/handles/list?type=stakekeyhash')
+                .set('Content-Type', 'application/json')
+                .send([['deadbeef']]);
+
+            expect(response.status).toEqual(400);
+            expect(response.body.message).toEqual('expected string entries and received array');
+            const repoInstance = MockedHandlesRepository.mock.results.at(-1)?.value;
+            expect(repoInstance.getHandlesByStakeKeyHashes).not.toHaveBeenCalled();
         });
 
         it('should return X-Total-Count from the full searchTotal on JSON list, not the returned page length', async () => {
@@ -723,14 +838,14 @@ describe('Testing Handles Routes', () => {
         it('should return valid handle', async () => {
             const response = await request(app?.getServer()).get('/handles/burritos');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff' });
+            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff', is_personalized: false });
         });
 
         it('should resolve handle by hex when hex query is true', async () => {
             const hex = Buffer.from('burritos').toString('hex');
             const response = await request(app?.getServer()).get(`/handles/${hex}?hex=true`);
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff' });
+            expect(response.body).toEqual({ name: 'burritos', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff', is_personalized: false });
         });
 
         it('should preserve cross-chain resolved addresses in handle response', async () => {
@@ -744,14 +859,15 @@ describe('Testing Handles Routes', () => {
                     eth: '0x1234'
                 },
                 utxo: 'utxo#0',
-                policy: 'f0ff'
+                policy: 'f0ff',
+                is_personalized: true
             });
         });
 
         it('should return legendary handle if available', async () => {
             const response = await request(app?.getServer()).get('/handles/1');
             expect(response.status).toEqual(200);
-            expect(response.body).toEqual({ name: '1', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff' });
+            expect(response.body).toEqual({ name: '1', resolved_addresses: { ada: 'addr1' }, utxo: 'utxo#0', policy: 'f0ff', is_personalized: false });
         });
 
         it('returns 404 with handle FAQ docs URL for legendary single-char handles', async () => {
@@ -1086,6 +1202,19 @@ describe('Testing Handles Routes', () => {
             );
         });
 
+        it('passes default_key_type through when decoding a handle UTxO datum', async () => {
+            jest.spyOn(cbor, 'decodeCborToJson').mockResolvedValue({ decoded: true } as any);
+
+            const response = await request(app?.getServer()).get('/handles/burritos/utxo?default_key_type=int');
+
+            expect(response.status).toEqual(200);
+            expect(cbor.decodeCborToJson).toHaveBeenCalledWith({
+                cborString: 'burritos_datum',
+                schema: {},
+                defaultKeyType: 'int'
+            });
+        });
+
         it('should return 400 when handle utxo datum decode fails for json accept', async () => {
             jest.spyOn(cbor, 'decodeCborToJson').mockImplementation(() => {
                 throw new Error('bad cbor');
@@ -1238,6 +1367,18 @@ describe('Testing Handles Routes', () => {
             const response = await request(app?.getServer()).get('/handles/sub@handle2/subhandle_settings/utxo');
             expect(response.status).toEqual(200);
             expect(response.body).toEqual({ address: 'addr1_ref_token', datum: '', index: 0, lovelace: 0, script: { cbor: 'a247', type: 'plutus_v2' }, tx_id: 'tx_id' });
+        });
+
+        it('returns raw subhandle settings utxo datum for text/plain accept', async () => {
+            const decodeSpy = jest.spyOn(cbor, 'decodeCborToJson').mockResolvedValue({ decoded: true } as any);
+            const response = await request(app?.getServer())
+                .get('/handles/sub@handle/subhandle_settings/utxo')
+                .set('Accept', 'text/plain');
+
+            expect(response.status).toEqual(200);
+            expect(response.body.datum).toEqual(expect.any(String));
+            expect(response.body.datum).toContain('687474703a2f2f6c6f63616c686f73743a333030372f23746f75');
+            expect(decodeSpy).not.toHaveBeenCalled();
         });
 
         it('should return 404 when subhandle settings utxo is missing in store', async () => {
