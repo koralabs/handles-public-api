@@ -46,6 +46,7 @@ const SCANNER_LEASE_HEARTBEAT_MS = 20_000;
 const KOIOS_RETRY_DELAYS_MS = [500, 1_500, 4_000];
 const KOIOS_TX_INFO_SOFT_BODY_LIMIT = 3_000;
 const KOIOS_BLOCK_TXS_SOFT_BODY_LIMIT = 3_000;
+const KOIOS_MAX_ROWS = 1_000; // Koios's per-response row cap (paginate with ?offset=)
 // CloudWatch failures on 2026-02-16 showed tx_info batches failing at 66-71 hashes.
 const KOIOS_TX_INFO_MAX_HASHES_PER_BATCH = 35;
 const scannerKoiosTxInfoSettings = { ...defaultKoiosSettings, _scripts: true, _bytecode: true };
@@ -136,7 +137,20 @@ const getRecoveryFlag = (): string | undefined => {
 };
 
 const getWhitelistedApiKeys = (): string[] => WHITELISTED_API_KEYS.split(',').map((key) => key.trim()).filter(Boolean);
-const getKoiosRetryDelay = (attempt: number): number => KOIOS_RETRY_DELAYS_MS[attempt];
+// A Koios Retry-After is law: never retry sooner than it says, and hold every scanner Koios request
+// (not just the throttled one) until then.
+let koiosNotBefore = 0;
+const getKoiosRetryDelay = (attempt: number, error?: any): number => {
+    const retryAfterMs = Number(error?.retryAfterMs ?? 0);
+    if (retryAfterMs > 0) koiosNotBefore = Math.max(koiosNotBefore, Date.now() + retryAfterMs);
+    return Math.max(KOIOS_RETRY_DELAYS_MS[attempt], retryAfterMs);
+};
+// Start Koios requests no faster than one per minIntervalMs across all concurrent callers.
+const waitForKoiosTurn = async (minIntervalMs: number): Promise<void> => {
+    const start = Math.max(Date.now(), koiosNotBefore);
+    koiosNotBefore = start + minIntervalMs;
+    if (start > Date.now()) await delayMs(start - Date.now());
+};
 
 const clearRecoveryFlag = (): void => {
     store.redisClientCall('del', [SCANNER_RECOVERY_KEY]);
@@ -325,7 +339,7 @@ const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 
         if (!retriable) throw error;
 
         if (attempt < KOIOS_TX_INFO_MAX_RETRIES) {
-            const backoff = getKoiosRetryDelay(attempt);
+            const backoff = getKoiosRetryDelay(attempt, error);
             await delayMs(backoff);
             return fetchTxInfoBatchWithRetryAndSplit(hashBatch, attempt + 1);
         }
@@ -369,7 +383,7 @@ const fetchDatumInfoBatchWithRetry = async (hashBatch: string[], attempt = 0): P
         if (!retriable) throw error;
 
         if (attempt < KOIOS_DATUM_INFO_MAX_RETRIES) {
-            const backoff = getKoiosRetryDelay(attempt);
+            const backoff = getKoiosRetryDelay(attempt, error);
             await delayMs(backoff);
             return fetchDatumInfoBatchWithRetry(hashBatch, attempt + 1);
         }
@@ -384,15 +398,20 @@ const getBatchedTxInfo = async (txHashes: string[]) => {
         maxItemsPerBatch: KOIOS_TX_INFO_MAX_HASHES_PER_BATCH,
         payload: scannerKoiosTxInfoSettings
     });
-    const txs: KoiosTxInfo[] = [];
-    for (const hashBatch of batchedTxHashes) {
-        const txInfo = await fetchTxInfoBatchWithRetryAndSplit(hashBatch);
-        txs.push(...(txInfo ?? []));
-        if (KOIOS_TX_INFO_MIN_INTERVAL_MS > 0) {
-            await delayMs(KOIOS_TX_INFO_MIN_INTERVAL_MS);
+    // tx_info (with scripts + bytecode) takes ~4.5s per batch; one at a time, a 1000-tx mainnet chunk
+    // took ~140s and the scanner fell ~25 min behind tip. Keep up to KOIOS_TX_INFO_MAX_RPS batches in
+    // flight, still starting at most KOIOS_TX_INFO_MAX_RPS per second. Results keep batch order.
+    const results: KoiosTxInfo[][] = new Array(batchedTxHashes.length);
+    let next = 0;
+    const worker = async () => {
+        while (next < batchedTxHashes.length) {
+            const i = next++;
+            await waitForKoiosTurn(KOIOS_TX_INFO_MIN_INTERVAL_MS);
+            results[i] = (await fetchTxInfoBatchWithRetryAndSplit(batchedTxHashes[i])) ?? [];
         }
-    }
-    return txs;
+    };
+    await Promise.all(Array.from({ length: Math.min(KOIOS_TX_INFO_MAX_RPS, batchedTxHashes.length) }, worker));
+    return results.flat();
 };
 
 const extractDatumHashes = (txInfo: KoiosTxInfo[]): string[] => [...new Set(
@@ -445,8 +464,15 @@ const fetchBlockTxHashBatchWithRetry = async (hashBatch: string[], attempt = 0):
     checkDeadline('block_txs_retry');
     const body = getBlockTxsBody(hashBatch);
     try {
-        const txs = (await fetchKoios(`block_txs`, 'POST', body)) as { block_hash: string; tx_hash: string }[] | null;
-        return (txs ?? []).map((tx) => ({ block_hash: tx.block_hash, tx_hash: tx.tx_hash }));
+        // Koios caps every response at KOIOS_MAX_ROWS rows. A 30-block mainnet chunk often holds more
+        // txs than that, so an unpaged request silently drops the tail and the coverage check below
+        // pauses the scan at that block on every invocation (mainnet, 2026-10-11). Page until short.
+        const rows: { block_hash: string; tx_hash: string }[] = [];
+        for (let offset = 0; ; offset += KOIOS_MAX_ROWS) {
+            const page = ((await fetchKoios(offset ? `block_txs?offset=${offset}` : 'block_txs', 'POST', body)) ?? []) as { block_hash: string; tx_hash: string }[];
+            rows.push(...page.map((tx) => ({ block_hash: tx.block_hash, tx_hash: tx.tx_hash })));
+            if (page.length < KOIOS_MAX_ROWS) return rows;
+        }
     } catch (error: any) {
         const retriable = isRetriableKoiosError(error);
         Logger.local({
@@ -458,7 +484,7 @@ const fetchBlockTxHashBatchWithRetry = async (hashBatch: string[], attempt = 0):
         if (!retriable) throw error;
 
         if (attempt < KOIOS_BLOCK_TXS_MAX_RETRIES) {
-            const backoff = getKoiosRetryDelay(attempt);
+            const backoff = getKoiosRetryDelay(attempt, error);
             await delayMs(backoff);
             return fetchBlockTxHashBatchWithRetry(hashBatch, attempt + 1);
         }
@@ -494,7 +520,7 @@ const fetchAssetUtxoBatchWithRetry = async (assetList: [string, string][], attem
 
         if (!retriable || attempt >= KOIOS_ASSET_UTXOS_MAX_RETRIES) throw error;
 
-        const backoff = getKoiosRetryDelay(attempt);
+        const backoff = getKoiosRetryDelay(attempt, error);
         await delayMs(backoff);
         return fetchAssetUtxoBatchWithRetry(assetList, attempt + 1);
     }
