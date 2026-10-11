@@ -2322,6 +2322,98 @@ describe('Scanner lambda unit tests', () => {
         }
     });
 
+    // Koios answers at most 1000 rows per request. Fake that cap, and answer tx_info for any hash.
+    const fakeKoiosWithRowCap = (txsByBlock: Record<string, number>, onTxInfo?: (body: string) => Promise<void>) => {
+        const rows = Object.entries(txsByBlock).flatMap(([block_hash, n]) =>
+            Array.from({ length: n }, (_, i) => ({ block_hash, tx_hash: `${block_hash}_tx${String(i).padStart(61 - block_hash.length, '0')}` })));   // 64-char hashes, like real ones
+        mockedHelpers.fetchKoios.mockImplementation(async (path: string, _method?: string, body?: string) => {
+            if (path.startsWith('block_txs')) {
+                const offset = Number(new URLSearchParams(path.split('?')[1] ?? '').get('offset') ?? 0);
+                const wanted = new Set(JSON.parse(body ?? '{}')._block_hashes);
+                return rows.filter((r) => wanted.has(r.block_hash)).slice(offset, offset + 1000) as never;
+            }
+            if (path === 'tx_info') {
+                await onTxInfo?.(body ?? '');
+                return JSON.parse(body ?? '{}')._tx_hashes.map((h: string) => ({ tx_hash: h, block_hash: h.split('_tx')[0], inputs: [], outputs: [], assets_minted: [] })) as never;
+            }
+            return [] as never;
+        });
+    };
+
+    it('scan reads every block_txs page so a chunk with more than 1000 txs is not paused (mainnet 2026-10-11)', async () => {
+        // Invariant: the scanner advances through a chunk whose blocks hold >1000 txs in total.
+        // Failure caught: an unpaged block_txs request lost rows past 1000, block_b looked short of its
+        // Blockfrost tx_count, and every invocation paused there (RDM stuck ~25 min behind tip).
+        const { handlesRepo, store, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([
+            { hash: 'block_a', slot: 100, confirmations: 6, tx_count: 600 },
+            { hash: 'block_b', slot: 120, confirmations: 5, tx_count: 600 }
+        ] as never);
+        fakeKoiosWithRowCap({ block_a: 600, block_b: 600 });
+        const warnSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            await scannerModule.Internal.scan();
+        } finally {
+            warnSpy.mockRestore();
+        }
+        expect(store.recordScannedBlock).toHaveBeenCalledWith(120, 'block_b');
+        const txInfoHashes = mockedHelpers.fetchKoios.mock.calls.filter((c) => c[0] === 'tx_info').flatMap((c) => JSON.parse(c[2] as string)._tx_hashes);
+        expect(new Set(txInfoHashes).size).toBe(1200);
+    }, 20_000);
+
+    it('scan fetches tx_info batches in parallel while starting no more than 6 per second', async () => {
+        // Invariant: a 1000-tx chunk is fetched with several tx_info requests in flight, never more than
+        // 6, and request starts stay >=1/6 s apart (the Koios rate we promised).
+        // Failure caught: one-at-a-time tx_info (~4.5s each) made a 1000-tx chunk take ~140s.
+        const { handlesRepo, store, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'block_a', slot: 100, confirmations: 5, tx_count: 420 }] as never);
+        let inFlight = 0; let maxInFlight = 0; const starts: number[] = [];
+        fakeKoiosWithRowCap({ block_a: 420 }, async () => {
+            starts.push(Date.now()); inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+            await new Promise((r) => setTimeout(r, 1200));
+            inFlight--;
+        });
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            await scannerModule.Internal.scan();
+        } finally {
+            logSpy.mockRestore();
+        }
+        expect(store.recordScannedBlock).toHaveBeenCalledWith(100, 'block_a');
+        expect(starts.length).toBeGreaterThan(6);     // more batches than workers, so the cap is exercised
+        expect(maxInFlight).toBe(6);
+        const gaps = starts.slice(1).map((t, i) => t - starts[i]);
+        expect(Math.min(...gaps)).toBeGreaterThanOrEqual(160);
+    }, 20_000);
+
+    it('scan waits at least the Koios Retry-After before retrying a throttled tx_info', async () => {
+        // Invariant: a 429 with Retry-After is honored (rate limits are law), not retried on the fixed 500ms backoff.
+        // Failure caught: retrying early burns the shared Koios quota and gets throttled again.
+        const { handlesRepo, store, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'block_a', slot: 100, confirmations: 5, tx_count: 2 }] as never);
+        const starts: number[] = [];
+        fakeKoiosWithRowCap({ block_a: 2 }, async () => {
+            starts.push(Date.now());
+            if (starts.length === 1) {
+                const error: any = new Error('Koios tx_info request failed: 429 Too Many Requests');
+                error.status = 429; error.retryAfterMs = 1500;
+                throw error;
+            }
+        });
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            await scannerModule.Internal.scan();
+        } finally {
+            logSpy.mockRestore();
+        }
+        expect(store.recordScannedBlock).toHaveBeenCalledWith(100, 'block_a');
+        expect(starts).toHaveLength(2);
+        expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(1450);   // timer granularity; the fixed backoff is 500
+    }, 10_000);
+
     // NOTE: datum_info Blockfrost fallback is tested via fetchBlockfrostDatumCbor in helpers.blockfrost-fallback.test.ts.
     // A scanner-level datum_info fallback test is impractical here because asyncForEach in kora-labs-common
     // creates a dangling rejected promise during its internal delay, which triggers Jest's unhandled rejection detection.
