@@ -163,6 +163,7 @@ describe('helpers pagination tests', () => {
             ok: false,
             status: 429,
             statusText: 'Too Many Requests',
+            headers: new Headers(),
             text: async () => '<html><body><h1>429 Too Many Requests</h1></body></html>'
         });
         global.fetch = fetchMock as any;
@@ -172,6 +173,20 @@ describe('helpers pagination tests', () => {
             status: 429,
             statusText: 'Too Many Requests'
         });
+    });
+
+    it('fetchKoios carries the Retry-After wait on a throttled error so callers can honor it', async () => {
+        // Invariant: Koios's stated wait reaches the retry logic. Failure caught: retrying before Retry-After.
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: false, status: 429, statusText: 'Too Many Requests',
+            headers: new Headers({ 'Retry-After': '7' }), text: async () => ''
+        }) as any;
+        await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.toMatchObject({ status: 429, retryAfterMs: 7000 });
+
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: false, status: 503, statusText: 'Service Unavailable', headers: new Headers(), text: async () => ''
+        }) as any;
+        await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.not.toHaveProperty('retryAfterMs');
     });
 
     it('fetchTxList should compose blockfrost pagination and koios request', async () => {
