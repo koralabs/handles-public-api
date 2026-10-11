@@ -53,6 +53,14 @@ against the chain-published root.
 
 ---
 
+### Cause: Blockfrost/Koios scanner stuck behind tip (`coverageIncompletePause` every run)
+
+**Symptoms:** `scannerLambda.koiosBlockTxs.coverageIncompletePause` on most invocations, with `koios_block_txs_count` far below `blockfrost_tx_count`; `/health` steadily 20+ min behind; each run spends minutes in `getBatchedTxInfo`.
+
+**Root cause (fixed 2026-10-11):** Koios returns at most 1000 rows per response. A 30-block mainnet chunk often has more txs, so an unpaged `block_txs` call lost the tail and the coverage check paused the scan there every run. `block_txs` is now paged with `?offset=`. `tx_info` batches (~4.5s each) now run up to 6 at once, still starting at most 6 per second, and every Koios retry waits at least the server's `Retry-After`.
+
+---
+
 ### Cause: Scanner worker timing out (15 min)
 
 **Symptoms:**

@@ -125,6 +125,11 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string) =>
         error.status = response.status;
         error.statusText = response.statusText;
         error.koiosResponse = responseJson;
+        const retryAfter = response.headers.get('retry-after');
+        if (retryAfter) {
+            const seconds = Number(retryAfter);
+            error.retryAfterMs = Number.isFinite(seconds) ? seconds * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now());
+        }
         if (!responseJson && responseText) {
             error.responseText = responseText.slice(0, 512);
         }
