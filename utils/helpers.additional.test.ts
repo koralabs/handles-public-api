@@ -23,6 +23,7 @@ describe('helpers additional tests', () => {
             ok: false,
             status: 503,
             statusText: 'Service Unavailable',
+            headers: new Headers(),
             text: async () => JSON.stringify({ message: 'upstream unavailable', code: 'X123' })
         }) as any;
 
