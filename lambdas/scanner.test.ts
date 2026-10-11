@@ -2491,6 +2491,39 @@ describe('Scanner lambda unit tests', () => {
             expect(handlesRepo.setMetrics).toHaveBeenCalledWith(expect.objectContaining({ currentBlockHash: 'canonical_before', currentSlot: 120 }));
         });
 
+        it('catches a far-behind cursor up through the provider block scan instead of Demeter', async () => {
+            // Invariant: a box that was offline for days resumes scanning.
+            // Failure caught (SFO preview, 2026-10-11): Demeter WatchTx from a ~58h-old intersect sat silent
+            // ~100s and was cancelled on every run, so the index never moved again.
+            // Negative control: route every Demeter-enabled scan to scanDemeterBlocks and the block-scan
+            // expectations fail (fetchPaginatedResults is never called).
+            const { scannerModule } = setup();
+            mockedDemeter.isDemeterScannerEnabled.mockReturnValue(true);
+            mockedHelpers.blockfrostApiCall.mockImplementation(async (endpoint: string) => {
+                if (endpoint === 'blocks/latest') return { ok: true, status: 200, json: async () => ({ slot: 130 + 209_000, height: 60000, hash: 'tip_hash' }) } as never;
+                return { ok: true, status: 200, json: async () => ({ slot: 130, height: 52000, hash: 'start_hash' }) } as never;
+            });
+            mockedHelpers.fetchPaginatedResults.mockResolvedValue([] as never);
+
+            await scannerModule.Internal.scan().catch(() => undefined);
+
+            expect(mockedDemeter.scanDemeterBlocks).not.toHaveBeenCalled();
+            expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/start_hash/next', expect.any(Number));
+        });
+
+        it('keeps a near-tip cursor on Demeter', async () => {
+            // Failure caught: routing every Demeter scan to the slower provider block scan.
+            const { scannerModule } = setup();
+            mockedDemeter.isDemeterScannerEnabled.mockReturnValue(true);
+            mockedDemeter.scanDemeterBlocks.mockReset().mockResolvedValueOnce({ slot: 400, hash: 'tip_hash' });
+            mockedHelpers.blockfrostApiCall.mockImplementation(async () => ({ ok: true, status: 200, json: async () => ({ slot: 400, height: 5000, hash: 'tip_hash' }) }) as never);
+
+            await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
+
+            expect(mockedDemeter.scanDemeterBlocks).toHaveBeenCalledTimes(1);
+            expect(mockedHelpers.fetchPaginatedResults).not.toHaveBeenCalled();
+        });
+
         it('does not treat a stream error on a canonical resume point as a rollback', async () => {
             // Failure caught: rewinding on every transient Demeter error would discard valid progress.
             const { handlesRepo, scannerModule } = setup();
