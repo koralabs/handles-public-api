@@ -47,6 +47,9 @@ Reading Handle state directly from chain providers for every request is expensiv
   - `/handles/:handle` details and associated views (`/utxo`, `/personalized`, `/subhandle-settings`, `/subhandles`)
   - `/holders` and `/holders/:address` holder reverse lookup and aggregation
   - `/root-handles` for root handle inventory and filtering
+- Marketplace reads:
+  - `/marketplace/listings` exposes current indexed Handle listings as a BFF-compatible array with seller and name filters, prices in lovelace, and current UTxO details.
+  - Empty results are successful reads; malformed listing entries are omitted and invalid queries return client errors. Normal indexed-read freshness statuses apply.
 - Utility endpoints:
   - `/scripts` for the deployed-script catalog (every `*@handlecontract` subhandle with inline CBOR), with `?type=` slug `startsWith` filtering and `?latest=true` to scope to the highest ordinal per family
   - `/datum` CBOR/JSON encode/decode utility
