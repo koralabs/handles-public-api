@@ -66,6 +66,11 @@ const KOIOS_ASSET_UTXOS_MAX_RETRIES = KOIOS_RETRY_DELAYS_MS.length;
 const SCANNER_MAX_BLOCKS_PER_INVOCATION = 720;
 const SCANNER_BLOCK_PREFETCH_CHUNK_SIZE = 30;
 const SCANNER_HARD_DEADLINE_MS = 12 * 60_000;
+// Demeter WatchTx only resumes reliably from a recent intersect: from ~1h back it streams at
+// once, but from a cursor ~58h old (SFO preview after its 2026-10 power outage) every request sat
+// silent ~100s and was cancelled (CANCEL 0x8), forever. A cursor further behind than this catches
+// up through the provider block scan, then hands back to Demeter near tip.
+const DEMETER_MAX_RESUME_SLOTS = 3_600;
 
 class ScannerDeadlineError extends Error {
     constructor(step: string, elapsed: number) {
@@ -1207,8 +1212,17 @@ const scan = async () => {
     handlesRepo.setMetrics({ lockLambdas: LockedLambdaReason.SCANNING, lockLambdasTimestamp: Date.now() });
     try {
         if (isDemeterScannerEnabled()) {
-            await scanWithDemeter(metrics, scanBreadcrumb);
-            return;
+            const tip = await getLatestChainTip();
+            const gap = tip?.slot ? tip.slot - startingCurrentSlot : 0;
+            if (gap <= DEMETER_MAX_RESUME_SLOTS) {
+                await scanWithDemeter(metrics, scanBreadcrumb);
+                return;
+            }
+            // An orphaned cursor needs the deep-gap rollback, not a forward block scan.
+            if ((await isCanonicalBlockHash(`${metrics.currentBlockHash ?? ''}`)) === false) {
+                throw new DemeterRollbackError({ slot: startingCurrentSlot, hash: `${metrics.currentBlockHash ?? ''}`, height: 0 });
+            }
+            scanBreadcrumb('demeter_catchup_via_blocks', `gap=${gap} slots > ${DEMETER_MAX_RESUME_SLOTS}`);
         }
 
         scanBreadcrumb('fetchPaginatedResults_start', `from=${metrics.currentBlockHash}`);
