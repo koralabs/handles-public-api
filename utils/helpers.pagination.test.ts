@@ -189,6 +189,27 @@ describe('helpers pagination tests', () => {
         await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.not.toHaveProperty('retryAfterMs');
     });
 
+    it.each([
+        ['HTTP date', 'Wed, 01 Jan 2031 00:00:07 GMT', 7000],
+        ['past HTTP date', 'Tue, 31 Dec 2030 23:59:59 GMT', 0],
+        ['zero seconds', '0', 0]
+    ])('fetchKoios carries Retry-After %s without retrying itself', async (_name, header, expected) => {
+        // Invariant: numeric/date provider signals reach the shared request gate unchanged.
+        // Removing HTTP-date parsing makes the future-date case fail; past dates must not become negative waits.
+        const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2031-01-01T00:00:00Z'));
+        const fetch = jest.fn().mockResolvedValue({
+            ok: false, status: 429, statusText: 'Too Many Requests',
+            headers: new Headers({ 'Retry-After': header }), text: async () => ''
+        });
+        global.fetch = fetch as any;
+        try {
+            await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.toMatchObject({ status: 429, retryAfterMs: expected });
+            expect(fetch).toHaveBeenCalledTimes(1);
+        } finally {
+            clock.mockRestore();
+        }
+    });
+
     it('fetchTxList should compose blockfrost pagination and koios request', async () => {
         const txHashes = ['tx-hash-1'];
         const txInfoResponse = [{ tx_hash: 'tx-hash-1', outputs: [], assets_minted: [] }];

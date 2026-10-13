@@ -145,6 +145,7 @@ const getWhitelistedApiKeys = (): string[] => WHITELISTED_API_KEYS.split(',').ma
 // A Koios Retry-After is law: never retry sooner than it says, and hold every scanner Koios request
 // (not just the throttled one) until then.
 let koiosNotBefore = 0;
+let koiosNextStart = 0;
 const getKoiosRetryDelay = (attempt: number, error?: any): number => {
     const retryAfterMs = Number(error?.retryAfterMs ?? 0);
     if (retryAfterMs > 0) koiosNotBefore = Math.max(koiosNotBefore, Date.now() + retryAfterMs);
@@ -152,9 +153,13 @@ const getKoiosRetryDelay = (attempt: number, error?: any): number => {
 };
 // Start Koios requests no faster than one per minIntervalMs across all concurrent callers.
 const waitForKoiosTurn = async (minIntervalMs: number): Promise<void> => {
-    const start = Math.max(Date.now(), koiosNotBefore);
-    koiosNotBefore = start + minIntervalMs;
-    if (start > Date.now()) await delayMs(start - Date.now());
+    do {
+        const start = Math.max(Date.now(), koiosNotBefore, koiosNextStart);
+        koiosNextStart = start + minIntervalMs;
+        if (start > Date.now()) await delayMs(start - Date.now());
+        // Another worker can extend the provider hold while this reservation sleeps.
+        // Rebook behind that hold (and other reservations), rather than starting early.
+    } while (Date.now() < koiosNotBefore);
 };
 
 const clearRecoveryFlag = (): void => {

@@ -2414,6 +2414,34 @@ describe('Scanner lambda unit tests', () => {
         expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(1450);   // timer granularity; the fixed backoff is 500
     }, 10_000);
 
+    it('queued workers obey a newly stated provider-wide wait', async () => {
+        // Invariant: queued six-worker reservations obey a provider hold announced after they booked.
+        // Failure caught: sleeping once and starting early; restoring the old gate fails at ~167ms.
+        const { handlesRepo, store, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'block_a', slot: 100, confirmations: 5, tx_count: 420 }] as never);
+        const starts: number[] = [];
+        fakeKoiosWithRowCap({ block_a: 420 }, async () => {
+            starts.push(Date.now());
+            if (starts.length === 1) {
+                const error: any = new Error('Koios tx_info request failed: 429 Too Many Requests');
+                error.status = 429; error.retryAfterMs = 1500;
+                throw error;
+            }
+        });
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            await scannerModule.Internal.scan();
+        } finally {
+            logSpy.mockRestore();
+        }
+        expect(store.recordScannedBlock).toHaveBeenCalledWith(100, 'block_a');
+        expect(starts.length).toBeGreaterThan(6);
+        expect(Math.min(...starts.slice(1).map((t) => t - starts[0]))).toBeGreaterThanOrEqual(1450); // timer granularity
+        for (let i = 2; i < starts.length; i++) expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(150); // pacing survives the hold
+    }, 10_000);
+
+
     // NOTE: datum_info Blockfrost fallback is tested via fetchBlockfrostDatumCbor in helpers.blockfrost-fallback.test.ts.
     // A scanner-level datum_info fallback test is impractical here because asyncForEach in kora-labs-common
     // creates a dangling rejected promise during its internal delay, which triggers Jest's unhandled rejection detection.
