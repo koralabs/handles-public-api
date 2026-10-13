@@ -18,3 +18,6 @@
 
 ## Environment
 - [Environment Variable Glossary](../site.env)
+
+## Canonical contract
+- [Canonical contract (must-never-violate rules)](../CANONICAL_CONTRACT.md)
