@@ -27,6 +27,10 @@ lambdas/snapshot.ts
 utils/snapshotVerification.ts
 utils/verifiedSnapshot.ts
 
+# MPT root served to the minting engine's root-hash check
+controllers/mptRoot.controller.ts
+routes/mptRoot.route.ts
+
 # The test gate for the above
 jest.critical.config.ts
 

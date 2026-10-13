@@ -6,6 +6,17 @@ Wallets, marketplaces and our own apps trust this API to say where a handle live
 must never break. The code that holds them is listed in [`.enclave`](./.enclave); K.O.R.A.'s
 `merge_pr` asks the operator before a change to it merges into `mainnet` or `preprod`.
 
+## Source requirements
+
+- Ecosystem `AGENTS.md`, "Critical Correctness": addresses correct 100% of the time, never
+  double-mint, properties chain-accurate. "Merging": double-mint risk, contract-settings edits and
+  automated burns are higher-risk and need operator approval.
+- kora-bot `v3/docs/ecosystem-ownership-plan.md`, operator decision 2: what an enclave must contain
+  (key/security material, prompt files, and every file that defines, supports or enforces this
+  contract).
+- kora-bot `v3/docs/tool-surface.md` (`merge_pr`): the gate cards enclave paths merged into
+  `master`/`main`/`mainnet`/`preprod`, reading a root `.enclave`.
+
 ## Must never be violated
 
 1. **Handle addresses are correct 100% of the time.** `resolved_addresses.ada` (and holder/stake
