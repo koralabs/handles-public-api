@@ -154,6 +154,7 @@ const getKoiosRetryDelay = (attempt: number, error?: any): number => {
 // Start Koios requests no faster than one per minIntervalMs across all concurrent callers.
 const waitForKoiosTurn = async (minIntervalMs: number): Promise<void> => {
     while (true) {
+        checkDeadline('koios_request_admission');
         const now = Date.now();
         const wait = Math.max(koiosNotBefore, koiosNextStart) - now;
         if (wait > 0) {

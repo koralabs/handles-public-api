@@ -2442,6 +2442,49 @@ describe('Scanner lambda unit tests', () => {
     }, 10_000);
 
 
+    it.each([
+        ['beyond deadline', 720_001, 420, false],
+        ['exact deadline', 720_000, 420, false],
+        ['before deadline', 719_000, 70, true]
+    ])('queued provider hold %s admits no expired requests', async (_name, holdMs, txCount, completes) => {
+        // Invariant: waiting for a provider hold never removes the scanner hard deadline.
+        // Failure caught: checking only before the wait admits expired requests; deleting
+        // the gate deadline check makes the exact/beyond deadline cases fail.
+        jest.useFakeTimers({ now: 1_000_000 });
+        const { handlesRepo, store, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'block_a', slot: 100, confirmations: 5, tx_count: txCount }] as never);
+        const starts: number[] = [];
+        fakeKoiosWithRowCap({ block_a: txCount }, async () => {
+            starts.push(Date.now() - 1_000_000);
+            if (starts.length === 1) {
+                const error: any = new Error('Koios tx_info request failed: 429 Too Many Requests');
+                error.status = 429;
+                error.retryAfterMs = holdMs - starts[0]; // hold ends at the chosen invocation-relative instant
+                throw error;
+            }
+        });
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            const scan = scannerModule.Internal.scan();
+            await jest.advanceTimersByTimeAsync(725_000);
+            await scan;
+            expect(starts.filter((start) => start >= 720_000)).toEqual([]);
+            if (completes) {
+                expect(starts.length).toBeGreaterThan(1);
+                expect(Math.min(...starts.slice(1))).toBeGreaterThanOrEqual(holdMs);
+                expect(store.recordScannedBlock).toHaveBeenCalledWith(100, 'block_a');
+            } else {
+                expect(starts).toHaveLength(1);
+                expect(starts[0]).toBeLessThan(720_000);
+                // This regression covers request admission, not scan-progress recovery.
+            }
+        } finally {
+            logSpy.mockRestore();
+            jest.useRealTimers();
+        }
+    });
+
     // NOTE: datum_info Blockfrost fallback is tested via fetchBlockfrostDatumCbor in helpers.blockfrost-fallback.test.ts.
     // A scanner-level datum_info fallback test is impractical here because asyncForEach in kora-labs-common
     // creates a dangling rejected promise during its internal delay, which triggers Jest's unhandled rejection detection.
