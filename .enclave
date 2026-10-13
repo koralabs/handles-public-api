@@ -1,0 +1,34 @@
+# api.handle.me enclave manifest (proposal, ecosystem-ownership-plan row 5.1).
+#
+# Changes to these paths merging into mainnet/preprod need operator approval
+# (K.O.R.A.'s merge_pr cards them). Everything else merges freely.
+# Format: one path per line; trailing "/" = directory prefix. "#" = comment.
+# Why each entry is here: CANONICAL_CONTRACT.md. This file is enclaved itself.
+
+.enclave
+CANONICAL_CONTRACT.md
+
+# C1/C2 chain → index: the scanner and rollback handling
+lambdas/scanner.ts
+lambdas/scanner.app.ts
+lambdas/scanner-sideload.ts
+services/ogmios/
+services/demeter/
+
+# C1/C2 how a handle's address and properties are stored and read
+repositories/handlesRepository.ts
+stores/redis/
+utils/assetLabelRegistry.ts
+utils/policies.ts
+utils/isPersonalized.ts
+
+# C3 snapshot verification (what a restored index must match)
+lambdas/snapshot.ts
+utils/snapshotVerification.ts
+utils/verifiedSnapshot.ts
+
+# The test gate for the above
+jest.critical.config.ts
+
+# Deploy path
+.github/workflows/

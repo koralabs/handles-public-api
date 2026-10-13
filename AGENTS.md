@@ -27,3 +27,6 @@
 - Deployment orchestration is handled by the sibling repo `../adahandle-deployments`.
 - Per the local ecosystem docs, `api.handle.me` deploys directly from `adahandle-deployments`, including the complementary Docker Hub deployment `handles-public-api`.
 - Changes in this repo may still require corresponding updates in `adahandle-deployments` before they are actually shipped.
+## Canonical contract and enclave
+- Read [`CANONICAL_CONTRACT.md`](./CANONICAL_CONTRACT.md): the behaviour this repo must never violate.
+- [`.enclave`](./.enclave) lists the code that holds it. Changes there need operator approval before merging into `mainnet`/`preprod`.
