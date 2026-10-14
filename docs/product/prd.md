@@ -76,6 +76,7 @@ Reading Handle state directly from chain providers for every request is expensiv
 - Chain ingestion must preserve every Handle-policy touch, complete-block ordering, datum/script/metadata fidelity, and rollback-safe cursor semantics
 - Deployment targets include local Docker/Node and self-hosted box functions; AWS Lambda/ALB deployment is retired
 - Deployment orchestration is owned by the box workflow and the sibling `adahandle-deployments` build scripts
+- GitHub Actions runs unit tests only. Integration/e2e, browser and user-journey tests run locally against isolated fixtures, never in Actions. [Verification contract](../spec/spec.md#verification).
 
 ## Risks and Pain Points (Ecosystem-driven)
 - Resolution complexity: multiple handle “types” and standard evolutions (CIP labels, policy transitions) create integration risk.

@@ -259,6 +259,19 @@ retain their contracts. The marketplace static consumer's `{listings,total}` env
 owned by its BFF; aligning that separate consumer mismatch is tracked in marketplace.handle.me.
 Deployment orchestration remains in the sibling deployment repository.
 
+## Verification
+The NPM Actions producer (`.github/workflows/yarn-pr-tests.yml`) invokes the existing
+`npm run test:unit` script, not `npm test`, which also dispatches local e2e tests.
+Unit-only workflow dispatch is a structural operator invariant. The local `test` and
+`test:e2e` scripts remain available; e2e/browser/user-journey tests never run in Actions.
+
+Local scanner integration tests use an isolated Valkey fixture database on loopback,
+never production Redis. Canonical rollback fixtures exercise actual HTTP helpers and
+provider conversion behind an HTTP-boundary fake and assert persisted block metrics,
+lock release, UTxOs and normalized holder ownership/indexes. A matching canonical block
+must not remove or replay valid tracked ownership. Assertions must not pin internal
+helper argument counts; admission parameters are not a persisted-state contract.
+
 ## Environment Variables
 See `site.env` for the operator-facing glossary. Commonly used ones include:
 - `NETWORK`, `OGMIOS_HOST`
