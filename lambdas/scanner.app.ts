@@ -142,31 +142,14 @@ const getRecoveryFlag = (): string | undefined => {
 };
 
 const getWhitelistedApiKeys = (): string[] => WHITELISTED_API_KEYS.split(',').map((key) => key.trim()).filter(Boolean);
-// A Koios Retry-After is law: never retry sooner than it says, and hold every scanner Koios request
-// (not just the throttled one) until then.
-let koiosNotBefore = 0;
-let koiosNextStart = 0;
-const getKoiosRetryDelay = (attempt: number, error?: any): number => {
-    const retryAfterMs = Number(error?.retryAfterMs ?? 0);
-    if (retryAfterMs > 0) koiosNotBefore = Math.max(koiosNotBefore, Date.now() + retryAfterMs);
-    return Math.max(KOIOS_RETRY_DELAYS_MS[attempt], retryAfterMs);
-};
-// Start Koios requests no faster than one per minIntervalMs across all concurrent callers.
-const waitForKoiosTurn = async (minIntervalMs: number): Promise<void> => {
-    while (true) {
-        checkDeadline('koios_request_admission');
-        const now = Date.now();
-        const wait = Math.max(koiosNotBefore, koiosNextStart) - now;
-        if (wait > 0) {
-            await delayMs(wait);
-            // Recheck both the latest provider hold and pacing after every wake.
-            continue;
-        }
-        // Claim a start only when admitted; requests themselves remain concurrent.
-        koiosNextStart = now + minIntervalMs;
-        return;
-    }
-};
+// A Koios Retry-After is law: the shared helper registers it at response receipt for
+// every caller, including terminal retries and tip failures, not only local retries.
+const getKoiosRetryDelay = (attempt: number, error?: any): number =>
+    Math.max(KOIOS_RETRY_DELAYS_MS[attempt], Number(error?.retryAfterMs ?? 0));
+const koiosAdmission = (minIntervalMs = 0) => ({
+    minIntervalMs,
+    beforeStart: () => checkDeadline('koios_request_admission')
+});
 
 const clearRecoveryFlag = (): void => {
     store.redisClientCall('del', [SCANNER_RECOVERY_KEY]);
@@ -336,8 +319,7 @@ const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 
     checkDeadline('tx_info_retry');
     const body = getTxInfoBody(hashBatch);
     try {
-        await waitForKoiosTurn(KOIOS_TX_INFO_MIN_INTERVAL_MS);
-        const txInfo = (await fetchKoios(`tx_info`, 'POST', body)) as KoiosTxInfo[] | null | { [key: string]: any };
+        const txInfo = (await fetchKoios(`tx_info`, 'POST', body, koiosAdmission(KOIOS_TX_INFO_MIN_INTERVAL_MS))) as KoiosTxInfo[] | null | { [key: string]: any };
         if (!txInfo) return [];
         if (!Array.isArray(txInfo)) {
             const error: any = new Error(`Unexpected tx_info response type`);
@@ -381,8 +363,7 @@ const fetchDatumInfoBatchWithRetry = async (hashBatch: string[], attempt = 0): P
     checkDeadline('datum_info_retry');
     const body = getDatumInfoBody(hashBatch);
     try {
-        await waitForKoiosTurn(0);
-        const datumInfo = (await fetchKoios(`datum_info`, 'POST', body)) as KoiosDatumInfo[] | null | { [key: string]: any };
+        const datumInfo = (await fetchKoios(`datum_info`, 'POST', body, koiosAdmission())) as KoiosDatumInfo[] | null | { [key: string]: any };
         if (!datumInfo) return [];
         if (!Array.isArray(datumInfo)) {
             const error: any = new Error(`Unexpected datum_info response type`);
@@ -486,8 +467,7 @@ const fetchBlockTxHashBatchWithRetry = async (hashBatch: string[], attempt = 0):
         // pauses the scan at that block on every invocation (mainnet, 2026-10-11). Page until short.
         const rows: { block_hash: string; tx_hash: string }[] = [];
         for (let offset = 0; ; offset += KOIOS_MAX_ROWS) {
-            await waitForKoiosTurn(0);
-            const page = ((await fetchKoios(offset ? `block_txs?offset=${offset}` : 'block_txs', 'POST', body)) ?? []) as { block_hash: string; tx_hash: string }[];
+            const page = ((await fetchKoios(offset ? `block_txs?offset=${offset}` : 'block_txs', 'POST', body, koiosAdmission())) ?? []) as { block_hash: string; tx_hash: string }[];
             rows.push(...page.map((tx) => ({ block_hash: tx.block_hash, tx_hash: tx.tx_hash })));
             if (page.length < KOIOS_MAX_ROWS) return rows;
         }
@@ -527,8 +507,7 @@ const fetchAssetUtxoBatchWithRetry = async (assetList: [string, string][], attem
     checkDeadline('asset_utxos_retry');
     const body = JSON.stringify({ _asset_list: assetList, _extended: true });
     try {
-        await waitForKoiosTurn(0);
-        return (await fetchKoios(`asset_utxos`, 'POST', body)) as KoiosAssetUTxO[] | null;
+        return (await fetchKoios(`asset_utxos`, 'POST', body, koiosAdmission())) as KoiosAssetUTxO[] | null;
     } catch (error: any) {
         const retriable = isRetriableKoiosError(error);
         Logger.local({
@@ -647,8 +626,7 @@ const getLatestChainTip = async () => {
     }
 
     try {
-        await waitForKoiosTurn(0);
-        const koiosTipResponse = await fetchKoios('tip');
+        const koiosTipResponse = await fetchKoios('tip', 'GET', undefined, koiosAdmission());
         const latestTip = Array.isArray(koiosTipResponse) ? koiosTipResponse[0] : koiosTipResponse;
         if (!latestTip) return null;
 

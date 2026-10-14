@@ -4,7 +4,13 @@ jest.mock('@koralabs/kora-labs-common', () => ({
 }));
 
 import { Logger, NETWORK } from '@koralabs/kora-labs-common';
-import { blockfrostApiCall, fetchKoios, fetchPaginatedResults, fetchTxList } from './helpers';
+import { blockfrostApiCall, fetchPaginatedResults, fetchTxList } from './helpers';
+
+let fetchKoios: typeof import('./helpers').fetchKoios;
+beforeEach(() => {
+    // A fresh process-lifetime transport per test; never clear a live provider hold.
+    jest.isolateModules(() => { fetchKoios = jest.requireActual('./helpers').fetchKoios; });
+});
 
 describe('helpers pagination tests', () => {
     const originalFetch = global.fetch;
@@ -112,6 +118,7 @@ describe('helpers pagination tests', () => {
         const koiosResponse = [{ tx_hash: 'abc' }];
         const fetchMock = jest.fn().mockResolvedValue({
             ok: true,
+            headers: new Headers(),
             text: async () => JSON.stringify(koiosResponse)
         });
         global.fetch = fetchMock as any;
@@ -137,6 +144,7 @@ describe('helpers pagination tests', () => {
         const koiosResponse = [{ tx_hash: 'abc' }];
         const fetchMock = jest.fn().mockResolvedValue({
             ok: true,
+            headers: new Headers(),
             text: async () => JSON.stringify(koiosResponse)
         });
         global.fetch = fetchMock as any;
@@ -175,18 +183,28 @@ describe('helpers pagination tests', () => {
         });
     });
 
-    it('fetchKoios carries the Retry-After wait on a throttled error so callers can honor it', async () => {
-        // Invariant: Koios's stated wait reaches the retry logic. Failure caught: retrying before Retry-After.
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: false, status: 429, statusText: 'Too Many Requests',
-            headers: new Headers({ 'Retry-After': '7' }), text: async () => ''
-        }) as any;
-        await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.toMatchObject({ status: 429, retryAfterMs: 7000 });
-
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: false, status: 503, statusText: 'Service Unavailable', headers: new Headers(), text: async () => ''
-        }) as any;
-        await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.not.toHaveProperty('retryAfterMs');
+    it('fetchKoios carries the Retry-After wait and binds the next caller', async () => {
+        // Invariant: the diagnostic wait also protects a later caller. Removing registration admits it early.
+        jest.useFakeTimers({ now: 1_000_000 });
+        try {
+            global.fetch = jest.fn().mockResolvedValue({
+                ok: false, status: 429, statusText: 'Too Many Requests',
+                headers: new Headers({ 'Retry-After': '7' }), text: async () => ''
+            }) as any;
+            await expect(fetchKoios('tx_info', 'POST', '{}')).rejects.toMatchObject({ status: 429, retryAfterMs: 7000 });
+            const nextFetch = jest.fn().mockResolvedValue({
+                ok: false, status: 503, statusText: 'Service Unavailable', headers: new Headers(), text: async () => ''
+            });
+            global.fetch = nextFetch as any;
+            const next = fetchKoios('tx_info', 'POST', '{}').catch((error: unknown) => error);
+            await jest.advanceTimersByTimeAsync(6999);
+            expect(nextFetch).not.toHaveBeenCalled();
+            await jest.advanceTimersByTimeAsync(1);
+            expect(await next).not.toHaveProperty('retryAfterMs');
+            expect(nextFetch).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     it.each([
@@ -223,6 +241,7 @@ describe('helpers pagination tests', () => {
 
             return {
                 ok: true,
+                headers: new Headers(),
                 text: async () => JSON.stringify(txInfoResponse)
             };
         });

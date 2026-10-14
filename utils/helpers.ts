@@ -1,6 +1,7 @@
 import { AssetNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, Network, NETWORK, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { KoiosAsset, KoiosOutput, KoiosTxInfo } from '../interfaces/provider.interface';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
+import { KoiosAdmission, observeKoiosBody, observeKoiosHeaders, requestKoios } from './koiosRateLimit';
 
 export const defaultKoiosSettings = { _inputs: true, _withdrawals: false, _certs: false, _governance: false, _scripts: true, _bytecode: true, _metadata: true, _assets: true };
 
@@ -92,7 +93,7 @@ export const fetchTxList = async (block: string) => {
     return txList;
 };
 
-export const fetchKoios = async (path: string, method = 'GET', body?: string) => {
+export const fetchKoios = async (path: string, method = 'GET', body?: string, admission?: KoiosAdmission) => {
     const url = `https://${NETWORK.toLowerCase() === 'mainnet' ? 'api' : NETWORK.toLowerCase()}.koios.rest/api/v1/${path}`;
     const koiosToken = process.env.KOIOS_API_BEARER_TOKEN?.trim();
     const headers: Record<string, string> = {
@@ -101,13 +102,14 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string) =>
     if (koiosToken) {
         headers.Authorization = `Bearer ${koiosToken}`;
     }
-    const response = await fetch(url, {
+    const response = await requestKoios(() => fetch(url, {
         method,
         headers,
         body,
         signal: AbortSignal.timeout(KOIOS_REQUEST_TIMEOUT_MS)
-    });
-
+    }), admission);
+    // Register known headers before a slow body can let another caller start early.
+    const headerWait = observeKoiosHeaders(response.headers);
     const responseText = await response.text();
     const parseResponseJson = () => {
         if (!responseText) return null;
@@ -125,10 +127,9 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string) =>
         error.status = response.status;
         error.statusText = response.statusText;
         error.koiosResponse = responseJson;
-        const retryAfter = response.headers.get('retry-after');
-        if (retryAfter) {
-            const seconds = Number(retryAfter);
-            error.retryAfterMs = Number.isFinite(seconds) ? seconds * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now());
+        const bodyWait = observeKoiosBody(responseJson);
+        if (headerWait !== undefined || bodyWait !== undefined) {
+            error.retryAfterMs = Math.max(headerWait ?? 0, bodyWait ?? 0);
         }
         if (!responseJson && responseText) {
             error.responseText = responseText.slice(0, 512);
@@ -136,7 +137,9 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string) =>
         throw error;
     }
 
-    return parseResponseJson();
+    const responseJson = parseResponseJson();
+    observeKoiosBody(responseJson);
+    return responseJson;
 };
 
 const resolveKoiosOutputDatum = (output: KoiosTxInfo['outputs'][number], datumByHash: Map<string, string>): string | undefined =>

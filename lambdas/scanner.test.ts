@@ -65,13 +65,41 @@ const buildUtxo = ({
         }
     }) as any;
 
+const originalFetch = global.fetch;
+
 const loadScannerModule = () => {
     let scannerModule: any;
+    jest.dontMock('../utils/helpers');
     jest.isolateModules(() => {
+        const transport: typeof helpers = require('../utils/helpers');
+        // Existing Koios data/error fixtures now sit at the HTTP boundary. The real
+        // helper's response registration/admission must not be mocked with its old gate.
+        for (const name of Object.keys(transport) as (keyof typeof helpers)[]) {
+            if (name !== 'fetchKoios') Object.assign(transport, { [name]: mockedHelpers[name] });
+        }
+        global.fetch = jest.fn(async (input, init) => {
+            const url = new URL(String(input));
+            if (!url.hostname.endsWith('.koios.rest')) throw new Error(`Unexpected test network request: ${url}`);
+            const path = url.pathname.replace('/api/v1/', '') + url.search;
+            try {
+                const data = await mockedHelpers.fetchKoios(path, init?.method ?? 'GET', init?.body as string | undefined);
+                return new Response(data == null ? '' : JSON.stringify(data));
+            } catch (error) {
+                const failure = error as { status?: number; statusText?: string; retryAfterMs?: number; koiosResponse?: unknown; message?: string };
+                if (!failure.status) throw error;
+                const headers = new Headers();
+                if (failure.retryAfterMs !== undefined) headers.set('Retry-After', `${failure.retryAfterMs / 1000}`);
+                return new Response(JSON.stringify(failure.koiosResponse ?? { message: failure.message }), {
+                    status: failure.status, statusText: failure.statusText, headers
+                });
+            }
+        });
         scannerModule = require('./scanner.app');
     });
     return scannerModule;
 };
+
+afterEach(() => { global.fetch = originalFetch; });
 
 const setup = ({ whitelistedApiKeys = 'allowed-key' }: { whitelistedApiKeys?: string } = {}) => {
     process.env.WHITELISTED_API_KEYS = whitelistedApiKeys;
@@ -2479,6 +2507,54 @@ describe('Scanner lambda unit tests', () => {
                 expect(starts[0]).toBeLessThan(720_000);
                 // This regression covers request admission, not scan-progress recovery.
             }
+        } finally {
+            logSpy.mockRestore();
+            jest.useRealTimers();
+        }
+    });
+
+    it('independent review: final retry response holds split requests', async () => {
+        // Invariant: even the response that exhausts local retries establishes the provider-wide wait.
+        // Failure caught: split children start early because only the retry branch registers Retry-After.
+        // Negative control: the original primary already fails; registration removal must restore that failure.
+        jest.useFakeTimers({ now: 1_000_000 });
+        const { handlesRepo, scannerModule } = setup();
+        handlesRepo.getMetrics.mockReturnValue({ currentBlockHash: 'start_hash', lockLambdas: LockedLambdaReason.UNLOCKED });
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'block_a', slot: 100, confirmations: 5, tx_count: 70 }] as never);
+        fakeKoiosWithRowCap({ block_a: 70 });
+        const network = mockedHelpers.fetchKoios.getMockImplementation()!;
+        const attempts = new Map<string, number>();
+        const splits: number[] = [];
+        let terminalAt: number | undefined;
+        mockedHelpers.fetchKoios.mockImplementation(async (path, method, body) => {
+            if (path === 'tx_info') {
+                const hashes = JSON.parse(body!)._tx_hashes as string[];
+                if (hashes.length === 35) {
+                    const attempt = (attempts.get(hashes[0]) ?? 0) + 1;
+                    attempts.set(hashes[0], attempt);
+                    if (attempt <= 4) {
+                        const error: any = new Error('Koios terminal provider hold');
+                        error.status = attempt === 4 ? 429 : 503;
+                        if (attempt === 4) {
+                            terminalAt ??= Date.now();
+                            error.retryAfterMs = 5_000;
+                        }
+                        throw error;
+                    }
+                } else {
+                    splits.push(Date.now());
+                }
+            }
+            return network(path, method, body);
+        });
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        try {
+            const scan = scannerModule.Internal.scan();
+            await jest.advanceTimersByTimeAsync(50_000);
+            await scan;
+            expect(terminalAt).toBeGreaterThan(1_000_000);
+            expect(splits.length).toBeGreaterThan(0);
+            expect(Math.min(...splits)).toBeGreaterThanOrEqual(terminalAt! + 5_000);
         } finally {
             logSpy.mockRestore();
             jest.useRealTimers();
