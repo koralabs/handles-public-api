@@ -1,7 +1,7 @@
 import { AssetNameLabel, delay, HANDLE_POLICIES, LogCategory, Logger, Network, NETWORK, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { KoiosAsset, KoiosOutput, KoiosTxInfo } from '../interfaces/provider.interface';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
-import { KoiosAdmission, observeKoiosBody, observeKoiosHeaders, requestKoios } from './koiosRateLimit';
+import { KoiosAdmission, observeKoiosBody, requestKoios } from './koiosRateLimit';
 
 export const defaultKoiosSettings = { _inputs: true, _withdrawals: false, _certs: false, _governance: false, _scripts: true, _bytecode: true, _metadata: true, _assets: true };
 
@@ -102,14 +102,13 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string, ad
     if (koiosToken) {
         headers.Authorization = `Bearer ${koiosToken}`;
     }
-    const response = await requestKoios(() => fetch(url, {
+    const { response, headerWait } = await requestKoios(() => fetch(url, {
         method,
         headers,
         body,
         signal: AbortSignal.timeout(KOIOS_REQUEST_TIMEOUT_MS)
     }), admission);
-    // Register known headers before a slow body can let another caller start early.
-    const headerWait = observeKoiosHeaders(response.headers);
+    // The direct transport reaction already registered headers before wrapper adoption.
     const responseText = await response.text();
     const parseResponseJson = () => {
         if (!responseText) return null;

@@ -17,8 +17,8 @@ const seconds = (value: unknown): number | undefined => {
 
 const retryAfter = (value: string | null, now: number): number | undefined => {
     if (value === null || value.trim() === '') return undefined;
-    const numeric = seconds(value);
-    if (numeric !== undefined) return numeric;
+    // A numeric lexeme is a duration, never a date (Date.parse('-2060') reads year 2060).
+    if (Number.isFinite(Number(value))) return seconds(value);
     const at = Date.parse(value);
     return Number.isFinite(at) ? Math.max(0, at - now) : undefined;
 };
@@ -26,7 +26,8 @@ const retryAfter = (value: string | null, now: number): number | undefined => {
 const resetDelay = (value: string | null, now: number, relative: boolean): number | undefined => {
     if (value === null || value.trim() === '') return undefined;
     const numeric = Number(value);
-    if (Number.isFinite(numeric) && numeric >= 0) {
+    if (Number.isFinite(numeric)) {
+        if (numeric < 0) return undefined;
         if (relative && numeric < 1_000_000_000) return numeric * 1000;
         const at = numeric >= 1_000_000_000_000 ? numeric : numeric * 1000;
         return Math.max(0, at - now);
@@ -70,7 +71,7 @@ export const observeKoiosBody = (body: unknown, now = Date.now()): number | unde
     return remember([seconds(object.retry_after), ...retries], now);
 };
 
-export const requestKoios = async <T>(dispatch: () => Promise<T>, admission: KoiosAdmission = {}): Promise<T> => {
+export const requestKoios = async (dispatch: () => Promise<Response>, admission: KoiosAdmission = {}): Promise<{ response: Response; headerWait: number | undefined }> => {
     while (true) {
         admission.beforeStart?.();
         const now = Date.now();
@@ -82,6 +83,8 @@ export const requestKoios = async <T>(dispatch: () => Promise<T>, admission: Koi
         }
         nextStart = now + (admission.minIntervalMs ?? 0);
         // No await separates the last deadline/hold check, pacing claim and actual fetch start.
-        return dispatch();
+        // Attach receipt handling directly to the HTTP promise. Observing only after
+        // this async wrapper resolves leaves its promise-adoption turns unprotected.
+        return dispatch().then((response) => ({ response, headerWait: observeKoiosHeaders(response.headers) }));
     }
 };
