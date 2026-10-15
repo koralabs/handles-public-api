@@ -1,5 +1,6 @@
 import { AssetNameLabel, asyncForEach, buildHolderInfo, HANDLE_POLICIES, IndexNames, LockedLambdaReason, LogCategory, Logger, MintingData, Network, NETWORK, StoredHandle, UTxOFunctionName, UTxOWithTxInfo } from '@koralabs/kora-labs-common';
 import { WHITELISTED_API_KEYS } from '../config';
+import { scannerBudgetMs, SCANNER_MAX_WORK_MS } from './scannerBudget';
 import { BlockfrostBlock, KoiosAssetUTxO, KoiosDatumInfo, KoiosTxInfo } from '../interfaces/provider.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
@@ -65,7 +66,7 @@ const KOIOS_ASSET_UTXOS_MIN_INTERVAL_MS = Math.ceil(1000 / KOIOS_ASSET_UTXOS_MAX
 const KOIOS_ASSET_UTXOS_MAX_RETRIES = KOIOS_RETRY_DELAYS_MS.length;
 const SCANNER_MAX_BLOCKS_PER_INVOCATION = 720;
 const SCANNER_BLOCK_PREFETCH_CHUNK_SIZE = 30;
-const SCANNER_HARD_DEADLINE_MS = 12 * 60_000;
+const SCANNER_HARD_DEADLINE_MS = SCANNER_MAX_WORK_MS;
 // Demeter WatchTx only resumes reliably from a recent intersect: from ~1h back it streams at
 // once, but from a cursor ~58h old (SFO preview after its 2026-10 power outage) every request sat
 // silent ~100s and was cancelled (CANCEL 0x8), forever. A cursor further behind than this catches
@@ -74,17 +75,23 @@ const DEMETER_MAX_RESUME_SLOTS = 3_600;
 
 class ScannerDeadlineError extends Error {
     constructor(step: string, elapsed: number) {
-        super(`Scanner hard deadline (${SCANNER_HARD_DEADLINE_MS / 1000}s) reached at ${step} after ${elapsed}ms`);
+        super(`Scanner work deadline reached at ${step} after ${elapsed}ms`);
         this.name = 'ScannerDeadlineError';
     }
 }
 
 let scannerDeadline = 0;
-const ensureDeadlineSet = () => { if (!scannerDeadline) scannerDeadline = Date.now() + SCANNER_HARD_DEADLINE_MS; };
+let scannerStartedAt = 0;
+const ensureDeadlineSet = () => {
+    if (!scannerDeadline) {
+        scannerStartedAt = Date.now();
+        scannerDeadline = scannerStartedAt + SCANNER_HARD_DEADLINE_MS;
+    }
+};
 const checkDeadline = (step: string) => {
     ensureDeadlineSet();
     if (Date.now() >= scannerDeadline) {
-        throw new ScannerDeadlineError(step, Date.now() - (scannerDeadline - SCANNER_HARD_DEADLINE_MS));
+        throw new ScannerDeadlineError(step, Date.now() - scannerStartedAt);
     }
 };
 const ROLLBACK_20_SLOT_WINDOW = 400; // 20 blocks * ~20 seconds per block
@@ -1446,8 +1453,9 @@ const scan = async () => {
 };
 
 export const lambdaHandler = async (event: AWSLambda.ALBEvent | AWSLambda.APIGatewayProxyEventV2, context: AWSLambda.Context) => {
-    scannerDeadline = Date.now() + SCANNER_HARD_DEADLINE_MS;
     const handlerStartedAt = Date.now();
+    scannerStartedAt = handlerStartedAt;
+    scannerDeadline = handlerStartedAt + scannerBudgetMs(context?.getRemainingTimeInMillis?.(), deferHeavyImports());
     const logBreadcrumb = (step: string, extra = '') => Logger.log({
         message: `[scanner:breadcrumb] ${step} at +${Date.now() - handlerStartedAt}ms${extra ? ` | ${extra}` : ''}`,
         category: LogCategory.INFO,
@@ -1490,6 +1498,7 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent | AWSLambda.APIGat
             heartbeat.unref?.();
         }
 
+        checkDeadline('ensure_initialized');
         logBreadcrumb('ensure_initialized_start');
         await ensureInitialized();
         logBreadcrumb('ensure_initialized_done');

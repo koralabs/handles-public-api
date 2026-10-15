@@ -124,6 +124,60 @@ describe('Scanner lambda e2e', () => {
         jest.clearAllMocks();
     });
 
+    it('exits before the Fn cap without advancing an unprocessed block, then resumes it', async () => {
+        // Invariant: a scheduled scan leaves a resumable cursor and releases its lock before Fn's 300s cap.
+        // Failure caught: the 720s software deadline cannot fire before Fn kills the call.
+        // Negative control: restore the fixed 720s handler deadline; the first cursor assertion fails.
+        const previousDefer = process.env.KORA_SCANNER_DEFER_IMPORTS;
+        process.env.KORA_SCANNER_DEFER_IMPORTS = 'true';
+        let now = Date.now();
+        const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+        mockedHelpers.blockfrostApiCall.mockResolvedValue({ ok: true, json: async () => ({ height: 5000, slot: 220, hash: 'tip_hash' }) } as never);
+        mockedHelpers.fetchPaginatedResults.mockImplementation(async (path: string) => {
+            if (path === 'blocks/provider_block/next') {
+                now += 240_001;
+                return [{ hash: 'budget_block', slot: 201, confirmations: 21, tx_count: 0 }] as never;
+            }
+            return [] as never;
+        });
+        mockedHelpers.fetchKoios.mockResolvedValue([] as never);
+        mockedHelpers.buildUTxOsFromKoiosTxs.mockImplementation(actualHelpers.buildUTxOsFromKoiosTxs);
+        try {
+            await lambdaHandler({} as AWSLambda.ALBEvent, {} as AWSLambda.Context);
+            expect(repo.getMetrics()).toEqual(expect.objectContaining({
+                currentSlot: 140, currentBlockHash: 'provider_block', lockLambdas: LockedLambdaReason.UNLOCKED
+            }));
+            expect([...store.getScannedBlockHashesInRange(201, 201)]).toEqual([]);
+
+            mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'budget_block', slot: 201, confirmations: 21, tx_count: 0 }] as never);
+            await lambdaHandler({} as AWSLambda.ALBEvent, {} as AWSLambda.Context);
+            expect(repo.getMetrics()).toEqual(expect.objectContaining({
+                currentSlot: 201, currentBlockHash: 'budget_block', lockLambdas: LockedLambdaReason.UNLOCKED
+            }));
+            expect([...store.getScannedBlockHashesInRange(201, 201)]).toEqual(['budget_block']);
+        } finally {
+            clock.mockRestore();
+            if (previousDefer === undefined) delete process.env.KORA_SCANNER_DEFER_IMPORTS;
+            else process.env.KORA_SCANNER_DEFER_IMPORTS = previousDefer;
+        }
+    });
+
+    it('preserves the index when the invocation has no work time left', async () => {
+        // Invariant: an invocation inside its cleanup reserve must not begin scanning.
+        // Failure caught: ignoring a short context starts provider work and advances the cursor.
+        // Negative control: ignore remainingTimeMs in scannerBudgetMs; the cursor advances to 201.
+        mockedHelpers.blockfrostApiCall.mockResolvedValue({ ok: true, json: async () => ({ height: 5000, slot: 220, hash: 'tip_hash' }) } as never);
+        mockedHelpers.fetchPaginatedResults.mockResolvedValue([{ hash: 'budget_block', slot: 201, confirmations: 21, tx_count: 0 }] as never);
+        mockedHelpers.fetchKoios.mockResolvedValue([] as never);
+        mockedHelpers.buildUTxOsFromKoiosTxs.mockImplementation(actualHelpers.buildUTxOsFromKoiosTxs);
+        const before = repo.getMetrics();
+        const existingUtxo = repo.getUTxO('rollback_tx#0');
+        await lambdaHandler({} as AWSLambda.ALBEvent, { getRemainingTimeInMillis: () => 60_000 } as AWSLambda.Context);
+        expect(repo.getMetrics()).toEqual(before);
+        expect(repo.getUTxO('rollback_tx#0')).toEqual(existingUtxo);
+        expect([...store.getScannedBlockHashesInRange(201, 201)]).toEqual([]);
+    });
+
     it('scans block updates and persists handle + metrics', async () => {
         const handleName = `scanner-${Date.now()}`;
 

@@ -1,10 +1,11 @@
 # Runtime Entrypoints
 
 ## Purpose
-This repo ships the same API/indexing system in three operational shapes:
+This repo ships the same API/indexing system in four operational shapes:
 - local Node.js development
 - container runtime
-- AWS Lambda entrypoints
+- self-hosted Fn entrypoints (current ecosystem deployment)
+- legacy AWS Lambda entrypoints
 
 This document maps the code entrypoints, what they start, and which environment variables affect them.
 
@@ -58,7 +59,15 @@ This document maps the code entrypoints, what they start, and which environment 
 - In container API mode, the script rewrites the packaged `swagger.yml` server URL to `http://localhost:3141` before starting `node express.js`.
 - If `NODE_DB` is empty and `DISABLE_NODE_SNAPSHOT=false`, the entrypoint downloads a Mithril cardano-node snapshot before starting the node.
 
-## Lambda Runtime
+## Self-hosted Fn Runtime
+
+The self-hosted boxes invoke the same scanner entrypoint with a 300-second function timeout and `KORA_SCANNER_DEFER_IMPORTS=true`. The bridge does not expose `getRemainingTimeInMillis`. Scheduled scans therefore receive a 240-second work budget, reserving 60 seconds for root rebuilding and lock/lease cleanup. A shorter remaining-time value from a runtime context takes precedence; a context advertising more time cannot extend the Fn cap. An exhausted work budget stops before initialization. The twelve-minute maximum remains for other runtimes, reduced when their context requires it.
+
+This corrects a software budget that previously exceeded Fn's lifetime. It does not guarantee completion of a hung dependency or an arbitrarily long root rebuild; deadline checks are cooperative. Coverage checks still pause without advancing the incomplete block, root rebuilding and token-conditional lease cleanup remain unchanged, and REIMPORT/REINDEX stay in the out-of-band sideload. No scanner or mint lock threshold is relaxed.
+
+Regression coverage: `lambdas/scannerBudget.test.ts` exercises cap/remaining-time boundaries; the local-only scanner integration suite uses isolated Valkey to prove an over-budget scan retains its cursor, unlocks, and resumes the same block on the next invocation. Neither suite submits transactions. Run integration tests locally, never in Actions.
+
+## Legacy Lambda Runtime
 
 ### API Lambda
 - `lambdas/api.ts` hydrates KMS environment variables, then loads `lambdas/api.app.ts`.
