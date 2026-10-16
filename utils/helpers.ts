@@ -37,7 +37,8 @@ export const blockfrostApiCall = async (endpointSegment: string, admission?: Koi
     };
 
     const url = `https://cardano-${NETWORK.toLowerCase()}.blockfrost.io/api/v0/${endpointSegment}`;
-    const { response } = await blockfrost.request(() => fetch(url, { headers, signal: AbortSignal.timeout(BLOCKFROST_REQUEST_TIMEOUT_MS) }), admission);
+    // An implicit redirect would dispatch outside admission and hide its wait.
+    const { response } = await blockfrost.request(() => fetch(url, { headers, redirect: 'manual', signal: AbortSignal.timeout(BLOCKFROST_REQUEST_TIMEOUT_MS) }), admission);
     // Observe body hints without consuming the Response returned to callers.
     // Header registration already ran directly on the fetch promise.
     try {
@@ -118,6 +119,8 @@ export const fetchKoios = async (path: string, method = 'GET', body?: string, ad
         method,
         headers,
         body,
+        // Surface every response to the limiter; never replay through fetch's redirect engine.
+        redirect: 'manual',
         signal: AbortSignal.timeout(KOIOS_REQUEST_TIMEOUT_MS)
     }), admission);
     // The direct transport reaction already registered headers before wrapper adoption.

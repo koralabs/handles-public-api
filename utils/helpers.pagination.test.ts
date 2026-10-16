@@ -40,6 +40,7 @@ describe('helpers pagination tests', () => {
                     project_id: 'test-key',
                     'Content-Type': 'application/json'
                 },
+                redirect: 'manual',
                 signal: expect.anything()
             }
         );
