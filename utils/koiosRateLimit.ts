@@ -1,12 +1,7 @@
 export interface KoiosAdmission {
+    beforeStart?: (earliestStartAtMs?: number) => void;
     minIntervalMs?: number;
-    beforeStart?: () => void;
 }
-
-// The account is shared across Koios endpoints/callers. Response receipt, not a
-// caller's decision to retry, creates the provider hold. Pacing is separate.
-let providerNotBefore = 0;
-let nextStart = 0;
 
 const seconds = (value: unknown): number | undefined => {
     if (typeof value !== 'string' && typeof value !== 'number') return undefined;
@@ -35,23 +30,6 @@ const resetDelay = (value: string | null, now: number, relative: boolean): numbe
     return retryAfter(value, now);
 };
 
-const remember = (delays: (number | undefined)[], now: number): number | undefined => {
-    const stated = delays.filter((delay): delay is number => delay !== undefined && Number.isFinite(delay) && delay >= 0);
-    if (!stated.length) return undefined;
-    const wait = Math.max(...stated);
-    providerNotBefore = Math.max(providerNotBefore, now + wait);
-    return wait;
-};
-
-export const observeKoiosHeaders = (headers: Headers, now = Date.now()): number | undefined => remember([
-    retryAfter(headers.get('retry-after'), now),
-    seconds(headers.get('x-ratelimit-reset-after')),
-    seconds(headers.get('ratelimit-reset-after')),
-    resetDelay(headers.get('ratelimit-reset'), now, true),
-    headers.get('x-ratelimit-remaining')?.trim() === '0'
-        ? resetDelay(headers.get('x-ratelimit-reset'), now, false) : undefined
-], now);
-
 const retryInfoDelay = (value: unknown): number | undefined => {
     if (typeof value === 'string' && /^\d+(?:\.\d+)?s$/.test(value)) return Number(value.slice(0, -1)) * 1000;
     if (!value || typeof value !== 'object') return undefined;
@@ -61,30 +39,61 @@ const retryInfoDelay = (value: unknown): number | undefined => {
     return Number.isFinite(s) && s >= 0 && Number.isFinite(n) && n >= 0 ? s * 1000 + n / 1_000_000 : undefined;
 };
 
-export const observeKoiosBody = (body: unknown, now = Date.now()): number | undefined => {
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return undefined;
-    const object = body as { retry_after?: unknown; error?: { details?: unknown } };
-    const details = object.error?.details;
-    const retries = Array.isArray(details) ? details.filter((detail) =>
-        detail && typeof detail === 'object' && detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'
-    ).map((detail) => retryInfoDelay(detail.retryDelay)) : [];
-    return remember([seconds(object.retry_after), ...retries], now);
+/** One process-lifetime state per provider; shared parsing/admission, never shared quotas. */
+export const createProviderLimiter = () => {
+    let providerNotBefore = 0;
+    let nextStart = 0;
+    const remember = (delays: (number | undefined)[], now: number): number | undefined => {
+        const stated = delays.filter((delay): delay is number => delay !== undefined && Number.isFinite(delay) && delay >= 0);
+        if (!stated.length) return undefined;
+        const wait = Math.max(...stated);
+        providerNotBefore = Math.max(providerNotBefore, now + wait);
+        return wait;
+    };
+    const observeHeaders = (headers: Headers, now = Date.now()): number | undefined => remember([
+        retryAfter(headers.get('retry-after'), now),
+        seconds(headers.get('x-ratelimit-reset-after')),
+        seconds(headers.get('ratelimit-reset-after')),
+        resetDelay(headers.get('ratelimit-reset'), now, true),
+        headers.get('x-ratelimit-remaining')?.trim() === '0'
+            ? resetDelay(headers.get('x-ratelimit-reset'), now, false) : undefined
+    ], now);
+    const observeBody = (body: unknown, now = Date.now()): number | undefined => {
+        if (!body || typeof body !== 'object' || Array.isArray(body)) return undefined;
+        const object = body as { retry_after?: unknown; error?: { details?: unknown } };
+        const details = object.error?.details;
+        const retries = Array.isArray(details) ? details.filter((detail) =>
+            detail && typeof detail === 'object' && detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'
+        ).map((detail) => retryInfoDelay(detail.retryDelay)) : [];
+        return remember([seconds(object.retry_after), ...retries], now);
+    };
+    const admit = async <T>(notBefore: number, admission: KoiosAdmission, start: () => T | Promise<T>, claim: boolean): Promise<T> => {
+        while (true) {
+            const now = Date.now();
+            const earliest = Math.max(now, notBefore, providerNotBefore, nextStart);
+            // Reject an impossible start before sleeping, without shortening the
+            // provider hold. Recheck on every wake, including at actual dispatch.
+            admission.beforeStart?.(earliest);
+            if (earliest > now) {
+                await new Promise<void>((resolve) => setTimeout(resolve, earliest - now));
+                continue;
+            }
+            if (claim) nextStart = now + (admission.minIntervalMs ?? 0);
+            // No await separates the final budget check, pacing claim and HTTP start.
+            return start();
+        }
+    };
+    return {
+        observeHeaders,
+        observeBody,
+        wait: (delayMs: number, admission: KoiosAdmission = {}): Promise<void> => admit(Date.now() + delayMs, admission, () => undefined, false),
+        // Attach receipt handling to fetch itself, before this wrapper's adoption turns.
+        request: (dispatch: () => Promise<Response>, admission: KoiosAdmission = {}): Promise<{ response: Response; headerWait: number | undefined }> =>
+            admit(0, admission, () => dispatch().then((response) => ({ response, headerWait: observeHeaders(response.headers) })), true)
+    };
 };
 
-export const requestKoios = async (dispatch: () => Promise<Response>, admission: KoiosAdmission = {}): Promise<{ response: Response; headerWait: number | undefined }> => {
-    while (true) {
-        admission.beforeStart?.();
-        const now = Date.now();
-        const wait = Math.max(providerNotBefore, nextStart) - now;
-        if (wait > 0) {
-            await new Promise<void>((resolve) => setTimeout(resolve, wait));
-            // A concurrent response can extend the hold while this caller sleeps.
-            continue;
-        }
-        nextStart = now + (admission.minIntervalMs ?? 0);
-        // No await separates the last deadline/hold check, pacing claim and actual fetch start.
-        // Attach receipt handling directly to the HTTP promise. Observing only after
-        // this async wrapper resolves leaves its promise-adoption turns unprotected.
-        return dispatch().then((response) => ({ response, headerWait: observeKoiosHeaders(response.headers) }));
-    }
-};
+const koios = createProviderLimiter();
+export const observeKoiosHeaders = koios.observeHeaders;
+export const observeKoiosBody = koios.observeBody;
+export const requestKoios = koios.request;

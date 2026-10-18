@@ -279,7 +279,7 @@ describe('Scanner lambda unit tests', () => {
 
         await scannerModule.Internal.checkRollback({ currentSlot: 130, lastMaxRollbackCheck: Date.now() });
 
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
         expect(handlesRepo.setMetrics).toHaveBeenNthCalledWith(
             1,
             expect.objectContaining({ lockLambdas: LockedLambdaReason.ROLLBACK, lockLambdasTimestamp: expect.any(Number) })
@@ -342,7 +342,7 @@ describe('Scanner lambda unit tests', () => {
 
         await expect(scannerModule.Internal.checkRollback({ currentSlot: 130, lastMaxRollbackCheck: Date.now() })).resolves.toBeUndefined();
 
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
     });
 
     it('filters unrelated handles from latest rollback UTxOs before index refresh', async () => {
@@ -848,8 +848,8 @@ describe('Scanner lambda unit tests', () => {
 
         await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
 
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(1, 'blocks/stale_hash/next', 721);
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(2, 'blocks/2840/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(1, 'blocks/stale_hash/next', 721, { minIntervalMs: 0, beforeStart: expect.any(Function) });
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(2, 'blocks/2840/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
         const txInfoCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'tx_info');
         expect(txInfoCalls).toHaveLength(0);
     });
@@ -1333,7 +1333,7 @@ describe('Scanner lambda unit tests', () => {
             errorSpy.mockRestore();
         }
 
-        expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_newer']);
+        expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_newer'], { minIntervalMs: 0, beforeStart: expect.any(Function) });
         expect(logEntries.some((entry) => entry.includes('fallbackToBlockfrost'))).toBe(true);
     });
 
@@ -1370,7 +1370,7 @@ describe('Scanner lambda unit tests', () => {
             errorSpy.mockRestore();
         }
 
-        expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_newer']);
+        expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_newer'], { minIntervalMs: 0, beforeStart: expect.any(Function) });
     });
 
     it('checkRollback logs and suppresses retriable upstream errors', async () => {
@@ -1853,8 +1853,8 @@ describe('Scanner lambda unit tests', () => {
         const result = await scannerModule.lambdaHandler({} as any, {} as any);
 
         expect(result).toEqual({ isBase64Encoded: false, statusCode: 200, body: '' });
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(1, 'blocks/start_hash/next', 721);
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(2, 'blocks/4980/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(1, 'blocks/start_hash/next', 721, { minIntervalMs: 0, beforeStart: expect.any(Function) });
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenNthCalledWith(2, 'blocks/4980/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
     });
 
     it('lambdaHandler rejects function-url reindex shortcut requests without whitelisted api-key', async () => {
@@ -1961,7 +1961,7 @@ describe('Scanner lambda unit tests', () => {
 
         await scannerModule.Internal.processRollback({ currentSlot: 100 });
 
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
     });
 
     it('returns early when rollback provider blocks are all ahead of current slot', async () => {
@@ -2009,7 +2009,7 @@ describe('Scanner lambda unit tests', () => {
 
         await scannerModule.Internal.checkRollback();
 
-        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next');
+        expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/4980/next', Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
     });
 
     it('scan tolerates null block_txs responses', async () => {
@@ -2188,7 +2188,7 @@ describe('Scanner lambda unit tests', () => {
         try {
             await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
 
-            expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_a']);
+            expect(mockedHelpers.fetchBlockfrostTxHashes).toHaveBeenCalledWith(['block_a'], { minIntervalMs: 0, beforeStart: expect.any(Function) });
             const txInfoCalls = mockedHelpers.fetchKoios.mock.calls.filter((call) => call[0] === 'tx_info');
             expect(txInfoCalls.length).toBeGreaterThan(0);
             expect(JSON.parse(txInfoCalls[0][2] as string)._tx_hashes).toContain('tx_fallback');
@@ -2221,7 +2221,7 @@ describe('Scanner lambda unit tests', () => {
         try {
             await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
 
-            expect(mockedHelpers.fetchBlockfrostTxInfo).toHaveBeenCalledWith('tx_a');
+            expect(mockedHelpers.fetchBlockfrostTxInfo).toHaveBeenCalledWith('tx_a', { minIntervalMs: 0, beforeStart: expect.any(Function) });
         } finally {
             logSpy.mockRestore();
             warnSpy.mockRestore();
@@ -2634,7 +2634,7 @@ describe('Scanner lambda unit tests', () => {
 
             await expect(scannerModule.Internal.scan()).resolves.toBeUndefined();
 
-            expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith(`blocks/${60000 - 24750}/next`);
+            expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith(`blocks/${60000 - 24750}/next`, Infinity, { minIntervalMs: 0, beforeStart: expect.any(Function) });
             expect(handlesRepo.setMetrics).toHaveBeenCalledWith(expect.objectContaining({ currentBlockHash: 'canonical_before', currentSlot: 120 }));
         });
 
@@ -2655,7 +2655,7 @@ describe('Scanner lambda unit tests', () => {
             await scannerModule.Internal.scan().catch(() => undefined);
 
             expect(mockedDemeter.scanDemeterBlocks).not.toHaveBeenCalled();
-            expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/start_hash/next', expect.any(Number));
+            expect(mockedHelpers.fetchPaginatedResults).toHaveBeenCalledWith('blocks/start_hash/next', expect.any(Number), { minIntervalMs: 0, beforeStart: expect.any(Function) });
         });
 
         it('keeps a near-tip cursor on Demeter', async () => {
