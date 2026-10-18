@@ -1,3 +1,4 @@
+import '../../tests/network-guard.cjs';
 import { RedisHandlesStore } from '../../stores/redis';
 import { HandlesRepository } from '../handlesRepository';
 

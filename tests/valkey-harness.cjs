@@ -141,7 +141,9 @@ function connectionOptions(options) {
         throw new Error('Integration Valkey requires exactly 127.0.0.1:6380 with no TLS');
     }
     const r = verify();
-    return { ...options, credentials: { username: 'default', password: r.password } };
+    // Supply the fixture's authentication only when the caller did not choose credentials;
+    // an explicit wrong password must still fail at the real server, not be papered over.
+    return { ...options, credentials: options.credentials ?? { username: 'default', password: r.password } };
 }
 
 module.exports = { start, stop, verify, connectionOptions };
