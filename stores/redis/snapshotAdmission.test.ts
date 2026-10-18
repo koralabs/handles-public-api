@@ -27,7 +27,7 @@ function fixture() {
         if (cmd === 'hgetall') return Object.entries(db.get(args[0]) ?? {}).map(([field, value]) => ({ field, value }));
         if (cmd === 'get') return db.get(args[0]) ?? null;
         if (cmd === 'scard') return db.get(args[0])?.size ?? 0;
-        if (cmd === 'snapshotClaim') return true; // Real atomic admission is exercised against Valkey in workers/snapshotTransactions.test.mjs.
+        if (cmd === 'snapshotClaim') return true; // Real atomic admission is exercised against Valkey in workers/snapshotTransactions.node-test.mjs.
         if (cmd === 'snapshotRelease') return 1;
         if (cmd === 'scan') return ['0', [...db.keys()]];
         if (cmd === 'hset') { db.set(args[0], { ...db.get(args[0]), ...args[1] }); return 1; }
