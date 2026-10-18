@@ -1,3 +1,4 @@
+import './network-guard.cjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,6 +34,12 @@ test('real owned fixture supports native Glide round trips', {
         assert.equal(await client.del([key]), 1);
         assert.equal(await client.get(key), null);
         assert.equal(h.verify().containerId, r.containerId);
+        // Invariant: the fixture does not replace explicit caller credentials with a good
+        // password. Restoring unconditional injection makes this real rejection disappear.
+        await assert.rejects(GlideClient.createClient(h.connectionOptions({
+            addresses: [{ host: '127.0.0.1', port: 6380 }], useTLS: false,
+            credentials: { username: 'default', password: 'deliberately-wrong-test-password' }
+        })).then(unexpected => { unexpected.close(); }), /WRONGPASS|authentication|invalid username-password/i);
     } finally {
         client?.close();
         if (!inherited) h.stop();
@@ -124,8 +131,10 @@ assert.equal(fs.statSync(receipt).mode & 0o777, 0o600);
 assert.equal(r.host, '127.0.0.1'); assert.equal(r.port, 6380);
 const opts = { addresses: [{ host: r.host, port: r.port }], useTLS: false, requestTimeout: 1234, credentials: { password: 'wrong' } };
 const got = h.connectionOptions(opts);
-assert.deepEqual(got, { ...opts, credentials: { username: 'default', password: r.password } });
+assert.deepEqual(got, opts);
 assert.equal(opts.credentials.password, 'wrong');
+const withoutCredentials = { addresses: opts.addresses, useTLS: false, requestTimeout: 1234 };
+assert.deepEqual(h.connectionOptions(withoutCredentials), { ...withoutCredentials, credentials: { username: 'default', password: r.password } });
 assert.equal((await h.start()).containerId, r.containerId);
 require('node:child_process').execFileSync(process.execPath, ['-e',
     'require(' + JSON.stringify(${JSON.stringify(harness)}) + ').verify()'], { env: process.env });
