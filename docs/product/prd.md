@@ -70,7 +70,7 @@ Reading Handle state directly from chain providers for every request is expensiv
 
 ## Constraints
 - Scanner/index updates are synchronous by design (ordering matters)
-- Koios response rate-limit signals bind every caller in the process, including success responses with exhausted quota and errors that exhaust local retries. Register header waits before reading a potentially slow body and body waits when received; no later endpoint, split or queued request may start before the maximum stated deadline. Scanner pacing and the 12-minute hard deadline still apply at actual request start. [Implementation contract](../spec/spec.md#scanner-and-rollback).
+- Koios response rate-limit signals bind every caller in the process, including success responses with exhausted quota and errors that exhaust local retries. Register header waits before reading a potentially slow body and body waits when received; no later endpoint, split or queued request may start before the maximum stated deadline. Scanner pacing and the invocation work deadline apply to the earliest proposed request start, before waiting and again at dispatch (240 seconds for scheduled Fn; at most twelve minutes otherwise). An unadmittable provider hold exits without clearing its floor, advancing an incomplete block or starting fresh fallback work. [Implementation contract](../spec/spec.md#scanner-and-rollback).
 - API side may use async operations
 - Store-first serving model returns `202` while still catching up
 - Scheduled scanning can use managed Demeter UTxORPC without locally hosting cardano-node or Ogmios

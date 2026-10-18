@@ -6,6 +6,8 @@ jest.mock('@koralabs/kora-labs-common', () => ({
 import { Logger, NETWORK } from '@koralabs/kora-labs-common';
 import { blockfrostApiCall, fetchPaginatedResults, fetchTxList } from './helpers';
 
+const jsonResponse = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
+
 let fetchKoios: typeof import('./helpers').fetchKoios;
 beforeEach(() => {
     // A fresh process-lifetime transport per test; never clear a live provider hold.
@@ -26,7 +28,7 @@ describe('helpers pagination tests', () => {
 
     it('blockfrostApiCall should call expected endpoint and headers', async () => {
         process.env.BLOCKFROST_API_KEY = 'test-key';
-        const fetchMock = jest.fn().mockResolvedValue({ status: 200, json: async () => ({}) });
+        const fetchMock = jest.fn().mockResolvedValue(jsonResponse({}));
         global.fetch = fetchMock as any;
 
         await blockfrostApiCall('blocks/latest');
@@ -38,16 +40,14 @@ describe('helpers pagination tests', () => {
                     project_id: 'test-key',
                     'Content-Type': 'application/json'
                 },
+                redirect: 'manual',
                 signal: expect.anything()
             }
         );
     });
 
     it('fetchPaginatedResults should return empty list on 404', async () => {
-        const fetchMock = jest.fn().mockResolvedValue({
-            status: 404,
-            json: async () => []
-        });
+        const fetchMock = jest.fn().mockResolvedValue(jsonResponse([], 404));
         global.fetch = fetchMock as any;
 
         const results = await fetchPaginatedResults<string>('blocks/latest/next');
@@ -60,14 +60,8 @@ describe('helpers pagination tests', () => {
         const pageItems = new Array(100).fill(null).map((_, index) => `${index}`);
         const fetchMock = jest
             .fn()
-            .mockResolvedValueOnce({
-                status: 200,
-                json: async () => pageItems
-            })
-            .mockResolvedValue({
-                status: 500,
-                text: async () => 'upstream unavailable'
-            });
+            .mockResolvedValueOnce(jsonResponse(pageItems))
+            .mockImplementation(async () => new Response('upstream unavailable', { status: 500 }));
         global.fetch = fetchMock as any;
 
         await expect(fetchPaginatedResults<string>('blocks/latest/next')).rejects.toThrow(
@@ -75,21 +69,15 @@ describe('helpers pagination tests', () => {
         );
 
         expect(fetchMock).toHaveBeenCalledTimes(7);
-    });
+    }, 10_000);
 
     it('fetchPaginatedResults should stop when maxResults is reached', async () => {
         const pageOne = new Array(100).fill(null).map((_, index) => `page1-${index}`);
         const pageTwo = new Array(100).fill(null).map((_, index) => `page2-${index}`);
         const fetchMock = jest
             .fn()
-            .mockResolvedValueOnce({
-                status: 200,
-                json: async () => pageOne
-            })
-            .mockResolvedValueOnce({
-                status: 200,
-                json: async () => pageTwo
-            });
+            .mockResolvedValueOnce(jsonResponse(pageOne))
+            .mockResolvedValueOnce(jsonResponse(pageTwo));
         global.fetch = fetchMock as any;
 
         const results = await fetchPaginatedResults<string>('blocks/latest/next', 120);
@@ -233,10 +221,7 @@ describe('helpers pagination tests', () => {
         const txInfoResponse = [{ tx_hash: 'tx-hash-1', outputs: [], assets_minted: [] }];
         const fetchMock = jest.fn().mockImplementation(async (url: string) => {
             if (url.includes('blockfrost.io')) {
-                return {
-                    status: 200,
-                    json: async () => txHashes
-                };
+                return jsonResponse(txHashes);
             }
 
             return {

@@ -10,6 +10,7 @@ import { getHandlesStore } from '../stores/redis';
 import { getApiMptRebuildPendingKey, getApiScannerLeaseKey, getApiScannerRecoveryKey } from '../stores/redis/keys';
 import { DemeterDeadlineError, DemeterRollbackError, isDemeterScannerEnabled, scanDemeterBlocks } from '../services/demeter/utxorpc.service';
 import { blockfrostApiCall, buildUTxOsFromKoiosTxs, defaultKoiosSettings, fetchBlockfrostDatumCbor, fetchBlockfrostTxHashes, fetchBlockfrostTxInfo, fetchKoios, fetchPaginatedResults } from '../utils/helpers';
+import { isRequestDeadlineError, RequestDeadlineError } from '../utils/requestDeadline';
 import { buildAndStoreMptRootHash, getChainMintingDataRootHash } from '../utils/snapshotVerification';
 
 type ScannerStore = ReturnType<typeof getHandlesStore>;
@@ -74,9 +75,9 @@ const SCANNER_HARD_DEADLINE_MS = SCANNER_MAX_WORK_MS;
 // up through the provider block scan, then hands back to Demeter near tip.
 const DEMETER_MAX_RESUME_SLOTS = 3_600;
 
-class ScannerDeadlineError extends Error {
+class ScannerDeadlineError extends RequestDeadlineError {
     constructor(step: string, elapsed: number) {
-        super(`Scanner work deadline reached at ${step} after ${elapsed}ms`);
+        super(`Scanner work deadline prevents ${step} after ${elapsed}ms`);
         this.name = 'ScannerDeadlineError';
     }
 }
@@ -89,9 +90,9 @@ const ensureDeadlineSet = () => {
         scannerDeadline = scannerStartedAt + SCANNER_HARD_DEADLINE_MS;
     }
 };
-const checkDeadline = (step: string) => {
+const checkDeadline = (step: string, earliestStartAt = Date.now()) => {
     ensureDeadlineSet();
-    if (Date.now() >= scannerDeadline) {
+    if (earliestStartAt >= scannerDeadline) {
         throw new ScannerDeadlineError(step, Date.now() - scannerStartedAt);
     }
 };
@@ -161,7 +162,7 @@ const getKoiosRetryDelay = (attempt: number, error?: any): number =>
     Math.max(KOIOS_RETRY_DELAYS_MS[attempt], Number(error?.retryAfterMs ?? 0));
 const koiosAdmission = (minIntervalMs = 0) => ({
     minIntervalMs,
-    beforeStart: () => checkDeadline('koios_request_admission')
+    beforeStart: (earliestStartAt = Date.now()) => checkDeadline('provider_request_admission', earliestStartAt)
 });
 
 const clearRecoveryFlag = (): void => {
@@ -229,7 +230,11 @@ const getKoiosBatches = (
     return batchedList;
 };
 
-const delayMs = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const delayMs = async (milliseconds: number) => {
+    checkDeadline('scanner_wait', Date.now() + milliseconds);
+    await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+    checkDeadline('scanner_wait_done');
+};
 
 const getTxInfoBody = (hashBatch: string[]) => JSON.stringify({ _tx_hashes: hashBatch, ...scannerKoiosTxInfoSettings });
 
@@ -328,11 +333,11 @@ const isRetriableKoiosError = (error: any): boolean => {
     return false;
 };
 
-const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 0): Promise<KoiosTxInfo[]> => {
+const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 0, admission = koiosAdmission(KOIOS_TX_INFO_MIN_INTERVAL_MS)): Promise<KoiosTxInfo[]> => {
     checkDeadline('tx_info_retry');
     const body = getTxInfoBody(hashBatch);
     try {
-        const txInfo = (await fetchKoios(`tx_info`, 'POST', body, koiosAdmission(KOIOS_TX_INFO_MIN_INTERVAL_MS))) as KoiosTxInfo[] | null | { [key: string]: any };
+        const txInfo = (await fetchKoios(`tx_info`, 'POST', body, admission)) as KoiosTxInfo[] | null | { [key: string]: any };
         if (!txInfo) return [];
         if (!Array.isArray(txInfo)) {
             const error: any = new Error(`Unexpected tx_info response type`);
@@ -353,7 +358,7 @@ const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 
         if (attempt < KOIOS_TX_INFO_MAX_RETRIES) {
             const backoff = getKoiosRetryDelay(attempt, error);
             await delayMs(backoff);
-            return fetchTxInfoBatchWithRetryAndSplit(hashBatch, attempt + 1);
+            return fetchTxInfoBatchWithRetryAndSplit(hashBatch, attempt + 1, admission);
         }
 
         if (hashBatch.length <= 1) throw error;
@@ -367,16 +372,16 @@ const fetchTxInfoBatchWithRetryAndSplit = async (hashBatch: string[], attempt = 
             event: 'scannerLambda.koiosTxInfo.splitBatch'
         });
 
-        const [leftTxInfo, rightTxInfo] = [await fetchTxInfoBatchWithRetryAndSplit(leftBatch), await fetchTxInfoBatchWithRetryAndSplit(rightBatch)];
+        const [leftTxInfo, rightTxInfo] = [await fetchTxInfoBatchWithRetryAndSplit(leftBatch, 0, admission), await fetchTxInfoBatchWithRetryAndSplit(rightBatch, 0, admission)];
         return [...leftTxInfo, ...rightTxInfo];
     }
 };
 
-const fetchDatumInfoBatchWithRetry = async (hashBatch: string[], attempt = 0): Promise<KoiosDatumInfo[]> => {
+const fetchDatumInfoBatchWithRetry = async (hashBatch: string[], attempt = 0, admission = koiosAdmission(KOIOS_DATUM_INFO_MIN_INTERVAL_MS)): Promise<KoiosDatumInfo[]> => {
     checkDeadline('datum_info_retry');
     const body = getDatumInfoBody(hashBatch);
     try {
-        const datumInfo = (await fetchKoios(`datum_info`, 'POST', body, koiosAdmission())) as KoiosDatumInfo[] | null | { [key: string]: any };
+        const datumInfo = (await fetchKoios(`datum_info`, 'POST', body, admission)) as KoiosDatumInfo[] | null | { [key: string]: any };
         if (!datumInfo) return [];
         if (!Array.isArray(datumInfo)) {
             const error: any = new Error(`Unexpected datum_info response type`);
@@ -397,7 +402,7 @@ const fetchDatumInfoBatchWithRetry = async (hashBatch: string[], attempt = 0): P
         if (attempt < KOIOS_DATUM_INFO_MAX_RETRIES) {
             const backoff = getKoiosRetryDelay(attempt, error);
             await delayMs(backoff);
-            return fetchDatumInfoBatchWithRetry(hashBatch, attempt + 1);
+            return fetchDatumInfoBatchWithRetry(hashBatch, attempt + 1, admission);
         }
 
         throw error;
@@ -415,13 +420,27 @@ const getBatchedTxInfo = async (txHashes: string[]) => {
     // flight, still starting at most KOIOS_TX_INFO_MAX_RPS per second. Results keep batch order.
     const results: KoiosTxInfo[][] = new Array(batchedTxHashes.length);
     let next = 0;
+    let failure: { error: unknown } | undefined;
+    const admission = koiosAdmission(KOIOS_TX_INFO_MIN_INTERVAL_MS);
+    const checkBudget = admission.beforeStart;
+    admission.beforeStart = (earliestStartAt) => {
+        if (failure) throw failure.error;
+        checkBudget(earliestStartAt);
+    };
     const worker = async () => {
-        while (next < batchedTxHashes.length) {
+        while (next < batchedTxHashes.length && !failure) {
             const i = next++;
-            results[i] = (await fetchTxInfoBatchWithRetryAndSplit(batchedTxHashes[i])) ?? [];
+            try {
+                results[i] = (await fetchTxInfoBatchWithRetryAndSplit(batchedTxHashes[i], 0, admission)) ?? [];
+            } catch (error) {
+                failure ??= { error };
+            }
         }
     };
+    // Drain already-started reads before releasing this invocation's lease;
+    // no queued batch may borrow the next invocation's renewed work budget.
     await Promise.all(Array.from({ length: Math.min(KOIOS_TX_INFO_MAX_RPS, batchedTxHashes.length) }, worker));
+    if (failure) throw failure.error;
     return results.flat();
 };
 
@@ -444,28 +463,29 @@ const getBatchedDatumInfo = async (txInfo: KoiosTxInfo[]) => {
         maxBodyLength: KOIOS_DATUM_INFO_SOFT_BODY_LIMIT
     });
 
-    // asyncForEach (in kora-labs-common) can swallow rejected promises during
-    // its internal delay; if a fetchDatumInfoBatchWithRetry call throws after
-    // exhausting retries, the rejection ends up in the unhandled-rejection
-    // void rather than propagating here. We must NOT replace the helper, so
-    // instead capture the first error per-batch and rethrow after the loop —
-    // this turns a silent partial result into a hard halt that the next
-    // scanner tick retries cleanly (same posture as the block_txs / tx_info
-    // halts in dabea7e and 6772557).
-    let captured: unknown = null;
+    // We must NOT replace the shared helper. Its internal start-delay can
+    // leave rejections unobserved, so pace through actual request admission
+    // instead. Stop queued batches on failure and drain already-started reads.
+    let captured: { error: unknown } | undefined;
+    const admission = koiosAdmission(KOIOS_DATUM_INFO_MIN_INTERVAL_MS);
+    const checkBudget = admission.beforeStart;
+    admission.beforeStart = (earliestStartAt) => {
+        if (captured) throw captured.error;
+        checkBudget(earliestStartAt);
+    };
     await asyncForEach(batchedDatumHashes, async (hashBatch) => {
         try {
-            const datumInfo = await fetchDatumInfoBatchWithRetry(hashBatch);
+            const datumInfo = await fetchDatumInfoBatchWithRetry(hashBatch, 0, admission);
             datumInfo.forEach((datum) => {
                 if (datum?.datum_hash && datum?.bytes) {
                     datumInfoByHash.set(datum.datum_hash, datum.bytes);
                 }
             });
-        } catch (err) {
-            if (!captured) captured = err;
+        } catch (error) {
+            captured ??= { error };
         }
-    }, KOIOS_DATUM_INFO_MIN_INTERVAL_MS);
-    if (captured) throw captured;
+    });
+    if (captured) throw captured.error;
 
     return datumInfoByHash;
 };
@@ -516,11 +536,11 @@ const fetchBlockTxHashBatchWithRetry = async (hashBatch: string[], attempt = 0):
     }
 };
 
-const fetchAssetUtxoBatchWithRetry = async (assetList: [string, string][], attempt = 0): Promise<KoiosAssetUTxO[] | null> => {
+const fetchAssetUtxoBatchWithRetry = async (assetList: [string, string][], attempt = 0, admission = koiosAdmission(KOIOS_ASSET_UTXOS_MIN_INTERVAL_MS)): Promise<KoiosAssetUTxO[] | null> => {
     checkDeadline('asset_utxos_retry');
     const body = JSON.stringify({ _asset_list: assetList, _extended: true });
     try {
-        return (await fetchKoios(`asset_utxos`, 'POST', body, koiosAdmission())) as KoiosAssetUTxO[] | null;
+        return (await fetchKoios(`asset_utxos`, 'POST', body, admission)) as KoiosAssetUTxO[] | null;
     } catch (error: any) {
         const retriable = isRetriableKoiosError(error);
         Logger.local({
@@ -532,8 +552,9 @@ const fetchAssetUtxoBatchWithRetry = async (assetList: [string, string][], attem
         if (!retriable || attempt >= KOIOS_ASSET_UTXOS_MAX_RETRIES) throw error;
 
         const backoff = getKoiosRetryDelay(attempt, error);
+        admission.beforeStart?.(Date.now() + backoff);
         await delayMs(backoff);
-        return fetchAssetUtxoBatchWithRetry(assetList, attempt + 1);
+        return fetchAssetUtxoBatchWithRetry(assetList, attempt + 1, admission);
     }
 };
 
@@ -557,12 +578,14 @@ const getBatchedTxHashesWithFallback = async (blockHashes: string[]): Promise<{ 
     try {
         return await getBatchedTxHashes(blockHashes);
     } catch (error: any) {
+        if (isRequestDeadlineError(error)) throw error;
+        checkDeadline('block_txs_fallback');
         Logger.log({
             message: `Koios block_txs failed, falling back to Blockfrost: ${error?.message ?? error}`,
             category: LogCategory.WARN,
             event: 'scannerLambda.koiosBlockTxs.fallbackToBlockfrost'
         });
-        return fetchBlockfrostTxHashes(blockHashes);
+        return fetchBlockfrostTxHashes(blockHashes, koiosAdmission());
     }
 };
 
@@ -570,6 +593,8 @@ const getBatchedTxInfoWithFallback = async (txHashes: string[]): Promise<KoiosTx
     try {
         return await getBatchedTxInfo(txHashes);
     } catch (error: any) {
+        if (isRequestDeadlineError(error)) throw error;
+        checkDeadline('tx_info_fallback');
         Logger.log({
             message: `Koios tx_info failed for ${txHashes.length} txs, falling back to Blockfrost: ${error?.message ?? error}`,
             category: LogCategory.WARN,
@@ -577,7 +602,7 @@ const getBatchedTxInfoWithFallback = async (txHashes: string[]): Promise<KoiosTx
         });
         const results: KoiosTxInfo[] = [];
         for (const txHash of txHashes) {
-            results.push(await fetchBlockfrostTxInfo(txHash));
+            results.push(await fetchBlockfrostTxInfo(txHash, koiosAdmission()));
         }
         return results;
     }
@@ -587,6 +612,8 @@ const getBatchedDatumInfoWithFallback = async (txInfo: KoiosTxInfo[]): Promise<M
     try {
         return await getBatchedDatumInfo(txInfo);
     } catch (error: any) {
+        if (isRequestDeadlineError(error)) throw error;
+        checkDeadline('datum_info_fallback');
         Logger.log({
             message: `Koios datum_info failed, falling back to Blockfrost: ${error?.message ?? error}`,
             category: LogCategory.WARN,
@@ -595,7 +622,7 @@ const getBatchedDatumInfoWithFallback = async (txInfo: KoiosTxInfo[]): Promise<M
         const datumHashes = extractDatumHashes(txInfo);
         const datumInfoByHash = new Map<string, string>();
         for (const datumHash of datumHashes) {
-            const cbor = await fetchBlockfrostDatumCbor(datumHash);
+            const cbor = await fetchBlockfrostDatumCbor(datumHash, koiosAdmission());
             if (cbor) datumInfoByHash.set(datumHash, cbor);
         }
         return datumInfoByHash;
@@ -628,7 +655,7 @@ const filterUTxOToHandleNames = (utxo: UTxOWithTxInfo, handleNames: Set<string>)
 };
 
 const getLatestChainTip = async () => {
-    const latestBlockResponse = await blockfrostApiCall('blocks/latest');
+    const latestBlockResponse = await blockfrostApiCall('blocks/latest', koiosAdmission());
     if (latestBlockResponse.ok) {
         const latestBlock = await latestBlockResponse.json();
         return {
@@ -648,7 +675,8 @@ const getLatestChainTip = async () => {
             slot: Number(latestTip?.abs_slot ?? 0),
             height: Number(latestTip?.block_height ?? latestTip?.block_no ?? 0)
         };
-    } catch {
+    } catch (error) {
+        if (isRequestDeadlineError(error)) throw error;
         return null;
     }
 };
@@ -688,7 +716,7 @@ const processRollback = async ({ currentSlot, rollbackOffset = DEFAULT_ROLLBACK_
 
     const blockHeight = latestBlock.height - rollbackOffset;
     rbBreadcrumb('fetchBlockMetadata_start', `fromHeight=${blockHeight}`);
-    const blockList: BlockfrostBlock[] = await fetchPaginatedResults(`blocks/${blockHeight}/next`);
+    const blockList: BlockfrostBlock[] = await fetchPaginatedResults(`blocks/${blockHeight}/next`, Infinity, koiosAdmission());
     rbBreadcrumb('fetchBlockMetadata_done', `blocks=${blockList.length}`);
     const [firstBlock] = blockList;
     if (!firstBlock) return;
@@ -832,21 +860,35 @@ const processRollback = async ({ currentSlot, rollbackOffset = DEFAULT_ROLLBACK_
     const handleTxHashes: string[] = [];
     const canonicalTxByHandle = new Map<string, string>();
     rbBreadcrumb('fetchAssetUtxos_start', `batchCount=${batchedHandles.length} handleCount=${storedHandles.length}`);
+    let assetFailure: { error: unknown } | undefined;
+    const assetAdmission = koiosAdmission(KOIOS_ASSET_UTXOS_MIN_INTERVAL_MS);
+    const checkAssetBudget = assetAdmission.beforeStart;
+    assetAdmission.beforeStart = (earliestStartAt) => {
+        if (assetFailure) throw assetFailure.error;
+        checkAssetBudget(earliestStartAt);
+    };
+    // Observe each rejection immediately (no shared-helper start-delay gap),
+    // stop queued admissions and drain active reads before outer lease cleanup.
     await asyncForEach(batchedHandles, async (batch) => {
-        const koiosUtxos = await fetchAssetUtxoBatchWithRetry(batch);
-        if (koiosUtxos !== null) {
-            for (const utxo of koiosUtxos) {
-                handleTxHashes.push(utxo.tx_hash);
-                // Extract handle → canonical tx mapping for drift detection
-                for (const asset of utxo.asset_list ?? []) {
-                    if (HANDLE_POLICIES.contains(NETWORK as Network, asset.policy_id)) {
-                        const { name } = getHandleNameFromAssetName(asset.asset_name);
-                        canonicalTxByHandle.set(name, utxo.tx_hash);
+        try {
+            const koiosUtxos = await fetchAssetUtxoBatchWithRetry(batch, 0, assetAdmission);
+            if (koiosUtxos !== null) {
+                for (const utxo of koiosUtxos) {
+                    handleTxHashes.push(utxo.tx_hash);
+                    // Extract handle → canonical tx mapping for drift detection
+                    for (const asset of utxo.asset_list ?? []) {
+                        if (HANDLE_POLICIES.contains(NETWORK as Network, asset.policy_id)) {
+                            const { name } = getHandleNameFromAssetName(asset.asset_name);
+                            canonicalTxByHandle.set(name, utxo.tx_hash);
+                        }
                     }
                 }
             }
+        } catch (error) {
+            assetFailure ??= { error };
         }
-    }, KOIOS_ASSET_UTXOS_MIN_INTERVAL_MS);
+    });
+    if (assetFailure) throw assetFailure.error;
     rbBreadcrumb('fetchAssetUtxos_done', `handleTxHashes=${handleTxHashes.length}`);
 
     // ===== PHASE 4b: Identify handles needing repair (orphaned OR drifted) =====
@@ -982,7 +1024,7 @@ const checkRollback = async () => {
         // Only orphaned Handle UTxOs trigger expensive provider calls (targeted).
         await processRollback({ currentSlot });
     } catch (error: any) {
-        if (error instanceof ScannerDeadlineError) {
+        if (isRequestDeadlineError(error)) {
             Logger.log({
                 message: `${error.message}. Rollback incomplete — next invocation will retry.`,
                 category: LogCategory.INFO,
@@ -1161,7 +1203,7 @@ const processScannerBlock = (
 
 // Blockfrost answers 404 for a block hash that is not on the canonical chain.
 const isCanonicalBlockHash = async (hash: string): Promise<boolean | undefined> => {
-    const response = await blockfrostApiCall(`blocks/${hash}`);
+    const response = await blockfrostApiCall(`blocks/${hash}`, koiosAdmission());
     if (response.status === 404) return false;
     return response.ok ? true : undefined;
 };
@@ -1178,6 +1220,7 @@ const scanWithDemeter = async (metrics: ReturnType<HandlesRepository['getMetrics
         throw new Error('Demeter scan requires a verified snapshot cursor with currentSlot and currentBlockHash');
     }
     const policies = Object.keys(HANDLE_POLICIES[NETWORK.toLowerCase() as Network] ?? {});
+    checkDeadline('demeter_watch');
     const timeoutMs = Math.max(1_000, scannerDeadline - Date.now() - 5_000);
     scanBreadcrumb('demeterWatch_start', `from=${start.slot} policies=${policies.length}`);
     let tip: Awaited<ReturnType<typeof scanDemeterBlocks>>;
@@ -1191,6 +1234,7 @@ const scanWithDemeter = async (metrics: ReturnType<HandlesRepository['getMetrics
             );
         });
     } catch (error) {
+        if (isRequestDeadlineError(error)) throw error;
         // A resume point on an orphaned fork makes Demeter cancel WatchTx instead of emitting `undo`,
         // so without this the scanner retries the same dead cursor forever (preprod stalled
         // 2026-09-21 -> 09-24 while /health said "current"). Route it into canonical rollback.
@@ -1234,7 +1278,8 @@ const scan = async () => {
         scanBreadcrumb('fetchPaginatedResults_start', `from=${metrics.currentBlockHash}`);
         let bResp: { hash: string; slot: number; confirmations: number; tx_count?: number }[] = await fetchPaginatedResults(
             `blocks/${metrics.currentBlockHash}/next`,
-            SCANNER_MAX_BLOCKS_PER_INVOCATION + 1
+            SCANNER_MAX_BLOCKS_PER_INVOCATION + 1,
+            koiosAdmission()
         );
         scanBreadcrumb('fetchPaginatedResults_done', `blocks=${bResp.length}`);
         bResp.sort((a, b) => b.confirmations - a.confirmations);
@@ -1379,13 +1424,13 @@ const scan = async () => {
         store.trimScannedBlocksToRecent(3000);
 
     } catch (error: any) {
-        if (error instanceof ScannerDeadlineError) {
+        if (isRequestDeadlineError(error)) {
             Logger.log({
                 message: `${error.message}. Pausing this invocation — next invocation will resume from last saved block.`,
                 category: LogCategory.INFO,
                 event: 'scannerLambda.deadlineReached'
             });
-            return;
+            return false;
         }
         if (error instanceof DemeterDeadlineError) {
             Logger.log({
@@ -1393,7 +1438,7 @@ const scan = async () => {
                 category: LogCategory.INFO,
                 event: 'scannerLambda.demeterDeadlineReached'
             });
-            return;
+            return false;
         }
         if (error instanceof DemeterRollbackError) {
             Logger.log({
@@ -1589,11 +1634,12 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent | AWSLambda.APIGat
         }
 
         logBreadcrumb('scan_start');
-        await scan();
+        if (await scan() === false) return;
         logBreadcrumb('scan_done');
 
         logBreadcrumb('mpt_root_check_start');
         if (handlesRepo.isCaughtUp()) {
+            checkDeadline('mpt_root_verification');
             const storedMptRoot = store.getMptRootHash();
             try {
                 const chainMptRoot = await getChainMintingDataRootHash();
@@ -1640,7 +1686,7 @@ export const lambdaHandler = async (event: AWSLambda.ALBEvent | AWSLambda.APIGat
             body: ''
         };
     } catch (error: any) {
-        if (error instanceof ScannerDeadlineError) {
+        if (isRequestDeadlineError(error)) {
             Logger.log({
                 message: `${error.message}. Exiting gracefully — next invocation will resume from last saved block.`,
                 category: LogCategory.WARN,

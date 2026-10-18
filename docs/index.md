@@ -16,6 +16,7 @@
 - [Scanner Recovery Runbook](./spec/scanner-recovery-runbook.md)
 - [Snapshot Admission and Ownership](./spec/snapshot-admission.md)
 - [Target-specific Mainnet Guard Readiness](./spec/mainnet-guard-readiness.md)
+- [Mainnet Provider Continuation](./spec/mainnet-provider-continuation.md)
 - [Build and Release Guards](./build-release-guards.md)
 - [OpenAPI Swagger](./swagger.yml)
 
