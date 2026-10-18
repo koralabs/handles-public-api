@@ -14,6 +14,9 @@
 - [Runtime Entrypoints](./spec/runtime-entrypoints.md)
 - [@handlecontract Script Discovery](./spec/handlecontract-script-discovery.md)
 - [Scanner Recovery Runbook](./spec/scanner-recovery-runbook.md)
+- [Snapshot Admission and Ownership](./spec/snapshot-admission.md)
+- [Target-specific Mainnet Guard Readiness](./spec/mainnet-guard-readiness.md)
+- [Build and Release Guards](./build-release-guards.md)
 - [OpenAPI Swagger](./swagger.yml)
 
 ## Environment
