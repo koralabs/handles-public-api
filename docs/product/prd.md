@@ -42,6 +42,7 @@ Reading Handle state directly from chain providers for every request is expensiv
 - Complete API documentation in `docs/swagger.yml`.
 - Operator env glossary is maintained in `site.env` (no real secrets).
 - Runtime feature inventory and endpoint ownership are maintained in `docs/product/feature-matrix.md`.
+- Snapshot recovery must preserve existing data, metrics and control ownership when a candidate, resume marker or pre-admission ownership check is invalid. Missing snapshots permit genesis only for an absent original. See [Snapshot Admission and Ownership](../spec/snapshot-admission.md) for the bounded import and trust contract.
 - Core read API:
   - `/handles` catalog search + pagination and `/handles/list` batch reverse-lookup
   - `/handles/:handle` details and associated views (`/utxo`, `/personalized`, `/subhandle-settings`, `/subhandles`)
