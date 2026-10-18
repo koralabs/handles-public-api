@@ -109,6 +109,9 @@ describe('Scanner lambda e2e', () => {
     });
 
     beforeEach(() => {
+        // Cache resets intentionally preserve control keys. Each case owns its recovery
+        // fixture; a prior forced reindex failure must not select recovery in this case.
+        store.redisClientCall('del', [getApiScannerRecoveryKey()]);
         repo.rollBackToGenesis();
         repo.addUTxOsWithMintData([buildTrackedUtxo()]);
         repo.setMetrics({
