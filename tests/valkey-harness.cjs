@@ -143,7 +143,9 @@ function connectionOptions(options) {
     const r = verify();
     // Supply the fixture's authentication only when the caller did not choose credentials;
     // an explicit wrong password must still fail at the real server, not be papered over.
-    return { ...options, credentials: options.credentials ?? { username: 'default', password: r.password } };
+    // Native creation awaits before using options: never retain a caller-mutable target.
+    return { ...options, addresses: [{ ...options.addresses[0], host: r.host, port: r.port }], useTLS: false,
+        credentials: options.credentials ?? { username: 'default', password: r.password } };
 }
 
 module.exports = { start, stop, verify, connectionOptions };
