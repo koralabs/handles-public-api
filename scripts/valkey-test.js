@@ -1,3 +1,5 @@
+// Legacy manual test: the shared guard refuses its default 6379 target before any command.
+import '../tests/network-guard.cjs';
 import { Batch, GlideClient } from '@valkey/valkey-glide';
 
 // Create a Valkey client using valkey-glide

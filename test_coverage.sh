@@ -12,13 +12,9 @@ STANDARD_TEST_OUTPUT="$(mktemp)"
 COVERAGE_OUTPUT="$(mktemp)"
 trap 'rm -f "$STANDARD_TEST_OUTPUT" "$COVERAGE_OUTPUT"' EXIT
 
-chmod +x ./shell/local_valkey.sh
-REDIS_HOST="$REDIS_HOST" REDIS_PORT="$REDIS_PORT" ./shell/local_valkey.sh
-
 npm test > "$STANDARD_TEST_OUTPUT" 2>&1
 
-NETWORK="$NETWORK" REDIS_HOST="$REDIS_HOST" REDIS_PORT="$REDIS_PORT" npx jest \
-  -c jest.critical.config.ts \
+NETWORK="$NETWORK" REDIS_HOST="$REDIS_HOST" REDIS_PORT="$REDIS_PORT" npm run test:critical -- \
   --forceExit \
   --runInBand \
   --coverage \

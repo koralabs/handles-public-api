@@ -1,3 +1,4 @@
+import '../tests/network-guard.cjs';
 import { Transaction } from '@cardano-ogmios/schema';
 import { buildOgmiosTransaction } from '../services/ogmios/utils';
 import { blockfrostApiCall, fetchTxList } from '../utils/helpers';

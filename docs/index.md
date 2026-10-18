@@ -20,5 +20,8 @@
 - [Build and Release Guards](./build-release-guards.md)
 - [OpenAPI Swagger](./swagger.yml)
 
+## Testing
+- [Credential and Network Isolation](./spec/test-network-isolation.md)
+
 ## Environment
 - [Environment Variable Glossary](../site.env)
