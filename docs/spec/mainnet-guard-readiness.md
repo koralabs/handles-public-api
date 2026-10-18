@@ -1,5 +1,7 @@
 # Target-specific mainnet snapshot and release guards
 
+This is the preserved PR262 guard-release assessment (a0bbfbc → actually served cf7). The deliberately excluded provider/deadline work is tracked separately in [Mainnet Provider Continuation](./mainnet-provider-continuation.md); the historical exclusion below is not a claim those known defects were fixed by PR262.
+
 ## Baselines and preservation
 
 This candidate is based on fresh mainnet source `35c2903ae4dc451fe977d701051ddd3c53629051`, not an environment merge. The previously verified PREPROD release `c9248cae532aa1bc947e856daf919836689ee652` remains reachable through `preserve/api-preprod-c924-20261018` and the preserved previous checkout branch. Only the reviewed snapshot/ownership/legacy-bootstrap/build/helper-pin commits were ported. PREPROD's separate provider-deadline/redirect changes are deliberately not included.
