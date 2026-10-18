@@ -135,6 +135,12 @@ assert.deepEqual(got, opts);
 assert.equal(opts.credentials.password, 'wrong');
 const withoutCredentials = { addresses: opts.addresses, useTLS: false, requestTimeout: 1234 };
 assert.deepEqual(h.connectionOptions(withoutCredentials), { ...withoutCredentials, credentials: { username: 'default', password: r.password } });
+// The checked destination cannot retain caller-owned references across native awaits.
+const mutable = { addresses: [{ host: r.host, port: r.port }], useTLS: false };
+const checked = h.connectionOptions(mutable);
+mutable.addresses[0].host = 'must-never-connect.invalid';
+mutable.addresses[0].port = 6379;
+assert.deepEqual(checked.addresses, [{ host: r.host, port: r.port }]);
 assert.equal((await h.start()).containerId, r.containerId);
 require('node:child_process').execFileSync(process.execPath, ['-e',
     'require(' + JSON.stringify(${JSON.stringify(harness)}) + ').verify()'], { env: process.env });
