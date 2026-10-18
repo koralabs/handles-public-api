@@ -10,4 +10,5 @@
 - [Target-specific Mainnet Guard Readiness](./mainnet-guard-readiness.md)
 - [Mainnet Provider Continuation](./mainnet-provider-continuation.md)
 - [OpenAPI Swagger](../swagger.yml)
+- [Test Credential and Network Isolation](./test-network-isolation.md)
 - [Docs Index](../index.md)

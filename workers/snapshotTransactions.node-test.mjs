@@ -1,7 +1,9 @@
+import '../tests/network-guard.cjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
 import { GlideClient } from '@valkey/valkey-glide';
+import { S3Client, ListBucketsCommand } from '@aws-sdk/client-s3';
 import { claimSnapshot, fencedSnapshotCall } from './redisSync.worker.js';
 
 // Isolated local test server only. Never connect to the default/live port.
@@ -29,6 +31,17 @@ before(async () => {
 after(async () => {
     if (client) { if (keys.size) await client.del([...keys]); client.close(); }
     peer?.close();
+});
+
+// Invariant: the native integration entrypoint isolates AWS even while real Glide is allowed.
+// Removing its preload reaches the AWS hostname rather than this transport denial.
+test('unfaked AWS remains blocked alongside the owned native Valkey clients', async () => {
+    assert.equal(process.env.AWS_SHARED_CREDENTIALS_FILE, '/dev/null');
+    assert.equal(process.env.AWS_EC2_METADATA_DISABLED, 'true');
+    const aws = new S3Client({ region: 'us-east-1', endpoint: 'https://s3.us-east-1.amazonaws.com',
+        credentials: { accessKeyId: 'unit-test-only', secretAccessKey: 'unit-test-only' }, maxAttempts: 1 });
+    try { await assert.rejects(aws.send(new ListBucketsCommand({})), /Test network denied/); }
+    finally { aws.destroy(); }
 });
 
 // Invariant: original metrics/progress are compared before ownership is admitted.
