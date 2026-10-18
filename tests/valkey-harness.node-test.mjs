@@ -82,7 +82,12 @@ else if (args[0] === 'create') {
 } else if (args[0] === 'start') {
     if (scenario.startFail) { console.error(c.Config.Cmd.join(' ')); process.exit(3); }
     c.State.Running = true; c.NetworkSettings.Ports = c.HostConfig.PortBindings; save(); console.log(id);
-} else if (args[0] === 'exec') { console.log('PONG'); }
+} else if (args[0] === 'exec') {
+    const password = c.Config.Cmd[c.Config.Cmd.indexOf('--requirepass') + 1];
+    // Valkey 8's CLI consumes REDISCLI_AUTH, not VALKEYCLI_AUTH.
+    const auth = args[args.indexOf('-e') + 1];
+    console.log(auth === 'REDISCLI_AUTH=' + password ? 'PONG' : 'NOAUTH Authentication required.');
+}
 else if (args[0] === 'rm') { fs.unlinkSync(dir + '/state.json'); console.log(id); }
 else process.exit(99);
 `, { mode: 0o700 });
