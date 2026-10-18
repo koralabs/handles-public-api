@@ -6,5 +6,6 @@
 - [Runtime Entrypoints](./runtime-entrypoints.md)
 - [@handlecontract Script Discovery](./handlecontract-script-discovery.md)
 - [Scanner Recovery Runbook](./scanner-recovery-runbook.md)
+- [Snapshot Admission and Ownership](./snapshot-admission.md)
 - [OpenAPI Swagger](../swagger.yml)
 - [Docs Index](../index.md)

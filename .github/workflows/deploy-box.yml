@@ -1,12 +1,12 @@
 name: api.handle.me (box / service-fn-push, no AWS)
 # Self-hosted box deploy (BACKEND service — no static). THIS REPO IS PUBLIC, so it names nothing
 # sensitive: the deploy LOGIC is the private adahandle-deployments service-fn-push.sh (fetched via
-# the vars.DEPLOY_FETCH_BASE repo variable); the box deploy endpoint is derived privately in that
+# an immutable reviewed commit); the box deploy endpoint is derived privately in that
 # script; paths/account/creds are repo variables + secrets. Only the build commands (already public
 # in this repo) and the fn list (handlers are public source) appear in the clear.
 #
 # TEMPLATE for any PUBLIC repo: copy this, set the repo's FN_FUNCTIONS/build cmds, and provide the
-# vars.DEPLOY_FETCH_BASE variable + the R2_*/KORA_DEPLOY_HMAC_SECRET/DEPLOYMENT_ACCESS_TOKEN secrets.
+# reviewed deployments commit + the R2_*/KORA_DEPLOY_HMAC_SECRET/DEPLOYMENT_ACCESS_TOKEN secrets.
 on:
   # All environments are deployed explicitly through the self-hosted box workflow.
   workflow_dispatch:
@@ -42,7 +42,7 @@ jobs:
           DEPLOYABLE: api.handle.me
           BOX_ENV: ${{ ((github.event.inputs.environment == 'auto' || github.event.inputs.environment == '') && github.ref_name || github.event.inputs.environment) }}
           NODE_VERSION: '22'
-          SERVICE_INSTALL_CMD: npm install
+          SERVICE_INSTALL_CMD: npm ci --include=dev
           # Also stage deployment_info.json into ./dist so the /deployment endpoint can
           # read it at runtime (the box runs functions with cwd=dist, same as swagger.yml).
           # The old AWS build.sh generated this into the lambda bundle root; the box build
@@ -50,8 +50,10 @@ jobs:
           SERVICE_BUILD_CMD: npm run build:lambda && cp -r ./dist/lambdas/* ./dist && jq -n --arg version $(jq -r .version package.json) --arg build ${{ github.run_id }}-${{ github.run_attempt }} --arg commit ${{ github.sha }} --arg timestamp $(date -u +%FT%TZ) '{version:$version,build:$build,commit:$commit,timestamp:$timestamp}' > ./dist/deployment_info.json
           SERVICE_DIST: dist
           FN_FUNCTIONS: '[{"name":"api","handler":"lambdas/api.js","kind":"http","memory":512,"export":"handler"},{"name":"scanner","handler":"lambdas/scanner.js","kind":"worker","schedule":"*:0/2","memory":8192,"export":"lambdaHandler"},{"name":"snapshot","handler":"lambdas/snapshot.js","kind":"worker","schedule":"*-*-* 00,06,12,18:00:00","memory":8192,"export":"handler"}]'
-          # --- everything below is a variable/secret so this public repo leaks nothing ---
-          DEPLOY_FETCH_BASE: ${{ vars.DEPLOY_FETCH_BASE }}
+          # Publish this reviewed deployments commit before using the workflow. The producer's
+          # validation/runtime/box helpers inherit this same immutable base.
+          DEPLOY_FETCH_BASE: https://raw.githubusercontent.com/koralabs/adahandle-deployments/b827d5a629bab68d60d5816dcbf96579eff84357/common
+          # --- everything below is a secret so this public repo leaks nothing ---
           DEPLOYMENT_ACCESS_TOKEN: ${{ secrets.DEPLOYMENT_ACCESS_TOKEN }}
           KORA_DEPLOY_HMAC_SECRET: ${{ secrets.KORA_DEPLOY_HMAC_SECRET }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
@@ -59,6 +61,5 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           set -eu
-          curl -fsS -H "Authorization: Bearer ${DEPLOYMENT_ACCESS_TOKEN}" "${DEPLOY_FETCH_BASE}/build-koralabs-deps.sh" -o build-koralabs-deps.sh
           curl -fsS -H "Authorization: Bearer ${DEPLOYMENT_ACCESS_TOKEN}" "${DEPLOY_FETCH_BASE}/service-fn-push.sh" -o service-fn-push.sh
           chmod +x service-fn-push.sh && ./service-fn-push.sh
