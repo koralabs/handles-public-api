@@ -1,6 +1,6 @@
 // Invariant: every environment installs the locked compiler graph without fetching sibling fallback.
 // Failure caught: floating npm install or reintroduction of the source-rewriting helper fetch.
-// Negative controls: restore either old workflow line; the command/fetch assertions below fail.
+// Negative controls: restore floating install, sibling fetch or mutable base; command/fetch assertions fail.
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,6 +11,7 @@ import YAML from 'yaml';
 
 const workflow = YAML.parse(readFileSync(new URL('../workflows/deploy-box.yml', import.meta.url), 'utf8'));
 const step = workflow.jobs['deploy-box'].steps.find(step => step.env?.SERVICE_INSTALL_CMD);
+const reviewedBase = 'https://raw.githubusercontent.com/koralabs/adahandle-deployments/b827d5a629bab68d60d5816dcbf96579eff84357/common';
 
 function execute(environment, failFetch = false) {
     const dir = mkdtempSync(join(tmpdir(), 'api-workflow-test-'));
@@ -36,20 +37,21 @@ cat > "$out" <<'HELPER'
 set -eu
 eval "$SERVICE_INSTALL_CMD"
 printf '%s' "$BOX_ENV" > invoked-environment
+printf '%s' "$DEPLOY_FETCH_BASE" > inherited-base
 HELPER
 `, { mode: 0o755 });
         writeFileSync(join(dir, 'bin/npm'), '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> installs\n', { mode: 0o755 });
         const result = spawnSync('bash', ['-c', step.run], {
             cwd: dir, encoding: 'utf8',
             env: { ...process.env, PATH: `${dir}/bin:${process.env.PATH}`, BOX_ENV: environment,
-                SERVICE_INSTALL_CMD: step.env.SERVICE_INSTALL_CMD, DEPLOY_FETCH_BASE: 'https://fixture.invalid/reviewed/common',
+                SERVICE_INSTALL_CMD: step.env.SERVICE_INSTALL_CMD, DEPLOY_FETCH_BASE: step.env.DEPLOY_FETCH_BASE,
                 DEPLOYMENT_ACCESS_TOKEN: 'fixture-token', FAIL_FETCH: failFetch ? '1' : '0' }
         });
         const content = file => {
             try { return readFileSync(join(dir, file), 'utf8'); }
             catch (error) { if (error.code === 'ENOENT') return null; throw error; }
         };
-        return { result, fetches: content('fetches'), installs: content('installs'), invoked: content('invoked-environment') };
+        return { result, fetches: content('fetches'), installs: content('installs'), invoked: content('invoked-environment'), inheritedBase: content('inherited-base') };
     } finally {
         rmSync(dir, { recursive: true, force: true });
     }
@@ -59,7 +61,8 @@ for (const environment of ['preview', 'preprod', 'mainnet']) {
     test(`${environment}: locked install and only deployment producer fetched`, () => {
         const output = execute(environment);
         assert.equal(output.result.status, 0, output.result.stderr);
-        assert.equal(output.fetches, 'https://fixture.invalid/reviewed/common/service-fn-push.sh\n');
+        assert.equal(output.fetches, `${reviewedBase}/service-fn-push.sh\n`);
+        assert.equal(output.inheritedBase, reviewedBase);
         assert.equal(output.installs, 'ci --include=dev\n');
         assert.equal(output.invoked, environment);
     });
@@ -70,4 +73,5 @@ test('failed producer fetch cannot install or execute deployment', () => {
     assert.equal(output.result.status, 22);
     assert.equal(output.installs, null);
     assert.equal(output.invoked, null);
+    assert.equal(output.inheritedBase, null);
 });
