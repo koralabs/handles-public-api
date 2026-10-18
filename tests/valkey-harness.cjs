@@ -109,7 +109,7 @@ async function start() {
         let ready = false;
         for (let attempt = 0; attempt < 50; attempt++) {
             try {
-                if (docker(['exec', '-e', `VALKEYCLI_AUTH=${r.password}`, r.containerId,
+                if (docker(['exec', '-e', `REDISCLI_AUTH=${r.password}`, r.containerId,
                     'valkey-cli', '-h', HOST, '-p', String(PORT), 'PING']) === 'PONG') { ready = true; break; }
             } catch {
                 // The server may not yet be listening immediately after Docker starts it.
