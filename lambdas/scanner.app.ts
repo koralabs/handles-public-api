@@ -4,6 +4,7 @@ import { scannerBudgetMs, SCANNER_MAX_WORK_MS } from './scannerBudget';
 import { BlockfrostBlock, KoiosAssetUTxO, KoiosDatumInfo, KoiosTxInfo } from '../interfaces/provider.interface';
 import { HandlesRepository } from '../repositories/handlesRepository';
 import { getHandleNameFromAssetName } from '../services/ogmios/utils';
+import { registerSnapshotScannerOwner, unregisterSnapshotScannerOwner } from '../utils/snapshotOwnership';
 import { isRegistryLabel } from '../utils/assetLabelRegistry';
 import { getHandlesStore } from '../stores/redis';
 import { getApiMptRebuildPendingKey, getApiScannerLeaseKey, getApiScannerRecoveryKey } from '../stores/redis/keys';
@@ -119,6 +120,7 @@ const acquireScannerLease = (owner: string): boolean => {
         conditionalSet: 'onlyIfDoesNotExist',
         expiry: { type: 'PX', count: SCANNER_LEASE_TTL_MS }
     });
+    if (result === 'OK') registerSnapshotScannerOwner(owner);
     return result === 'OK';
 };
 
@@ -136,9 +138,13 @@ const renewScannerLease = (owner: string): boolean => {
 };
 
 const releaseScannerLease = (owner: string): void => {
-    store.redisClientCall('customCommand', [
-        'EVAL', LEASE_RELEASE_SCRIPT, '1', SCANNER_LEASE_KEY, owner
-    ]);
+    try {
+        store.redisClientCall('customCommand', [
+            'EVAL', LEASE_RELEASE_SCRIPT, '1', SCANNER_LEASE_KEY, owner
+        ]);
+    } finally {
+        unregisterSnapshotScannerOwner(owner);
+    }
 };
 
 const setRecoveryFlag = (reason: string): void => {
