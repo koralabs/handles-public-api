@@ -11,7 +11,7 @@ import YAML from 'yaml';
 
 const workflow = YAML.parse(readFileSync(new URL('../workflows/deploy-box.yml', import.meta.url), 'utf8'));
 const step = workflow.jobs['deploy-box'].steps.find(step => step.env?.SERVICE_INSTALL_CMD);
-const reviewedBase = 'https://raw.githubusercontent.com/koralabs/adahandle-deployments/b827d5a629bab68d60d5816dcbf96579eff84357/common';
+const reviewedBase = 'https://raw.githubusercontent.com/koralabs/adahandle-deployments/2b2b8350f59054a28aee6cd59ffa04253261425a/common';
 
 function execute(environment, failFetch = false) {
     const dir = mkdtempSync(join(tmpdir(), 'api-workflow-test-'));

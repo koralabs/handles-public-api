@@ -52,7 +52,7 @@ jobs:
           FN_FUNCTIONS: '[{"name":"api","handler":"lambdas/api.js","kind":"http","memory":512,"export":"handler"},{"name":"scanner","handler":"lambdas/scanner.js","kind":"worker","schedule":"*:0/2","memory":8192,"export":"lambdaHandler"},{"name":"snapshot","handler":"lambdas/snapshot.js","kind":"worker","schedule":"*-*-* 00,06,12,18:00:00","memory":8192,"export":"handler"}]'
           # Publish this reviewed deployments commit before using the workflow. The producer's
           # validation/runtime/box helpers inherit this same immutable base.
-          DEPLOY_FETCH_BASE: https://raw.githubusercontent.com/koralabs/adahandle-deployments/b827d5a629bab68d60d5816dcbf96579eff84357/common
+          DEPLOY_FETCH_BASE: https://raw.githubusercontent.com/koralabs/adahandle-deployments/2b2b8350f59054a28aee6cd59ffa04253261425a/common
           # --- everything below is a secret so this public repo leaks nothing ---
           DEPLOYMENT_ACCESS_TOKEN: ${{ secrets.DEPLOYMENT_ACCESS_TOKEN }}
           KORA_DEPLOY_HMAC_SECRET: ${{ secrets.KORA_DEPLOY_HMAC_SECRET }}
