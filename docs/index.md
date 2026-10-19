@@ -20,6 +20,8 @@
 - [Build and Release Guards](./build-release-guards.md)
 - [OpenAPI Swagger](./swagger.yml)
 
+- [R2-only Snapshot Storage](./spec/snapshot-r2-storage.md)
+
 ## Testing
 - [Credential and Network Isolation](./spec/test-network-isolation.md)
 

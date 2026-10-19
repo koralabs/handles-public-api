@@ -52,6 +52,30 @@ describe('App lifecycle', () => {
         jest.restoreAllMocks();
     });
 
+    // Startup must fail before opening a listener when R2 is incomplete.
+    // Removing initialize's real factory validation makes these rejections disappear.
+    it.each(['R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'])('refuses startup when %s is blank', async (field) => {
+        const original = process.env[field];
+        process.env[field] = '   ';
+        const app = new App();
+        const listen = jest.spyOn(app.app, 'listen').mockReturnValue({ keepAliveTimeout: 0 } as any);
+        try {
+            await expect(app.listen()).rejects.toThrow('R2 object store requires');
+            expect(listen).not.toHaveBeenCalled();
+        } finally { process.env[field] = original; }
+    });
+
+    it('refuses the retired S3 selector before listening', async () => {
+        const original = process.env.KORA_OBJECT_STORE;
+        process.env.KORA_OBJECT_STORE = 's3';
+        const app = new App();
+        try { await expect(app.listen()).rejects.toThrow('AWS S3 is retired'); }
+        finally {
+            if (original === undefined) delete process.env.KORA_OBJECT_STORE;
+            else process.env.KORA_OBJECT_STORE = original;
+        }
+    });
+
     it('returns dynamic load directories only in development/test env', () => {
         process.env.DYNAMIC_LOAD_DIR = './custom-one;./custom-two';
         const app = new App();
