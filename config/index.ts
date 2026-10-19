@@ -10,9 +10,15 @@ export const {
     OGMIOS_HOST = 'http://localhost:1337',
     NETWORK = '',
     DISABLE_HANDLES_SNAPSHOT = '',
-    SNAPSHOT_BASE_URL = 'http://api.handle.me.s3-website-us-west-2.amazonaws.com',
+    SNAPSHOT_BASE_URL = '',
     WHITELISTED_API_KEYS = ''
 } = process.env;
+
+export const getSnapshotUrl = (network: string, schemaVersion: number) => {
+    const baseUrl = SNAPSHOT_BASE_URL.trim().replace(/\/+$/, '');
+    if (!baseUrl) throw new Error('SNAPSHOT_BASE_URL must be set to the R2 snapshot public URL');
+    return `${baseUrl}/${network}/utxo-snapshot/${schemaVersion}/handles_utxos.gz`;
+};
 
 export const getIpfsGateway = (backup = false) => {
     return backup
