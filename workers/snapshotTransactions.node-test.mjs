@@ -1,8 +1,19 @@
+import '../tests/network-guard.cjs';
 import assert from 'node:assert/strict';
+import { S3Client, ListBucketsCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
 import { GlideClient } from '@valkey/valkey-glide';
 import { claimSnapshot, fencedSnapshotCall } from './redisSync.worker.js';
+
+// Invariant: the native integration profile retains AWS denial while real Valkey works.
+// Removing transport fencing makes this fail instead of returning TEST_NETWORK_DENIED.
+test('native integration still rejects an unfaked AWS client before networking', async () => {
+    const aws = new S3Client({ region: 'us-east-1', endpoint: 'https://s3.amazonaws.com', maxAttempts: 1,
+        credentials: { accessKeyId: 'test-only-access', secretAccessKey: 'test-only-secret' } });
+    try { await assert.rejects(aws.send(new ListBucketsCommand({})), error => error.code === 'TEST_NETWORK_DENIED'); }
+    finally { aws.destroy(); }
+});
 
 // Isolated local test server only. Never connect to the default/live port.
 const port = Number(process.env.REDIS_PORT ?? 6380);
