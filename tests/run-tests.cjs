@@ -1,5 +1,5 @@
 'use strict';
-require('./network-guard.cjs');
+require('./network-setup.cjs');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 

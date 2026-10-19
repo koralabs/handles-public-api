@@ -1,4 +1,5 @@
 import { IS_LOCAL, LogCategory, Logger } from '@koralabs/kora-labs-common';
+import { objectStoreConfig } from '@koralabs/kora-labs-common/aws';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
@@ -69,6 +70,7 @@ class App {
     }
 
     public async initialize() {
+        objectStoreConfig();
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();
         // Final route fall-through: distinguish 405 (path matched, method didn't)
