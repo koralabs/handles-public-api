@@ -1,7 +1,7 @@
-import { hydrateKmsEnvironment } from '@koralabs/kora-labs-common/aws';
+import { validatePlaintextStartup } from '../utils/startupEnvironment';
 
 export const handler = async (event: AWSLambda.ALBEvent, context: AWSLambda.Context) => {
-    await hydrateKmsEnvironment();
+    await validatePlaintextStartup();
     const { handler: appHandler } = await import('./api.app');
     return appHandler(event, context);
 };

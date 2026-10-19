@@ -102,6 +102,7 @@ Status: planned, not implemented. [Lean implementation design](../spec/demi-mint
 - HandleChat / payments experiences are separate products; this API may become a data dependency but does not implement messaging or payment flows.
 
 ## Snapshot Storage
+- Runtime settings arrive as plaintext from deploy-time SOPS; leftover encrypted settings fail startup without contacting KMS. API runtime does not require unused JWT keys or cloud metadata discovery.
 - Snapshot publishing and restoration use Cloudflare R2 only, never ambient AWS credentials or an AWS website fallback.
 - Missing R2 configuration must fail startup before accepting requests or starting cache workers, rather than being logged only on a later publish.
 - Verify deployments on both boxes with an isolated scratch-object write/read/delete check; never invoke a production snapshot worker for verification.

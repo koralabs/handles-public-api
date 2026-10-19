@@ -35,7 +35,7 @@ describe('API lambda handler', () => {
         expect(result).toEqual(lambdaResponse);
     });
 
-    it('hydrates before loading the API app module', async () => {
+    it('validates plaintext before loading the API app module', async () => {
         const lambdaResponse = { statusCode: 200, body: 'ok' };
         const event = { requestContext: { elb: {} } } as any;
         const context = {} as any;
