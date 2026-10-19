@@ -42,7 +42,7 @@ jobs:
           DEPLOYABLE: api.handle.me
           BOX_ENV: ${{ ((github.event.inputs.environment == 'auto' || github.event.inputs.environment == '') && github.ref_name || github.event.inputs.environment) }}
           NODE_VERSION: '22'
-          SERVICE_INSTALL_CMD: npm install
+          SERVICE_INSTALL_CMD: npm ci --include=dev
           # Also stage deployment_info.json into ./dist so the /deployment endpoint can
           # read it at runtime (the box runs functions with cwd=dist, same as swagger.yml).
           # The old AWS build.sh generated this into the lambda bundle root; the box build
