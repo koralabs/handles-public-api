@@ -16,6 +16,7 @@ import packageJson from './package.json';
 import { HandlesRepository } from './repositories/handlesRepository';
 import OgmiosService from './services/ogmios/ogmios.service';
 import { dynamicallyLoad } from './utils/util';
+import { validatePlaintextStartup } from './utils/startupEnvironment';
 
 export interface AppOptions {
     disableOgmios?: boolean;
@@ -70,6 +71,7 @@ class App {
     }
 
     public async initialize() {
+        await validatePlaintextStartup();
         objectStoreConfig();
         this.initializeMiddleware();
         await this.initializeDynamicHandlers();

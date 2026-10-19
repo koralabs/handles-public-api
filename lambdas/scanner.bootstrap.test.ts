@@ -13,7 +13,7 @@ describe('Scanner lambda bootstrap', () => {
         process.env = ORIGINAL_ENV;
     });
 
-    it('hydrates before loading scanner app exports', async () => {
+    it('validates plaintext before loading scanner app exports', async () => {
         let appLoaded = false;
         let hydrated = false;
         const lambdaResult = { statusCode: 200 };
@@ -130,6 +130,17 @@ describe('Scanner lambda bootstrap', () => {
         } finally {
             consoleError.mockRestore();
         }
+    });
+
+    // The retired crypto flag must not classify runtime or suppress bootstrap failures.
+    // Restoring the KORA_KMS_DISABLED condition turns this rejection into an empty result.
+    it('does not use the dead KMS flag to classify scanner runtime', async () => {
+        delete process.env.KORA_SCANNER_DEFER_IMPORTS;
+        process.env.KORA_KMS_DISABLED = 'true';
+        jest.doMock('@koralabs/kora-labs-common/aws', () => ({ hydrateKmsEnvironment: jest.fn().mockResolvedValue([]) }));
+        jest.doMock('./scanner.app', () => { throw new Error('scanner import boom'); });
+        const scanner = await import('./scanner');
+        await expect(scanner.lambdaHandler({} as any, {} as any)).rejects.toThrow('scanner import boom');
     });
 
     it('keeps throwing bootstrap failures outside self-hosted scanner runtime', async () => {
