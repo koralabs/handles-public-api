@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const [modulePath, env, box, deployId] = process.argv.slice(2);
-const installedModule = modulePath === '/function/snapshot.js' || /^\/tmp\/api-installed-r2-[^/]+\/function\/snapshot\.js$/.test(modulePath ?? '');
+const installedModule = /^\/function\/(?:lambdas\/)?snapshot\.js$/.test(modulePath ?? '') || /^\/tmp\/api-installed-r2-[^/]+\/function\/(?:lambdas\/)?snapshot\.js$/.test(modulePath ?? '');
 if (!installedModule || !['preview', 'preprod', 'mainnet'].includes(env) || !['kora-sf', 'kora-rdm'].includes(box) || !/^[a-f0-9-]{36}$/.test(deployId ?? '')) {
     throw new Error('Usage: node verify-snapshot-r2.mjs <installed-snapshot-module> <env> <kora-sf|kora-rdm> <deploy-uuid>');
 }
@@ -44,7 +44,7 @@ try {
     receipt.getCompared = bytes.equals(body);
     if (!receipt.getCompared) throw new Error('Scratch byte comparison failed');
 } catch (error) {
-    receipt.error = { name: error?.name, status: error?.$metadata?.httpStatusCode };
+    receipt.error = { name: error?.name, code: error?.code, status: error?.$metadata?.httpStatusCode };
     process.exitCode = 1;
 } finally {
     if (putAttempted) {
