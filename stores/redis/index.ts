@@ -4,7 +4,8 @@ import { promisify } from 'util';
 import { createHash, randomUUID } from 'crypto';
 import { MessageChannel, receiveMessageOnPort, Worker } from 'worker_threads';
 import { inflate } from 'zlib';
-import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV, SNAPSHOT_BASE_URL } from '../../config';
+import { objectStoreConfig } from '@koralabs/kora-labs-common/aws';
+import { DISABLE_HANDLES_SNAPSHOT, NODE_ENV, getSnapshotUrl } from '../../config';
 import { handleEraBoundaries, MAX_SETS_PER_PIPE, META_INDEXES, ORDERED_SLOTS } from '../../config/constants';
 import { getHandleNameFromAssetName } from '../../services/ogmios/utils';
 import { canonicalJsonStringify } from '../../utils/helpers';
@@ -34,6 +35,7 @@ export class RedisHandlesStore implements IApiStore {
 
     // #region SETUP **************************
     public initialize(): IApiStore {
+        objectStoreConfig();
         if (!RedisHandlesStore._worker) {
             const worker = new Worker('./workers/redisSync.worker.js');
             worker.on('error', (error: any) => Logger.log({ message: `Valkey sync worker error: ${error?.message ?? error}`, category: LogCategory.ERROR, event: 'ValkeySyncWorker.Error' }));
@@ -197,8 +199,7 @@ export class RedisHandlesStore implements IApiStore {
     public async tryPopulateFromS3UTxOs(utxoFunctions: UTxOFunctions): Promise<{ slot: number; id: string }> {
         const startTime = Date.now();
         const currentUTxOSchemaVersion = this.getUTxOSchemaVersion();
-        const fileName = 'handles_utxos.gz';
-        const url = `${SNAPSHOT_BASE_URL}/${NETWORK}/utxo-snapshot/${this.getUTxOSchemaVersion()}/${fileName}`;
+        const url = getSnapshotUrl(NETWORK, currentUTxOSchemaVersion);
 
         const progressKey = `${getApiCacheTag(NETWORK)}:snapshot_loader:progress`;
         const ownerKey = `${getApiCacheTag(NETWORK)}:snapshot_loader:owner`;
