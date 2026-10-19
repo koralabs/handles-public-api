@@ -13,7 +13,7 @@ const config = {
     testEnvironment: 'node',
     globalSetup: './tests/integration-setup.cjs',
     globalTeardown: './tests/integration-teardown.cjs',
-    setupFiles: ['./tests/network-guard.cjs'],
+    setupFiles: ['./tests/network-setup.cjs'],
     silent: true,
     testMatch: ['**/*.e2e.test.ts'],
     testTimeout: 120000

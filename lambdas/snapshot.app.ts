@@ -9,6 +9,11 @@ import { getHandlesStore } from '../stores/redis';
 import { extractApiIndexMember, getApiIndexScanPattern } from '../stores/redis/keys';
 import { buildSnapshotVerification } from '../utils/snapshotVerification';
 import { VerifiedHandleFileContent } from '../utils/verifiedSnapshot';
+import { getSnapshotUrl } from '../config';
+
+const snapshotObjectStoreConfig = objectStoreConfig();
+export const createSnapshotObjectStoreClient = () => new S3Client(snapshotObjectStoreConfig);
+export { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 declare global {
     interface Console {
@@ -31,12 +36,11 @@ const SNAPSHOT_STALE_NOTIFY_WINDOW_MS = 48 * 60 * 60 * 1000;
 const SNAPSHOT_RETENTION_DAYS = 5;
 const SNAPSHOT_RETENTION_MS = SNAPSHOT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const SNAPSHOT_SCAN_COUNT = 10_000;
-// Snapshot store bucket. On AWS this was the api.handle.me S3 bucket; self-host sets
-// SNAPSHOT_BUCKET (e.g. kora-snapshots in R2). Default preserves the AWS behavior (reversible).
-const SNAPSHOT_BUCKET = process.env.SNAPSHOT_BUCKET || 'api.handle.me';
+// Bucket names are independent of transport; the client is always explicit R2.
+// Self-hosted deployments set SNAPSHOT_BUCKET (e.g. kora-snapshots).
+export const SNAPSHOT_BUCKET = process.env.SNAPSHOT_BUCKET || 'api.handle.me';
 
 const delayMs = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const getSnapshotUrl = (network: string, utxoSchemaVersion: number) => `http://api.handle.me.s3-website-us-west-2.amazonaws.com/${network}/utxo-snapshot/${utxoSchemaVersion}/handles_utxos.gz`;
 const getArchivedSnapshotPrefix = (network: string, utxoSchemaVersion: number) => `${network}/utxo-snapshot/${utxoSchemaVersion}/archive/`;
 const getArchivedSnapshotKey = (network: string, utxoSchemaVersion: number, now: Date) => {
     const timestamp = now.toISOString().replace(/[:.]/g, '-');
@@ -260,7 +264,7 @@ export const handler = async (event: any) => {
 
             const { utxoSchemaVersion = 1 } = verifiedFileJson;
             const fileName = `${network}/utxo-snapshot/${utxoSchemaVersion}/handles_utxos.gz`;
-            const s3Client = new S3Client(objectStoreConfig());
+            const s3Client = createSnapshotObjectStoreClient();
             const now = new Date(Date.now());
 
             const compressedBody = zlib.deflateSync(JSON.stringify(verifiedFileJson));
