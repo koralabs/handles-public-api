@@ -1,8 +1,7 @@
 type ScannerApp = typeof import('./scanner.app');
 
 const isSelfHostedScannerRuntime = () => {
-    const kmsDisabled = `${process.env.KORA_KMS_DISABLED ?? ''}`.toLowerCase();
-    return process.env.KORA_SCANNER_DEFER_IMPORTS?.toLowerCase() === 'true' || kmsDisabled === 'true' || kmsDisabled === '1';
+    return process.env.KORA_SCANNER_DEFER_IMPORTS?.toLowerCase() === 'true';
 };
 
 const isFunctionUrlEvent = (event: any): boolean => Boolean(event?.requestContext?.http);
@@ -40,35 +39,35 @@ const runScannerEntrypoint = async <T>(event: any, run: () => Promise<T>) => {
     }
 };
 
-const hydrateScannerEnvironment = async () => {
-    const { hydrateKmsEnvironment } = await import('@koralabs/kora-labs-common/aws');
-    return hydrateKmsEnvironment();
+const validateScannerEnvironment = async () => {
+    const { validatePlaintextStartup } = await import('../utils/startupEnvironment');
+    return validatePlaintextStartup();
 };
 
 export const lambdaHandler = async (event: any, context: any) => runScannerEntrypoint(event, async () => {
-    await hydrateScannerEnvironment();
+    await validateScannerEnvironment();
     const { lambdaHandler: scannerLambdaHandler } = await import('./scanner.app');
     return scannerLambdaHandler(event, context);
 });
 
 export const Internal = {
     checkRollback: async (...args: Parameters<ScannerApp['Internal']['checkRollback']>) => {
-        await hydrateScannerEnvironment();
+        await validateScannerEnvironment();
         const { Internal: scannerInternal } = await import('./scanner.app');
         return scannerInternal.checkRollback(...args);
     },
     processRollback: async (...args: Parameters<ScannerApp['Internal']['processRollback']>) => {
-        await hydrateScannerEnvironment();
+        await validateScannerEnvironment();
         const { Internal: scannerInternal } = await import('./scanner.app');
         return scannerInternal.processRollback(...args);
     },
     processReindex: async (...args: Parameters<ScannerApp['Internal']['processReindex']>) => {
-        await hydrateScannerEnvironment();
+        await validateScannerEnvironment();
         const { Internal: scannerInternal } = await import('./scanner.app');
         return scannerInternal.processReindex(...args);
     },
     scan: async (...args: Parameters<ScannerApp['Internal']['scan']>) => {
-        await hydrateScannerEnvironment();
+        await validateScannerEnvironment();
         const { Internal: scannerInternal } = await import('./scanner.app');
         return scannerInternal.scan(...args);
     }
