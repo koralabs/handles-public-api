@@ -76,6 +76,24 @@ describe('App lifecycle', () => {
         }
     });
 
+    // A stale encrypted setting must reject startup, not be logged and ignored.
+    // Removing plaintext validation from initialize makes listen resolve instead.
+    it('rejects ciphertext before listening despite a legacy disabled-KMS flag', async () => {
+        process.env.API_STARTUP_FIXTURE_ENC = 'dummy-retired-ciphertext';
+        const previous = process.env.KORA_KMS_DISABLED;
+        process.env.KORA_KMS_DISABLED = 'true';
+        const app = new App();
+        const listen = jest.spyOn(app.app, 'listen').mockReturnValue({ keepAliveTimeout: 0 } as any);
+        try {
+            await expect(app.listen()).rejects.toThrow('AWS KMS is retired');
+            expect(listen).not.toHaveBeenCalled();
+        } finally {
+            delete process.env.API_STARTUP_FIXTURE_ENC;
+            if (previous === undefined) delete process.env.KORA_KMS_DISABLED;
+            else process.env.KORA_KMS_DISABLED = previous;
+        }
+    });
+
     it('returns dynamic load directories only in development/test env', () => {
         process.env.DYNAMIC_LOAD_DIR = './custom-one;./custom-two';
         const app = new App();

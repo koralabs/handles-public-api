@@ -4,7 +4,7 @@
 
 The snapshot client previously called a shared object-store factory only inside the publish handler. Missing R2 settings could select ambient AWS/S3 behavior, or surface only after the worker started. The reader and stale-snapshot check also retained an AWS website fallback. This change corrects configuration at startup and removes those fallback paths; it is not an IAM or credential-retirement operation.
 
-The installed npmjs `@koralabs/kora-labs-common@6.21.1` tarball is pinned in package.json and package-lock.json, with the publisher's integrity `sha512-wR8Oy54ir6mKdrq9iL1pBH4+lqK53XuocdBboJynkQsV+sizuA3iwOqHUVo6gNqvBAbVxbYwD4RnCJAhw6Ti4g==`. No linked package or unpublished version is used.
+The R2-only contract introduced in common6.21.1 is retained in the installed, pinned npmjs6.21.2 tarball. Package.json and package-lock.json use the actual published version, resolved URL and publisher integrity recorded in [API Plaintext Bootstrap](./api-plaintext-bootstrap.md). No linked package or unpublished version is used.
 
 The real shared `objectStoreConfig()` validates nonblank R2_ENDPOINT, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY; KORA_OBJECT_STORE may be absent or r2 only. It returns an explicit endpoint, credentials and region auto. App.initialize validates before routes/listening. RedisHandlesStore.initialize validates before starting a cache worker (including scanner startup). Snapshot module initialization captures this configuration before a handler can run. Errors propagate; no logging-and-continuing fallback is added.
 

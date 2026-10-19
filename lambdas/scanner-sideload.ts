@@ -1,4 +1,4 @@
-import { hydrateKmsEnvironment } from '@koralabs/kora-labs-common/aws';
+import { validatePlaintextStartup } from '../utils/startupEnvironment';
 
 // Standalone REIMPORT / REINDEX runner. The self-host box invokes this entrypoint in a one-off,
 // memory/time-unconstrained container (see aws-exit/scanner_sideload.sh) so the heavy ops can exceed
@@ -9,7 +9,7 @@ import { hydrateKmsEnvironment } from '@koralabs/kora-labs-common/aws';
 //   detect -> print {reimportNeeded,reindexNeeded} and exit 10 if either is pending (else 0), so a
 //             deploy can branch on "is a sideload needed?" without running it.
 const main = async () => {
-    await hydrateKmsEnvironment();
+    await validatePlaintextStartup();
     const { runSideload } = await import('./scanner.app');
     const mode = (process.argv[2] || process.env.SIDELOAD_MODE || 'auto') as any;
     const result = await runSideload(mode);

@@ -44,6 +44,12 @@ it('round trips snapshot bytes through the actual SDK and configured public read
     process.env.SNAPSHOT_BASE_URL = `${endpoint}/local-snapshot-fixture/`;
     let client: import('@aws-sdk/client-s3').S3Client | undefined;
     try {
+        // Real shared plaintext validation must reject legacy config before storage work.
+        const { validatePlaintextStartup } = await import('../utils/startupEnvironment');
+        process.env.API_STORAGE_FIXTURE_ENC = 'dummy-retired-ciphertext';
+        try { await expect(validatePlaintextStartup()).rejects.toThrow('AWS KMS is retired'); }
+        finally { delete process.env.API_STORAGE_FIXTURE_ENC; }
+        await expect(validatePlaintextStartup()).resolves.toEqual([]);
         const storage = await import('./snapshot');
         const { getSnapshotUrl } = await import('../config');
         client = storage.createSnapshotObjectStoreClient();
