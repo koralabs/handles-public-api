@@ -16,6 +16,7 @@
 - [Scanner Recovery Runbook](./spec/scanner-recovery-runbook.md)
 - [OpenAPI Swagger](./swagger.yml)
 
+- [API Plaintext Bootstrap](./spec/api-plaintext-bootstrap.md)
 - [R2-only Snapshot Storage](./spec/snapshot-r2-storage.md)
 
 ## Testing
