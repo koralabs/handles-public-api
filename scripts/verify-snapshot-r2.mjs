@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const [modulePath, env, box, deployId] = process.argv.slice(2);
-if (modulePath !== '/function/snapshot.js' || !['preview', 'preprod', 'mainnet'].includes(env) || !['kora-sf', 'kora-rdm'].includes(box) || !/^[a-f0-9-]{36}$/.test(deployId ?? '')) {
+const installedModule = modulePath === '/function/snapshot.js' || /^\/tmp\/api-installed-r2-[^/]+\/function\/snapshot\.js$/.test(modulePath ?? '');
+if (!installedModule || !['preview', 'preprod', 'mainnet'].includes(env) || !['kora-sf', 'kora-rdm'].includes(box) || !/^[a-f0-9-]{36}$/.test(deployId ?? '')) {
     throw new Error('Usage: node verify-snapshot-r2.mjs <installed-snapshot-module> <env> <kora-sf|kora-rdm> <deploy-uuid>');
 }
 
@@ -21,6 +22,9 @@ try {
     try { receipt.externalSdkResolution = createRequire(pathToFileURL(modulePath)).resolve('@aws-sdk/client-s3'); }
     catch { receipt.externalSdkResolution = 'not-installed-sdk-is-bundled'; }
     client = commands.createSnapshotObjectStoreClient();
+    const userAgent = await client.config.defaultUserAgentProvider();
+    receipt.sdkVersion = userAgent.find(part => part[0] === 'aws-sdk-js')?.[1];
+    if (!/^\d+\.\d+\.\d+$/.test(receipt.sdkVersion ?? '')) throw new Error('Installed SDK version unavailable');
     const credentials = await client.config.credentials();
     if (credentials.accessKeyId !== process.env.R2_ACCESS_KEY_ID || credentials.secretAccessKey !== process.env.R2_SECRET_ACCESS_KEY ||
         await client.config.region() !== 'auto' || (await client.config.endpoint()).hostname !== new URL(process.env.R2_ENDPOINT).hostname) {
