@@ -7,4 +7,5 @@
 - [@handlecontract Script Discovery](./handlecontract-script-discovery.md)
 - [Scanner Recovery Runbook](./scanner-recovery-runbook.md)
 - [OpenAPI Swagger](../swagger.yml)
+- [Test Credential and Network Isolation](./test-network-isolation.md)
 - [Docs Index](../index.md)

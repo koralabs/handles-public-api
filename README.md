@@ -159,7 +159,8 @@ npm run test:critical
 npm run test:container
 ```
 - Test isolation:
-  - `test:e2e` and `test:critical` run against a dedicated local Valkey instance on `127.0.0.1:6380` by default (`REDIS_HOST` / `REDIS_PORT`), so they do not wipe a live scan running on `6379`.
+  - Every Jest/Node test entrypoint strips AWS credentials/profiles, disables metadata and denies external transports before application imports. See [Test Network Isolation](docs/spec/test-network-isolation.md).
+  - `test:e2e`, `test:critical` and native Glide tests retain real Valkey, but the harness itself starts/authenticates/verifies an ephemeral Docker instance on **127.0.0.1:6380 only**. A local Docker daemon and already-local `valkey/valkey:8-alpine` image are required. Unknown listeners/tunnels and port6379 are refused, never adopted. Unit tests cannot use native Valkey.
   - `test:container` builds the image and runs lightweight runtime checks; requires a local Docker daemon.
 
 &nbsp;
