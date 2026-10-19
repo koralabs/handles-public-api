@@ -12,7 +12,7 @@ const config = {
     'preset': 'ts-jest/presets/default-esm',
     'testEnvironment': 'node',
     'globalSetup': './tests/network-setup.cjs',
-    'setupFiles': ['./tests/network-guard.cjs'],
+    'setupFiles': ['./tests/network-setup.cjs'],
     'silent': true,
     'testPathIgnorePatterns': ['\\.e2e\\.test\\.ts$']
 
