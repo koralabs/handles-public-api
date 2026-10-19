@@ -20,7 +20,7 @@ SNAPSHOT_BUCKET selects the R2 bucket; its existing api.handle.me bucket-name de
 
 ## Production SDK packaging
 
-The API Rollup configuration bundles `@aws-sdk/client-s3`; it is not an external. `build:lambda` subsequently installs only production dependencies into dist for the actual externals. The built `dist/lambdas/snapshot.js` successfully imports and constructs its explicit R2 client even with bare S3-package resolution deliberately blocked. Therefore this consumer does not need a speculative devDependency-to-dependency move. The verified artifact result is recorded with the rollout receipts.
+The API Rollup configuration bundles `@aws-sdk/client-s3`; it is not an external. This preview build first installs the runtime-only `rollup.package.json` manifest into dist for the actual externals, then Rollup bundles application dependencies from the root lock-installed graph. The built `dist/lambdas/snapshot.js` successfully imports and constructs its explicit R2 client even with bare S3-package resolution deliberately blocked. Therefore this consumer does not need a speculative devDependency-to-dependency move. The verified artifact result is recorded with the rollout receipts.
 
 ## Deployment verification
 
