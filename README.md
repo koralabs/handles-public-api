@@ -1,5 +1,9 @@
 <p align="center"><img src="docs/media/hero.png" alt="handles-api: a curl request for the $koralabs Handle returning its name, rarity, holder and resolved address"></p>
 
+## Contributor test policy
+
+All tests are local-only by owner directive. Preserve local test scripts. GitHub Actions must not run tests directly or indirectly through lifecycle hooks, composites, shared helpers, or renamed commands. Build, lint, publish, deployment, and production dispatch guards remain allowed; obsolete test-only required checks must be removed without weakening unrelated protections.
+
 <p align="center">
   <a href="#-quick-start">🚀 Quick start</a> ·
   <a href="#testing-the-api">🔌 Try it</a> ·
